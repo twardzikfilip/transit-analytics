@@ -1,0 +1,11 @@
+# Loads every dashboard JSON in grafana/dashboards/ (mounted into the otel-lgtm container, see docker-compose.yml).
+apiVersion: 1
+
+providers:
+  - name: transit-analytics
+    folder: Transit Analytics
+    type: file
+    allowUiUpdates: true
+    options:
+      path: /otel-lgtm/grafana/conf/provisioning/dashboards/transit
+      foldersFromFilesStructure: false
