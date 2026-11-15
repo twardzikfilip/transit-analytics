@@ -1,0 +1,14 @@
+<div class="header">
+  <h1>Live map</h1>
+  <span class="muted">
+    @if (error()) {
+      <span class="error">Could not load positions</span>
+    } @else {
+      {{ count() }} vehicles
+      @if (lastUpdate(); as t) {
+        · updated {{ t.toLocaleTimeString() }}
+      }
+    }
+  </span>
+</div>
+<div #map class="map"></div>
