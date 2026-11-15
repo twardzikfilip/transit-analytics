@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: transit-postgres
+    environment:
+      POSTGRES_DB: transit
+      POSTGRES_USER: transit
+      POSTGRES_PASSWORD: transit
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U transit -d transit"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Local observability: OpenTelemetry collector + Tempo (traces) + Prometheus (metrics) + Loki (logs)
+  # + Grafana at http://localhost:3000. Development only, data is not persisted.
+  otel-lgtm:
+    image: grafana/otel-lgtm:0.41.0
+    container_name: transit-otel-lgtm
+    ports:
+      - "3000:3000"   # Grafana
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    volumes:
+      # Dashboards from grafana/dashboards/ appear in Grafana under "Transit Analytics".
+      - ./grafana/provisioning/dashboards.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/transit.yaml:ro
+      - ./grafana/dashboards:/otel-lgtm/grafana/conf/provisioning/dashboards/transit:ro
+
+volumes:
+  pgdata:

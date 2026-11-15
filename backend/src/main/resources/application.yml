@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: transit-analytics
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/transit}
+    username: ${DB_USER:transit}
+    password: ${DB_PASSWORD:transit}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+app:
+  jwt:
+    # Dev default only — override with JWT_SECRET (min 32 bytes) in any real environment.
+    secret: ${JWT_SECRET:dev-only-secret-change-me-please-0123456789abcdef}
+    expiration-minutes: ${JWT_EXPIRATION_MINUTES:480}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING:1.0}
+  opentelemetry:
+    resource-attributes:
+      service.name: transit-backend
+      deployment.environment: ${ENVIRONMENT:local}
+    tracing:
+      export:
+        otlp:
+          endpoint: ${OTLP_ENDPOINT:http://localhost:4318}/v1/traces
+    logging:
+      export:
+        otlp:
+          endpoint: ${OTLP_ENDPOINT:http://localhost:4318}/v1/logs
+  otlp:
+    metrics:
+      export:
+        url: ${OTLP_ENDPOINT:http://localhost:4318}/v1/metrics
+        step: 30s

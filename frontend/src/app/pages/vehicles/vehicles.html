@@ -1,0 +1,62 @@
+<div class="header">
+  <h1>Vehicles</h1>
+  <button *appHasRole="'ADMIN'" type="button" class="primary" (click)="startCreate()">Add vehicle</button>
+</div>
+
+@if (error(); as message) {
+  <p class="error">{{ message }}</p>
+}
+
+@if (editingId() !== null) {
+  <form class="card editor" [formGroup]="form" (ngSubmit)="save()">
+    <h2>{{ editingId() ? 'Edit vehicle' : 'New vehicle' }}</h2>
+    <label>Number <input formControlName="vehicleNumber" /></label>
+    <label>
+      Type
+      <select formControlName="type">
+        <option>BUS</option>
+        <option>TRAM</option>
+        <option>METRO</option>
+        <option>TRAIN</option>
+      </select>
+    </label>
+    <label>Capacity <input formControlName="capacity" type="number" min="0" /></label>
+    <label class="checkbox"><input formControlName="active" type="checkbox" /> Active</label>
+    <div class="actions">
+      <button type="submit" class="primary">Save</button>
+      <button type="button" (click)="cancel()">Cancel</button>
+    </div>
+  </form>
+}
+
+<div class="card table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Number</th>
+        <th>Type</th>
+        <th>Capacity</th>
+        <th>Status</th>
+        <th *appHasRole="'ADMIN'"></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (vehicle of vehicles(); track vehicle.id) {
+        <tr>
+          <td>{{ vehicle.vehicleNumber }}</td>
+          <td>{{ vehicle.type }}</td>
+          <td>{{ vehicle.capacity ?? '—' }}</td>
+          <td>{{ vehicle.active ? 'Active' : 'Inactive' }}</td>
+          <td *appHasRole="'ADMIN'" class="row-actions">
+            <button type="button" (click)="startEdit(vehicle)">Edit</button>
+            <button type="button" class="danger" (click)="remove(vehicle)">Delete</button>
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="5" class="muted">{{ loading() ? 'Loading…' : 'No vehicles yet.' }}</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
