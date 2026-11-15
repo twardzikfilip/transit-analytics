@@ -3,7 +3,7 @@
 Starter full-stack app: Angular 22 + NgRx frontend, Spring Boot 4 backend, PostgreSQL with Flyway migrations.
 
 ```
-docker-compose.yml   PostgreSQL 17 for local development
+docker-compose.yml   PostgreSQL 17 + Grafana LGTM (telemetry) for local development
 backend/             Spring Boot 4.1 (Gradle, Java 17): JWT auth + CRUD REST API
 frontend/            Angular 22 (standalone, signals, NgRx, Leaflet)
 ```
@@ -17,7 +17,7 @@ frontend/            Angular 22 (standalone, signals, NgRx, Leaflet)
 ## Run it
 
 ```bash
-# 1. Database
+# 1. Database + telemetry stack (Grafana on http://localhost:3000)
 docker compose up -d
 
 # 2. Backend  → http://localhost:8080 (Flyway migrates on startup)
@@ -76,3 +76,35 @@ npm start        # dev server with API proxy
 npm test         # Vitest unit tests
 npm run build
 ```
+
+## Observability
+
+Both apps send OpenTelemetry data over OTLP/HTTP. Locally, the `otel-lgtm` container receives it and shows it
+in Grafana at http://localhost:3000: Tempo for traces, Prometheus for metrics, Loki for logs.
+
+| | Backend (`transit-backend`) | Frontend (`transit-frontend`) |
+|---|---|---|
+| Traces | every HTTP request, with JDBC query spans | page load, every fetch/XHR, route changes, uncaught errors (`ui.error`) |
+| Metrics | HTTP server, JVM, Hikari pool, `transit.auth.logins{outcome,role}` | Core Web Vitals `web_vitals.{lcp,inp,cls,fcp,ttfb}` by route |
+| Logs | exported over OTLP with `trace_id`; console lines show `[traceId-spanId]` | — |
+
+Dashboards in `grafana/dashboards/` are loaded into Grafana automatically, in the **Transit Analytics** folder.
+**Transit Backend** lists every backend request (time, method, endpoint, status, duration, who started it), and
+each row links to its trace. To add a dashboard, drop its JSON into that folder; Grafana picks it up within about 10 seconds.
+
+A browser API call and the backend request it triggers share one trace: the frontend sends a W3C `traceparent` header.
+No headers, tokens, request bodies or usernames are recorded.
+
+Backend settings:
+
+| Setting | Env var | Default |
+|---|---|---|
+| OTLP/HTTP base URL | `OTLP_ENDPOINT` | `http://localhost:4318` |
+| Trace sampling ratio | `TRACING_SAMPLING` | `1.0` |
+| `deployment.environment` | `ENVIRONMENT` | `local` |
+
+The frontend's settings are in `frontend/src/app/core/telemetry/telemetry.config.ts`. In development, `/otlp` is
+proxied to the collector (`proxy.conf.json`). In production:
+- serve `/otlp` through your reverse proxy to a collector, or point `endpoint` at a collector that allows CORS
+- set `propagateTraceHeaderCorsUrls` if the API is on another origin
+- lower `sampleRatio` and `TRACING_SAMPLING`
