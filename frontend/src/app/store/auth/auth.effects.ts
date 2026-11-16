@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { catchError, exhaustMap, map, of, tap } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
+import { traceLogin } from '../../core/telemetry/login-telemetry';
 import { AuthActions } from './auth.actions';
 
 export const login = createEffect(
@@ -11,7 +12,7 @@ export const login = createEffect(
     actions$.pipe(
       ofType(AuthActions.login),
       exhaustMap(({ username, password }) =>
-        auth.login(username, password).pipe(
+        traceLogin(username, auth.login(username, password)).pipe(
           map((session) => AuthActions.loginSuccess({ session })),
           catchError((err: HttpErrorResponse) =>
             of(AuthActions.loginFailure({ error: err.status === 401 ? 'Invalid username or password' : 'Login failed' })),

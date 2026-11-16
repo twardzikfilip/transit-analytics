@@ -1,0 +1,305 @@
+{
+  "uid": "transit-logins",
+  "title": "Transit Logins",
+  "description": "Login attempts in the frontend app, from auth.login spans in Tempo.",
+  "tags": [
+    "transit-analytics",
+    "frontend",
+    "auth"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "refresh": "30s",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "schemaVersion": 41,
+  "version": 1,
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Successful logins",
+      "description": "Successful logins in the selected time range (counted from up to 1000 spans).",
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceql",
+          "query": "{resource.service.name=\"transit-frontend\" && name=\"auth.login\" && span.login.outcome=\"success\"}",
+          "tableType": "spans",
+          "limit": 1000,
+          "spss": 1
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          },
+          "unit": "none",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "count"
+          ],
+          "fields": "/^Span ID$/",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "showPercentChange": false,
+        "orientation": "auto",
+        "wideLayout": true
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Failed logins",
+      "description": "Logins rejected for a wrong username or password in the selected time range.",
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceql",
+          "query": "{resource.service.name=\"transit-frontend\" && name=\"auth.login\" && span.login.outcome=\"invalid_credentials\"}",
+          "tableType": "spans",
+          "limit": 1000,
+          "spss": 1
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "orange"
+          },
+          "unit": "none",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "count"
+          ],
+          "fields": "/^Span ID$/",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "showPercentChange": false,
+        "orientation": "auto",
+        "wideLayout": true
+      }
+    },
+    {
+      "id": 3,
+      "type": "table",
+      "title": "Logins",
+      "description": "Every login attempt made in the frontend app, newest first (up to 500). Click a Trace link to follow the login through the backend to the database.",
+      "gridPos": {
+        "h": 18,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceql",
+          "query": "{resource.service.name=\"transit-frontend\" && name=\"auth.login\"} | select(span.user.name, span.user.roles, span.login.outcome)",
+          "tableType": "spans",
+          "limit": 500,
+          "spss": 1
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Trace Name": true,
+              "Trace Service": true,
+              "Name": true,
+              "service.name": true
+            },
+            "indexByName": {
+              "Start time": 0,
+              "user.name": 1,
+              "user.roles": 2,
+              "login.outcome": 3,
+              "Duration": 4,
+              "Span ID": 5,
+              "traceIdHidden": 6
+            },
+            "renameByName": {
+              "Start time": "Time",
+              "user.name": "User",
+              "user.roles": "Role",
+              "login.outcome": "Outcome",
+              "Span ID": "Trace"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "filterable": true,
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Outcome"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "success": {
+                        "text": "Success",
+                        "color": "green",
+                        "index": 0
+                      },
+                      "invalid_credentials": {
+                        "text": "Wrong credentials",
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "error": {
+                        "text": "Error",
+                        "color": "red",
+                        "index": 2
+                      },
+                      "cancelled": {
+                        "text": "Cancelled",
+                        "color": "text",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Time"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 190
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Duration"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ns"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.width",
+                "value": 110
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Trace"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 190
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Time",
+            "desc": true
+          }
+        ]
+      }
+    }
+  ]
+}
