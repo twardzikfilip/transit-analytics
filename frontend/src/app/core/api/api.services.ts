@@ -6,6 +6,7 @@ import {
   DelayBand,
   FleetSeries,
   LineStatsReport,
+  CorridorReport,
   LineDetail,
   LinePerformance,
   LineRef,
@@ -186,5 +187,14 @@ export class LineDetailApi {
 
   performance(line: string): Observable<LinePerformance> {
     return this.http.get<LinePerformance>(`/api/lines/${encodeURIComponent(line)}/performance`);
+  }
+}
+
+@Injectable({ providedIn: 'root' })
+export class CorridorApi {
+  private readonly http = inject(HttpClient);
+
+  report(): Observable<CorridorReport> {
+    return this.http.get<CorridorReport>('/api/corridors');
   }
 }
