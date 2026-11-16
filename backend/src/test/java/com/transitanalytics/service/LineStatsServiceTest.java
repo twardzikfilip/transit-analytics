@@ -73,7 +73,8 @@ class LineStatsServiceTest {
 
     @Test
     void tripsAfterMidnightAndLinesWithoutShapesWork() {
-        List<TripTimes> trips = List.of(trip(0, null, "N1-01", 23, 30, 60, null), trip(0, null, "N1-01", 24, 40, 50, null));
+        List<TripTimes> trips = List.of(trip(0, null, "N1-01", 23, 30, 60, null),
+                trip(0, null, "N1-01", 24, 40, 50, null));
 
         LineStatsDto.Line line = LineStatsService.lineStats(null, 7, trips);
 

@@ -44,7 +44,8 @@ class CorridorIntegrationTest {
         CorridorDto.Report report = corridors.corridors();
 
         assertThat(report.serviceId()).isEqualTo(SERVICE);
-        assertThat(report.peak()).extracting(p -> p.from() + "–" + p.to()).containsExactly("06:30–08:30", "15:00–17:00");
+        assertThat(report.peak()).extracting(p -> p.from() + "–" + p.to())
+                .containsExactly("06:30–08:30", "15:00–17:00");
         assertThat(report.corridors()).singleElement().satisfies(c -> {
             assertThat(c.stops()).containsExactly("Pe", "Qu", "Ro", "Si");
             assertThat(c.lines()).containsExactly("C1", "C2");

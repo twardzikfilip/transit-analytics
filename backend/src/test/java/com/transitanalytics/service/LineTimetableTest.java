@@ -8,13 +8,10 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Map;
 
+import static com.transitanalytics.service.LineFixtures.stop;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class LineTimetableTest {
-
-    private static StopPoint stop(double km, String zone) {
-        return new StopPoint("S" + km, 53.0, 23.0, km, zone);
-    }
 
     private static TripRow trip(String duty, int startMin, int endMin, int dir, String shape) {
         return trip(duty, startMin, endMin, dir, shape, dir == 0 ? "A" : "Z", dir == 0 ? "Z" : "A");

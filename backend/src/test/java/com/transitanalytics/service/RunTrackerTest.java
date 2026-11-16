@@ -9,14 +9,11 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static com.transitanalytics.service.LineFixtures.stop;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 class RunTrackerTest {
-
-    private static StopPoint stop(double km, String zone) {
-        return new StopPoint("S" + km, 53.0, 23.0, km, zone);
-    }
 
     private static Sample s(long vehicle, double t, String headsign, int seq) {
         return new Sample(vehicle, t, "103-01", headsign, seq);

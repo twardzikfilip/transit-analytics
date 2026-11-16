@@ -1,5 +1,6 @@
 plugins {
 	java
+	jacoco
 	id("org.springframework.boot") version "4.1.2"
 	id("io.spring.dependency-management") version "1.1.7"
 }
@@ -51,4 +52,41 @@ dependencies {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+}
+
+// Test coverage (JaCoCo): every test run writes a report to build/reports/jacoco/test (html/index.html and an XML
+// file for CI). A plain `./gradlew test` covers the unit tests; with INTEGRATION_TESTS=true the database tests count
+// too. `./gradlew check` also fails when line coverage drops below the floor below.
+jacoco {
+	toolVersion = "0.8.13"
+}
+
+tasks.test {
+	finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+	dependsOn(tasks.test)
+	reports {
+		xml.required = true
+		html.required = true
+		csv.required = false
+	}
+}
+
+tasks.jacocoTestCoverageVerification {
+	dependsOn(tasks.test)
+	violationRules {
+		rule {
+			limit {
+				counter = "LINE"
+				// The unit-test floor; raise it as coverage grows.
+				minimum = "0.50".toBigDecimal()
+			}
+		}
+	}
+}
+
+tasks.check {
+	dependsOn(tasks.jacocoTestCoverageVerification)
 }

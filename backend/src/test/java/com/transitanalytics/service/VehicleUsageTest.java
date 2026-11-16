@@ -25,7 +25,8 @@ class VehicleUsageTest {
         var use = VehicleUsage.vehicleUse(rows);
 
         assertThat(use.days()).isEqualTo(2);
-        assertThat(use.vehicles()).extracting(LineDetailDto.VehicleUse::number).containsExactly("224", "221", "300", "999");
+        assertThat(use.vehicles()).extracting(LineDetailDto.VehicleUse::number)
+                .containsExactly("224", "221", "300", "999");
         assertThat(use.vehicles().get(0).days()).isEqualTo(2);
         assertThat(use.vehicles().get(3).brigades()).isEmpty();
         assertThat(use.brigades()).containsExactly(
