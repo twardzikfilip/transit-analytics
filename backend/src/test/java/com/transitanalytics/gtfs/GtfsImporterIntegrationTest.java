@@ -1,12 +1,10 @@
 package com.transitanalytics.gtfs;
 
+import com.transitanalytics.DbIntegrationTest;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.transaction.AfterTransaction;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,15 +24,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * Loads a tiny feed into the real database. The test transaction is rolled back at the end (the importer joins it),
  * so the timetable in the database is left as it was. Run with INTEGRATION_TESTS=true and the DB up.
  */
-@SpringBootTest
+@DbIntegrationTest
 @Transactional
-@TestPropertySource(properties = {
-        "management.tracing.export.enabled=false",
-        "management.otlp.metrics.export.enabled=false",
-        "management.logging.export.enabled=false",
-        "app.recording.enabled=false"
-})
-@EnabledIfEnvironmentVariable(named = "INTEGRATION_TESTS", matches = "true")
 class GtfsImporterIntegrationTest {
 
     private static final Map<String, String> FEED = Map.of(

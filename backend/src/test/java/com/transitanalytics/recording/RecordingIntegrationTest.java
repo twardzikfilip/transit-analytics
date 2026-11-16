@@ -1,16 +1,14 @@
 package com.transitanalytics.recording;
 
+import com.transitanalytics.DbIntegrationTest;
 import com.transitanalytics.dto.LivePositionDto;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.io.IOException;
@@ -28,14 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Position recording against the real TimescaleDB database. Uses vehicle numbers starting with "IT-" and removes
  * them (and their positions) afterwards. Run with INTEGRATION_TESTS=true and the DB up.
  */
-@SpringBootTest
-@TestPropertySource(properties = {
-        "management.tracing.export.enabled=false",
-        "management.otlp.metrics.export.enabled=false",
-        "management.logging.export.enabled=false",
-        "app.recording.enabled=false"
-})
-@EnabledIfEnvironmentVariable(named = "INTEGRATION_TESTS", matches = "true")
+@DbIntegrationTest
 class RecordingIntegrationTest {
 
     @TempDir

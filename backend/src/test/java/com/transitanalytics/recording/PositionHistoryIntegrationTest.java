@@ -1,13 +1,11 @@
 package com.transitanalytics.recording;
 
+import com.transitanalytics.DbIntegrationTest;
 import com.transitanalytics.dto.LivePositionDto;
 import com.transitanalytics.dto.PositionHistoryDto;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -16,15 +14,8 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /** Queries over position_sample on the real database; the test data is rolled back. */
-@SpringBootTest
+@DbIntegrationTest
 @Transactional
-@TestPropertySource(properties = {
-        "management.tracing.export.enabled=false",
-        "management.otlp.metrics.export.enabled=false",
-        "management.logging.export.enabled=false",
-        "app.recording.enabled=false"
-})
-@EnabledIfEnvironmentVariable(named = "INTEGRATION_TESTS", matches = "true")
 class PositionHistoryIntegrationTest {
 
     private static final Instant FROM = Instant.parse("2099-01-01T10:00:00Z");
