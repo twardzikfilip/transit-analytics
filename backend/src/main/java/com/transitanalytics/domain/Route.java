@@ -44,6 +44,10 @@ public class Route {
     @Column(name = "sort_order")
     private Integer sortOrder;
 
+    /** Urban, suburban, night or regional line. */
+    @Column(nullable = false, length = 16)
+    private RouteSubtype subtype = RouteSubtype.URBAN;
+
     public Long getId() {
         return id;
     }
@@ -130,6 +134,14 @@ public class Route {
 
     public void setSortOrder(Integer sortOrder) {
         this.sortOrder = sortOrder;
+    }
+
+    public RouteSubtype getSubtype() {
+        return subtype;
+    }
+
+    public void setSubtype(RouteSubtype subtype) {
+        this.subtype = subtype;
     }
 
     /** What riders see: the short name, or the long name when there is none. */

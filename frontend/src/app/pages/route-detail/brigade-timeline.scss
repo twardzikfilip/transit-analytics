@@ -1,0 +1,112 @@
+:host {
+  display: block;
+}
+
+.plot {
+  position: relative;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+  color: var(--muted);
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+}
+
+.swatch {
+  display: inline-block;
+  width: 16px;
+  height: 10px;
+  border-radius: 2px;
+
+  &.hatched {
+    background: repeating-linear-gradient(45deg, var(--muted) 0 2px, transparent 2px 5px);
+  }
+
+  &.dashed {
+    height: 0;
+    border-top: 2px dashed var(--muted);
+    border-radius: 0;
+  }
+}
+
+svg {
+  display: block;
+  max-width: 100%;
+  overflow: visible;
+}
+
+.grid {
+  stroke: var(--border);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.axis-label,
+.time {
+  fill: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.name {
+  fill: var(--fg);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.run {
+  stroke: var(--surface);
+  stroke-width: 0.5;
+}
+
+.hatch {
+  pointer-events: none;
+}
+
+.hatch-line {
+  fill: var(--surface);
+  opacity: 0.7;
+}
+
+.break {
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+.break-label {
+  fill: var(--muted);
+  font-size: 10px;
+}
+
+.hit {
+  fill: transparent;
+}
+
+.tooltip {
+  position: absolute;
+  z-index: 2;
+  transform: translate(-50%, calc(-100% - 12px));
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 12%);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  pointer-events: none;
+}

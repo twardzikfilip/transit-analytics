@@ -12,6 +12,13 @@
   --sidebar-fg: #d9dee4;
   /* Chart series colour; validated against the chart surface for each mode. */
   --chart-line: #1e88e5;
+  /* More chart series (categorical slots 2 and 3), and line colours by subtype. */
+  --chart-series-2: #eb6834;
+  --chart-series-3: #1baf7a;
+  --line-urban: #2a78d6;
+  --line-suburban: #1baf7a;
+  --line-night: #6250d6;
+  --line-regional: #eb6834;
   color-scheme: light;
 }
 
@@ -29,6 +36,12 @@
     --sidebar-bg: #0d0f12;
     --sidebar-fg: #c9ced5;
     --chart-line: #3d97e8;
+    --chart-series-2: #d95926;
+    --chart-series-3: #199e70;
+    --line-urban: #3987e5;
+    --line-suburban: #199e70;
+    --line-night: #9085e9;
+    --line-regional: #d95926;
     color-scheme: dark;
   }
 }

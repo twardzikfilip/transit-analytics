@@ -24,8 +24,9 @@ public class ZbiorkomBialystokService {
 
     private static final Logger log = LoggerFactory.getLogger(ZbiorkomBialystokService.class);
 
-    /** zbiorkom reports the city operator as "default". */
-    private static final String DEFAULT_AGENCY = "BKM";
+    /** The city operator (Białostocka Komunikacja Miejska); zbiorkom reports it as "default". */
+    public static final String CITY_AGENCY = "BKM";
+    private static final String DEFAULT_AGENCY = CITY_AGENCY;
 
     /** GTFS route types, named like the vehicle types used elsewhere in the app. */
     private static final Map<String, String> VEHICLE_TYPES = Map.of(

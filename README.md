@@ -58,7 +58,8 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   `/api/agencies`, `/api/routes`, `/api/stops`, `/api/trips`, `/api/stop-times`, `/api/calendar-dates`,
   `/api/shape-points`. Timetable lists take filters as query parameters, e.g. `/api/trips?routeId=17&direction=1`,
   `/api/stop-times?stopId=260&sort=departureTime&sort=id`, `/api/stops?q=dworzec` (Swagger lists them all).
-- Position history (recorded time series), each with a required window `from`/`to` (ISO-8601, `to` exclusive, at
+- Position history (recorded time series, city operator BKM's lines only; regional operators such as WSCHODEXPRESS
+  and TUROSN are left out), each with a required window `from`/`to` (ISO-8601, `to` exclusive, at
   most 31 days) and an optional `route` (line):
   - `GET /api/positions/fleet` — per bucket of polls: vehicles running (average per poll), the most at once,
     reports and mean delay. Buckets are 1 minute (one poll) for windows up to 24 h and coarser beyond, keeping
@@ -67,6 +68,9 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   - `GET /api/positions/delays` — vehicles and reports per minute of delay: under 1 min (incl. early), 1–2, …,
     9–10, 10 min or more. A vehicle counts in every band it was in.
   - `GET /api/positions/routes` — lines recorded in the window.
+  - `GET /api/positions/replay` — animation frames (latest position of every vehicle per step; 1 min for short
+    windows, up to 30 min for a week, at most 360 frames) as compact rows `[vehicle, lat, lon, delay, line]`.
+    Repeat `route` for several lines. Responses are gzipped.
   - `GET /api/positions` — the raw position reports, paged (`page`, `size` ≤ 500; also `vehicle`), sorted by
     `sort=time|vehicle|line|duty|towards|delay|nextStop,asc|desc` (default `time,desc`). `excludeOutliers=true`
     leaves out reports more than 30 min late; those are outliers, most likely feed errors. The page highlights
@@ -75,6 +79,17 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   longest end-to-end travel time, average speed, interval, regularity (coefficient of variation of the gaps between
   departures, graded A–F as in TCQSM) and vehicles in peak (06:00–09:00, 15:00–17:00) and off-peak
   (17:00–22:00) hours. The definitions are on the Line statistics page.
+- Routes in detail (`{line}` is the route's GTFS id, e.g. `103`):
+  - `GET /api/lines` — all lines in numeric order, with their subtype.
+  - `GET /api/lines/{line}/detail` — from the weekday timetable: every variant (direction and shape, with its route
+    shape, stops, length, trips and scheduled travel times; the most frequent one per direction is the base route,
+    the others are longer or shorter), the base route's length and its scheduled shortest/longest travel time and
+    average speed, the part in fare zone 2 (stops and km; the stretch crossing the border counts half), and every
+    brigade: first departure (leaves the depot), last arrival (returns), runs and breaks of 30 min or more.
+  - `GET /api/lines/{line}/performance` — from recorded positions on weekdays: travel time and average speed of full
+    runs of the base route by departure hour (min, max, mean, median), average delay per 15 minutes, and speed
+    between consecutive stops for runs leaving in peak hours. A stop counts as passed midway between the two
+    reports that bracket it (one a minute), so single runs are accurate to about ±30 s.
 - `POST /api/gtfs/bialystok/import` (admin) — downloads Białystok's GTFS timetable and loads it; see below.
 - `GET /api/vehicle-positions/latest` — latest stored position per vehicle
 - `GET /api/zbiorkom/bialystok/positions` — live Białystok vehicle positions from [zbiorkom.live](https://zbiorkom.live),
@@ -94,6 +109,9 @@ inserting the ~384k stop times.
   broken feed changes nothing (422). If the download fails the answer is 502; a second import while one runs gets 409.
 - Agencies, routes, stops and trips are updated in place by `gtfs_id`, so their database ids stay the same across
   imports (and links to them keep working). Stop times, calendar dates and shape points are replaced.
+- Each route has a `subtype`: `urban`, `suburban` (numbers from 100 up), `night_urban` (N1, N2, …) or `regional`
+  (set by hand). New routes get it from their name (`RouteSubtype.classify`, migration V10); an import keeps the
+  subtype of existing routes, so a manual change stays.
 - Rows that point at a route, trip or stop that isn't in the feed are skipped and counted in the response. Files the
   app doesn't load (e.g. `feed_info.txt`) are listed as ignored.
 - Code: `gtfs/GtfsImporter` (generic loader: files are streamed from the zip into temporary tables with PostgreSQL
@@ -190,7 +208,15 @@ INTEGRATION_TESTS=true ./gradlew test           # also boots the full context ag
 - Position history: vehicles running and mean delay every minute (SVG line charts with a hover/keyboard tooltip and
   a table view), running now / most at once / different vehicles seen, the delay distribution, and the raw reports, filtered by time range (1 h – 30 days or a custom from/to) and line, all kept in the URL.
   Preset ranges refresh every minute. Store slice `positionHistory`, registered by its lazy route.
+- Delays: an animated replay of recorded positions on a map, each bus coloured by delay (green on time → yellow →
+  orange → red at 10+ min). Filter by one, several or all lines and by time window (last 15 min / hour / 24 hours
+  or custom). Play/pause, speed, loop and a timeline are at the top; the filters are kept in the URL.
 - Line statistics: the figures above for every line in a sortable table (weekday timetable, planned values).
+- Routes in detail: pick a line from labels grouped by subtype (kept in the URL as `?line=`). The map shows the base
+  route thick and other variants thin and dashed in the same colour, with zone-2 stops filled. Below: length,
+  scheduled travel time and speed, zone 2, the variants, charts of measured travel time, speed and delay over the
+  day (each with a table view), speed between stops in peak hours with the slowest stretches numbered, and a
+  timeline of the brigades with their breaks. Store slice `routeDetail`, registered by its lazy route.
 - Timetable pages (read-only): Routes → Trips (filter by route, direction, service, headsign) → Stop times of a trip;
   Stops (search, zone) → departure board of a stop. Filters and the page number live in the URL, so every view can be
   linked and the back button works.

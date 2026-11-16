@@ -57,6 +57,28 @@ public final class PositionHistoryDto {
     public record RouteActivity(String route, long samples) {
     }
 
+    /**
+     * Recorded positions as animation frames.
+     *
+     * @param stepSeconds time between frames (one poll = 60 s for short windows, coarser for long ones)
+     * @param routes      the line filter, or empty for all lines
+     * @param vehicles    vehicle numbers; frame positions refer to them by index
+     * @param lines       line names; frame positions refer to them by index
+     * @param frames      only frames with data, in time order
+     */
+    public record Replay(Instant from, Instant to, long stepSeconds, List<String> routes, List<String> vehicles,
+                         List<String> lines, List<Frame> frames) {
+    }
+
+    /**
+     * The latest position of every vehicle in one step.
+     *
+     * @param positions compact rows {@code [vehicleIndex, latitude, longitude, delaySeconds or null,
+     *                  lineIndex or null]} to keep a day of frames small
+     */
+    public record Frame(Instant time, List<List<Object>> positions) {
+    }
+
     /** One recorded position report. */
     public record Sample(Instant observedAt, Long vehicleId, String vehicleNumber, String routeName, String brigade,
                          String headsign, double latitude, double longitude, Integer bearing, Integer delaySeconds,

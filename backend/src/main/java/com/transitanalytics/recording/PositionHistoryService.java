@@ -1,6 +1,7 @@
 package com.transitanalytics.recording;
 
 import com.transitanalytics.dto.PositionHistoryDto;
+import com.transitanalytics.zbiorkom.ZbiorkomBialystokService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -15,8 +16,9 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
-/** Reads the recorded position time series ({@code position_sample}). */
+/** Reads the recorded position time series ({@code position_sample}), for the city operator's (BKM) lines. */
 @Service
 public class PositionHistoryService {
 
@@ -35,7 +37,7 @@ public class PositionHistoryService {
      * Reports more than this late are treated as outliers (likely feed errors). The frontend uses the same 30 minutes
      * to highlight them.
      */
-    static final int OUTLIER_DELAY_SECONDS = 30 * 60;
+    public static final int OUTLIER_DELAY_SECONDS = 30 * 60;
     /** Delay bands are whole minutes from 1 up to this; below is "under 1 minute", from here on "or more". */
     static final int DELAY_BANDS_UP_TO_MINUTES = 10;
 
@@ -48,8 +50,16 @@ public class PositionHistoryService {
         String p = alias.isEmpty() ? "" : alias + ".";
         return "%1$sobserved_at >= ? AND %1$sobserved_at < ?".formatted(p)
                 + " AND coalesce(%1$sfetched_at, %1$sobserved_at) >= ? AND coalesce(%1$sfetched_at, %1$sobserved_at) < ?"
-                .formatted(p);
+                .formatted(p)
+                // City lines only: regional operators (e.g. WSCHODEXPRESS, TUROSN) run their own lines on the feed.
+                + " AND %svehicle_id IN (SELECT id FROM vehicle WHERE agency = '%s')".formatted(p, AGENCY);
     }
+
+    /**
+     * Position history covers the city operator's lines only. Every line in the feed is run by a single operator,
+     * so filtering by the vehicle's operator removes exactly the regional lines.
+     */
+    static final String AGENCY = ZbiorkomBialystokService.CITY_AGENCY;
 
     private static final String WINDOW = windowCondition("");
     private static final Duration SLACK = Duration.ofMinutes(15);
@@ -139,6 +149,70 @@ public class PositionHistoryService {
                     counts[band][0], counts[band][1]));
         }
         return bands;
+    }
+
+    /** Longest window a replay may cover. */
+    static final Duration MAX_REPLAY_WINDOW = Duration.ofDays(7);
+    /** Frame steps to choose from; the smallest keeping a replay at or under {@link #MAX_FRAMES} frames wins. */
+    static final List<Duration> REPLAY_STEPS = List.of(Duration.ofMinutes(1), Duration.ofMinutes(2),
+            Duration.ofMinutes(5), Duration.ofMinutes(10), Duration.ofMinutes(15), Duration.ofMinutes(30));
+    static final int MAX_FRAMES = 360;
+
+    /**
+     * Recorded positions in {@code [from, to)} as animation frames: per step, the latest report of every vehicle in
+     * the polls of that step. Optionally only some lines.
+     */
+    public PositionHistoryDto.Replay replay(Instant from, Instant to, List<String> routes) {
+        validate(from, to);
+        if (Duration.between(from, to).compareTo(MAX_REPLAY_WINDOW) > 0) {
+            throw new IllegalArgumentException("A replay can cover at most " + MAX_REPLAY_WINDOW.toDays() + " days");
+        }
+        List<String> lineFilter = routes == null ? List.of()
+                : routes.stream().filter(r -> r != null && !r.isBlank()).map(String::strip).distinct().toList();
+        Duration step = REPLAY_STEPS.stream().filter(s -> Duration.between(from, to).dividedBy(s) <= MAX_FRAMES)
+                .findFirst().orElse(REPLAY_STEPS.get(REPLAY_STEPS.size() - 1));
+
+        List<Object> args = new ArrayList<>(List.of(step.toSeconds()));
+        args.addAll(window(from, to, null));
+        String routeFilter = "";
+        if (!lineFilter.isEmpty()) {
+            routeFilter = " AND p.route_name IN (" + String.join(", ", java.util.Collections.nCopies(lineFilter.size(), "?")) + ")";
+            args.addAll(lineFilter);
+        }
+
+        Map<String, Integer> vehicleIndex = new java.util.LinkedHashMap<>();
+        Map<String, Integer> lineIndex = new java.util.LinkedHashMap<>();
+        java.util.TreeMap<Instant, List<List<Object>>> frames = new java.util.TreeMap<>();
+        jdbc.query("""
+                SELECT DISTINCT ON (bucket, p.vehicle_id)
+                       time_bucket(make_interval(secs => ?::integer), coalesce(p.fetched_at, p.observed_at)) AS bucket,
+                       v.vehicle_number, p.route_name, p.latitude, p.longitude, p.delay_seconds
+                FROM position_sample p JOIN vehicle v ON v.id = p.vehicle_id
+                WHERE""" + " " + windowCondition("p") + routeFilter + """
+
+                ORDER BY bucket, p.vehicle_id, p.observed_at DESC""",
+                rs -> {
+                    int vehicle = vehicleIndex.computeIfAbsent(rs.getString("vehicle_number"), k -> vehicleIndex.size());
+                    String route = rs.getString("route_name");
+                    Integer line = route == null ? null : lineIndex.computeIfAbsent(route, k -> lineIndex.size());
+                    List<Object> row = new ArrayList<>(5);
+                    row.add(vehicle);
+                    row.add(round(rs.getDouble("latitude"), 6));
+                    row.add(round(rs.getDouble("longitude"), 6));
+                    row.add(nullableInt(rs, "delay_seconds"));
+                    row.add(line);
+                    frames.computeIfAbsent(instant(rs, "bucket"), k -> new ArrayList<>()).add(row);
+                },
+                args.toArray());
+
+        return new PositionHistoryDto.Replay(from, to, step.toSeconds(), lineFilter,
+                List.copyOf(vehicleIndex.keySet()), List.copyOf(lineIndex.keySet()),
+                frames.entrySet().stream().map(e -> new PositionHistoryDto.Frame(e.getKey(), e.getValue())).toList());
+    }
+
+    private static double round(double value, int decimals) {
+        double f = Math.pow(10, decimals);
+        return Math.round(value * f) / f;
     }
 
     /** Lines recorded in the window, in natural line order (2, 10, 100, N1). */

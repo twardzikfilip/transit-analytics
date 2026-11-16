@@ -106,13 +106,69 @@ class PositionHistoryIntegrationTest {
                 .hasSize(7);
     }
 
+    @Test
+    void leavesOutVehiclesOfOtherOperators() {
+        long city = vehicle("IT-B1");
+        long regional = vehicle("IT-R1", "WSCHODEXPRESS");
+        long unknown = vehicle("IT-U1", null);
+        poll("10:00:00", position(city, "10:00:10", "IT-10", 60L), position(regional, "10:00:20", "IT-453", 3000L),
+                position(unknown, "10:00:30", "IT-X", 0L));
+
+        PositionHistoryDto.FleetSeries fleet = history.fleet(FROM, TO, null);
+        assertThat(fleet.summary().vehicles()).isEqualTo(1);
+        assertThat(fleet.points()).extracting(PositionHistoryDto.FleetPoint::vehicles).containsExactly(1.0);
+        assertThat(history.routes(FROM, TO)).extracting(PositionHistoryDto.RouteActivity::route).containsExactly("IT-10");
+        assertThat(history.delays(FROM, TO, null).stream().mapToLong(PositionHistoryDto.DelayBand::reports).sum())
+                .isEqualTo(1);
+        assertThat(history.samples(FROM, TO, null, null, 0, 10, null, false).getContent())
+                .extracting(PositionHistoryDto.Sample::vehicleNumber).containsExactly("IT-B1");
+        assertThat(history.fleet(FROM, TO, "IT-453").points()).as("a regional line, even when asked for").isEmpty();
+    }
+
+    @Test
+    void replaysPositionsAsFramesPerPollFilteredByLines() {
+        long a = vehicle("IT-P1");
+        long b = vehicle("IT-P2");
+        long regional = vehicle("IT-P3", "WSCHODEXPRESS");
+        poll("10:00:00", position(a, "10:00:10", "IT-10", 60L), position(b, "10:00:20", "IT-20", 700L),
+                position(regional, "10:00:30", "IT-453", 0L));
+        // Two reports of vehicle a in the same poll minute: the later one is used.
+        poll("10:01:00", position(a, "10:01:05", "IT-10", 90L), position(b, "10:01:10", "IT-20", null));
+        poll("10:01:30", position(a, "10:01:40", "IT-10", 120L));
+
+        PositionHistoryDto.Replay all = history.replay(FROM, TO, null);
+        assertThat(all.stepSeconds()).isEqualTo(60);
+        assertThat(all.vehicles()).containsExactly("IT-P1", "IT-P2");
+        assertThat(all.lines()).containsExactly("IT-10", "IT-20");
+        assertThat(all.frames()).extracting(PositionHistoryDto.Frame::time)
+                .containsExactly(Instant.parse("2099-01-01T10:00:00Z"), Instant.parse("2099-01-01T10:01:00Z"));
+        assertThat(all.frames().get(0).positions()).containsExactly(
+                List.of(0, 53.13, 23.16, 60, 0), List.of(1, 53.13, 23.16, 700, 1));
+        assertThat(all.frames().get(1).positions()).containsExactly(
+                List.of(0, 53.13, 23.16, 120, 0), java.util.Arrays.asList(1, 53.13, 23.16, null, 1));
+
+        PositionHistoryDto.Replay one = history.replay(FROM, TO, List.of("IT-20", " ", "IT-99"));
+        assertThat(one.routes()).containsExactly("IT-20", "IT-99");
+        assertThat(one.vehicles()).containsExactly("IT-P2");
+        assertThat(one.frames()).hasSize(2);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                () -> history.replay(FROM, FROM.plus(java.time.Duration.ofDays(8)), null))
+                .hasMessageContaining("at most 7 days");
+    }
+
     private void poll(String time, LivePositionDto... positions) {
         writer.write(List.of(positions), Instant.parse("2099-01-01T" + time + "Z"));
     }
 
     private long vehicle(String number) {
-        return jdbc.queryForObject("INSERT INTO vehicle (vehicle_number, type) VALUES (?, 'BUS') RETURNING id",
-                Long.class, number);
+        return vehicle(number, "BKM");
+    }
+
+    private long vehicle(String number, String agency) {
+        return jdbc.queryForObject(
+                "INSERT INTO vehicle (vehicle_number, type, agency) VALUES (?, 'BUS', ?) RETURNING id",
+                Long.class, number, agency);
     }
 
     private static LivePositionDto position(long vehicleId, String time, String route, Long delay) {

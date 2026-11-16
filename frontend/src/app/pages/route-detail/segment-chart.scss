@@ -1,0 +1,99 @@
+:host {
+  display: block;
+}
+
+.plot {
+  position: relative;
+}
+
+svg {
+  display: block;
+  max-width: 100%;
+  overflow: visible;
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+    border-radius: 4px;
+  }
+}
+
+.grid,
+.axis {
+  stroke: var(--border);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.axis-label {
+  fill: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.bar {
+  fill: var(--chart-line);
+  opacity: 0.55;
+
+  &.slow {
+    fill: var(--chart-series-2);
+    opacity: 1;
+  }
+
+  &.active {
+    opacity: 1;
+    stroke: var(--fg);
+    stroke-width: 1;
+  }
+}
+
+.rank {
+  fill: var(--fg);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.hit {
+  fill: transparent;
+  cursor: crosshair;
+}
+
+.tooltip {
+  position: absolute;
+  z-index: 2;
+  transform: translate(12px, -50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 12%);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  pointer-events: none;
+
+  &.left {
+    transform: translate(calc(-100% - 12px), -50%);
+  }
+
+  strong {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.slowest {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+  font-size: 0.85rem;
+
+  li::marker {
+    font-weight: 600;
+  }
+
+  strong {
+    margin-left: 0.35rem;
+    font-variant-numeric: tabular-nums;
+  }
+}

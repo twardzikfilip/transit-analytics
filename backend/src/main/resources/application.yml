@@ -1,3 +1,10 @@
+server:
+  # Gzip JSON responses (a day of position replay frames shrinks ~10x).
+  compression:
+    enabled: true
+    mime-types: application/json
+    min-response-size: 2KB
+
 spring:
   application:
     name: transit-analytics

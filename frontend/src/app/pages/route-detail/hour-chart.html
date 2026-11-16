@@ -1,0 +1,130 @@
+<ul class="legend" aria-hidden="true">
+  @if (band(); as b) {
+    <li><span class="swatch band" [style.background]="b.color"></span>{{ b.label }}</li>
+  }
+  @for (s of series(); track s.label) {
+    <li><span class="swatch line" [style.background]="s.color"></span>{{ s.label }}</li>
+  }
+  @for (r of refs(); track r.label) {
+    <li><span class="swatch ref"></span>{{ r.label }}</li>
+  }
+</ul>
+
+<div class="plot">
+  <svg
+    [attr.viewBox]="'0 0 ' + width() + ' ' + height"
+    [attr.width]="width()"
+    [attr.height]="height"
+    role="img"
+    [attr.aria-label]="summary()"
+    tabindex="0"
+    (keydown)="onKey($event)"
+    (blur)="hoverX.set(null)"
+  >
+    @for (t of yTicks(); track t) {
+      <line
+        class="grid"
+        [attr.x1]="margin.left"
+        [attr.x2]="plotRight()"
+        [attr.y1]="y(t)"
+        [attr.y2]="y(t)"
+      />
+      <text
+        class="axis-label"
+        [attr.x]="margin.left - 8"
+        [attr.y]="y(t)"
+        text-anchor="end"
+        dominant-baseline="middle"
+      >
+        {{ format()(t) }}
+      </text>
+    }
+    @for (t of xTicks(); track t.x) {
+      <text class="axis-label" [attr.x]="t.x" [attr.y]="plotBottom + 18" text-anchor="middle">
+        {{ t.text }}
+      </text>
+    }
+    <line
+      class="axis"
+      [attr.x1]="margin.left"
+      [attr.x2]="plotRight()"
+      [attr.y1]="y(0)"
+      [attr.y2]="y(0)"
+    />
+
+    @for (d of bandPaths(); track $index) {
+      <path class="band" [attr.d]="d" [style.fill]="band()!.color" />
+    }
+    @for (r of refs(); track r.label) {
+      <line
+        class="ref"
+        [attr.x1]="margin.left"
+        [attr.x2]="plotRight()"
+        [attr.y1]="y(r.value)"
+        [attr.y2]="y(r.value)"
+      />
+      <text
+        class="ref-label"
+        [attr.x]="plotRight() - 4"
+        [attr.y]="y(r.value) - 5"
+        text-anchor="end"
+      >
+        {{ r.label }} {{ format()(r.value) }}
+      </text>
+    }
+    @for (p of paths(); track $index) {
+      @for (a of p.areas; track $index) {
+        <path class="area" [attr.d]="a" [style.fill]="p.color" />
+      }
+      @for (l of p.lines; track $index) {
+        <path class="line" [attr.d]="l" [style.stroke]="p.color" />
+      }
+      @for (d of p.dots; track $index) {
+        <circle [attr.cx]="d.cx" [attr.cy]="d.cy" r="3" [style.fill]="p.color" />
+      }
+    }
+
+    @if (hovered(); as h) {
+      <line
+        class="crosshair"
+        [attr.x1]="h.x"
+        [attr.x2]="h.x"
+        [attr.y1]="margin.top"
+        [attr.y2]="plotBottom"
+      />
+      @for (m of h.markers; track $index) {
+        <circle class="marker" [attr.cx]="m.cx" [attr.cy]="m.cy" r="4" [style.fill]="m.color" />
+      }
+    }
+    <rect
+      class="hit"
+      [attr.x]="margin.left"
+      [attr.y]="margin.top"
+      [attr.width]="plotRight() - margin.left"
+      [attr.height]="plotBottom - margin.top"
+      (pointermove)="onPointerMove($event)"
+      (pointerleave)="hoverX.set(null)"
+    />
+  </svg>
+
+  @if (hovered(); as h) {
+    <div
+      class="tooltip"
+      [class.left]="h.left"
+      [style.left.px]="h.x"
+      [style.top.px]="h.y"
+      aria-hidden="true"
+    >
+      <span class="muted">{{ h.when }}</span>
+      @for (r of h.rows; track r.label) {
+        <span class="row">
+          <span class="swatch" [class.band]="r.band" [style.background]="r.color"></span>
+          {{ r.label }} <strong>{{ r.value }}</strong>
+        </span>
+      }
+    </div>
+  }
+  @if (!hasData() && !loading()) {
+    <p class="empty muted">{{ empty() }}</p>
+  }
+</div>

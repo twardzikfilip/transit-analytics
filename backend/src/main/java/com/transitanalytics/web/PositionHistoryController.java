@@ -46,6 +46,17 @@ public class PositionHistoryController {
         return history.delays(from, to, blankToNull(route));
     }
 
+    @Operation(summary = "Replay of vehicle positions",
+            description = "Animation frames for [from, to) (at most 7 days): per step the latest position of every "
+                    + "vehicle, as compact rows [vehicleIndex, latitude, longitude, delaySeconds, lineIndex]. The "
+                    + "step is 1 minute (one poll) for short windows and grows to keep at most 360 frames. Repeat "
+                    + "route for several lines; leave it out for all.")
+    @GetMapping("/replay")
+    public PositionHistoryDto.Replay replay(@RequestParam Instant from, @RequestParam Instant to,
+                                            @RequestParam(required = false) List<String> route) {
+        return history.replay(from, to, route);
+    }
+
     @Operation(summary = "Lines recorded in a time window", description = "For the line filter, in line order.")
     @GetMapping("/routes")
     public List<PositionHistoryDto.RouteActivity> routes(@RequestParam Instant from, @RequestParam Instant to) {
