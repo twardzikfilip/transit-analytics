@@ -84,16 +84,26 @@ in Grafana at http://localhost:3000: Tempo for traces, Prometheus for metrics, L
 
 | | Backend (`transit-backend`) | Frontend (`transit-frontend`) |
 |---|---|---|
-| Traces | every HTTP request, with JDBC query spans | page load, every fetch/XHR, route changes, uncaught errors (`ui.error`) |
+| Traces | every HTTP request, with JDBC query spans | page load, every fetch/XHR, route changes, login attempts (`auth.login`), uncaught errors (`ui.error`) |
 | Metrics | HTTP server, JVM, Hikari pool, `transit.auth.logins{outcome,role}` | Core Web Vitals `web_vitals.{lcp,inp,cls,fcp,ttfb}` by route |
 | Logs | exported over OTLP with `trace_id`; console lines show `[traceId-spanId]` | — |
 
+Telemetry is kept in the `lgtmdata` Docker volume, so it survives restarts and recreating the container. To clear
+only the telemetry, run `docker compose rm -sf otel-lgtm` and then `docker volume rm transit-analytics_lgtmdata`.
+Don't use `docker compose down -v`: it also deletes the Postgres volume.
+
 Dashboards in `grafana/dashboards/` are loaded into Grafana automatically, in the **Transit Analytics** folder.
-**Transit Backend** lists every backend request (time, method, endpoint, status, duration, who started it), and
-each row links to its trace. To add a dashboard, drop its JSON into that folder; Grafana picks it up within about 10 seconds.
+- **Transit Backend** lists every backend request (time, method, endpoint, status, duration, who started it).
+- **Transit Logins** counts successful and failed logins in the frontend and lists each attempt (time, user, role,
+  outcome).
+
+Each row links to its trace. To add a dashboard, drop its JSON into that folder; Grafana picks it up within about
+10 seconds.
 
 A browser API call and the backend request it triggers share one trace: the frontend sends a W3C `traceparent` header.
-No headers, tokens, request bodies or usernames are recorded.
+No headers, tokens, passwords or request bodies are recorded. The one exception for personal data: each `auth.login`
+span carries the username (`user.name`), so stored traces show who logged in and when. Usernames never appear in
+metric labels.
 
 Backend settings:
 
