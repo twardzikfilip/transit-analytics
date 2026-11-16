@@ -1,8 +1,10 @@
 package com.transitanalytics.zbiorkom;
 
+import com.transitanalytics.domain.RouteSubtype;
 import com.transitanalytics.dto.LivePositionDto;
 import com.transitanalytics.dto.VehicleDto;
 import com.transitanalytics.service.ExternalServiceException;
+import com.transitanalytics.service.LineSubtypes;
 import com.transitanalytics.service.VehicleService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,10 +44,12 @@ class ZbiorkomBialystokServiceTest {
         RestClient.Builder builder = RestClient.builder().baseUrl("https://zbiorkom.test/api");
         server = MockRestServiceServer.bindTo(builder).build();
         vehicleService = mock(VehicleService.class);
+        LineSubtypes subtypes = mock(LineSubtypes.class);
+        given(subtypes.of("18")).willReturn(RouteSubtype.URBAN);
         var properties = new ZbiorkomProperties("https://zbiorkom.test/api", Duration.ofSeconds(1),
                 Duration.ofSeconds(1), new ZbiorkomProperties.Bialystok(BBOX));
         service = new ZbiorkomBialystokService(new ZbiorkomClient(builder.build(), JsonMapper.builder().build()),
-                properties, vehicleService);
+                properties, vehicleService, subtypes);
     }
 
     @Test
@@ -64,6 +68,7 @@ class ZbiorkomBialystokServiceTest {
         assertThat(city.type()).isEqualTo("BUS");
         assertThat(city.model()).isEqualTo("Solaris Urbino 12 W33");
         assertThat(city.routeName()).isEqualTo("18");
+        assertThat(city.subtype()).isEqualTo(RouteSubtype.URBAN);
         assertThat(city.latitude()).isEqualTo(53.152219);
         assertThat(city.longitude()).isEqualTo(23.07823);
         assertThat(city.timestamp()).isEqualTo(Instant.ofEpochMilli(1794819764000L));

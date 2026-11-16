@@ -110,7 +110,11 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
 - `GET /api/zbiorkom/bialystok/positions` — live Białystok vehicle positions from [zbiorkom.live](https://zbiorkom.live),
   used by the live map. Fetched on every call and not stored. Vehicles seen for the first time are added to the
   vehicle table (number, type, agency, model). The agency `default` is stored as `BKM`, and GTFS type codes become names
-  (`3` → `BUS`). If zbiorkom.live fails or times out, the endpoint returns 502.
+  (`3` → `BUS`). Each position carries its line's `subtype` (the stored one, else from the name, for other operators'
+  lines). If zbiorkom.live fails or times out, the endpoint returns 502.
+- `GET /api/brigades/{brigade}/schedule` — a brigade's runs on the current service day (03:00–03:00 Warsaw time) from
+  the timetable: line, headsign, first and last stop, scheduled departure and arrival. Brigades are named as on the
+  live feed (`103-05`); the timetable's is the trip id's prefix. Used by the live map's popups.
 
 ### Timetable (GTFS) import
 
@@ -125,8 +129,8 @@ inserting the ~384k stop times.
 - Agencies, routes, stops and trips are updated in place by `gtfs_id`, so their database ids stay the same across
   imports (and links to them keep working). Stop times, calendar dates and shape points are replaced.
 - Each route has a `subtype`: `urban`, `suburban` (numbers from 100 up), `night_urban` (N1, N2, …) or `regional`
-  (set by hand). New routes get it from their name (`RouteSubtype.classify`, migration V10); an import keeps the
-  subtype of existing routes, so a manual change stays.
+  (400–499, or set by hand). New routes get it from their name (`RouteSubtype.classify`, migrations V10 and V12); an
+  import keeps the subtype of existing routes, so a manual change stays.
 - Rows that point at a route, trip or stop that isn't in the feed are skipped and counted in the response. Files the
   app doesn't load (e.g. `feed_info.txt`) are listed as ignored.
 - Code: `gtfs/GtfsImporter` (generic loader: files are streamed from the zip into temporary tables with PostgreSQL
@@ -144,9 +148,12 @@ archive (`backend/data/raw/zbiorkom-bialystok/YYYY/MM/DD/<UTC time>.json.gz`).
   and statistics functions (`timescaledb_toolkit`).
 - **Expected size for half a year at one poll per minute:** ~2 GB of gzipped archive (13 KiB per snapshot), ~6 GB in
   PostgreSQL uncompressed (measured ~230 bytes per row with indexes), ~0.7 GB once compressed (measured 8.6× on a real
-  week of data). A 2-minute interval halves that.
-- **Polling:** at most once a minute (`min-interval` guard). The feed itself refreshes ~99% of vehicles every minute.
-  A report seen twice (same vehicle and feed timestamp) is stored once.
+  week of data). Polling every 20 seconds (the default) is about three times that: most vehicles send a new report
+  every few seconds, so nearly every poll stores a new row per vehicle.
+- **Polling:** every 20 seconds (`cron`), never closer than 18 s (`min-interval` guard). A report seen twice (same
+  vehicle and feed timestamp) is stored once.
+- **Vehicles running** at a poll are the vehicles that reported in the minute up to it, so a vehicle that skips a poll
+  still counts, and the figure doesn't depend on the polling interval.
 - **Aggregates (refresh in the background, include the newest rows):**
   - `fleet_5min`: vehicles in service and mean delay per 5 minutes.
   - `route_delay_hourly`: per route and hour, `delay_stats` (mean/stddev via `average()`, `stddev()`) and
@@ -228,10 +235,13 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
 - Startup bundle: telemetry (the OpenTelemetry SDK) loads as its own chunk right after startup, and the NgRx
   devtools are only in development builds (`store-devtools.prod.ts` replaces them in production).
 - `pages` — login, home, vehicles (edit actions for ADMIN only), live map (Białystok, Leaflet/OSM; dispatches a
-  `livePositions` load every 5 s and draws markers from the store), settings (GTFS import for admins)
-- Position history: vehicles running and mean delay every minute (SVG line charts with a hover/keyboard tooltip and
-  a table view), running now / most at once / different vehicles seen, the delay distribution, and the raw reports, filtered by time range (1 h – 30 days or a custom from/to) and line, all kept in the URL.
-  Preset ranges refresh every minute. Store slice `positionHistory`, registered by its lazy route.
+  `livePositions` load every 5 s and draws markers from the store; filled by delay as on the Delays map, outlined by
+  kind of line: urban blue, suburban black, regional magenta; filters by operator and delay in the URL, with a reset;
+  the popup shows the brigade and its remaining runs today), settings (GTFS import for admins)
+- Position history: vehicles running and mean delay every 20 s (each poll) for windows up to an hour, else every
+  minute or coarser (SVG line charts with a hover/keyboard tooltip and
+  a table view), running now / most at once / different vehicles seen, the delay distribution, and the raw reports, filtered by time range (1 min – 30 days or a custom from/to) and line, all kept in the URL.
+  Preset ranges refresh with each poll (up to 1 h) or every minute. Store slice `positionHistory`, registered by its lazy route.
 - Delays: an animated replay of recorded positions on a map, each bus coloured by delay (green on time → yellow →
   orange → red at 10+ min). Filter by one, several or all lines and by time window (last 15 min / hour / 24 hours
   or custom). Play/pause, speed, loop and a timeline are at the top; the filters are kept in the URL.

@@ -1,5 +1,7 @@
 package com.transitanalytics.dto;
 
+import com.transitanalytics.domain.RouteSubtype;
+
 import java.time.Instant;
 import java.util.List;
 
@@ -9,6 +11,7 @@ import java.util.List;
  * @param vehicleId    id of the matching row in the vehicle table (null if it could not be registered yet)
  * @param delaySeconds delay against the timetable, negative when early
  * @param timestamp    when the feed recorded the position
+ * @param subtype      kind of line (urban, suburban, …); null when the vehicle reports no line
  */
 public record LivePositionDto(
         Long vehicleId,
@@ -25,7 +28,8 @@ public record LivePositionDto(
         Double bearing,
         Long delaySeconds,
         Instant timestamp,
-        List<UpcomingStop> upcomingStops) {
+        List<UpcomingStop> upcomingStops,
+        RouteSubtype subtype) {
 
     public record UpcomingStop(Integer sequence, String name, Instant scheduledArrival, Instant scheduledDeparture) {
     }

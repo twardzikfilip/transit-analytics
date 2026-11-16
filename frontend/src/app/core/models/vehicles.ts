@@ -1,4 +1,5 @@
 /** Vehicles and their live positions. */
+import { RouteSubtype } from './timetable';
 
 export interface Vehicle {
   id: number;
@@ -28,6 +29,27 @@ export interface LivePosition {
   delaySeconds: number | null;
   timestamp: string | null;
   upcomingStops: UpcomingStop[];
+  /** Kind of line; null when the vehicle reports no line. */
+  subtype: RouteSubtype | null;
+}
+
+/** A brigade's (vehicle duty's) runs on the current service day, from the timetable. */
+export interface BrigadeSchedule {
+  brigade: string;
+  /** yyyy-MM-dd; runs after midnight belong to the day before. */
+  serviceDay: string;
+  /** In departure order; empty when the brigade is not in today's timetable. */
+  runs: ScheduledRun[];
+}
+
+export interface ScheduledRun {
+  line: string;
+  headsign: string | null;
+  from: string;
+  to: string;
+  /** ISO instants. */
+  departure: string;
+  arrival: string;
 }
 
 export interface UpcomingStop {

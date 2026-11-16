@@ -14,8 +14,10 @@ class PositionHistoryServiceTest {
     private static final Instant T = Instant.parse("2026-11-16T00:00:00Z");
 
     @Test
-    void picksOneMinuteUpToADayAndCoarserStepsBeyond() {
-        assertThat(PositionHistoryService.stepFor(T, T.plus(Duration.ofHours(1)))).isEqualTo(Duration.ofMinutes(1));
+    void picksEachPollUpToAnHourOneMinuteUpToADayAndCoarserStepsBeyond() {
+        assertThat(PositionHistoryService.stepFor(T, T.plus(Duration.ofMinutes(1)))).isEqualTo(Duration.ofSeconds(20));
+        assertThat(PositionHistoryService.stepFor(T, T.plus(Duration.ofHours(1)))).isEqualTo(Duration.ofSeconds(20));
+        assertThat(PositionHistoryService.stepFor(T, T.plus(Duration.ofHours(3)))).isEqualTo(Duration.ofMinutes(1));
         assertThat(PositionHistoryService.stepFor(T, T.plus(Duration.ofHours(24)))).isEqualTo(Duration.ofMinutes(1));
         assertThat(PositionHistoryService.stepFor(T, T.plus(Duration.ofDays(7)))).isEqualTo(Duration.ofMinutes(10));
         assertThat(PositionHistoryService.stepFor(T, T.plus(Duration.ofDays(31)))).isEqualTo(Duration.ofMinutes(30));

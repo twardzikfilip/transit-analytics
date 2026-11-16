@@ -156,7 +156,7 @@ class SecurityWebTest {
     void guestCanReadLivePositions() throws Exception {
         given(zbiorkomBialystokService.positions()).willReturn(List.of(new LivePositionDto(7L, "230", "BUS", "BKM",
                 "Solaris Urbino 12 W33", "18", "#006963", "018-02", "Warzywna", 53.15, 23.08, 152.0, 0L,
-                Instant.parse("2026-11-16T09:00:00Z"), List.of())));
+                Instant.parse("2026-11-16T09:00:00Z"), List.of(), null)));
 
         mvc.perform(get("/api/zbiorkom/bialystok/positions").header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isOk())

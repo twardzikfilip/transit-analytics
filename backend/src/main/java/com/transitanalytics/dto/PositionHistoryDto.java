@@ -22,8 +22,9 @@ public final class PositionHistoryDto {
     }
 
     /**
-     * @param vehicles         vehicles running: the average number of vehicles per poll in the bucket
-     * @param peakVehicles     the most vehicles in one poll in the bucket
+     * @param vehicles         vehicles running, averaged over the polls in the bucket; a vehicle is running at a poll
+     *                         when it reported in the minute up to it
+     * @param peakVehicles     the most vehicles running at one poll in the bucket
      * @param samples          position reports in the bucket
      * @param meanDelaySeconds mean delay of all reports in the bucket (null when none had a delay)
      */
@@ -35,8 +36,8 @@ public final class PositionHistoryDto {
      *
      * @param vehicles       different vehicles seen at any time in the window. Larger than the number running at
      *                       once: vehicles go off duty and others start during the window.
-     * @param peakVehicles   the most vehicles running at once (in one poll)
-     * @param latestVehicles vehicles in the latest poll of the window
+     * @param peakVehicles   the most vehicles running at once (at one poll)
+     * @param latestVehicles vehicles running at the latest poll of the window
      */
     public record Summary(long samples, long vehicles, long peakVehicles, long latestVehicles, Instant latestPoll,
                           Double meanDelaySeconds, Instant first, Instant last) {

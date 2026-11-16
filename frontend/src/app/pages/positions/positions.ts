@@ -14,7 +14,7 @@ import { positionHistoryFeature } from '../../store/position-history/position-hi
 import { formatDelay, toLocalInput } from '../../shared/format/time';
 import { bandRows, formatShare, isOutlier, windowLabel } from './delay-bands';
 import { ReportSortKey, formatReportSort, nextReportSort, parseReportSort } from './report-sort';
-import { PRESETS, resolveWindow } from './time-window';
+import { POLL_MS, PRESETS, refreshMs, resolveWindow } from './time-window';
 
 /**
  * Recorded vehicle positions over time for a window and line: vehicles running and mean delay (per poll, i.e. per
@@ -96,23 +96,26 @@ export class Positions {
   protected readonly formatDelay = formatDelay;
   protected readonly formatShare = formatShare;
 
-  /** "every minute (each poll)" or "per 10 min" for longer windows. */
+  /** "every 20 s (each poll)", "every minute", or "per 10 min" for longer windows. */
   protected readonly stepLabel = computed(() => {
     const seconds = this.series()?.stepSeconds ?? 60;
-    if (seconds === 60) return 'every minute (each poll)';
+    if (seconds < 60) return `every ${seconds} s (each poll)`;
+    if (seconds === 60) return 'every minute';
     if (seconds % 86_400 === 0) return `per ${seconds / 86_400} day`;
     if (seconds % 3_600 === 0) return `per ${seconds / 3_600} h`;
     return `per ${seconds / 60} min`;
   });
 
   constructor() {
-    // Load whenever the URL changes, and every minute for preset windows (they end "now").
+    // Load whenever the URL changes, and as preset windows move (they end "now"): each poll for windows of up to an
+    // hour, else each minute.
     const route = inject(ActivatedRoute);
-    combineLatest([route.queryParamMap, timer(60_000, 60_000).pipe(startWith(-1))])
+    combineLatest([route.queryParamMap, timer(POLL_MS, POLL_MS).pipe(startWith(-1))])
       .pipe(takeUntilDestroyed())
       .subscribe(([params, tick]) => {
         const w = this.resolve(new Date(), params);
         if (tick >= 0 && !w.preset) return; // custom windows don't move
+        if (tick >= 0 && (tick + 1) % (refreshMs(w) / POLL_MS) !== 0) return;
         const query: HistoryQuery = {
           from: w.from.toISOString(),
           to: w.to.toISOString(),

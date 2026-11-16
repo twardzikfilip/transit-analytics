@@ -1,6 +1,13 @@
 import { Component, computed, input, signal } from '@angular/core';
 import { hostWidth } from '../host-width';
-import { ChartPoint, nearestIndex, niceTicks, segments, timeTicks } from './chart-geometry';
+import {
+  ChartPoint,
+  nearestIndex,
+  niceTicks,
+  segments,
+  timeTicks,
+  MIN_GAP_MS,
+} from './chart-geometry';
 
 const HEIGHT = 260;
 const DEFAULT_FORMAT = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
@@ -41,7 +48,6 @@ export class TimeSeriesChart {
   protected readonly margin = MARGIN;
   protected readonly hover = signal<number | null>(null);
 
-
   protected readonly plotRight = computed(() => this.width() - MARGIN.right);
   protected readonly plotBottom = HEIGHT - MARGIN.bottom;
 
@@ -65,7 +71,11 @@ export class TimeSeriesChart {
   }
 
   protected readonly xTicks = computed(() => {
-    const { ticks, interval } = timeTicks(this.from(), this.to(), Math.max(2, Math.floor(this.width() / 90)));
+    const { ticks, interval } = timeTicks(
+      this.from(),
+      this.to(),
+      Math.max(2, Math.floor(this.width() / 90)),
+    );
     const sameDay = new Date(this.from()).toDateString() === new Date(this.to() - 1).toDateString();
     const timeFmt = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
     const dayFmt = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
@@ -73,16 +83,19 @@ export class TimeSeriesChart {
       const d = new Date(t);
       const midnight = d.getHours() === 0 && d.getMinutes() === 0;
       // Days for long ranges; times otherwise, with the date at midnight when the range spans days.
-      const text = interval >= 86_400_000 || (!sameDay && midnight) ? dayFmt.format(d) : timeFmt.format(d);
+      const text =
+        interval >= 86_400_000 || (!sameDay && midnight) ? dayFmt.format(d) : timeFmt.format(d);
       return { x: this.x(t), text };
     });
   });
 
   /** Line paths per gap-free run; a run of one point is drawn as a dot so it isn't lost. */
   protected readonly runs = computed(() =>
-    segments(this.points(), this.stepMs()).map((run) => {
+    segments(this.points(), this.stepMs(), MIN_GAP_MS).map((run) => {
       const coords = run.map((p) => [this.x(p.time), this.y(p.value)] as const);
-      const line = coords.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join('');
+      const line = coords
+        .map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`)
+        .join('');
       const base = this.zeroY().toFixed(1);
       const area =
         coords.length > 1
@@ -96,7 +109,13 @@ export class TimeSeriesChart {
     const i = this.hover();
     const p = i === null ? undefined : this.points()[i];
     if (!p) return null;
-    const timeFmt = new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    const timeFmt = new Intl.DateTimeFormat(undefined, {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
     const endFmt = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
     const x = this.x(p.time);
     return {
@@ -119,10 +138,13 @@ export class TimeSeriesChart {
   });
 
   protected onPointerMove(event: PointerEvent): void {
-    const svg = (event.currentTarget as SVGElement).ownerSVGElement ?? (event.currentTarget as SVGSVGElement);
+    const svg =
+      (event.currentTarget as SVGElement).ownerSVGElement ?? (event.currentTarget as SVGSVGElement);
     const rect = svg.getBoundingClientRect();
     const px = ((event.clientX - rect.left) / rect.width) * this.width();
-    const time = this.from() + ((px - MARGIN.left) / (this.plotRight() - MARGIN.left)) * (this.to() - this.from());
+    const time =
+      this.from() +
+      ((px - MARGIN.left) / (this.plotRight() - MARGIN.left)) * (this.to() - this.from());
     const i = nearestIndex(this.points(), time);
     this.hover.set(i >= 0 ? i : null);
   }
@@ -132,11 +154,15 @@ export class TimeSeriesChart {
     if (!n) return;
     const current = this.hover() ?? (event.key === 'ArrowLeft' || event.key === 'End' ? n : -1);
     const next =
-      event.key === 'ArrowRight' ? Math.min(n - 1, current + 1)
-      : event.key === 'ArrowLeft' ? Math.max(0, current - 1)
-      : event.key === 'Home' ? 0
-      : event.key === 'End' ? n - 1
-      : null;
+      event.key === 'ArrowRight'
+        ? Math.min(n - 1, current + 1)
+        : event.key === 'ArrowLeft'
+          ? Math.max(0, current - 1)
+          : event.key === 'Home'
+            ? 0
+            : event.key === 'End'
+              ? n - 1
+              : null;
     if (event.key === 'Escape') this.hover.set(null);
     if (next !== null) {
       event.preventDefault();

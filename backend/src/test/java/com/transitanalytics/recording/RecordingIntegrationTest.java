@@ -127,7 +127,7 @@ class RecordingIntegrationTest {
 
     private static LivePositionDto position(Long vehicleId, Instant at, Long delay, String route) {
         return new LivePositionDto(vehicleId, "IT-W1", "BUS", "BKM", null, route, null, "IT-01", "Test", 53.13, 23.16,
-                90.0, delay, at, List.of(new LivePositionDto.UpcomingStop(3, "Next stop", at, at)));
+                90.0, delay, at, List.of(new LivePositionDto.UpcomingStop(3, "Next stop", at, at)), null);
     }
 
     /** One zbiorkom response with a single vehicle. */

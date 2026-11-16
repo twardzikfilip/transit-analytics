@@ -16,3 +16,15 @@ export function delayedOver(positions: LivePosition[], minMinutes: number | null
   const threshold = minMinutes * 60;
   return positions.filter((p) => p.delaySeconds !== null && p.delaySeconds > threshold);
 }
+
+/** Vehicles of one operator; '' = all. */
+export function ofAgency(positions: LivePosition[], agency: string): LivePosition[] {
+  return agency ? positions.filter((p) => p.agency === agency) : positions;
+}
+
+/** Operators of the vehicles, sorted, plus `selected` (when set) so a chosen operator stays in the list. */
+export function agencies(positions: LivePosition[], selected = ''): string[] {
+  const names = new Set(positions.map((p) => p.agency).filter((a): a is string => !!a));
+  if (selected) names.add(selected);
+  return [...names].sort((a, b) => a.localeCompare(b));
+}
