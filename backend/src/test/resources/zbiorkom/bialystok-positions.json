@@ -1,0 +1,85 @@
+{
+  "positions": [
+    {
+      "vehicle": {
+        "id": "230",
+        "type": "3",
+        "agency": "default",
+        "model": "Solaris Urbino 12 W33"
+      },
+      "routeName": "18",
+      "routeColor": "#006963",
+      "brigade": "018-02",
+      "location": [
+        23.07823,
+        53.152219
+      ],
+      "timestamp": 1794819764000,
+      "bearing": 152,
+      "delay": 0,
+      "headsign": "Warzywna",
+      "upcomingStops": [
+        {
+          "sequence": 0,
+          "name": "N. Sił Zbrojnych/Ogródki Działkowe",
+          "scheduledArrival": 1794819900000,
+          "scheduledDeparture": 1794819900000
+        },
+        {
+          "sequence": 1,
+          "name": "KEN/N. Sił Zbrojnych",
+          "scheduledArrival": 1794820020000,
+          "scheduledDeparture": 1794820020000
+        },
+        {
+          "sequence": 2,
+          "name": "Pileckiego/Pietkiewicza",
+          "scheduledArrival": 1794820080000,
+          "scheduledDeparture": 1794820080000
+        }
+      ],
+      "url": "https://v6-api.zbiorkom-v5.pages.dev/bialystok/vehicle/3%3A230",
+      "extraField": "ignored"
+    },
+    {
+      "vehicle": {
+        "id": "1051",
+        "type": "3",
+        "agency": "WSCHODEXPRESS",
+        "model": "Solaris Urbino 8,9 LE"
+      },
+      "routeName": "453",
+      "routeColor": "#00619c",
+      "brigade": "1",
+      "location": [
+        23.142018,
+        53.01891
+      ],
+      "timestamp": 1794819770000,
+      "bearing": 221,
+      "delay": 104000,
+      "headsign": "Juchnowiec Kościelny przez Klewinowo",
+      "upcomingStops": [
+        {
+          "sequence": 0,
+          "name": "Juchnowiec Kościelny",
+          "scheduledArrival": 1794820260000,
+          "scheduledDeparture": 1794820260000
+        },
+        {
+          "sequence": 1,
+          "name": "Juchnowiec/PKS",
+          "scheduledArrival": 1794820320000,
+          "scheduledDeparture": 1794820320000
+        },
+        {
+          "sequence": 2,
+          "name": "Wólka",
+          "scheduledArrival": 1794820440000,
+          "scheduledDeparture": 1794820440000
+        }
+      ],
+      "url": "https://v6-api.zbiorkom-v5.pages.dev/bialystok/vehicle/3%3AWSCHODEXPRESS_1051"
+    }
+  ]
+}

@@ -18,10 +18,12 @@
         <option>TRAM</option>
         <option>METRO</option>
         <option>TRAIN</option>
+        <option>TROLLEYBUS</option>
       </select>
     </label>
+    <label>Agency <input formControlName="agency" /></label>
+    <label>Model <input formControlName="model" /></label>
     <label>Capacity <input formControlName="capacity" type="number" min="0" /></label>
-    <label class="checkbox"><input formControlName="active" type="checkbox" /> Active</label>
     <div class="actions">
       <button type="submit" class="primary">Save</button>
       <button type="button" (click)="cancel()">Cancel</button>
@@ -29,24 +31,53 @@
   </form>
 }
 
+<div class="filters">
+  <label>
+    Agency
+    <select [value]="agencyFilter()" (change)="agencyFilter.set($any($event.target).value)">
+      <option value="">All agencies</option>
+      @for (agency of agencies(); track agency) {
+        <option [value]="agency">{{ agency }}</option>
+      }
+    </select>
+  </label>
+  <label>
+    Model
+    <select [value]="makeFilter()" (change)="makeFilter.set($any($event.target).value)">
+      <option value="">All models</option>
+      @for (make of makes(); track make) {
+        <option [value]="make">{{ make }}</option>
+      }
+    </select>
+  </label>
+  @if (filtering()) {
+    <button type="button" (click)="clearFilters()">Clear filters</button>
+  }
+  <span class="muted count">{{ filtered().length }} of {{ vehicles().length }} vehicles</span>
+</div>
+
 <div class="card table-wrap">
   <table>
     <thead>
       <tr>
+        <th class="index">#</th>
         <th>Number</th>
         <th>Type</th>
+        <th>Agency</th>
+        <th>Model</th>
         <th>Capacity</th>
-        <th>Status</th>
         <th *appHasRole="'ADMIN'"></th>
       </tr>
     </thead>
     <tbody>
-      @for (vehicle of vehicles(); track vehicle.id) {
+      @for (vehicle of filtered(); track vehicle.id; let i = $index) {
         <tr>
+          <td class="index muted">{{ i + 1 }}</td>
           <td>{{ vehicle.vehicleNumber }}</td>
           <td>{{ vehicle.type }}</td>
+          <td>{{ vehicle.agency ?? '—' }}</td>
+          <td>{{ vehicle.model ?? '—' }}</td>
           <td>{{ vehicle.capacity ?? '—' }}</td>
-          <td>{{ vehicle.active ? 'Active' : 'Inactive' }}</td>
           <td *appHasRole="'ADMIN'" class="row-actions">
             <button type="button" (click)="startEdit(vehicle)">Edit</button>
             <button type="button" class="danger" (click)="remove(vehicle)">Delete</button>
@@ -54,7 +85,9 @@
         </tr>
       } @empty {
         <tr>
-          <td colspan="5" class="muted">{{ loading() ? 'Loading…' : 'No vehicles yet.' }}</td>
+          <td colspan="7" class="muted">
+            {{ loading() ? 'Loading…' : filtering() ? 'No vehicles match the filters.' : 'No vehicles yet.' }}
+          </td>
         </tr>
       }
     </tbody>

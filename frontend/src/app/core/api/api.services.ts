@@ -1,6 +1,7 @@
-import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { Route, Stop, Trip, User, UserPayload, UserRole, Vehicle, VehiclePosition } from '../models/models';
+import { LivePosition, Route, Stop, Trip, User, UserPayload, UserRole, Vehicle, VehiclePosition } from '../models/models';
 import { CrudApiService } from './crud-api.service';
 
 @Injectable({ providedIn: 'root' })
@@ -54,5 +55,15 @@ export class UserApi extends CrudApiService<User, UserPayload> {
 export class UserRoleApi extends CrudApiService<UserRole> {
   constructor() {
     super('/api/roles');
+  }
+}
+
+/** Live data from zbiorkom.live, passed through by the backend. */
+@Injectable({ providedIn: 'root' })
+export class ZbiorkomApi {
+  private readonly http = inject(HttpClient);
+
+  bialystokPositions(): Observable<LivePosition[]> {
+    return this.http.get<LivePosition[]>('/api/zbiorkom/bialystok/positions');
   }
 }

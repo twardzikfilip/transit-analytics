@@ -18,8 +18,11 @@ public class Vehicle {
 
     private Integer capacity;
 
-    @Column(nullable = false)
-    private boolean active = true;
+    @Column(length = 64)
+    private String agency;
+
+    @Column(length = 128)
+    private String model;
 
     public Long getId() {
         return id;
@@ -53,11 +56,19 @@ public class Vehicle {
         this.capacity = capacity;
     }
 
-    public boolean isActive() {
-        return active;
+    public String getAgency() {
+        return agency;
     }
 
-    public void setActive(boolean active) {
-        this.active = active;
+    public void setAgency(String agency) {
+        this.agency = agency;
+    }
+
+    public String getModel() {
+        return model;
+    }
+
+    public void setModel(String model) {
+        this.model = model;
     }
 }

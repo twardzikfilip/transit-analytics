@@ -10,6 +10,8 @@ import { provideRouteTracing } from './core/telemetry/route-tracing';
 import { TelemetryErrorHandler } from './core/telemetry/telemetry-error-handler';
 import * as authEffects from './store/auth/auth.effects';
 import { authFeature } from './store/auth/auth.reducer';
+import * as livePositionsEffects from './store/live-positions/live-positions.effects';
+import { livePositionsFeature } from './store/live-positions/live-positions.reducer';
 import * as vehiclesEffects from './store/vehicles/vehicles.effects';
 import { vehiclesFeature } from './store/vehicles/vehicles.reducer';
 
@@ -23,7 +25,8 @@ export const appConfig: ApplicationConfig = {
     provideStore(),
     provideState(authFeature),
     provideState(vehiclesFeature),
-    provideEffects(authEffects, vehiclesEffects),
+    provideState(livePositionsFeature),
+    provideEffects(authEffects, vehiclesEffects, livePositionsEffects),
     provideStoreDevtools({ maxAge: 25, logOnly: !isDevMode() }),
   ],
 };
