@@ -17,6 +17,7 @@ import {
 } from '@opentelemetry/sdk-trace';
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 import { Metric, onCLS, onFCP, onINP, onLCP, onTTFB } from 'web-vitals';
+import { routeOf } from './route-of';
 import { TRACER_NAME, telemetryConfig as config } from './telemetry.config';
 
 /**
@@ -107,11 +108,6 @@ function recordWebVitals(): void {
   onCLS(report);
   onFCP(report);
   onTTFB(report);
-}
-
-/** Collapses numeric/uuid path segments so routes stay low-cardinality (e.g. /vehicles/:id). */
-export function routeOf(path: string): string {
-  return path.replace(/\/(\d+|[0-9a-f-]{36})(?=\/|$)/gi, '/:id') || '/';
 }
 
 function escapeRegExp(value: string): string {

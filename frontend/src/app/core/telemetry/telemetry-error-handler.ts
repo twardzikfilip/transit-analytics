@@ -1,7 +1,7 @@
 import { ErrorHandler, Injectable } from '@angular/core';
 import { SpanStatusCode, trace } from '@opentelemetry/api';
 import { TRACER_NAME } from './telemetry.config';
-import { routeOf } from './telemetry';
+import { routeOf } from './route-of';
 
 /** Reports uncaught errors as `ui.error` spans, then logs them to the console as Angular normally does. */
 @Injectable()

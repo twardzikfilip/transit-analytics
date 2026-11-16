@@ -1,4 +1,4 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import {
   Component,
   DestroyRef,
@@ -36,7 +36,6 @@ import { createBaseMap } from '../../shared/map/base-map';
 @Component({
   selector: 'app-route-detail',
   imports: [
-    DatePipe,
     DecimalPipe,
     VariantTiles,
     DepotRuns,

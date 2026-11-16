@@ -216,8 +216,12 @@ INTEGRATION_TESTS=true ./gradlew test           # also boots the full context ag
 - `layout/shell` — sidebar (Home, Vehicles, Live map) + top-right hamburger menu (Settings, Logout)
 - `store` — NgRx slices with functional effects: `auth`, `vehicles`, `livePositions`, `routes` (all routes), and
   `stops`, `trips`, `stopTimes`, which hold one server-side page each (shared helpers in `store/paged.ts`);
-  `gtfsImport` tracks the import. The timetable slices and `gtfsImport` are registered by their lazy-loaded routes
-  (`pages/timetable.routes.ts`, `pages/settings/settings.routes.ts`).
+  `gtfsImport` tracks the import. Only `auth` is registered at startup; every other slice is registered by its
+  page's lazy-loaded route (`*.routes.ts`), so it loads with the page.
+- `shared` — pieces several pages use: the time-series and hour-of-day charts, `createBaseMap` (Leaflet + OSM),
+  `hostWidth` (chart width), time and delay formatting, and the colour palette (`cssColor` reads theme tokens).
+- Startup bundle: telemetry (the OpenTelemetry SDK) loads as its own chunk right after startup, and the NgRx
+  devtools are only in development builds (`store-devtools.prod.ts` replaces them in production).
 - `pages` — login, home, vehicles (edit actions for ADMIN only), live map (Białystok, Leaflet/OSM; dispatches a
   `livePositions` load every 5 s and draws markers from the store), settings (GTFS import for admins)
 - Position history: vehicles running and mean delay every minute (SVG line charts with a hover/keyboard tooltip and
