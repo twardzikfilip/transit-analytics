@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { routeColor, routeTypeLabel } from '../../core/gtfs';
+import { subtypeLabel } from '../route-detail/format';
 import { RoutesActions } from '../../store/routes/routes.actions';
 import { routesFeature } from '../../store/routes/routes.reducer';
 
@@ -21,11 +22,14 @@ export class Routes {
   protected readonly filtered = computed(() => {
     const q = this.search().trim().toLowerCase();
     return q
-      ? this.routes().filter((r) => [r.name, r.longName, r.description].some((v) => v?.toLowerCase().includes(q)))
+      ? this.routes().filter((r) =>
+          [r.name, r.longName, r.description].some((v) => v?.toLowerCase().includes(q)),
+        )
       : this.routes();
   });
 
   protected readonly routeTypeLabel = routeTypeLabel;
+  protected readonly subtypeLabel = subtypeLabel;
   protected readonly routeColor = routeColor;
 
   constructor() {

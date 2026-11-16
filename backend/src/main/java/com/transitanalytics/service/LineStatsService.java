@@ -76,19 +76,12 @@ public class LineStatsService {
 
     @Transactional(readOnly = true)
     public LineStatsDto.Report weekdayReport() {
-        // The weekday service that runs on the most upcoming weekdays (else on the most weekdays overall).
-        List<String> services = jdbc.queryForList("""
-                SELECT service_id FROM calendar_date
-                WHERE exception_type = 1 AND extract(isodow FROM date) <= 5
-                GROUP BY service_id
-                ORDER BY count(*) FILTER (WHERE date >= current_date) DESC, count(*) DESC, service_id
-                LIMIT 1""", String.class);
-        if (services.isEmpty()) {
+        String service = weekdayService();
+        if (service == null) {
             // No timetable imported yet.
             return new LineStatsDto.Report(null, 0, null, null, PEAK.stream().map(Window::toDto).toList(),
                     OFF_PEAK.toDto(), List.of());
         }
-        String service = services.get(0);
         var days = jdbc.queryForMap("""
                 SELECT count(*) AS days, min(date) AS first, max(date) AS last FROM calendar_date
                 WHERE service_id = ? AND exception_type = 1 AND extract(isodow FROM date) <= 5""", service);
@@ -151,6 +144,20 @@ public class LineStatsService {
         return new LineStatsDto.Report(service, ((Number) days.get("days")).intValue(),
                 toLocalDate(days.get("first")), toLocalDate(days.get("last")),
                 PEAK.stream().map(Window::toDto).toList(), OFF_PEAK.toDto(), lines);
+    }
+
+    /**
+     * The regular weekday timetable: the service that runs on the most upcoming weekdays (else on the most weekdays
+     * overall). Null when no timetable is imported.
+     */
+    String weekdayService() {
+        List<String> services = jdbc.queryForList("""
+                SELECT service_id FROM calendar_date
+                WHERE exception_type = 1 AND extract(isodow FROM date) <= 5
+                GROUP BY service_id
+                ORDER BY count(*) FILTER (WHERE date >= current_date) DESC, count(*) DESC, service_id
+                LIMIT 1""", String.class);
+        return services.isEmpty() ? null : services.get(0);
     }
 
     static LineStatsDto.Line lineStats(Route route, long routeId, List<TripTimes> trips) {
@@ -256,7 +263,8 @@ public class LineStatsService {
         return duties.size();
     }
 
-    private static String mostFrequent(List<String> values) {
+    /** The most common value; ties go to the smallest one, nulls last. */
+    static String mostFrequent(List<String> values) {
         Map<String, Long> counts = new HashMap<>();
         values.forEach(v -> counts.merge(v, 1L, Long::sum));
         return counts.entrySet().stream()
@@ -265,7 +273,7 @@ public class LineStatsService {
                 .map(Map.Entry::getKey).orElse(null);
     }
 
-    private static double round(double value, int decimals) {
+    static double round(double value, int decimals) {
         double f = Math.pow(10, decimals);
         return Math.round(value * f) / f;
     }

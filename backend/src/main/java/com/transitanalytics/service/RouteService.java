@@ -1,6 +1,7 @@
 package com.transitanalytics.service;
 
 import com.transitanalytics.domain.Route;
+import com.transitanalytics.domain.RouteSubtype;
 import com.transitanalytics.dto.RouteDto;
 import com.transitanalytics.repository.AgencyRepository;
 import com.transitanalytics.repository.RouteRepository;
@@ -19,7 +20,8 @@ public class RouteService extends CrudService<Route, RouteDto.Request, RouteDto.
 
     @Override
     protected Specification<Route> toSpecification(RouteDto.Filter f) {
-        return Specs.all(Specs.contains(f.q(), "shortName", "longName"), Specs.equal("routeType", f.routeType()));
+        return Specs.all(Specs.contains(f.q(), "shortName", "longName"), Specs.equal("routeType", f.routeType()),
+                Specs.equal("subtype", f.subtype()));
     }
 
     @Override
@@ -39,6 +41,7 @@ public class RouteService extends CrudService<Route, RouteDto.Request, RouteDto.
         e.setColor(r.color());
         e.setTextColor(r.textColor());
         e.setSortOrder(r.sortOrder());
+        e.setSubtype(r.subtype() != null ? r.subtype() : RouteSubtype.classify(e.displayName()));
     }
 
     @Override
@@ -46,6 +49,7 @@ public class RouteService extends CrudService<Route, RouteDto.Request, RouteDto.
         var agency = e.getAgency();
         return new RouteDto.Response(e.getId(), e.getGtfsId(), agency != null ? agency.getId() : null,
                 agency != null ? agency.getName() : null, e.displayName(), e.getShortName(), e.getLongName(),
-                e.getDescription(), e.getRouteType(), e.getUrl(), e.getColor(), e.getTextColor(), e.getSortOrder());
+                e.getDescription(), e.getRouteType(), e.getUrl(), e.getColor(), e.getTextColor(), e.getSortOrder(),
+                e.getSubtype());
     }
 }

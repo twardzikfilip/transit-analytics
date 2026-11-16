@@ -6,7 +6,12 @@
 <div class="list-filters">
   <label>
     Search
-    <input type="search" placeholder="Line or name" [value]="search()" (input)="search.set($any($event.target).value)" />
+    <input
+      type="search"
+      placeholder="Line or name"
+      [value]="search()"
+      (input)="search.set($any($event.target).value)"
+    />
   </label>
 </div>
 
@@ -22,6 +27,7 @@
         <th>Line</th>
         <th>Name</th>
         <th>Type</th>
+        <th>Subtype</th>
         <th>Agency</th>
         <th></th>
       </tr>
@@ -40,8 +46,10 @@
           </td>
           <td>{{ route.longName && route.longName !== route.name ? route.longName : '—' }}</td>
           <td>{{ routeTypeLabel(route.routeType) }}</td>
+          <td>{{ subtypeLabel(route.subtype) }}</td>
           <td>{{ route.agencyName ?? '—' }}</td>
           <td class="num">
+            <a [routerLink]="['/route-detail']" [queryParams]="{ line: route.gtfsId }">Details</a> ·
             <a [routerLink]="['/trips']" [queryParams]="{ routeId: route.id }">Trips</a>
             @if (route.url) {
               · <a [href]="route.url" target="_blank" rel="noopener">Timetable ↗</a>
@@ -50,8 +58,14 @@
         </tr>
       } @empty {
         <tr>
-          <td colspan="6" class="muted">
-            {{ loading() ? 'Loading…' : search() ? 'No routes match.' : 'No routes yet. Import a timetable in Settings.' }}
+          <td colspan="7" class="muted">
+            {{
+              loading()
+                ? 'Loading…'
+                : search()
+                  ? 'No routes match.'
+                  : 'No routes yet. Import a timetable in Settings.'
+            }}
           </td>
         </tr>
       }

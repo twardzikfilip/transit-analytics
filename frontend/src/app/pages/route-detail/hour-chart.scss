@@ -1,0 +1,174 @@
+:host {
+  display: block;
+  transition: opacity 0.15s;
+}
+
+:host(.loading) {
+  opacity: 0.55;
+}
+
+.plot {
+  position: relative;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+  color: var(--muted);
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+}
+
+.swatch {
+  display: inline-block;
+  flex: none;
+
+  &.line {
+    width: 16px;
+    height: 2px;
+    border-radius: 1px;
+  }
+
+  &.band {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    opacity: 0.25;
+  }
+
+  &.ref {
+    width: 16px;
+    border-top: 2px dashed var(--muted);
+  }
+}
+
+svg {
+  display: block;
+  max-width: 100%;
+  overflow: visible;
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+    border-radius: 4px;
+  }
+}
+
+.grid,
+.axis {
+  stroke: var(--border);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.axis-label {
+  fill: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.band {
+  opacity: 0.18;
+}
+
+.ref-label {
+  fill: var(--muted);
+  font-size: 11px;
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 3px;
+}
+
+.ref {
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+
+.line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.area {
+  opacity: 0.1;
+}
+
+.crosshair {
+  stroke: var(--muted);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.marker {
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.hit {
+  fill: transparent;
+  cursor: crosshair;
+}
+
+.tooltip {
+  position: absolute;
+  z-index: 2;
+  transform: translate(12px, -50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 12%);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  pointer-events: none;
+
+  &.left {
+    transform: translate(calc(-100% - 12px), -50%);
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+
+    &.band {
+      border-radius: 3px;
+      opacity: 0.4;
+    }
+  }
+
+  strong {
+    margin-left: auto;
+    padding-left: 0.75rem;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+}

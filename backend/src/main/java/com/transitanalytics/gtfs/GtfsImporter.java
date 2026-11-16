@@ -64,13 +64,18 @@ public class GtfsImporter {
 
     private static final String UPSERT_ROUTES = """
             INSERT INTO route (gtfs_id, agency_id, short_name, long_name, description, route_type, url, color,
-                               text_color, sort_order)
+                               text_color, sort_order, subtype)
             SELECT DISTINCT ON (r.route_id)
                    r.route_id, a.id, r.route_short_name, r.route_long_name, r.route_desc, r.route_type::smallint,
                    r.route_url,
                    CASE WHEN r.route_color ~ '^[0-9A-Fa-f]{6}$' THEN '#' || upper(r.route_color) END,
                    CASE WHEN r.route_text_color ~ '^[0-9A-Fa-f]{6}$' THEN '#' || upper(r.route_text_color) END,
-                   r.route_sort_order::integer
+                   r.route_sort_order::integer,
+                   -- Same rule as RouteSubtype.classify. Only for new routes: an existing route keeps its subtype.
+                   CASE WHEN coalesce(nullif(r.route_short_name, ''), r.route_long_name) ~* '^N[0-9]+$' THEN 'night_urban'
+                        WHEN coalesce(nullif(r.route_short_name, ''), r.route_long_name) ~ '^0*[1-9][0-9]{2,}$'
+                        THEN 'suburban'
+                        ELSE 'urban' END
             FROM gtfs_routes r
             LEFT JOIN agency a ON a.gtfs_id = COALESCE(r.agency_id, %s)
             ON CONFLICT (gtfs_id) DO UPDATE SET

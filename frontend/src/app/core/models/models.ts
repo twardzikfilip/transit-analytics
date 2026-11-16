@@ -82,7 +82,11 @@ export interface Route {
   color: string | null;
   textColor: string | null;
   sortOrder: number | null;
+  subtype: RouteSubtype;
 }
+
+/** Kind of line: city, suburban (100 and up), night (N1…) or regional. */
+export type RouteSubtype = 'urban' | 'suburban' | 'night_urban' | 'regional';
 
 /** A stop or station (GTFS stop). */
 export interface Stop {
@@ -298,4 +302,131 @@ export interface Session {
   token: string;
   username: string;
   role: RoleName;
+}
+
+/** A line to pick on Routes in detail; `line` is the route's GTFS id. */
+export interface LineRef {
+  id: number;
+  line: string;
+  name: string;
+  subtype: RouteSubtype;
+}
+
+/** Variant kind: the base route of its direction, or longer / shorter than it. */
+export type VariantKind = 'main' | 'longer' | 'shorter';
+
+export interface StopPoint {
+  name: string;
+  lat: number | null;
+  lon: number | null;
+  /** Distance along the route from its first stop. */
+  km: number;
+  zone: string | null;
+}
+
+export interface LineVariant {
+  direction: number;
+  shapeId: string | null;
+  headsign: string | null;
+  kind: VariantKind;
+  km: number;
+  tripsPerDay: number;
+  shortestMin: number;
+  longestMin: number;
+  firstStop: string | null;
+  lastStop: string | null;
+  /** Route shape as [lat, lon]. */
+  points: [number, number][];
+  stops: StopPoint[];
+}
+
+export interface LineBase {
+  lengthKm: number | null;
+  shortestMin: number | null;
+  longestMin: number | null;
+  minSpeedKmh: number | null;
+  maxSpeedKmh: number | null;
+}
+
+/** The part of a direction's base route in fare zone 2 (outside the city). */
+export interface LineZone2 {
+  direction: number;
+  headsign: string | null;
+  stops: number;
+  totalStops: number;
+  km: number;
+  totalKm: number;
+}
+
+/** Times are seconds after midnight; they can pass 24:00. */
+export interface BrigadeRun {
+  from: number;
+  to: number;
+  direction: number;
+  headsign: string | null;
+  kind: VariantKind;
+}
+
+export interface Brigade {
+  name: string;
+  start: number;
+  end: number;
+  runs: BrigadeRun[];
+  breaks: { from: number; to: number }[];
+}
+
+export interface LineDetail {
+  id: number;
+  line: string;
+  name: string;
+  subtype: RouteSubtype;
+  serviceId: string | null;
+  base: LineBase;
+  variants: LineVariant[];
+  zone2: LineZone2[];
+  brigades: Brigade[];
+}
+
+/** Hours of the service day: 3–23, then 24–26 after midnight. */
+export interface HourStat {
+  hour: number;
+  runs: number;
+  min: number;
+  max: number;
+  avg: number;
+  median: number;
+}
+
+export interface DelaySlot {
+  /** Start of the 15-minute slot, minutes after midnight (can pass 1440). */
+  minute: number;
+  avgDelaySeconds: number;
+  samples: number;
+}
+
+export interface Segment {
+  from: string;
+  to: string;
+  fromKm: number;
+  toKm: number;
+  kmh: number | null;
+}
+
+export interface SegmentProfile {
+  direction: number;
+  headsign: string | null;
+  runs: number;
+  segments: Segment[];
+}
+
+/** Measured from recorded positions on weekdays. */
+export interface LinePerformance {
+  firstDay: string | null;
+  lastDay: string | null;
+  weekdays: number;
+  fullRuns: number;
+  durations: HourStat[];
+  speeds: HourStat[];
+  delays: DelaySlot[];
+  segments: SegmentProfile[];
 }
