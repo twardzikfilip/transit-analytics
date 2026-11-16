@@ -46,7 +46,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class SecurityWebTest {
 
     private static final String VEHICLE_JSON = """
-            {"vehicleNumber":"BUS-1","type":"BUS","capacity":50,"active":true}
+            {"vehicleNumber":"BUS-1","type":"BUS","capacity":50}
             """;
 
     @Autowired
@@ -122,7 +122,7 @@ class SecurityWebTest {
 
     @Test
     void adminCanCreateVehicle() throws Exception {
-        given(vehicleService.create(any())).willReturn(new VehicleDto.Response(1L, "BUS-1", "BUS", 50, true, null, null));
+        given(vehicleService.create(any())).willReturn(new VehicleDto.Response(1L, "BUS-1", "BUS", 50, null, null));
 
         mvc.perform(post("/api/vehicles").header("Authorization", bearer("admin", "ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON).content(VEHICLE_JSON))

@@ -47,8 +47,7 @@ class VehicleServiceTest {
             return vehicles.size() == 1
                     && vehicles.get(0).getVehicleNumber().equals("009")
                     && vehicles.get(0).getAgency().equals("BKM")
-                    && vehicles.get(0).getModel().equals("Yutong ZK6128BEVG E12")
-                    && vehicles.get(0).isActive();
+                    && vehicles.get(0).getModel().equals("Yutong ZK6128BEVG E12");
         }));
     }
 

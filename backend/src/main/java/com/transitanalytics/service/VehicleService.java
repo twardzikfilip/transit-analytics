@@ -62,16 +62,13 @@ public class VehicleService extends CrudService<Vehicle, VehicleDto.Request, Veh
         e.setVehicleNumber(r.vehicleNumber());
         e.setType(r.type());
         e.setCapacity(r.capacity());
-        if (r.active() != null) {
-            e.setActive(r.active());
-        }
         e.setAgency(r.agency());
         e.setModel(r.model());
     }
 
     @Override
     protected VehicleDto.Response toResponse(Vehicle e) {
-        return new VehicleDto.Response(e.getId(), e.getVehicleNumber(), e.getType(), e.getCapacity(), e.isActive(),
+        return new VehicleDto.Response(e.getId(), e.getVehicleNumber(), e.getType(), e.getCapacity(),
                 e.getAgency(), e.getModel());
     }
 }

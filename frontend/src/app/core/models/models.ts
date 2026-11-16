@@ -10,7 +10,6 @@ export interface Vehicle {
   vehicleNumber: string;
   type: string;
   capacity: number | null;
-  active: boolean;
   agency: string | null;
   model: string | null;
 }

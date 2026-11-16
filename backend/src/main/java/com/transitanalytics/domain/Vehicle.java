@@ -18,9 +18,6 @@ public class Vehicle {
 
     private Integer capacity;
 
-    @Column(nullable = false)
-    private boolean active = true;
-
     @Column(length = 64)
     private String agency;
 
@@ -57,14 +54,6 @@ public class Vehicle {
 
     public void setCapacity(Integer capacity) {
         this.capacity = capacity;
-    }
-
-    public boolean isActive() {
-        return active;
-    }
-
-    public void setActive(boolean active) {
-        this.active = active;
     }
 
     public String getAgency() {

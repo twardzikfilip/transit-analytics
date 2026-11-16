@@ -1,10 +1,11 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Store } from '@ngrx/store';
 import { HasRoleDirective } from '../../core/auth/has-role.directive';
 import { Vehicle } from '../../core/models/models';
 import { VehiclesActions } from '../../store/vehicles/vehicles.actions';
 import { vehiclesFeature } from '../../store/vehicles/vehicles.reducer';
+import { filterVehicles, modelMake, options } from './vehicle-filters';
 
 @Component({
   selector: 'app-vehicles',
@@ -19,6 +20,17 @@ export class Vehicles {
   protected readonly loading = this.store.selectSignal(vehiclesFeature.selectLoading);
   protected readonly error = this.store.selectSignal(vehiclesFeature.selectError);
 
+  /** Selected filters; '' means "all". */
+  protected readonly agencyFilter = signal('');
+  protected readonly makeFilter = signal('');
+
+  protected readonly agencies = computed(() => options(this.vehicles().map((v) => v.agency)));
+  protected readonly makes = computed(() => options(this.vehicles().map((v) => modelMake(v.model))));
+  protected readonly filtered = computed(() =>
+    filterVehicles(this.vehicles(), { agency: this.agencyFilter(), make: this.makeFilter() }),
+  );
+  protected readonly filtering = computed(() => !!this.agencyFilter() || !!this.makeFilter());
+
   /** null = form hidden, 0 = creating, otherwise id being edited. */
   protected readonly editingId = signal<number | null>(null);
 
@@ -26,13 +38,17 @@ export class Vehicles {
     vehicleNumber: ['', [Validators.required, Validators.maxLength(32)]],
     type: ['BUS', Validators.required],
     capacity: [null as number | null, Validators.min(0)],
-    active: [true],
     agency: [null as string | null, Validators.maxLength(64)],
     model: [null as string | null, Validators.maxLength(128)],
   });
 
   constructor() {
     this.store.dispatch(VehiclesActions.load());
+  }
+
+  protected clearFilters(): void {
+    this.agencyFilter.set('');
+    this.makeFilter.set('');
   }
 
   protected startCreate(): void {
@@ -45,7 +61,6 @@ export class Vehicles {
       vehicleNumber: vehicle.vehicleNumber,
       type: vehicle.type,
       capacity: vehicle.capacity,
-      active: vehicle.active,
       agency: vehicle.agency,
       model: vehicle.model,
     });
