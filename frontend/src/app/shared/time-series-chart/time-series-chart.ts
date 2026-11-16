@@ -1,4 +1,5 @@
-import { Component, DestroyRef, ElementRef, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, input, signal } from '@angular/core';
+import { hostWidth } from '../host-width';
 import { ChartPoint, nearestIndex, niceTicks, segments, timeTicks } from './chart-geometry';
 
 const HEIGHT = 260;
@@ -35,18 +36,11 @@ export class TimeSeriesChart {
   /** Dims the chart while new data loads, keeping the previous frame. */
   readonly loading = input(false);
 
-  private readonly host = inject(ElementRef<HTMLElement>);
-  protected readonly width = signal(600);
+  protected readonly width = hostWidth(600, 280);
   protected readonly height = HEIGHT;
   protected readonly margin = MARGIN;
   protected readonly hover = signal<number | null>(null);
 
-  constructor() {
-    if (typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(([entry]) => this.width.set(Math.max(280, Math.floor(entry.contentRect.width))));
-    observer.observe(this.host.nativeElement);
-    inject(DestroyRef).onDestroy(() => observer.disconnect());
-  }
 
   protected readonly plotRight = computed(() => this.width() - MARGIN.right);
   protected readonly plotBottom = HEIGHT - MARGIN.bottom;

@@ -17,8 +17,7 @@ import { Store } from '@ngrx/store';
 import * as L from 'leaflet';
 import { DelayReplayActions } from '../../store/delay-replay/delay-replay.actions';
 import { delayReplayFeature } from '../../store/delay-replay/delay-replay.reducer';
-import { formatDelay } from '../positions/delay-bands';
-import { toLocalInput } from '../positions/time-window';
+import { formatDelay, toLocalInput } from '../../shared/format/time';
 import {
   DELAY_STOPS,
   NO_DELAY_COLOR,
@@ -33,8 +32,7 @@ import {
   positionsAt,
   resolveDelayWindow,
 } from './replay';
-
-const BIALYSTOK: L.LatLngExpression = [53.13, 23.16];
+import { createBaseMap } from '../../shared/map/base-map';
 
 /**
  * Delays: an animated replay of recorded vehicle positions for a time window and lines, each vehicle coloured by how
@@ -113,11 +111,7 @@ export class Delays {
 
   constructor() {
     afterNextRender(() => {
-      this.map = L.map(this.mapEl().nativeElement, { preferCanvas: true }).setView(BIALYSTOK, 12);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors',
-      }).addTo(this.map);
+      this.map = createBaseMap(this.mapEl().nativeElement, { canvas: true });
       this.mapReady.set(true);
     });
     this.destroyRef.onDestroy(() => {

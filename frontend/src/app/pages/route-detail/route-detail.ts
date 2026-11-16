@@ -26,11 +26,12 @@ import { routeDetailFeature } from '../../store/route-detail/route-detail.reduce
 import { BrigadeTimeline } from './brigade-timeline';
 import { EndStops } from './end-stops';
 import { LineVehiclesSection } from './line-vehicles';
-import { SUBTYPES, clock, duration, groupLines, subtypeLabel, variantKindLabel } from './format';
-import { HourBand, HourChart, HourSeries, RefLine } from './hour-chart';
+import { clock, duration, formatDelay } from '../../shared/format/time';
+import { cssColor } from '../../shared/palette';
+import { SUBTYPES, groupLines, subtypeLabel, variantKindLabel } from './format';
+import { HourBand, HourChart, HourSeries, RefLine } from '../../shared/hour-chart/hour-chart';
 import { SegmentChart } from './segment-chart';
-
-const BIALYSTOK: L.LatLngExpression = [53.13, 23.16];
+import { createBaseMap } from '../../shared/map/base-map';
 
 /** A chart's data: series, band and reference lines for the hour chart. */
 interface HourChartData {
@@ -90,9 +91,6 @@ export class RouteDetail {
 
   protected readonly mains = computed(
     () => this.detail()?.variants.filter((v) => v.kind === 'main') ?? [],
-  );
-  protected readonly others = computed(
-    () => this.detail()?.variants.filter((v) => v.kind !== 'main') ?? [],
   );
   protected readonly trips = computed(
     () => this.detail()?.variants.reduce((n, v) => n + v.tripsPerDay, 0) ?? 0,
@@ -169,11 +167,8 @@ export class RouteDetail {
 
   protected readonly minutes = (v: number) => String(Math.round(v));
   protected readonly speed = (v: number) => (Math.round(v * 10) / 10).toFixed(1);
-  protected readonly delayMinutes = (v: number) => {
-    const s = Math.round(v * 60);
-    const sign = s < 0 ? '−' : '';
-    return `${sign}${Math.floor(Math.abs(s) / 60)}:${String(Math.abs(s) % 60).padStart(2, '0')}`;
-  };
+  /** Minutes as "m:ss" (a delay chart's values are in minutes). */
+  protected readonly delayMinutes = (minutes: number) => formatDelay(minutes * 60);
 
   private map?: L.Map;
   private readonly mapReady = signal(false);
@@ -193,11 +188,7 @@ export class RouteDetail {
     });
 
     afterNextRender(() => {
-      this.map = L.map(this.mapEl().nativeElement, { preferCanvas: true }).setView(BIALYSTOK, 12);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors',
-      }).addTo(this.map);
+      this.map = createBaseMap(this.mapEl().nativeElement, { canvas: true });
       this.layers = L.layerGroup().addTo(this.map);
       this.mapReady.set(true);
     });
@@ -225,9 +216,8 @@ export class RouteDetail {
   private drawRoute(detail: LineDetail): void {
     const layers = this.layers!;
     layers.clearLayers();
-    const css = getComputedStyle(document.documentElement);
-    const color = css.getPropertyValue(this.colorVar(detail.subtype)).trim() || '#2a78d6';
-    const depotColor = css.getPropertyValue('--depot').trim() || '#eda100';
+    const color = cssColor(this.colorVar(detail.subtype), '#2a78d6');
+    const depotColor = cssColor('--depot', '#eda100');
     const ordered = [...detail.variants].sort(
       (a, b) => (a.kind === 'main' ? 1 : 0) - (b.kind === 'main' ? 1 : 0),
     );

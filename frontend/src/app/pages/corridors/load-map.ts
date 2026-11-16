@@ -12,9 +12,9 @@ import {
 } from '@angular/core';
 import * as L from 'leaflet';
 import { SegmentLoad } from '../../core/models/models';
+import { SEQUENTIAL_BLUE } from '../../shared/palette';
 import { MAX_WIDTH, colorClasses, colorFor, widthFor } from './load-scale';
-
-const BIALYSTOK: L.LatLngExpression = [53.13, 23.16];
+import { createBaseMap } from '../../shared/map/base-map';
 
 /**
  * Every stretch between two stops on a map (grey base map), drawn by its peak-hour buses: as line width in proportion
@@ -49,12 +49,7 @@ export class LoadMap {
 
   constructor() {
     afterNextRender(() => {
-      this.map = L.map(this.mapEl().nativeElement, { preferCanvas: true }).setView(BIALYSTOK, 12);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors',
-        className: 'grey-tiles',
-      }).addTo(this.map);
+      this.map = createBaseMap(this.mapEl().nativeElement, { canvas: true, grey: true });
       this.layer = L.layerGroup().addTo(this.map);
       this.ready.set(true);
     });
@@ -76,7 +71,7 @@ export class LoadMap {
       if (s.points.length < 2) continue;
       const style: L.PolylineOptions =
         this.mode() === 'width'
-          ? { color: '#1c5cab', weight: widthFor(s.peakBuses, max), opacity: 0.8, lineCap: 'butt' }
+          ? { color: SEQUENTIAL_BLUE[3], weight: widthFor(s.peakBuses, max), opacity: 0.8, lineCap: 'butt' }
           : { color: colorFor(s.peakBuses, classes), weight: 4, opacity: 1 };
       L.polyline(s.points, style)
         .bindTooltip(

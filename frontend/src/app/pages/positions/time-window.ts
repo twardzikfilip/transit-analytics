@@ -35,9 +35,3 @@ export function resolveWindow(
   const end = new Date(Math.floor(now.getTime() / 60_000) * 60_000 + 60_000);
   return { from: new Date(end.getTime() - preset.ms), to: end, preset: preset.key };
 }
-
-/** Value for a datetime-local input, in local time ("2026-11-16T14:05"). */
-export function toLocalInput(date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}

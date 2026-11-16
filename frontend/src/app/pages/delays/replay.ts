@@ -1,4 +1,5 @@
 import { ReplayResponse } from '../../core/models/models';
+import { DELAY_STOPS, NO_DELAY_COLOR } from '../../shared/palette';
 
 /** A vehicle's position at one moment of the replay. */
 export interface ReplayPosition {
@@ -79,14 +80,7 @@ export function positionsAt(replay: Replay, t: number): ReplayPosition[] {
   });
 }
 
-/** Colour stops: on time (≤ 1 min late, or early) green → 3 min yellow → 6 min orange → 10 min and more red. */
-export const DELAY_STOPS: { seconds: number; color: string; label: string }[] = [
-  { seconds: 60, color: '#2e9e5b', label: 'on time' },
-  { seconds: 180, color: '#f2c12e', label: '3 min' },
-  { seconds: 360, color: '#f07f22', label: '6 min' },
-  { seconds: 600, color: '#d7301f', label: '10+ min' },
-];
-export const NO_DELAY_COLOR = '#8a8f98';
+export { DELAY_STOPS, NO_DELAY_COLOR } from '../../shared/palette';
 
 /** The marker colour for a delay, blended between the stops. */
 export function delayColor(seconds: number | null): string {

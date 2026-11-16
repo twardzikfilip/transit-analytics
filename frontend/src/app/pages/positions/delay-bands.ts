@@ -24,14 +24,6 @@ export function formatShare(share: number): string {
   return `${(share * 100).toFixed(1)}%`;
 }
 
-/** Delay as "m:ss", with a minus sign when early; "—" when unknown. */
-export function formatDelay(seconds: number | null): string {
-  if (seconds === null) return '—';
-  const sign = seconds < 0 ? '−' : '';
-  const abs = Math.abs(Math.round(seconds));
-  return `${sign}${Math.floor(abs / 60)}:${String(abs % 60).padStart(2, '0')}`;
-}
-
 /**
  * The window a result covers, e.g. "Mon 16 Nov, 08:36 – 14:36" or "Mon 9 Nov, 14:14 – Mon 16 Nov, 14:14" (local
  * time). `to` is exclusive, so a window ending at midnight shows 00:00 of the next day.

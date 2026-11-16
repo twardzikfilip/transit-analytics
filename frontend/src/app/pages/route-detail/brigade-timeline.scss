@@ -97,20 +97,3 @@ svg {
 .hit {
   fill: transparent;
 }
-
-.tooltip {
-  position: absolute;
-  z-index: 2;
-  transform: translate(-50%, calc(-100% - 12px));
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  padding: 0.4rem 0.6rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-  box-shadow: 0 2px 8px rgb(0 0 0 / 12%);
-  font-size: 0.85rem;
-  white-space: nowrap;
-  pointer-events: none;
-}
