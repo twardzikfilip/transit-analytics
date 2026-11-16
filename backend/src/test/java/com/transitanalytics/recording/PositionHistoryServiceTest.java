@@ -46,4 +46,15 @@ class PositionHistoryServiceTest {
         assertThatThrownBy(() -> PositionHistoryService.SampleSort.orderBy("latitude; DROP TABLE vehicle"))
                 .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("sort must be one of");
     }
+
+    @Test
+    void replayStepsKeepFramesBounded() {
+        // 15 min and 1 h at one frame per poll; a day at 5 min; a week at 30 min.
+        for (var c : List.of(List.of(15L, 1L), List.of(60L, 1L), List.of(24 * 60L, 5L), List.of(7 * 24 * 60L, 30L))) {
+            Duration window = Duration.ofMinutes(c.get(0));
+            Duration step = PositionHistoryService.REPLAY_STEPS.stream()
+                    .filter(s -> window.dividedBy(s) <= PositionHistoryService.MAX_FRAMES).findFirst().orElseThrow();
+            assertThat(step.toMinutes()).as(window.toString()).isEqualTo(c.get(1));
+        }
+    }
 }

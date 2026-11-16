@@ -14,6 +14,7 @@ export const routes: Routes = [
       { path: 'vehicles', loadComponent: () => import('./pages/vehicles/vehicles').then((m) => m.Vehicles) },
       { path: 'live-map', loadComponent: () => import('./pages/live-map/live-map').then((m) => m.LiveMap) },
       { path: 'lines', loadChildren: () => import('./pages/line-stats/line-stats.routes').then((m) => m.LINE_STATS_ROUTES) },
+      { path: 'delays', loadChildren: () => import('./pages/delays/delays.routes').then((m) => m.DELAYS_ROUTES) },
       { path: 'positions', loadChildren: () => import('./pages/positions/positions.routes').then((m) => m.POSITIONS_ROUTES) },
       { path: '', loadChildren: () => import('./pages/timetable.routes').then((m) => m.TIMETABLE_ROUTES) },
       { path: 'settings', loadChildren: () => import('./pages/settings/settings.routes').then((m) => m.SETTINGS_ROUTES) },

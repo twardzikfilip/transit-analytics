@@ -58,7 +58,8 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   `/api/agencies`, `/api/routes`, `/api/stops`, `/api/trips`, `/api/stop-times`, `/api/calendar-dates`,
   `/api/shape-points`. Timetable lists take filters as query parameters, e.g. `/api/trips?routeId=17&direction=1`,
   `/api/stop-times?stopId=260&sort=departureTime&sort=id`, `/api/stops?q=dworzec` (Swagger lists them all).
-- Position history (recorded time series), each with a required window `from`/`to` (ISO-8601, `to` exclusive, at
+- Position history (recorded time series, city operator BKM's lines only; regional operators such as WSCHODEXPRESS
+  and TUROSN are left out), each with a required window `from`/`to` (ISO-8601, `to` exclusive, at
   most 31 days) and an optional `route` (line):
   - `GET /api/positions/fleet` — per bucket of polls: vehicles running (average per poll), the most at once,
     reports and mean delay. Buckets are 1 minute (one poll) for windows up to 24 h and coarser beyond, keeping
@@ -67,6 +68,9 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   - `GET /api/positions/delays` — vehicles and reports per minute of delay: under 1 min (incl. early), 1–2, …,
     9–10, 10 min or more. A vehicle counts in every band it was in.
   - `GET /api/positions/routes` — lines recorded in the window.
+  - `GET /api/positions/replay` — animation frames (latest position of every vehicle per step; 1 min for short
+    windows, up to 30 min for a week, at most 360 frames) as compact rows `[vehicle, lat, lon, delay, line]`.
+    Repeat `route` for several lines. Responses are gzipped.
   - `GET /api/positions` — the raw position reports, paged (`page`, `size` ≤ 500; also `vehicle`), sorted by
     `sort=time|vehicle|line|duty|towards|delay|nextStop,asc|desc` (default `time,desc`). `excludeOutliers=true`
     leaves out reports more than 30 min late; those are outliers, most likely feed errors. The page highlights
@@ -190,6 +194,9 @@ INTEGRATION_TESTS=true ./gradlew test           # also boots the full context ag
 - Position history: vehicles running and mean delay every minute (SVG line charts with a hover/keyboard tooltip and
   a table view), running now / most at once / different vehicles seen, the delay distribution, and the raw reports, filtered by time range (1 h – 30 days or a custom from/to) and line, all kept in the URL.
   Preset ranges refresh every minute. Store slice `positionHistory`, registered by its lazy route.
+- Delays: an animated replay of recorded positions on a map, each bus coloured by delay (green on time → yellow →
+  orange → red at 10+ min). Filter by one, several or all lines and by time window (last 15 min / hour / 24 hours
+  or custom). Play/pause, speed, loop and a timeline are at the top; the filters are kept in the URL.
 - Line statistics: the figures above for every line in a sortable table (weekday timetable, planned values).
 - Timetable pages (read-only): Routes → Trips (filter by route, direction, service, headsign) → Stop times of a trip;
   Stops (search, zone) → departure board of a stop. Filters and the page number live in the URL, so every view can be

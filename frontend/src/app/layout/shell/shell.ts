@@ -30,6 +30,7 @@ export class Shell {
     { path: '/vehicles', label: 'Vehicles', icon: '🚌' },
     { path: '/live-map', label: 'Live map', icon: '🗺' },
     { path: '/positions', label: 'Position history', icon: '📈' },
+    { path: '/delays', label: 'Delays', icon: '⏱' },
     { path: '/routes', label: 'Routes', icon: '〰' },
     { path: '/lines', label: 'Line statistics', icon: '📊' },
     { path: '/stops', label: 'Stops', icon: '🚏' },

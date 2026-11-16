@@ -1,7 +1,8 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
+  ReplayResponse,
   DelayBand,
   FleetSeries,
   LineStatsReport,
@@ -121,6 +122,13 @@ export class PositionHistoryApi {
     return this.http.get<DelayBand[]>('/api/positions/delays', {
       params: withRoute({ from, to }, route),
     });
+  }
+
+  /** Animation frames of recorded positions; `routes` empty = all lines. */
+  replay(from: string, to: string, routes: string[]): Observable<ReplayResponse> {
+    let params = new HttpParams().set('from', from).set('to', to);
+    for (const r of routes) params = params.append('route', r);
+    return this.http.get<ReplayResponse>('/api/positions/replay', { params });
   }
 
   routes(from: string, to: string): Observable<RouteActivity[]> {

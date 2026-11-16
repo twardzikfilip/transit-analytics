@@ -197,6 +197,20 @@ export interface RouteActivity {
   samples: number;
 }
 
+/**
+ * Recorded positions as animation frames (GET /api/positions/replay). Positions are compact rows
+ * [vehicleIndex, latitude, longitude, delaySeconds | null, lineIndex | null] into `vehicles` and `lines`.
+ */
+export interface ReplayResponse {
+  from: string;
+  to: string;
+  stepSeconds: number;
+  routes: string[];
+  vehicles: string[];
+  lines: string[];
+  frames: { time: string; positions: [number, number, number, number | null, number | null][] }[];
+}
+
 /** One recorded position report. */
 export interface PositionSample {
   observedAt: string;
