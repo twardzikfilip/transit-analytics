@@ -67,6 +67,18 @@ export class LineStatsPage {
         lines: topLines(lines, 'offPeakIntervalMinutes', false),
       },
       {
+        title: 'Top 5 most regular lines in peak hours',
+        description:
+          'Most evenly spread departures in peak hours (lowest coefficient of variation).',
+        lines: topLines(lines, 'peakRegularityCv', false),
+      },
+      {
+        title: 'Top 5 least regular lines in peak hours',
+        description:
+          'Most unevenly spread departures in peak hours (highest coefficient of variation).',
+        lines: topLines(lines, 'peakRegularityCv', true),
+      },
+      {
         title: 'Top 5 least frequent lines in peak hours',
         description:
           'Longest average interval between departures in peak hours (lines with no peak departures are left out).',

@@ -9,6 +9,8 @@ export type SortKey =
   | 'offPeakSpeedKmh'
   | 'peakIntervalMinutes'
   | 'offPeakIntervalMinutes'
+  | 'peakRegularityCv'
+  | 'offPeakRegularityCv'
   | 'peakVehicles'
   | 'offPeakVehicles';
 

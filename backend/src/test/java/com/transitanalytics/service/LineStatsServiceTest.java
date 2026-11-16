@@ -107,4 +107,37 @@ class LineStatsServiceTest {
         assertThat(List.of("N1", "100", "2", "10").stream().sorted(LineStatsService.LINE_ORDER))
                 .containsExactly("2", "10", "100", "N1");
     }
+
+    @Test
+    void regularityIsTheCoefficientOfVariationOfGaps() {
+        // Every 10 min from 06:00 to 08:50: perfectly even.
+        List<Integer> even = new ArrayList<>();
+        for (int m = 0; m < 180; m += 10) even.add(at(6, m));
+        assertThat(LineStatsService.regularity(Map.of(0, even), LineStatsService.PEAK)).isEqualTo(0.0);
+
+        // Gaps 5, 15, 5, 15 min: mean 10, population sd 5 → CV 0.5.
+        List<Integer> bunched = List.of(at(6, 0), at(6, 5), at(6, 20), at(6, 25), at(6, 40));
+        assertThat(LineStatsService.regularity(Map.of(0, bunched), LineStatsService.PEAK)).isEqualTo(0.5);
+    }
+
+    @Test
+    void regularityNeedsThreeGapsAndIgnoresTheBreakBetweenPeaks() {
+        // Two gaps only → not enough.
+        assertThat(LineStatsService.regularity(Map.of(0, List.of(at(6, 0), at(6, 10), at(6, 20))),
+                LineStatsService.PEAK)).isNull();
+        // Even every 20 min in the morning and every 20 min in the afternoon: the 08:40 → 15:00 break isn't a gap.
+        List<Integer> twoPeaks = new ArrayList<>();
+        for (int m = 0; m < 180; m += 20) twoPeaks.add(at(6, m));
+        for (int m = 0; m < 120; m += 20) twoPeaks.add(at(15, m));
+        assertThat(LineStatsService.regularity(Map.of(0, twoPeaks), LineStatsService.PEAK)).isEqualTo(0.0);
+    }
+
+    @Test
+    void regularityWeighsDirectionsByTheirNumberOfGaps() {
+        // Direction 0: 8 gaps, CV 0 (even). Direction 1: 4 gaps 5,15,5,15 → CV 0.5. Weighted: 0.5 × 4 / 12 = 0.17.
+        List<Integer> even = new ArrayList<>();
+        for (int m = 0; m <= 80; m += 10) even.add(at(6, m));
+        List<Integer> bunched = List.of(at(7, 0), at(7, 5), at(7, 20), at(7, 25), at(7, 40));
+        assertThat(LineStatsService.regularity(Map.of(0, even, 1, bunched), LineStatsService.PEAK)).isEqualTo(0.17);
+    }
 }

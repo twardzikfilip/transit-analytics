@@ -32,6 +32,10 @@ public final class LineStatsDto {
      * @param offPeakSpeedKmh        the same for off-peak hours
      * @param peakIntervalMinutes    average time between departures in peak hours, per direction; null without trips
      * @param offPeakIntervalMinutes the same for off-peak hours
+     * @param peakRegularityCv       how evenly departures are spread in peak hours: coefficient of variation of the
+     *                               gaps between departures (standard deviation / mean) at the main route's first
+     *                               stop; 0 = perfectly even. Null with too few departures
+     * @param offPeakRegularityCv    the same for off-peak hours
      * @param peakVehicles           buses needed at peak: duties running in the busier of the two peak periods
      * @param offPeakVehicles        duties running in the off-peak period
      * @param trips                  weekday trips of the line (all variants)
@@ -39,6 +43,7 @@ public final class LineStatsDto {
     public record Line(Long routeId, String route, String color, String textColor, Double lengthKm,
                        Integer shortestTravelSeconds, Integer longestTravelSeconds, Double peakSpeedKmh,
                        Double offPeakSpeedKmh, Double peakIntervalMinutes,
-                       Double offPeakIntervalMinutes, int peakVehicles, int offPeakVehicles, int trips) {
+                       Double offPeakIntervalMinutes, Double peakRegularityCv, Double offPeakRegularityCv,
+                       int peakVehicles, int offPeakVehicles, int trips) {
     }
 }

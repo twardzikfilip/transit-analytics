@@ -28,7 +28,8 @@
         <th colspan="2" class="group sep">Travel time</th>
         <th colspan="2" class="group sep">Avg speed</th>
         <th colspan="2" class="group sep">Interval</th>
-        <th colspan="2" class="group sep">Vehicles</th>
+        <th colspan="2" class="group sep" title="How evenly departures are spread: 0 = perfectly even">Regularity</th>
+    <th colspan="2" class="group sep">Vehicles</th>
         <th rowspan="2" class="sep"></th>
       </tr>
       <tr>
@@ -105,6 +106,16 @@
               —
             }
           </td>
+          @for (cv of [l.peakRegularityCv, l.offPeakRegularityCv]; track $index) {
+            <td class="num" [class.sep]="$first" [attr.title]="regularityMeaning(cv)">
+              @if (cv !== null) {
+                {{ cv | number: '1.2-2' }}
+                <span class="grade" [attr.data-grade]="regularityGrade(cv)">{{ regularityGrade(cv) }}</span>
+              } @else {
+                —
+              }
+            </td>
+          }
           <td class="num sep">{{ l.peakVehicles || '—' }}</td>
           <td class="num">{{ l.offPeakVehicles || '—' }}</td>
           <td class="num sep">
@@ -117,7 +128,7 @@
         </tr>
       } @empty {
         <tr>
-          <td colspan="11" class="muted">{{ loading() ? 'Loading…' : empty() }}</td>
+          <td colspan="13" class="muted">{{ loading() ? 'Loading…' : empty() }}</td>
         </tr>
       }
     </tbody>

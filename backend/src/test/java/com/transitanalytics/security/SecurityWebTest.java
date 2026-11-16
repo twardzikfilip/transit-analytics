@@ -255,7 +255,8 @@ class SecurityWebTest {
     void guestCanReadLineStats() throws Exception {
         given(lineStatsService.weekdayReport()).willReturn(new LineStatsDto.Report("P_1349", 59, null, null, List.of(),
                 new LineStatsDto.Period("17:00", "22:00"),
-                List.of(new LineStatsDto.Line(17L, "103", null, null, 19.8, 2400, 3000, 24.5, 26.0, 31.7, 40.2, 5, 4, 64))));
+                List.of(new LineStatsDto.Line(17L, "103", null, null, 19.8, 2400, 3000, 24.5, 26.0, 31.7, 40.2, 0.39, 0.2, 5, 4,
+                        64))));
 
         mvc.perform(get("/api/lines/stats").header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isOk())

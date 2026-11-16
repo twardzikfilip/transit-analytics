@@ -72,7 +72,8 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
     leaves out reports more than 30 min late; those are outliers, most likely feed errors. The page highlights
     them in red and has a checkbox to hide them.
 - `GET /api/lines/stats` — per line, from the regular weekday timetable: length (main route, km), shortest and
-  longest end-to-end travel time, average speed, interval and vehicles in peak (06:00–09:00, 15:00–17:00) and off-peak
+  longest end-to-end travel time, average speed, interval, regularity (coefficient of variation of the gaps between
+  departures, graded A–F as in TCQSM) and vehicles in peak (06:00–09:00, 15:00–17:00) and off-peak
   (17:00–22:00) hours. The definitions are on the Line statistics page.
 - `POST /api/gtfs/bialystok/import` (admin) — downloads Białystok's GTFS timetable and loads it; see below.
 - `GET /api/vehicle-positions/latest` — latest stored position per vehicle

@@ -109,11 +109,42 @@ public class LineStatsService {
                         rs.getObject("km") == null ? null : rs.getDouble("km")),
                 service);
 
+        // Departures at each direction's reference stop (first stop of its main variant), for regularity. Every trip
+        // of that direction serving the stop counts, once (a loop line returns to its first stop).
+        Map<Long, Map<Integer, List<Integer>>> departures = new HashMap<>();
+        jdbc.query("""
+                WITH t AS (
+                    SELECT id, route_id, coalesce(direction, 0) AS dir, shape_id FROM trip WHERE service_id = ?),
+                main AS (
+                    SELECT DISTINCT ON (route_id, dir) route_id, dir, shape_id
+                    FROM t GROUP BY route_id, dir, shape_id
+                    ORDER BY route_id, dir, count(*) DESC, shape_id NULLS LAST),
+                ref AS (
+                    SELECT DISTINCT ON (m.route_id, m.dir) m.route_id, m.dir, st.stop_id
+                    FROM main m
+                    JOIN t ON t.route_id = m.route_id AND t.dir = m.dir AND t.shape_id IS NOT DISTINCT FROM m.shape_id
+                    JOIN stop_time st ON st.trip_id = t.id
+                    ORDER BY m.route_id, m.dir, st.stop_sequence)
+                SELECT DISTINCT ON (t.id) r.route_id, r.dir,
+                       extract(epoch FROM st.departure_time::interval)::int AS departure_s
+                FROM ref r
+                JOIN t ON t.route_id = r.route_id AND t.dir = r.dir
+                JOIN stop_time st ON st.trip_id = t.id AND st.stop_id = r.stop_id
+                WHERE st.departure_time IS NOT NULL
+                ORDER BY t.id, st.stop_sequence""",
+                rs -> {
+                    departures.computeIfAbsent(rs.getLong("route_id"), k -> new HashMap<>())
+                            .computeIfAbsent(rs.getInt("dir"), k -> new ArrayList<>())
+                            .add(rs.getInt("departure_s"));
+                },
+                service);
+
         Map<Long, Route> routeById = routes.findAll().stream().collect(Collectors.toMap(Route::getId, Function.identity()));
         List<LineStatsDto.Line> lines = trips.stream()
                 .collect(Collectors.groupingBy(TripTimes::routeId))
                 .entrySet().stream()
-                .map(e -> lineStats(routeById.get(e.getKey()), e.getKey(), e.getValue()))
+                .map(e -> lineStats(routeById.get(e.getKey()), e.getKey(), e.getValue(),
+                        departures.getOrDefault(e.getKey(), Map.of())))
                 .sorted(Comparator.comparing(LineStatsDto.Line::route, LINE_ORDER))
                 .toList();
 
@@ -123,6 +154,12 @@ public class LineStatsService {
     }
 
     static LineStatsDto.Line lineStats(Route route, long routeId, List<TripTimes> trips) {
+        return lineStats(route, routeId, trips, Map.of());
+    }
+
+    /** @param departures departure times (seconds) at the reference stop, per direction, for regularity */
+    static LineStatsDto.Line lineStats(Route route, long routeId, List<TripTimes> trips,
+                                       Map<Integer, List<Integer>> departures) {
         Map<Integer, List<TripTimes>> byDirection = trips.stream().collect(Collectors.groupingBy(TripTimes::direction));
 
         // Main variant of each direction: its most frequent shape. Length and travel times use only those trips, so
@@ -143,6 +180,7 @@ public class LineStatsService {
                 route == null ? null : route.getColor(), route == null ? null : route.getTextColor(), lengthKm,
                 shortest, longest, speed(mainTrips, PEAK), speed(mainTrips, List.of(OFF_PEAK)),
                 interval(byDirection.values(), PEAK), interval(byDirection.values(), List.of(OFF_PEAK)),
+                regularity(departures, PEAK), regularity(departures, List.of(OFF_PEAK)),
                 PEAK.stream().mapToInt(w -> duties(trips, w)).max().orElse(0), duties(trips, OFF_PEAK), trips.size());
     }
 
@@ -176,6 +214,39 @@ public class LineStatsService {
             }
         }
         return seconds == 0 ? null : round(km / (seconds / 3600), 1);
+    }
+
+    /**
+     * How evenly departures are spread: the coefficient of variation of the gaps between consecutive departures
+     * (population standard deviation / mean; 0 = perfectly even). Computed per direction and per period, so the
+     * break between the two peak periods is never a gap, then averaged weighted by the number of gaps. A direction
+     * and period needs at least 3 gaps; null when none qualifies.
+     *
+     * <p>A useful reading: for passengers arriving at random, the expected wait is mean gap / 2 × (1 + CV²).
+     */
+    static Double regularity(Map<Integer, List<Integer>> departuresByDirection, List<Window> windows) {
+        double weightedCv = 0;
+        int gapCount = 0;
+        for (List<Integer> times : departuresByDirection.values()) {
+            for (Window w : windows) {
+                List<Integer> in = times.stream().filter(t -> t >= w.from() && t < w.to()).sorted().toList();
+                if (in.size() < 4) {
+                    continue;
+                }
+                double[] gaps = new double[in.size() - 1];
+                for (int i = 1; i < in.size(); i++) {
+                    gaps[i - 1] = in.get(i) - in.get(i - 1);
+                }
+                double mean = java.util.Arrays.stream(gaps).average().orElse(0);
+                if (mean <= 0) {
+                    continue;
+                }
+                double variance = java.util.Arrays.stream(gaps).map(g -> (g - mean) * (g - mean)).average().orElse(0);
+                weightedCv += Math.sqrt(variance) / mean * gaps.length;
+                gapCount += gaps.length;
+            }
+        }
+        return gapCount == 0 ? null : round(weightedCv / gapCount, 2);
     }
 
     /** Duties (buses) with a trip running at some point in the window. */

@@ -243,6 +243,9 @@ export interface LineStats {
   offPeakSpeedKmh: number | null;
   peakIntervalMinutes: number | null;
   offPeakIntervalMinutes: number | null;
+  /** Coefficient of variation of the gaps between departures; 0 = perfectly even. */
+  peakRegularityCv: number | null;
+  offPeakRegularityCv: number | null;
   peakVehicles: number;
   offPeakVehicles: number;
   trips: number;

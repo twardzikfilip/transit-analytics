@@ -3,6 +3,7 @@ import { Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { routeColor } from '../../core/gtfs';
 import { LineStats } from '../../core/models/models';
+import { regularityGrade, regularityMeaning } from './regularity';
 import { Sort, SortKey } from './sort';
 
 /** The line statistics table. Sortable by clicking a header when a `sort` is given; otherwise a fixed list. */
@@ -31,11 +32,15 @@ export class LineStatsTable {
     { key: 'offPeakSpeedKmh', label: 'Off-peak' },
     { key: 'peakIntervalMinutes', label: 'Peak' },
     { key: 'offPeakIntervalMinutes', label: 'Off-peak' },
+    { key: 'peakRegularityCv', label: 'Peak' },
+    { key: 'offPeakRegularityCv', label: 'Off-peak' },
     { key: 'peakVehicles', label: 'Peak' },
     { key: 'offPeakVehicles', label: 'Off-peak' },
   ];
 
   protected readonly routeColor = routeColor;
+  protected readonly regularityGrade = regularityGrade;
+  protected readonly regularityMeaning = regularityMeaning;
 
   protected ariaSort(key: SortKey): 'ascending' | 'descending' | null {
     const s = this.sort();

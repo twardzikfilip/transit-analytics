@@ -14,6 +14,8 @@ describe('line stats sorting', () => {
     offPeakSpeedKmh: null,
     peakIntervalMinutes: null,
     offPeakIntervalMinutes: null,
+    peakRegularityCv: null,
+    offPeakRegularityCv: null,
     peakVehicles: 0,
     offPeakVehicles: 0,
     trips: 0,
