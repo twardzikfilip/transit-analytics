@@ -19,6 +19,9 @@
   --line-suburban: #1baf7a;
   --line-night: #6250d6;
   --line-regional: #eb6834;
+  /* Depot runs: always paired with a "Depot run" label. */
+  --depot: #eda100;
+  --depot-soft: #fdf1d3;
   color-scheme: light;
 }
 
@@ -42,6 +45,8 @@
     --line-suburban: #199e70;
     --line-night: #9085e9;
     --line-regional: #d95926;
+    --depot: #c98500;
+    --depot-soft: #3a2f14;
     color-scheme: dark;
   }
 }

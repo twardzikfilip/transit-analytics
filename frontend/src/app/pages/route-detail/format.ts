@@ -1,4 +1,4 @@
-import { LineRef, RouteSubtype, Segment } from '../../core/models/models';
+import { LineRef, RouteSubtype, Segment, VariantKind } from '../../core/models/models';
 
 /** Subtypes in display order, with their label and line colour (a CSS custom property from styles.scss). */
 export const SUBTYPES: { subtype: RouteSubtype; label: string; color: string }[] = [
@@ -56,4 +56,34 @@ export function hourRange(times: number[]): { from: number; to: number } {
 /** Round tick step (hours) so that at most `maxTicks` ticks fit. */
 export function hourTickStep(span: number, maxTicks: number): number {
   return [1, 2, 3, 4, 6, 12].find((s) => span / s <= maxTicks) ?? 24;
+}
+
+/** What a variant is, in words. */
+export function variantKindLabel(kind: VariantKind): string {
+  return { main: 'Base route', longer: 'Longer', shorter: 'Shorter', depot: 'Depot run' }[kind];
+}
+
+const LOCAL_TIME = new Intl.DateTimeFormat('en-GB', {
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZone: 'Europe/Warsaw',
+});
+
+/** Clock time in Białystok of an instant, e.g. "17:19". */
+export function localTime(iso: string): string {
+  return LOCAL_TIME.format(new Date(iso));
+}
+
+/**
+ * The buses of one brigade's day in order, e.g. "224 until 17:19 → 221 17:26–19:44 → 036 from 19:50": the first
+ * bus until it was replaced, the last from when it took over, those in between with both times.
+ */
+export function spellsText(spells: { number: string; from: string; to: string }[]): string {
+  return spells
+    .map((s, i) => {
+      if (i === 0) return `${s.number} until ${localTime(s.to)}`;
+      if (i === spells.length - 1) return `${s.number} from ${localTime(s.from)}`;
+      return `${s.number} ${localTime(s.from)}–${localTime(s.to)}`;
+    })
+    .join(' → ');
 }

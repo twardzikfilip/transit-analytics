@@ -14,11 +14,19 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import * as L from 'leaflet';
-import { HourStat, LineDetail, LineVariant, RouteSubtype } from '../../core/models/models';
+import {
+  HourStat,
+  LineDetail,
+  LineVariant,
+  RouteSubtype,
+  VariantKind,
+} from '../../core/models/models';
 import { RouteDetailActions } from '../../store/route-detail/route-detail.actions';
 import { routeDetailFeature } from '../../store/route-detail/route-detail.reducer';
 import { BrigadeTimeline } from './brigade-timeline';
-import { SUBTYPES, clock, duration, groupLines, subtypeLabel } from './format';
+import { EndStops } from './end-stops';
+import { LineVehiclesSection } from './line-vehicles';
+import { SUBTYPES, clock, duration, groupLines, subtypeLabel, variantKindLabel } from './format';
 import { HourBand, HourChart, HourSeries, RefLine } from './hour-chart';
 import { SegmentChart } from './segment-chart';
 
@@ -37,7 +45,15 @@ interface HourChartData {
  */
 @Component({
   selector: 'app-route-detail',
-  imports: [DatePipe, DecimalPipe, HourChart, SegmentChart, BrigadeTimeline],
+  imports: [
+    DatePipe,
+    DecimalPipe,
+    HourChart,
+    SegmentChart,
+    BrigadeTimeline,
+    EndStops,
+    LineVehiclesSection,
+  ],
   templateUrl: './route-detail.html',
   styleUrl: './route-detail.scss',
 })
@@ -67,6 +83,10 @@ export class RouteDetail {
   protected readonly clock = clock;
   protected readonly duration = duration;
   protected readonly subtypeLabel = subtypeLabel;
+  protected readonly kindLabel = variantKindLabel;
+  /** Short kind label for the tile lists. */
+  protected readonly shortKind = (kind: VariantKind) =>
+    ({ main: 'Base', longer: 'Longer', shorter: 'Shorter', depot: 'Depot' })[kind];
 
   protected readonly mains = computed(
     () => this.detail()?.variants.filter((v) => v.kind === 'main') ?? [],
@@ -83,11 +103,20 @@ export class RouteDetail {
     return m ? `${m.firstStop} ⇄ ${m.lastStop}` : '';
   });
 
+  /** Zone 2 entries of the base route first, then of longer variants. */
+  protected readonly zone2 = computed(() => {
+    const zones = this.detail()?.zone2 ?? [];
+    return {
+      base: zones.filter((z) => z.kind === 'main'),
+      longer: zones.filter((z) => z.kind !== 'main'),
+    };
+  });
+
   /** Visible hours of the charts: the hours with data, at least 05:00–24:00. */
   protected readonly hours = computed(() => {
     const p = this.performance();
     const xs = [
-      ...(p?.durations.map((d) => d.hour) ?? []),
+      ...(p?.travelTimes.flatMap((t) => t.durations.map((d) => d.hour)) ?? []),
       ...(p?.delays.map((d) => d.minute / 60) ?? []),
     ];
     return {
@@ -96,28 +125,31 @@ export class RouteDetail {
     };
   });
 
-  protected readonly durationChart = computed<HourChartData>(() => {
-    const p = this.performance();
-    const base = this.detail()?.base;
-    const refs: RefLine[] = [];
-    if (base?.shortestMin != null)
-      refs.push({ label: 'Scheduled shortest', value: base.shortestMin });
-    if (base?.longestMin != null && base.longestMin !== base.shortestMin) {
-      refs.push({ label: 'Scheduled longest', value: base.longestMin });
-    }
-    return statChart(p?.durations ?? [], 'Shortest–longest run', refs, true);
-  });
-
-  protected readonly speedChart = computed<HourChartData>(() => {
-    const base = this.detail()?.base;
-    const refs: RefLine[] = [];
-    if (base?.maxSpeedKmh != null)
-      refs.push({ label: 'Scheduled fastest', value: base.maxSpeedKmh });
-    if (base?.minSpeedKmh != null && base.minSpeedKmh !== base.maxSpeedKmh) {
-      refs.push({ label: 'Scheduled slowest', value: base.minSpeedKmh });
-    }
-    return statChart(this.performance()?.speeds ?? [], 'Slowest–fastest run', refs, false);
-  });
+  /** Travel time and speed charts per route pattern: the base route first, then longer variants. */
+  protected readonly travelCharts = computed(() =>
+    (this.performance()?.travelTimes ?? []).map((t) => {
+      const timeRefs: RefLine[] = [];
+      if (t.scheduledShortestMin != null) {
+        timeRefs.push({ label: 'Scheduled shortest', value: t.scheduledShortestMin });
+      }
+      if (t.scheduledLongestMin != null && t.scheduledLongestMin !== t.scheduledShortestMin) {
+        timeRefs.push({ label: 'Scheduled longest', value: t.scheduledLongestMin });
+      }
+      const speedRefs: RefLine[] = [];
+      if (t.scheduledMaxSpeedKmh != null) {
+        speedRefs.push({ label: 'Scheduled fastest', value: t.scheduledMaxSpeedKmh });
+      }
+      if (t.scheduledMinSpeedKmh != null && t.scheduledMinSpeedKmh !== t.scheduledMaxSpeedKmh) {
+        speedRefs.push({ label: 'Scheduled slowest', value: t.scheduledMinSpeedKmh });
+      }
+      return {
+        t,
+        title: `${t.kind === 'main' ? 'Base route' : 'Longer variant'}: ${t.label}`,
+        duration: statChart(t.durations, 'Shortest–longest run', timeRefs, true),
+        speed: statChart(t.speeds, 'Slowest–fastest run', speedRefs, false),
+      };
+    }),
+  );
 
   protected readonly delayChart = computed<HourChartData>(() => ({
     series: [
@@ -186,18 +218,16 @@ export class RouteDetail {
     return SUBTYPES.find((s) => s.subtype === subtype)?.color ?? '--line-urban';
   }
 
-  protected zoneOf(direction: number) {
-    return this.detail()?.zone2.find((z) => z.direction === direction) ?? null;
-  }
-
-  /** Base routes thick, other variants thin and dashed in the same colour; stops as small circles, zone 2 filled. */
+  /**
+   * Base routes thick, other variants thin and dashed in the same colour, depot runs dotted in yellow; stops as small
+   * circles, zone 2 filled.
+   */
   private drawRoute(detail: LineDetail): void {
     const layers = this.layers!;
     layers.clearLayers();
-    const color =
-      getComputedStyle(document.documentElement)
-        .getPropertyValue(this.colorVar(detail.subtype))
-        .trim() || '#2a78d6';
+    const css = getComputedStyle(document.documentElement);
+    const color = css.getPropertyValue(this.colorVar(detail.subtype)).trim() || '#2a78d6';
+    const depotColor = css.getPropertyValue('--depot').trim() || '#eda100';
     const ordered = [...detail.variants].sort(
       (a, b) => (a.kind === 'main' ? 1 : 0) - (b.kind === 'main' ? 1 : 0),
     );
@@ -205,11 +235,12 @@ export class RouteDetail {
     for (const v of ordered) {
       if (!v.points.length) continue;
       const main = v.kind === 'main';
+      const depot = v.kind === 'depot';
       L.polyline(v.points, {
-        color,
-        weight: main ? 5 : 2,
+        color: depot ? depotColor : color,
+        weight: main ? 5 : depot ? 3 : 2,
         opacity: main ? 0.85 : 1,
-        dashArray: main ? undefined : '6 5',
+        dashArray: main ? undefined : depot ? '2 6' : '6 5',
       })
         .bindTooltip(variantLabel(v), { sticky: true })
         .addTo(layers);
@@ -241,7 +272,9 @@ export class RouteDetail {
 
 function variantLabel(v: LineVariant): string {
   const kind =
-    v.kind === 'main' ? 'Base route' : v.kind === 'longer' ? 'Longer variant' : 'Shorter variant';
+    v.kind === 'main' || v.kind === 'depot'
+      ? variantKindLabel(v.kind)
+      : `${variantKindLabel(v.kind)} variant`;
   return `${kind} towards ${v.headsign}: ${v.km.toFixed(1)} km, ${v.tripsPerDay} trips a weekday`;
 }
 
