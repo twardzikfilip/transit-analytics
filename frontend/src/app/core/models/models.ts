@@ -25,17 +25,6 @@ export interface Vehicle {
   model: string | null;
 }
 
-export interface VehiclePosition {
-  id: number;
-  vehicleId: number;
-  vehicleNumber: string;
-  tripId: number | null;
-  latitude: number;
-  longitude: number;
-  bearing: number | null;
-  speed: number | null;
-  recordedAt: string;
-}
 
 /** Live position from an external feed (zbiorkom.live); not stored in the backend. */
 export interface LivePosition {
@@ -112,7 +101,6 @@ export interface Trip {
   routeId: number;
   routeName: string;
   routeColor: string | null;
-  vehicleId: number | null;
   serviceId: string;
   headsign: string | null;
   shortName: string | null;

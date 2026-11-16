@@ -54,7 +54,7 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
 
 - `POST /api/auth/login` `{username, password}` → `{token, username, role}`; `GET /api/auth/me`
 - CRUD (`GET` list paged with `?page=&size=&sort=`, `GET /{id}`, `POST`, `PUT /{id}`, `DELETE /{id}`) on
-  `/api/vehicles`, `/api/vehicle-positions`, `/api/users`, `/api/roles`, and the timetable (GTFS) tables
+  `/api/vehicles`, `/api/users`, `/api/roles`, and the timetable (GTFS) tables
   `/api/agencies`, `/api/routes`, `/api/stops`, `/api/trips`, `/api/stop-times`, `/api/calendar-dates`,
   `/api/shape-points`. Timetable lists take filters as query parameters, e.g. `/api/trips?routeId=17&direction=1`,
   `/api/stop-times?stopId=260&sort=departureTime&sort=id`, `/api/stops?q=dworzec` (Swagger lists them all).
@@ -107,7 +107,6 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   Also every stretch between two consecutive stops (both directions together) with its peak and all-day buses and
   its route shape, for the maps. Computed in the background at startup and cached per timetable.
 - `POST /api/gtfs/bialystok/import` (admin) — downloads Białystok's GTFS timetable and loads it; see below.
-- `GET /api/vehicle-positions/latest` — latest stored position per vehicle
 - `GET /api/zbiorkom/bialystok/positions` — live Białystok vehicle positions from [zbiorkom.live](https://zbiorkom.live),
   used by the live map. Fetched on every call and not stored. Vehicles seen for the first time are added to the
   vehicle table (number, type, agency, model). The agency `default` is stored as `BKM`, and GTFS type codes become names

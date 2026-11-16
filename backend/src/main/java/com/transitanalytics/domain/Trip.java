@@ -18,9 +18,6 @@ public class Trip {
     @JoinColumn(name = "route_id", nullable = false)
     private Route route;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "vehicle_id")
-    private Vehicle vehicle;
 
     /** Matches calendar_date.service_id. */
     @Column(name = "service_id", nullable = false, length = 64)
@@ -71,13 +68,6 @@ public class Trip {
         this.route = route;
     }
 
-    public Vehicle getVehicle() {
-        return vehicle;
-    }
-
-    public void setVehicle(Vehicle vehicle) {
-        this.vehicle = vehicle;
-    }
 
     public String getServiceId() {
         return serviceId;

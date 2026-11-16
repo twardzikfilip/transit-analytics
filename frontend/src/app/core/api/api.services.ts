@@ -23,7 +23,6 @@ import {
   UserPayload,
   UserRole,
   Vehicle,
-  VehiclePosition,
 } from '../models/models';
 import { CrudApiService } from './crud-api.service';
 
@@ -31,21 +30,6 @@ import { CrudApiService } from './crud-api.service';
 export class VehicleApi extends CrudApiService<Vehicle> {
   constructor() {
     super('/api/vehicles');
-  }
-}
-
-@Injectable({ providedIn: 'root' })
-export class VehiclePositionApi extends CrudApiService<
-  VehiclePosition,
-  Omit<VehiclePosition, 'id' | 'vehicleNumber'>
-> {
-  constructor() {
-    super('/api/vehicle-positions');
-  }
-
-  /** Latest position of every vehicle. */
-  latest(): Observable<VehiclePosition[]> {
-    return this.http.get<VehiclePosition[]>(`${this.baseUrl}/latest`);
   }
 }
 
