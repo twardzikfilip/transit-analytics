@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { GtfsImportResult, LivePosition, Route, Stop, StopTime, Trip, User, UserPayload, UserRole, Vehicle, VehiclePosition } from '../models/models';
+import { DelayBand, FleetSeries, GtfsImportResult, LivePosition, Page, PositionSample, RouteActivity, Route, Stop, StopTime, Trip, User, UserPayload, UserRole, Vehicle, VehiclePosition } from '../models/models';
 import { CrudApiService } from './crud-api.service';
 
 @Injectable({ providedIn: 'root' })
@@ -83,4 +83,32 @@ export class ZbiorkomApi {
   bialystokPositions(): Observable<LivePosition[]> {
     return this.http.get<LivePosition[]>('/api/zbiorkom/bialystok/positions');
   }
+}
+
+/** Recorded vehicle positions (time series). Times are ISO-8601 instants; `to` is exclusive. */
+@Injectable({ providedIn: 'root' })
+export class PositionHistoryApi {
+  private readonly http = inject(HttpClient);
+
+  fleet(from: string, to: string, route: string | null): Observable<FleetSeries> {
+    return this.http.get<FleetSeries>('/api/positions/fleet', { params: withRoute({ from, to }, route) });
+  }
+
+  delays(from: string, to: string, route: string | null): Observable<DelayBand[]> {
+    return this.http.get<DelayBand[]>('/api/positions/delays', { params: withRoute({ from, to }, route) });
+  }
+
+  routes(from: string, to: string): Observable<RouteActivity[]> {
+    return this.http.get<RouteActivity[]>('/api/positions/routes', { params: { from, to } });
+  }
+
+  samples(from: string, to: string, route: string | null, page: number, size: number): Observable<Page<PositionSample>> {
+    return this.http.get<Page<PositionSample>>('/api/positions', {
+      params: withRoute({ from, to, page, size }, route),
+    });
+  }
+}
+
+function withRoute(params: Record<string, string | number>, route: string | null): Record<string, string | number> {
+  return route ? { ...params, route } : params;
 }

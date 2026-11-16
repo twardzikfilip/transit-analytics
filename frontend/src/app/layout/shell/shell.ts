@@ -29,6 +29,7 @@ export class Shell {
     { path: '/home', label: 'Home', icon: '⌂' },
     { path: '/vehicles', label: 'Vehicles', icon: '🚌' },
     { path: '/live-map', label: 'Live map', icon: '🗺' },
+    { path: '/positions', label: 'Position history', icon: '📈' },
     { path: '/routes', label: 'Routes', icon: '〰' },
     { path: '/stops', label: 'Stops', icon: '🚏' },
     { path: '/trips', label: 'Trips', icon: '⇄' },

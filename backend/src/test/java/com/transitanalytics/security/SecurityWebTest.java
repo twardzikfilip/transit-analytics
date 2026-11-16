@@ -9,6 +9,9 @@ import com.transitanalytics.gtfs.GtfsImportResult;
 import com.transitanalytics.service.ExternalServiceException;
 import com.transitanalytics.service.VehicleService;
 import com.transitanalytics.web.GtfsController;
+import com.transitanalytics.web.PositionHistoryController;
+import com.transitanalytics.recording.PositionHistoryService;
+import com.transitanalytics.dto.PositionHistoryDto;
 import com.transitanalytics.web.VehicleController;
 import com.transitanalytics.web.ZbiorkomController;
 import com.transitanalytics.zbiorkom.ZbiorkomBialystokService;
@@ -42,7 +45,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = {AuthController.class, VehicleController.class, ZbiorkomController.class,
-        GtfsController.class})
+        GtfsController.class, PositionHistoryController.class})
 @Import({SecurityConfig.class, JwtAuthFilter.class, JwtService.class, SecurityWebTest.Metrics.class})
 @TestPropertySource(properties = {
         "app.jwt.secret=test-secret-test-secret-test-secret-123456",
@@ -83,6 +86,9 @@ class SecurityWebTest {
 
     @MockitoBean
     GtfsBialystokService gtfsBialystokService;
+
+    @MockitoBean
+    PositionHistoryService positionHistoryService;
 
     @Test
     void loginReturnsToken() throws Exception {
@@ -195,6 +201,47 @@ class SecurityWebTest {
         mvc.perform(post("/api/gtfs/bialystok/import").header("Authorization", bearer("admin", "ADMIN")))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.detail").value("The feed has no stops.txt"));
+    }
+
+    @Test
+    void guestCanReadPositionHistory() throws Exception {
+        Instant from = Instant.parse("2026-11-16T10:00:00Z");
+        Instant to = Instant.parse("2026-11-16T11:00:00Z");
+        given(positionHistoryService.fleet(from, to, "103")).willReturn(new PositionHistoryDto.FleetSeries(from, to, 60,
+                "103", List.of(new PositionHistoryDto.FleetPoint(from, 7.0, 7, 7, 30.0)),
+                new PositionHistoryDto.Summary(7, 8, 7, 7, from, 30.0, from, from)));
+        given(positionHistoryService.delays(from, to, null)).willReturn(List.of(
+                new PositionHistoryDto.DelayBand(null, 1, 5, 40), new PositionHistoryDto.DelayBand(10, null, 1, 2)));
+
+        mvc.perform(get("/api/positions/fleet").param("from", from.toString()).param("to", to.toString())
+                        .param("route", "103").header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.points[0].vehicles").value(7))
+                .andExpect(jsonPath("$.stepSeconds").value(60))
+                .andExpect(jsonPath("$.summary.peakVehicles").value(7));
+        mvc.perform(get("/api/positions/delays").param("from", from.toString()).param("to", to.toString())
+                        .header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].toMinutes").value(1))
+                .andExpect(jsonPath("$[1].fromMinutes").value(10));
+        mvc.perform(get("/api/positions/fleet").param("from", from.toString()).param("to", to.toString()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void positionHistoryRejectsBadWindows() throws Exception {
+        given(positionHistoryService.fleet(any(), any(), any()))
+                .willThrow(new IllegalArgumentException("from must be before to"));
+
+        mvc.perform(get("/api/positions/fleet").param("from", "2026-11-16T11:00:00Z").param("to", "2026-11-16T10:00:00Z")
+                        .header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("from must be before to"));
+        mvc.perform(get("/api/positions/fleet").param("from", "yesterday").param("to", "2026-11-16T10:00:00Z")
+                        .header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/positions/fleet").header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isBadRequest());
     }
 
     private double loginCount(String outcome) {

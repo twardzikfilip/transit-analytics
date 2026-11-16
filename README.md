@@ -3,7 +3,7 @@
 Starter full-stack app: Angular 22 + NgRx frontend, Spring Boot 4 backend, PostgreSQL with Flyway migrations.
 
 ```
-docker-compose.yml   PostgreSQL 17 + Grafana LGTM (telemetry) for local development
+docker-compose.yml   PostgreSQL 17 + TimescaleDB, Grafana LGTM (telemetry) for local development
 backend/             Spring Boot 4.1 (Gradle, Java 17): JWT auth + CRUD REST API
 frontend/            Angular 22 (standalone, signals, NgRx, Leaflet)
 ```
@@ -46,6 +46,9 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
 | zbiorkom.live API base URL | `ZBIORKOM_BASE_URL` | `https://api.zbiorkom.live/api6-open` |
 | Białystok bounding box (`minLon,minLat,maxLon,maxLat`) | `ZBIORKOM_BIALYSTOK_BBOX` | `22.921150,53.016270,23.382496,53.243687` |
 | Białystok GTFS feed (zip) | `GTFS_BIALYSTOK_URL` | `https://komunikacja.bialystok.pl/cms/File/download/gtfs/google_transit.zip` |
+| Record vehicle positions | `RECORDING_ENABLED` | `true` |
+| Raw snapshot archive folder | `RECORDING_ARCHIVE_DIR` | `data/raw` (inside `backend/`, git-ignored) |
+| Password of the read-only `grafana_reader` DB user | `GRAFANA_DB_PASSWORD` | `grafana_reader` (set the same value for docker compose) |
 
 ### API
 
@@ -55,6 +58,16 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   `/api/agencies`, `/api/routes`, `/api/stops`, `/api/trips`, `/api/stop-times`, `/api/calendar-dates`,
   `/api/shape-points`. Timetable lists take filters as query parameters, e.g. `/api/trips?routeId=17&direction=1`,
   `/api/stop-times?stopId=260&sort=departureTime&sort=id`, `/api/stops?q=dworzec` (Swagger lists them all).
+- Position history (recorded time series), each with a required window `from`/`to` (ISO-8601, `to` exclusive, at
+  most 31 days) and an optional `route` (line):
+  - `GET /api/positions/fleet` — per bucket of polls: vehicles running (average per poll), the most at once,
+    reports and mean delay. Buckets are 1 minute (one poll) for windows up to 24 h and coarser beyond, keeping
+    ≤ 1,500 points. The totals separate *running now* (latest poll) and *most at once* (peak poll) from *different
+    vehicles seen*. The last is always larger, because vehicles start and end their runs during the window.
+  - `GET /api/positions/delays` — vehicles and reports per minute of delay: under 1 min (incl. early), 1–2, …,
+    9–10, 10 min or more. A vehicle counts in every band it was in.
+  - `GET /api/positions/routes` — lines recorded in the window.
+  - `GET /api/positions` — the raw position reports, newest first, paged (`page`, `size` ≤ 500; also `vehicle`).
 - `POST /api/gtfs/bialystok/import` (admin) — downloads Białystok's GTFS timetable and loads it; see below.
 - `GET /api/vehicle-positions/latest` — latest stored position per vehicle
 - `GET /api/zbiorkom/bialystok/positions` — live Białystok vehicle positions from [zbiorkom.live](https://zbiorkom.live),
@@ -78,6 +91,67 @@ inserting the ~384k stop times.
   app doesn't load (e.g. `feed_info.txt`) are listed as ignored.
 - Code: `gtfs/GtfsImporter` (generic loader: files are streamed from the zip into temporary tables with PostgreSQL
   `COPY`, then merged with SQL) and `gtfs/GtfsBialystokService` (download + import for Białystok).
+
+### Vehicle position history (time series)
+
+Every minute from 03:30 to 01:30 (Warsaw time), the backend polls the zbiorkom.live Białystok feed and stores every
+vehicle's position in `position_sample`, a TimescaleDB hypertable. It also keeps the raw response, gzipped, in the
+archive (`backend/data/raw/zbiorkom-bialystok/YYYY/MM/DD/<UTC time>.json.gz`).
+
+- **Why PostgreSQL + TimescaleDB.** Half a year is about 25 million rows (≈ 940k vehicle-minutes per week from the
+  timetable; weekday peak 181 buses). That's small for PostgreSQL, and it keeps positions next to the GTFS and vehicle
+  tables for joins. TimescaleDB adds weekly partitions, columnar compression after 7 days, self-updating aggregates,
+  and statistics functions (`timescaledb_toolkit`).
+- **Expected size for half a year at one poll per minute:** ~2 GB of gzipped archive (13 KiB per snapshot), ~6 GB in
+  PostgreSQL uncompressed (measured ~230 bytes per row with indexes), ~0.7 GB once compressed (measured 8.6× on a real
+  week of data). A 2-minute interval halves that.
+- **Polling:** at most once a minute (`min-interval` guard). The feed itself refreshes ~99% of vehicles every minute.
+  A report seen twice (same vehicle and feed timestamp) is stored once.
+- **Aggregates (refresh in the background, include the newest rows):**
+  - `fleet_5min`: vehicles in service and mean delay per 5 minutes.
+  - `route_delay_hourly`: per route and hour, `delay_stats` (mean/stddev via `average()`, `stddev()`) and
+    `delay_pct` (percentiles via `approx_percentile(0.9, …)`). Combine buckets with `rollup()`.
+- **Grafana:** the **Transit Fleet** dashboard shows vehicles in service, delay over time, a route × hour delay
+  matrix, the most delayed routes, outliers (> 3σ from the route's mean for that hour), and a map of the vehicles at
+  the end of the selected time range. It reads the database as `grafana_reader`, which can't see users or passwords.
+- Positions are only recorded while the backend runs. Turn recording off with `RECORDING_ENABLED=false`.
+- Vehicles with recorded positions can't be deleted (the history references them).
+
+**Backfill saved snapshots** (one API response per file, `.json` or `.json.gz`, any folder depth). The command
+imports them into `position_sample` and the archive, refreshes the aggregates for that period, and exits. Running it
+twice adds nothing.
+
+```bash
+cd backend
+./gradlew bootRun --args='--app.recording.import-dir=/path/to/snapshots --server.port=0'
+```
+
+**Analysis examples** (psql: `psql -h localhost -U transit transit`):
+
+```sql
+-- Mean and p90 delay per route on weekdays, by hour of day
+SELECT route_name, extract(hour FROM bucket AT TIME ZONE 'Europe/Warsaw') AS hour,
+       average(rollup(delay_stats)) AS mean_s, approx_percentile(0.9, rollup(delay_pct)) AS p90_s
+FROM route_delay_hourly
+WHERE extract(isodow FROM bucket AT TIME ZONE 'Europe/Warsaw') <= 5
+GROUP BY 1, 2 ORDER BY 1, 2;
+
+-- One vehicle's track for a day
+SELECT observed_at, latitude, longitude, delay_seconds, route_name
+FROM position_sample p JOIN vehicle v ON v.id = p.vehicle_id
+WHERE v.vehicle_number = '230' AND observed_at >= '2026-11-16' AND observed_at < '2026-11-17'
+ORDER BY observed_at;
+
+-- Storage used, before and after compression
+SELECT * FROM hypertable_columnstore_stats('position_sample');
+```
+
+For projections and modelling, connect pandas or a notebook to the same database. For heavy offline work, export a
+period to Parquet and use DuckDB.
+
+**Switching from the old `postgres:17` container.** The TimescaleDB image uses a new volume (`tsdata`), so it starts
+empty. Flyway recreates the schema and users; vehicles re-register from the feed; re-import the timetable from
+Settings. The old data stays in the `pgdata` volume until you remove it with `docker volume rm transit-analytics_pgdata`.
 
 Interactive docs: Swagger UI at http://localhost:8080/swagger-ui.html, OpenAPI JSON at `/v3/api-docs`. To try
 the secured endpoints, call `POST /api/auth/login`, copy the `token`, click **Authorize** and paste it. Set
@@ -106,6 +180,9 @@ INTEGRATION_TESTS=true ./gradlew test           # also boots the full context ag
   (`pages/timetable.routes.ts`, `pages/settings/settings.routes.ts`).
 - `pages` — login, home, vehicles (edit actions for ADMIN only), live map (Białystok, Leaflet/OSM; dispatches a
   `livePositions` load every 5 s and draws markers from the store), settings (GTFS import for admins)
+- Position history: vehicles running and mean delay every minute (SVG line charts with a hover/keyboard tooltip and
+  a table view), running now / most at once / different vehicles seen, the delay distribution, and the raw reports, filtered by time range (1 h – 30 days or a custom from/to) and line, all kept in the URL.
+  Preset ranges refresh every minute. Store slice `positionHistory`, registered by its lazy route.
 - Timetable pages (read-only): Routes → Trips (filter by route, direction, service, headsign) → Stop times of a trip;
   Stops (search, zone) → departure board of a stop. Filters and the page number live in the URL, so every view can be
   linked and the back button works.

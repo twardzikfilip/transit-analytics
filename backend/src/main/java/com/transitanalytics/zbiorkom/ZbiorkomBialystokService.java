@@ -42,9 +42,33 @@ public class ZbiorkomBialystokService {
         this.vehicleService = vehicleService;
     }
 
+    /**
+     * One poll of the feed: the response as received, when it was fetched, and the parsed positions.
+     *
+     * @param raw       response body, for archiving
+     * @param fetchedAt when the request was made
+     */
+    public record Snapshot(byte[] raw, Instant fetchedAt, List<LivePositionDto> positions) {
+    }
+
     /** Current position of every vehicle in the Białystok area. */
     public List<LivePositionDto> positions() {
-        ZbiorkomFeed.Positions feed = client.positions(CITY, properties.bialystok().bbox());
+        return snapshot().positions();
+    }
+
+    /** Polls the feed once; vehicles seen for the first time are registered. */
+    public Snapshot snapshot() {
+        Instant fetchedAt = Instant.now();
+        byte[] raw = client.positionsRaw(CITY, properties.bialystok().bbox());
+        return new Snapshot(raw, fetchedAt, toPositions(client.parsePositions(raw)));
+    }
+
+    /** Positions from a response saved earlier (e.g. a file being imported); new vehicles are registered. */
+    public List<LivePositionDto> positionsFrom(byte[] savedResponse) {
+        return toPositions(client.parsePositions(savedResponse));
+    }
+
+    private List<LivePositionDto> toPositions(ZbiorkomFeed.Positions feed) {
         List<ZbiorkomFeed.Position> raw = feed == null || feed.positions() == null ? List.of() : feed.positions()
                 .stream()
                 .filter(p -> p.vehicle() != null && p.vehicle().id() != null)

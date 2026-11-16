@@ -11,6 +11,9 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+    placeholders:
+      # Password of the read-only grafana_reader role (V8). Must match GRAFANA_DB_PASSWORD in docker-compose.yml.
+      grafana_db_password: ${GRAFANA_DB_PASSWORD:grafana_reader}
 
 app:
   jwt:
@@ -25,6 +28,16 @@ app:
     read-timeout: 10s
     bialystok:
       bbox: ${ZBIORKOM_BIALYSTOK_BBOX:22.921150,53.016270,23.382496,53.243687}
+  recording:
+    # Poll the zbiorkom Białystok feed and store every vehicle position (position_sample) plus the raw response.
+    enabled: ${RECORDING_ENABLED:true}
+    cron: "0 * * * * *"            # every minute, at second 0
+    zone: Europe/Warsaw
+    window-start: "03:30"
+    window-end: "01:30"
+    min-interval: 55s              # never poll more than once a minute
+    archive-dir: ${RECORDING_ARCHIVE_DIR:data/raw}
+    import-dir:                    # set to backfill saved snapshots, then the app exits
   gtfs:
     connect-timeout: 5s
     read-timeout: 60s

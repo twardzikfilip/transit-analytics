@@ -1,0 +1,475 @@
+{
+  "uid": "transit-fleet",
+  "title": "Transit Fleet",
+  "tags": [
+    "transit",
+    "positions"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "1m",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Vehicles in service",
+      "description": "Distinct vehicles reporting in each 5-minute bucket (fleet_5min).",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "transit-postgres"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "time_series",
+          "rawSql": "SELECT bucket AS time, vehicles AS \"vehicles\"\nFROM fleet_5min\nWHERE $__timeFilter(bucket)\nORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "fillOpacity": 15,
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "id": 1,
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "transit-postgres"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Delay (all routes)",
+      "description": "Mean and 90th percentile delay per hour, from route_delay_hourly. Negative = early.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "transit-postgres"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "time_series",
+          "rawSql": "SELECT bucket AS time,\n       average(rollup(delay_stats)) AS \"mean\",\n       approx_percentile(0.5, rollup(delay_pct)) AS \"median\",\n       approx_percentile(0.9, rollup(delay_pct)) AS \"p90\"\nFROM route_delay_hourly\nWHERE $__timeFilter(bucket)\nGROUP BY bucket\nORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 0
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "id": 2,
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "transit-postgres"
+      }
+    },
+    {
+      "type": "table",
+      "title": "Mean delay by route and hour of day (minutes)",
+      "description": "Rows: routes; columns: hour of day in Warsaw time. Red = late, blue = early.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "transit-postgres"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "SELECT route_name AS route,\n       lpad(extract(hour FROM bucket AT TIME ZONE 'Europe/Warsaw')::int::text, 2, '0') AS hour,\n       round((average(rollup(delay_stats)) / 60.0)::numeric, 1) AS delay_min\nFROM route_delay_hourly\nWHERE $__timeFilter(bucket) AND route_name IS NOT NULL\nGROUP BY 1, 2\nORDER BY length(route_name), route_name, 2"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "groupingToMatrix",
+          "options": {
+            "rowField": "route",
+            "columnField": "hour",
+            "valueField": "delay_min",
+            "emptyValue": "null"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "custom": {
+            "align": "center",
+            "cellOptions": {
+              "type": "color-background",
+              "mode": "basic"
+            },
+            "width": 46
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              },
+              {
+                "color": "transparent",
+                "value": -1
+              },
+              {
+                "color": "#FADE2A",
+                "value": 2
+              },
+              {
+                "color": "orange",
+                "value": 4
+              },
+              {
+                "color": "red",
+                "value": 7
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "route\\hour"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Route"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 70
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 24,
+        "h": 12
+      },
+      "id": 3,
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "transit-postgres"
+      }
+    },
+    {
+      "type": "table",
+      "title": "Most delayed routes",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "transit-postgres"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "SELECT route_name AS \"Route\",\n       round(average(rollup(delay_stats))) AS \"Mean delay\",\n       round(approx_percentile(0.9, rollup(delay_pct))) AS \"p90 delay\",\n       max(max_delay_seconds) AS \"Max delay\",\n       sum(samples) AS \"Reports\"\nFROM route_delay_hourly\nWHERE $__timeFilter(bucket) AND route_name IS NOT NULL\nGROUP BY route_name\nHAVING sum(samples) >= 30\nORDER BY 2 DESC\nLIMIT 15"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Reports"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Route"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mean delay"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "max",
+                "value": 600
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-GrYlRd"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 10,
+        "h": 12
+      },
+      "id": 4,
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "transit-postgres"
+      }
+    },
+    {
+      "type": "table",
+      "title": "Outliers: delay more than 3σ from the route's mean for that hour",
+      "description": "Each report compared with its route and hour (route_delay_hourly, at least 30 reports). Sorted by z-score.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "transit-postgres"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "SELECT p.observed_at AS \"Time\", p.route_name AS \"Route\", v.vehicle_number AS \"Vehicle\", p.brigade AS \"Duty\",\n       p.delay_seconds AS \"Delay\",\n       round(average(h.delay_stats)) AS \"Route mean\",\n       round(((p.delay_seconds - average(h.delay_stats)) / stddev(h.delay_stats))::numeric, 1) AS \"z\"\nFROM position_sample p\nJOIN route_delay_hourly h ON h.route_name = p.route_name AND h.bucket = time_bucket(INTERVAL '1 hour', p.observed_at)\nJOIN vehicle v ON v.id = p.vehicle_id\nWHERE $__timeFilter(p.observed_at)\n  AND h.samples >= 30 AND stddev(h.delay_stats) > 0\n  AND abs(p.delay_seconds - average(h.delay_stats)) > 3 * stddev(h.delay_stats)\nORDER BY abs((p.delay_seconds - average(h.delay_stats)) / stddev(h.delay_stats)) DESC\nLIMIT 200"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(Delay|Route mean)$"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      },
+      "gridPos": {
+        "x": 10,
+        "y": 20,
+        "w": 14,
+        "h": 12
+      },
+      "id": 5,
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "transit-postgres"
+      }
+    },
+    {
+      "type": "geomap",
+      "title": "Vehicles at the end of the selected time range",
+      "description": "Latest report per vehicle in the 3 minutes before the end of the time range; move the time range to replay history. Colour = delay.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "transit-postgres"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "SELECT DISTINCT ON (p.vehicle_id)\n       p.observed_at AS time, v.vehicle_number AS vehicle, p.route_name AS route, p.headsign,\n       p.delay_seconds AS delay, p.latitude, p.longitude\nFROM position_sample p\nJOIN vehicle v ON v.id = p.vehicle_id\nWHERE p.observed_at BETWEEN $__timeTo()::timestamptz - INTERVAL '3 minutes' AND $__timeTo()::timestamptz\nORDER BY p.vehicle_id, p.observed_at DESC"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": -60
+              },
+              {
+                "color": "#FADE2A",
+                "value": 120
+              },
+              {
+                "color": "orange",
+                "value": 300
+              },
+              {
+                "color": "red",
+                "value": 600
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "view": {
+          "id": "coords",
+          "lat": 53.13,
+          "lon": 23.16,
+          "zoom": 11.5
+        },
+        "controls": {
+          "showZoom": true,
+          "mouseWheelZoom": true
+        },
+        "basemap": {
+          "type": "default",
+          "name": "Basemap"
+        },
+        "layers": [
+          {
+            "type": "markers",
+            "name": "Vehicles",
+            "tooltip": true,
+            "location": {
+              "mode": "coords",
+              "latitude": "latitude",
+              "longitude": "longitude"
+            },
+            "config": {
+              "size": {
+                "fixed": 6
+              },
+              "color": {
+                "field": "delay",
+                "fixed": "green"
+              },
+              "showLegend": true,
+              "text": {
+                "field": "route",
+                "mode": "field"
+              },
+              "textConfig": {
+                "fontSize": 9,
+                "offsetY": -10
+              }
+            }
+          }
+        ],
+        "tooltip": {
+          "mode": "details"
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 32,
+        "w": 24,
+        "h": 14
+      },
+      "id": 6,
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "transit-postgres"
+      }
+    }
+  ],
+  "description": "Recorded zbiorkom.live vehicle positions for Białystok (position_sample and its continuous aggregates)."
+}

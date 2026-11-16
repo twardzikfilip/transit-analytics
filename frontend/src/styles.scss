@@ -10,6 +10,8 @@
   --danger: #d32f2f;
   --sidebar-bg: #1f2933;
   --sidebar-fg: #d9dee4;
+  /* Chart series colour; validated against the chart surface for each mode. */
+  --chart-line: #1e88e5;
   color-scheme: light;
 }
 
@@ -26,6 +28,7 @@
     --danger: #ef5350;
     --sidebar-bg: #0d0f12;
     --sidebar-fg: #c9ced5;
+    --chart-line: #3d97e8;
     color-scheme: dark;
   }
 }
