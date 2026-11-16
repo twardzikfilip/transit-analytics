@@ -89,7 +89,8 @@
               "src/app/**/*.ts"
             ],
             "coverageExclude": [
-              "src/app/**/*.spec.ts"
+              "src/app/**/*.spec.ts",
+              "src/app/testing/**"
             ],
             "coverageReporters": [
               "text-summary",
@@ -97,10 +98,10 @@
               "lcovonly"
             ],
             "coverageThresholds": {
-              "statements": 44,
-              "branches": 46,
-              "functions": 44,
-              "lines": 42
+              "statements": 77,
+              "branches": 70,
+              "functions": 72,
+              "lines": 77
             }
           }
         }
