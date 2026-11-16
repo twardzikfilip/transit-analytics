@@ -6,7 +6,9 @@ import {
   hourRange,
   hourTickStep,
   slowestSegments,
+  spellsText,
   subtypeLabel,
+  variantKindLabel,
 } from './format';
 
 describe('route detail formatting', () => {
@@ -53,5 +55,20 @@ describe('route detail formatting', () => {
     expect(hourRange([])).toEqual({ from: 4, to: 24 });
     expect(hourTickStep(24, 12)).toBe(2);
     expect(hourTickStep(24, 5)).toBe(6);
+  });
+
+  it('names variant kinds', () => {
+    expect(variantKindLabel('depot')).toBe('Depot run');
+    expect(variantKindLabel('main')).toBe('Base route');
+  });
+
+  it('describes bus changes within a brigade day in local time', () => {
+    const spells = [
+      { number: '224', from: '2026-11-09T06:37:05Z', to: '2026-11-09T16:19:52Z' },
+      { number: '221', from: '2026-11-09T16:26:03Z', to: '2026-11-09T18:44:14Z' },
+      { number: '036', from: '2026-11-09T18:50:04Z', to: '2026-11-09T20:27:46Z' },
+    ];
+    expect(spellsText(spells)).toBe('224 until 17:19 → 221 17:26–19:44 → 036 from 19:50');
+    expect(spellsText(spells.slice(0, 2))).toBe('224 until 17:19 → 221 from 17:26');
   });
 });

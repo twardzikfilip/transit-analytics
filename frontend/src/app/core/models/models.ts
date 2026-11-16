@@ -312,8 +312,8 @@ export interface LineRef {
   subtype: RouteSubtype;
 }
 
-/** Variant kind: the base route of its direction, or longer / shorter than it. */
-export type VariantKind = 'main' | 'longer' | 'shorter';
+/** Variant kind: the base route of its direction, longer / shorter than it, or mostly runs to or from the depot. */
+export type VariantKind = 'main' | 'longer' | 'shorter' | 'depot';
 
 export interface StopPoint {
   name: string;
@@ -333,6 +333,8 @@ export interface LineVariant {
   tripsPerDay: number;
   shortestMin: number;
   longestMin: number;
+  minSpeedKmh: number | null;
+  maxSpeedKmh: number | null;
   firstStop: string | null;
   lastStop: string | null;
   /** Route shape as [lat, lon]. */
@@ -352,6 +354,7 @@ export interface LineBase {
 export interface LineZone2 {
   direction: number;
   headsign: string | null;
+  kind: VariantKind;
   stops: number;
   totalStops: number;
   km: number;
@@ -365,6 +368,29 @@ export interface BrigadeRun {
   direction: number;
   headsign: string | null;
   kind: VariantKind;
+  /** Set when the run goes from the depot into service, or back. */
+  depot: DepotKind | null;
+}
+
+export type DepotKind = 'pull_out' | 'pull_in';
+
+/** Nearby stops (< 500 m) as one place, named after the stop where runs end; `alsoNames` are the others. */
+export interface EndStop {
+  name: string;
+  alsoNames: string[];
+}
+
+/** A run between the depot area and the route. Times are seconds after midnight. */
+export interface DepotRun {
+  brigade: string;
+  from: number;
+  to: number;
+  fromStop: string | null;
+  toStop: string | null;
+  direction: number;
+  headsign: string | null;
+  kind: DepotKind;
+  km: number | null;
 }
 
 export interface Brigade {
@@ -385,6 +411,11 @@ export interface LineDetail {
   variants: LineVariant[];
   zone2: LineZone2[];
   brigades: Brigade[];
+  /** Where buses turn round in service; stops closer than 500 m are one end stop. */
+  endStops: EndStop[];
+  /** Where depot runs start or end, away from the end stops; grouped the same way. */
+  depotStops: EndStop[];
+  depotRuns: DepotRun[];
 }
 
 /** Hours of the service day: 3–23, then 24–26 after midnight. */
@@ -425,8 +456,89 @@ export interface LinePerformance {
   lastDay: string | null;
   weekdays: number;
   fullRuns: number;
-  durations: HourStat[];
-  speeds: HourStat[];
+  /** The base route first, then each longer variant. */
+  travelTimes: TravelTimes[];
   delays: DelaySlot[];
   segments: SegmentProfile[];
+  vehicles: LineVehicles;
+}
+
+/** Full runs of one route pattern (base route or a longer variant, both directions). */
+export interface TravelTimes {
+  kind: VariantKind;
+  label: string;
+  km: number;
+  runs: number;
+  scheduledShortestMin: number | null;
+  scheduledLongestMin: number | null;
+  scheduledMinSpeedKmh: number | null;
+  scheduledMaxSpeedKmh: number | null;
+  durations: HourStat[];
+  speeds: HourStat[];
+}
+
+/** The buses that served a line, from every recorded day. */
+export interface LineVehicles {
+  days: number;
+  vehicles: {
+    number: string;
+    model: string | null;
+    days: number;
+    brigades: string[];
+    lastSeen: string;
+  }[];
+  brigades: {
+    brigade: string;
+    mostUsed: string;
+    mostUsedDays: number;
+    days: number;
+    vehicles: number;
+  }[];
+  /** Brigades that changed bus during a day, most recent day first. */
+  switches: {
+    day: string;
+    brigade: string;
+    spells: { number: string; from: string; to: string }[];
+  }[];
+}
+
+/** A stretch of 4+ consecutive stops along which every listed line runs (both directions where they run back). */
+export interface Corridor {
+  from: string;
+  to: string;
+  /** Stops of the busier direction, in order. */
+  stops: string[];
+  /** Every line running along it (at least half of it). */
+  lines: string[];
+  /** The lines running all of it; the others run part of it. */
+  throughLines: string[];
+  km: number | null;
+  /** Weekday buses on its stretches (averaged along it), both directions. */
+  buses: number;
+  oneWay: boolean;
+  peakIntervalMin: number | null;
+  offPeakIntervalMin: number | null;
+  peakCv: number | null;
+  offPeakCv: number | null;
+}
+
+export interface CorridorReport {
+  serviceId: string | null;
+  peak: { from: string; to: string }[];
+  offPeak: { from: string; to: string }[];
+  corridors: Corridor[];
+  /** Every stretch between two consecutive stops, quietest first. */
+  segments: SegmentLoad[];
+}
+
+/** Weekday buses between two consecutive stops, both directions together. */
+export interface SegmentLoad {
+  from: string;
+  to: string;
+  /** Buses in the peak periods. */
+  peakBuses: number;
+  /** Buses all day. */
+  buses: number;
+  /** The route between the stops as [lat, lon]. */
+  points: [number, number][];
 }

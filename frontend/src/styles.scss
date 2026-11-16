@@ -19,6 +19,9 @@
   --line-suburban: #1baf7a;
   --line-night: #6250d6;
   --line-regional: #eb6834;
+  /* Depot runs: always paired with a "Depot run" label. */
+  --depot: #eda100;
+  --depot-soft: #fdf1d3;
   color-scheme: light;
 }
 
@@ -42,6 +45,8 @@
     --line-suburban: #199e70;
     --line-night: #9085e9;
     --line-regional: #d95926;
+    --depot: #c98500;
+    --depot-soft: #3a2f14;
     color-scheme: dark;
   }
 }
@@ -239,4 +244,37 @@ table.data-table {
 
 a {
   color: var(--accent);
+}
+
+/* Regularity grade A–F: the letter carries the meaning; the tint only supports it. */
+/* Shared by Line statistics and Important corridors. */
+.grade {
+  display: inline-block;
+  min-width: 1.4em;
+  margin-left: 0.3rem;
+  padding: 0 0.3rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--fg);
+  background: color-mix(in srgb, var(--grade-color) 22%, transparent);
+
+  &[data-grade='A'],
+  &[data-grade='B'] {
+    --grade-color: #2e9e5b;
+  }
+
+  &[data-grade='C'] {
+    --grade-color: #c9a227;
+  }
+
+  &[data-grade='D'] {
+    --grade-color: #e07b24;
+  }
+
+  &[data-grade='E'],
+  &[data-grade='F'] {
+    --grade-color: var(--danger);
+  }
 }

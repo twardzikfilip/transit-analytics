@@ -1,0 +1,32 @@
+<div
+  #map
+  class="map"
+  role="region"
+  [attr.aria-label]="'Map of buses in peak hours by ' + mode()"
+></div>
+<div class="legend">
+  <span class="muted">Buses in peak hours, both directions:</span>
+  @if (mode() === 'width') {
+    @for (w of widthSamples(); track w.value) {
+      <span class="item">
+        <svg [attr.width]="28" [attr.height]="maxWidth + 2" aria-hidden="true">
+          <line
+            x1="2"
+            x2="26"
+            [attr.y1]="(maxWidth + 2) / 2"
+            [attr.y2]="(maxWidth + 2) / 2"
+            [attr.stroke-width]="w.width"
+          />
+        </svg>
+        {{ w.value }}
+      </span>
+    }
+  } @else {
+    @for (c of classes(); track c.from) {
+      <span class="item">
+        <span class="swatch" [style.background]="c.color"></span>
+        {{ c.from }}–{{ c.to }}
+      </span>
+    }
+  }
+</div>

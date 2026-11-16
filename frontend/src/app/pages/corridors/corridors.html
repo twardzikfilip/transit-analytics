@@ -1,0 +1,227 @@
+<div class="page-header">
+  <h1>Important corridors</h1>
+  @if (report()?.serviceId; as service) {
+    <span class="muted">Weekday timetable {{ service }}</span>
+  }
+</div>
+
+@if (error(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+}
+
+<p class="muted intro">
+  Stretches of at least 4 consecutive stops where two or more lines run together, joined end to end
+  where the way on doesn't fork. Lines in an outlined badge run only part of a corridor. Both
+  directions are one row. Peak: {{ periods(report()?.peak) }}; off-peak:
+  {{ periods(report()?.offPeak) }}. Click a column to sort.
+</p>
+
+@if (report(); as r) {
+  <div class="maps">
+    <section class="card map-card">
+      <h2>Buses in peak hours between stops · line width</h2>
+      <app-load-map [segments]="r.segments" mode="width" [peakLabel]="periods(r.peak)" />
+    </section>
+    <section class="card map-card">
+      <h2>Buses in peak hours between stops · colour</h2>
+      <app-load-map [segments]="r.segments" mode="color" [peakLabel]="periods(r.peak)" />
+    </section>
+  </div>
+
+  <p class="summary">
+    <strong>{{ corridors().length }}</strong> corridors
+    @if (oneWay()) {
+      <span class="muted"
+        >· {{ oneWay() }} run one way only (the lines come back along other streets)</span
+      >
+    }
+  </p>
+}
+
+<div class="card data-table-wrap">
+  <table class="data-table" [class.loading]="loading()">
+    <colgroup>
+      <col class="c-rank" />
+      <col class="c-corridor" />
+      <col class="c-stops" />
+      <col class="c-lines" />
+      <col class="c-num" />
+      <col class="c-num" />
+      <col class="c-num" />
+      <col class="c-num" />
+      <col class="c-cv" />
+      <col class="c-cv" />
+    </colgroup>
+    <thead>
+      <tr class="groups">
+        <th rowspan="2" class="num">#</th>
+        <th rowspan="2" [attr.aria-sort]="ariaSort('from')">
+          <button type="button" class="sort" (click)="sortBy('from')">Corridor</button>
+        </th>
+        <th rowspan="2" class="num sep" [attr.aria-sort]="ariaSort('stops')">
+          <button type="button" class="sort" (click)="sortBy('stops')">Stops</button>
+        </th>
+        <th rowspan="2" class="sep">Lines</th>
+        <th rowspan="2" class="num sep" [attr.aria-sort]="ariaSort('km')">
+          <button type="button" class="sort" (click)="sortBy('km')">Length</button>
+        </th>
+        <th rowspan="2" class="num sep" [attr.aria-sort]="ariaSort('buses')">
+          <button
+            type="button"
+            class="sort"
+            (click)="sortBy('buses')"
+            title="Weekday trips running all of it, both directions"
+          >
+            Buses a day
+          </button>
+        </th>
+        <th colspan="2" class="group sep">Interval</th>
+        <th colspan="2" class="group sep" title="How evenly buses are spread: 0 = perfectly even">
+          Regularity
+        </th>
+      </tr>
+      <tr>
+        <th class="num sep" [attr.aria-sort]="ariaSort('peakIntervalMin')">
+          <button type="button" class="sort" (click)="sortBy('peakIntervalMin')">Peak</button>
+        </th>
+        <th class="num" [attr.aria-sort]="ariaSort('offPeakIntervalMin')">
+          <button type="button" class="sort" (click)="sortBy('offPeakIntervalMin')">
+            Off-peak
+          </button>
+        </th>
+        <th class="num sep" [attr.aria-sort]="ariaSort('peakCv')">
+          <button type="button" class="sort" (click)="sortBy('peakCv')">Peak</button>
+        </th>
+        <th class="num" [attr.aria-sort]="ariaSort('offPeakCv')">
+          <button type="button" class="sort" (click)="sortBy('offPeakCv')">Off-peak</button>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (c of corridors(); track c.from + c.to + c.lines.join(); let i = $index) {
+        <tr>
+          <td class="num muted">{{ i + 1 }}</td>
+          <td>
+            <details class="stops">
+              <summary>
+                {{ c.from }} {{ c.oneWay ? '→' : '⇄' }} {{ c.to }}
+                @if (c.oneWay) {
+                  <span class="one-way">one way</span>
+                }
+              </summary>
+              <ol>
+                @for (s of c.stops; track $index) {
+                  <li>{{ s }}</li>
+                }
+              </ol>
+            </details>
+          </td>
+          <td class="num sep">{{ c.stops.length }}</td>
+          <td class="sep">
+            <span class="lines">
+              @for (l of c.lines; track l) {
+                <a
+                  class="route-badge"
+                  [class.partial]="!c.throughLines.includes(l)"
+                  [attr.title]="c.throughLines.includes(l) ? 'Runs all of it' : 'Runs part of it'"
+                  [routerLink]="['/route-detail']"
+                  [queryParams]="{ line: l }"
+                  >{{ l }}</a
+                >
+              }
+            </span>
+          </td>
+          <td class="num sep">
+            @if (c.km !== null) {
+              {{ c.km | number: '1.1-1' }} <span class="unit">km</span>
+            } @else {
+              —
+            }
+          </td>
+          <td class="num sep">{{ c.buses }}</td>
+          @for (v of [c.peakIntervalMin, c.offPeakIntervalMin]; track $index) {
+            <td class="num" [class.sep]="$first">
+              @if (v !== null) {
+                {{ v | number: '1.1-1' }} <span class="unit">min</span>
+              } @else {
+                —
+              }
+            </td>
+          }
+          @for (cv of [c.peakCv, c.offPeakCv]; track $index) {
+            <td class="num" [class.sep]="$first" [attr.title]="regularityMeaning(cv)">
+              @if (cv !== null) {
+                {{ cv | number: '1.2-2' }}
+                <span class="grade" [attr.data-grade]="regularityGrade(cv)">{{
+                  regularityGrade(cv)
+                }}</span>
+              } @else {
+                —
+              }
+            </td>
+          }
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="10" class="muted">
+            {{
+              loading()
+                ? 'Finding corridors…'
+                : 'No corridors. An admin can import the timetable under Settings.'
+            }}
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+<details class="card how">
+  <summary>How these are calculated</summary>
+  <ul>
+    <li>
+      <strong>Corridor:</strong> from the regular weekday timetable, in three steps.
+      <ol>
+        <li>
+          For each set of 2 or more lines, the longest stretch of at least 4 consecutive stops they
+          all run along.
+        </li>
+        <li>
+          A shorter one lying inside a longer one is dropped unless it carries at least 1.5 times as
+          many buses (all of its stops), e.g. where an extra line joins for a few stops.
+        </li>
+        <li>
+          The rest are joined end to end where one ends on the stops the next starts with and the
+          way on doesn't fork (all ways on lead to the same next stop). On a joined corridor, lines
+          can join or leave partway: lines running all of it have a filled badge, lines running at
+          least half of it an outlined one.
+        </li>
+      </ol>
+      The stops, start and end shown are those of the busier direction.
+    </li>
+    <li>
+      <strong>Both directions</strong> are one row when at least half of the lines run back between
+      the same ends (stops with the same name, or less than 500 m apart) or along at least half of
+      the same stops. Otherwise the row is marked "one way": in the centre, many lines go back along
+      other streets.
+    </li>
+    <li>
+      <strong>Buses a day, interval and regularity</strong> are measured on each stretch between two
+      stops (every bus using it) and averaged along the corridor, weighted by the stretches' length,
+      so a line running part of it counts for that part. Buses: both directions added up; the rest
+      averaged over the directions.
+    </li>
+    <li>
+      <strong>Interval:</strong> on each stretch, the minutes of the period divided by the buses
+      leaving its first stop in it.
+    </li>
+    <li>
+      <strong>Regularity:</strong> how evenly those buses are spread, as the coefficient of
+      variation (CV) of the gaps between them: standard deviation ÷ mean, on each stretch per period
+      window (needs 4 buses), weighted by the number of gaps. 0 means perfectly even. Lines sharing
+      a corridor are rarely timed together, so corridors are usually less regular than single lines.
+      Grades as in TCQSM:
+      {{ gradeBands }}
+    </li>
+  </ul>
+</details>

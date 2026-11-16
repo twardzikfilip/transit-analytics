@@ -83,13 +83,29 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   - `GET /api/lines` — all lines in numeric order, with their subtype.
   - `GET /api/lines/{line}/detail` — from the weekday timetable: every variant (direction and shape, with its route
     shape, stops, length, trips and scheduled travel times; the most frequent one per direction is the base route,
-    the others are longer or shorter), the base route's length and its scheduled shortest/longest travel time and
-    average speed, the part in fare zone 2 (stops and km; the stretch crossing the border counts half), and every
-    brigade: first departure (leaves the depot), last arrival (returns), runs and breaks of 30 min or more.
+    the others are longer, shorter or depot runs) with its scheduled travel times and average speeds, the base
+    route's length, travel time and speed, the part in fare zone 2 on the base route and longer variants (stops
+    and km; the stretch crossing the border counts half), every brigade (first departure, last arrival, runs and
+    breaks of 30 min or more), the standard end stops, and the depot runs with their stops. Standard end stops are
+    where a brigade starts its next run within 30 min; end stops less than 500 m from each other (e.g. arrival and
+    departure platforms) are one, named after the stop where runs end. Depot-run stops are grouped the same way. A depot run starts or ends elsewhere, as a brigade's first or
+    last run or next to a break of 30 min or more. A long wait at a standard end stop is a break.
   - `GET /api/lines/{line}/performance` — from recorded positions on weekdays: travel time and average speed of full
-    runs of the base route by departure hour (min, max, mean, median), average delay per 15 minutes, and speed
-    between consecutive stops for runs leaving in peak hours. A stop counts as passed midway between the two
+    runs by departure hour (min, max, mean, median), per route pattern (base route, each longer variant; both
+    directions), average delay per 15 minutes, and speed between consecutive stops for runs leaving in peak hours.
+    Also, from all recorded days, the buses that served the line: days per bus, the most used bus per brigade, and
+    brigades that changed bus during a day. A stop counts as passed midway between the two
     reports that bracket it (one a minute), so single runs are accurate to about ±30 s.
+- `GET /api/corridors` — important corridors from the weekday timetable, built in three steps: (1) for each set of
+  2+ lines, the longest stretch of at least 4 consecutive stops they all run along; (2) a shorter one inside a longer
+  one is dropped unless it carries at least 1.5× the buses; (3) the rest are joined end to end where the way on
+  doesn't fork (all continuations lead to the same next stop). No corridor passes the same stop (name) twice. Both
+  directions are one row when at least half the lines run back between the same ends or along half the same stops.
+  For each: stops, all lines and those running all of it, length, and buses, interval and regularity (CV of the
+  gaps, graded A–F) in peak (06:30–08:30, 15:00–17:00) and off-peak (08:30–15:00, 17:00–20:00) hours, measured per
+  stretch between stops and averaged along the corridor by length. Busiest first.
+  Also every stretch between two consecutive stops (both directions together) with its peak and all-day buses and
+  its route shape, for the maps. Computed in the background at startup and cached per timetable.
 - `POST /api/gtfs/bialystok/import` (admin) — downloads Białystok's GTFS timetable and loads it; see below.
 - `GET /api/vehicle-positions/latest` — latest stored position per vehicle
 - `GET /api/zbiorkom/bialystok/positions` — live Białystok vehicle positions from [zbiorkom.live](https://zbiorkom.live),
@@ -216,7 +232,12 @@ INTEGRATION_TESTS=true ./gradlew test           # also boots the full context ag
   route thick and other variants thin and dashed in the same colour, with zone-2 stops filled. Below: length,
   scheduled travel time and speed, zone 2, the variants, charts of measured travel time, speed and delay over the
   day (each with a table view), speed between stops in peak hours with the slowest stretches numbered, and a
-  timeline of the brigades with their breaks. Store slice `routeDetail`, registered by its lazy route.
+  timeline of the brigades with their breaks. Depot runs are yellow and labelled everywhere, the standard end stops
+  and depot-run stops are listed under the title, and a Vehicles section lists the buses and brigade changes.
+  Store slice `routeDetail`, registered by its lazy route.
+- Important corridors: two maps of every stretch between stops by its buses in peak hours (one by line width, one
+  by colour in equal classes of a sequential blue), then the corridors above in a sortable table (busiest first), with each corridor's stops in an
+  expandable list and its lines linking to Routes in detail. Store slice `corridors`, registered by its lazy route.
 - Timetable pages (read-only): Routes → Trips (filter by route, direction, service, headsign) → Stop times of a trip;
   Stops (search, zone) → departure board of a stop. Filters and the page number live in the URL, so every view can be
   linked and the back button works.

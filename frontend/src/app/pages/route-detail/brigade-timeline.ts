@@ -21,8 +21,8 @@ interface Hover {
 }
 
 /**
- * The day's brigades as a timeline: one row per bus, a bar per run (coloured by direction, hatched for a variant
- * other than the base route), breaks of 30 minutes or more as a dashed, labelled gap, and the times the bus leaves
+ * The day's brigades as a timeline: one row per bus, a bar per run (coloured by direction, yellow for a depot run,
+ * hatched for a variant other than the base route), breaks of 30 minutes or more as a dashed, labelled gap, and the times the bus leaves
  * and returns to the depot at the row's ends.
  */
 @Component({
@@ -86,7 +86,7 @@ export class BrigadeTimeline {
           r,
           x: this.x(r.from),
           w: Math.max(1, this.x(r.to) - this.x(r.from) - 1),
-          color: DIRECTION_COLORS[r.direction % 2],
+          color: r.depot ? 'var(--depot)' : DIRECTION_COLORS[r.direction % 2],
         })),
         breaks: b.breaks.map((k) => ({
           k,
@@ -99,7 +99,13 @@ export class BrigadeTimeline {
   );
 
   protected showRun(b: Brigade, r: Brigade['runs'][number], x: number, y: number): void {
-    const kind = r.kind === 'main' ? '' : ` · ${r.kind} variant`;
+    const kind = r.depot
+      ? r.depot === 'pull_out'
+        ? ' · depot run: from the depot into service'
+        : ' · depot run: back to the depot'
+      : r.kind === 'main'
+        ? ''
+        : ` · ${r.kind} variant`;
     this.hover.set({
       x,
       y,

@@ -1,0 +1,46 @@
+:host {
+  display: block;
+}
+
+.map {
+  height: 560px;
+}
+
+@media (max-width: 600px) {
+  .map {
+    height: 380px;
+  }
+}
+
+/* A grey base map, so the blue stretches stand out. */
+.map ::ng-deep .grey-tiles {
+  filter: grayscale(1) contrast(0.85) brightness(1.05);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 1rem;
+  padding: 0.6rem 1rem;
+  font-size: 0.85rem;
+}
+
+.item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+svg line {
+  stroke: #1c5cab;
+  stroke-opacity: 0.8;
+}
+
+.swatch {
+  display: inline-block;
+  width: 22px;
+  height: 6px;
+  border-radius: 2px;
+}

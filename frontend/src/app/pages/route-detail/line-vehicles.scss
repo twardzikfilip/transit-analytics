@@ -1,0 +1,51 @@
+:host {
+  display: block;
+}
+
+h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+p.muted {
+  margin: 0 0 0.75rem;
+}
+
+.vehicle-tables {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.data-table-wrap {
+  max-height: 22rem;
+  overflow-y: auto;
+}
+
+.data-table {
+  font-size: 0.85rem;
+
+  th,
+  td {
+    padding: 0.3rem 0.6rem;
+  }
+}
+
+.switches {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+
+  li + li {
+    margin-top: 0.25rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .vehicle-tables {
+    grid-template-columns: 1fr;
+  }
+}

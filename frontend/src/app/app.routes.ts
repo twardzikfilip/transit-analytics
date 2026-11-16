@@ -14,6 +14,10 @@ export const routes: Routes = [
       { path: 'vehicles', loadComponent: () => import('./pages/vehicles/vehicles').then((m) => m.Vehicles) },
       { path: 'live-map', loadComponent: () => import('./pages/live-map/live-map').then((m) => m.LiveMap) },
       { path: 'lines', loadChildren: () => import('./pages/line-stats/line-stats.routes').then((m) => m.LINE_STATS_ROUTES) },
+      {
+        path: 'corridors',
+        loadChildren: () => import('./pages/corridors/corridors.routes').then((m) => m.CORRIDORS_ROUTES),
+      },
       { path: 'delays', loadChildren: () => import('./pages/delays/delays.routes').then((m) => m.DELAYS_ROUTES) },
       {
         path: 'route-detail',
