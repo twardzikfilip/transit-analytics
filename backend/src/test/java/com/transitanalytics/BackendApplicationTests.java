@@ -10,7 +10,8 @@ import org.springframework.test.context.TestPropertySource;
 @TestPropertySource(properties = {
         "management.tracing.export.enabled=false",
         "management.otlp.metrics.export.enabled=false",
-        "management.logging.export.enabled=false"
+        "management.logging.export.enabled=false",
+        "app.recording.enabled=false"
 })
 @EnabledIfEnvironmentVariable(named = "INTEGRATION_TESTS", matches = "true")
 class BackendApplicationTests {

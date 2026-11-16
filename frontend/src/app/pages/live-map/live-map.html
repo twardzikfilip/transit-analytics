@@ -1,7 +1,11 @@
 <div class="header">
   <h1>Live map · Białystok</h1>
   <span class="muted">
-    {{ count() }} vehicles
+    @if (minDelay() !== null) {
+      {{ visible().length }} of {{ count() }} vehicles delayed over {{ minDelay() }} min
+    } @else {
+      {{ count() }} vehicles
+    }
     @if (lastUpdated(); as t) {
       · updated {{ t | date: 'mediumTime' }}
     }
@@ -9,6 +13,30 @@
       · <span class="error">{{ message }}</span>
     }
   </span>
+</div>
+<div class="filters">
+  <label class="delay">
+    Delay over
+    <span class="input-with-unit">
+      <input
+        type="number"
+        min="0"
+        step="1"
+        inputmode="numeric"
+        placeholder="any"
+        aria-label="Show only vehicles delayed more than this many minutes"
+        [value]="minDelay() ?? ''"
+        (input)="setMinDelay($any($event.target).value)"
+      />
+      min
+    </span>
+  </label>
+  @for (preset of [2, 5, 10]; track preset) {
+    <button type="button" [class.active]="minDelay() === preset" (click)="setMinDelay('' + preset)">&gt; {{ preset }} min</button>
+  }
+  @if (minDelay() !== null) {
+    <button type="button" (click)="setMinDelay('')">Show all</button>
+  }
 </div>
 <div #map class="map"></div>
 <p class="muted source">Live data: <a href="https://zbiorkom.live" target="_blank" rel="noopener">zbiorkom.live</a></p>

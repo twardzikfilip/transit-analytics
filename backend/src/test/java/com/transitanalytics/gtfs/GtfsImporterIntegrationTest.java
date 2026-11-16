@@ -31,7 +31,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @TestPropertySource(properties = {
         "management.tracing.export.enabled=false",
         "management.otlp.metrics.export.enabled=false",
-        "management.logging.export.enabled=false"
+        "management.logging.export.enabled=false",
+        "app.recording.enabled=false"
 })
 @EnabledIfEnvironmentVariable(named = "INTEGRATION_TESTS", matches = "true")
 class GtfsImporterIntegrationTest {

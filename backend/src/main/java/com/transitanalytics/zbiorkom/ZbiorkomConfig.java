@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
+import tools.jackson.databind.json.JsonMapper;
 
 @Configuration
 @EnableConfigurationProperties(ZbiorkomProperties.class)
@@ -12,10 +13,11 @@ class ZbiorkomConfig {
 
     /** Built from Boot's builder, so every call is traced as a client span. */
     @Bean
-    ZbiorkomClient zbiorkomClient(RestClient.Builder builder, ZbiorkomProperties properties) {
+    ZbiorkomClient zbiorkomClient(RestClient.Builder builder, ZbiorkomProperties properties, JsonMapper jsonMapper) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(properties.connectTimeout());
         requestFactory.setReadTimeout(properties.readTimeout());
-        return new ZbiorkomClient(builder.baseUrl(properties.baseUrl()).requestFactory(requestFactory).build());
+        return new ZbiorkomClient(builder.baseUrl(properties.baseUrl()).requestFactory(requestFactory).build(),
+                jsonMapper);
     }
 }

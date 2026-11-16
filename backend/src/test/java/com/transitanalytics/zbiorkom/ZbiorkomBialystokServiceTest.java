@@ -11,6 +11,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -43,7 +44,8 @@ class ZbiorkomBialystokServiceTest {
         vehicleService = mock(VehicleService.class);
         var properties = new ZbiorkomProperties("https://zbiorkom.test/api", Duration.ofSeconds(1),
                 Duration.ofSeconds(1), new ZbiorkomProperties.Bialystok(BBOX));
-        service = new ZbiorkomBialystokService(new ZbiorkomClient(builder.build()), properties, vehicleService);
+        service = new ZbiorkomBialystokService(new ZbiorkomClient(builder.build(), JsonMapper.builder().build()),
+                properties, vehicleService);
     }
 
     @Test

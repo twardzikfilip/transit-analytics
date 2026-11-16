@@ -1,6 +1,8 @@
 services:
+  # PostgreSQL 17 with TimescaleDB (time-series tables, compression, continuous aggregates) and the
+  # timescaledb_toolkit statistics functions. Data lives in the tsdata volume.
   postgres:
-    image: postgres:17
+    image: timescale/timescaledb-ha:pg17.11-ts2.31.0
     container_name: transit-postgres
     environment:
       POSTGRES_DB: transit
@@ -9,7 +11,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - tsdata:/home/postgres/pgdata/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U transit -d transit"]
       interval: 5s
@@ -21,6 +23,9 @@ services:
   otel-lgtm:
     image: grafana/otel-lgtm:0.41.0
     container_name: transit-otel-lgtm
+    environment:
+      # Password of the read-only grafana_reader database user (must match the backend's GRAFANA_DB_PASSWORD).
+      GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD:-grafana_reader}
     ports:
       - "3000:3000"   # Grafana
       - "4317:4317"   # OTLP gRPC
@@ -29,9 +34,14 @@ services:
       # Dashboards from grafana/dashboards/ appear in Grafana under "Transit Analytics".
       - ./grafana/provisioning/dashboards.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/transit.yaml:ro
       - ./grafana/dashboards:/otel-lgtm/grafana/conf/provisioning/dashboards/transit:ro
+      # Read-only PostgreSQL datasource for the analytics dashboards (vehicle position history).
+      - ./grafana/provisioning/datasources.yaml:/otel-lgtm/grafana/conf/provisioning/datasources/transit-postgres.yaml:ro
       # Telemetry data (Prometheus, Tempo, Loki, Grafana state); survives container recreation.
       - lgtmdata:/data
 
 volumes:
+  tsdata:
+  # Data of the old postgres:17 container, kept so you can switch back. Delete it with
+  # `docker volume rm transit-analytics_pgdata` once you no longer need it.
   pgdata:
   lgtmdata:

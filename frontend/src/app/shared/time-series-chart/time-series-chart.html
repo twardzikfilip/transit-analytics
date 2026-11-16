@@ -1,0 +1,56 @@
+<svg
+  [attr.viewBox]="'0 0 ' + width() + ' ' + height"
+  [attr.width]="width()"
+  [attr.height]="height"
+  role="img"
+  [attr.aria-label]="summary()"
+  tabindex="0"
+  (keydown)="onKey($event)"
+  (blur)="hover.set(null)"
+>
+  <!-- Grid and y axis labels -->
+  @for (t of yTicks(); track t) {
+    <line class="grid" [attr.x1]="margin.left" [attr.x2]="plotRight()" [attr.y1]="y(t)" [attr.y2]="y(t)" />
+    <text class="axis-label" [attr.x]="margin.left - 8" [attr.y]="y(t)" text-anchor="end" dominant-baseline="middle">{{ axisFormat()(t) }}</text>
+  }
+  @for (t of xTicks(); track t.x) {
+    <text class="axis-label" [attr.x]="t.x" [attr.y]="plotBottom + 18" text-anchor="middle">{{ t.text }}</text>
+  }
+  <line class="axis" [attr.x1]="margin.left" [attr.x2]="plotRight()" [attr.y1]="zeroY()" [attr.y2]="zeroY()" />
+
+  <!-- Data -->
+  @for (run of runs(); track $index) {
+    @if (run.area) {
+      <path class="area" [attr.d]="run.area" />
+      <path class="line" [attr.d]="run.line" />
+    }
+    @if (run.single; as p) {
+      <circle class="dot" [attr.cx]="p[0]" [attr.cy]="p[1]" r="3" />
+    }
+  }
+
+  <!-- Hover -->
+  @if (hovered(); as h) {
+    <line class="crosshair" [attr.x1]="h.x" [attr.x2]="h.x" [attr.y1]="margin.top" [attr.y2]="plotBottom" />
+    <circle class="marker" [attr.cx]="h.x" [attr.cy]="h.y" r="4" />
+  }
+  <rect
+    class="hit"
+    [attr.x]="margin.left"
+    [attr.y]="margin.top"
+    [attr.width]="plotRight() - margin.left"
+    [attr.height]="plotBottom - margin.top"
+    (pointermove)="onPointerMove($event)"
+    (pointerleave)="hover.set(null)"
+  />
+</svg>
+
+@if (hovered(); as h) {
+  <div class="tooltip" [class.left]="h.left" [style.left.px]="h.x" [style.top.px]="h.y" aria-hidden="true">
+    <strong>{{ h.value }} {{ unit() }}</strong>
+    <span>{{ h.when }}</span>
+  </div>
+}
+@if (!points().length && !loading()) {
+  <p class="empty muted">Nothing was recorded in this time range.</p>
+}

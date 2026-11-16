@@ -1,0 +1,20 @@
+apiVersion: 1
+
+# Read-only access to the application database, for the analytics dashboards.
+# grafana_reader is created by Flyway (V8). Its password is GRAFANA_DB_PASSWORD, set on the container in
+# docker-compose.yml and on the backend (spring.flyway.placeholders.grafana_db_password); both default to grafana_reader.
+datasources:
+  - name: Transit DB
+    uid: transit-postgres
+    type: grafana-postgresql-datasource
+    access: proxy
+    url: postgres:5432
+    user: grafana_reader
+    jsonData:
+      database: transit
+      sslmode: disable
+      postgresVersion: 1700
+      timescaledb: true
+    secureJsonData:
+      password: $GRAFANA_DB_PASSWORD
+    editable: false
