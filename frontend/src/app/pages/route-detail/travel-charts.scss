@@ -1,0 +1,59 @@
+:host {
+  display: block;
+}
+
+.loading {
+  opacity: 0.55;
+  transition: opacity 0.15s;
+}
+
+h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+}
+
+h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+p.muted {
+  margin: 0 0 0.75rem;
+}
+
+.charts {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.chart + .chart {
+  margin-top: 1.5rem;
+}
+
+.charts .chart + .chart {
+  margin-top: 0;
+}
+
+details:not(.how) {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+
+  summary {
+    color: var(--muted);
+    cursor: pointer;
+  }
+
+  table {
+    margin-top: 0.5rem;
+  }
+}
+
+.data-table.compact {
+  font-size: 0.85rem;
+
+  th,
+  td {
+    padding: 0.3rem 0.6rem;
+  }
+}

@@ -71,7 +71,12 @@ export class LoadMap {
       if (s.points.length < 2) continue;
       const style: L.PolylineOptions =
         this.mode() === 'width'
-          ? { color: SEQUENTIAL_BLUE[3], weight: widthFor(s.peakBuses, max), opacity: 0.8, lineCap: 'butt' }
+          ? {
+              color: SEQUENTIAL_BLUE[3],
+              weight: widthFor(s.peakBuses, max),
+              opacity: 0.8,
+              lineCap: 'butt',
+            }
           : { color: colorFor(s.peakBuses, classes), weight: 4, opacity: 1 };
       L.polyline(s.points, style)
         .bindTooltip(

@@ -1,0 +1,141 @@
+<h2>How it actually runs</h2>
+@if (performance(); as p) {
+  <p class="muted">
+    Measured from recorded vehicle positions on {{ p.weekdays }} weekday{{
+      p.weekdays === 1 ? '' : 's'
+    }}
+    @if (p.firstDay) {
+      ({{ p.firstDay | date: 'd MMM' }} – {{ p.lastDay | date: 'd MMM y' }})
+    }
+    · {{ p.fullRuns }} full runs of the base route and longer variants.
+  </p>
+} @else if (loading()) {
+  <p class="muted">Loading real-time data…</p>
+}
+
+<div class="charts" [class.loading]="loading()">
+  @for (c of travelCharts(); track c.t.label) {
+    <div class="chart">
+      <h3>
+        Travel time · {{ c.title }}
+        <span class="muted">· {{ c.t.km | number: '1.1-1' }} km, {{ c.t.runs }} full runs</span>
+      </h3>
+      <app-hour-chart
+        [series]="c.duration.series"
+        [band]="c.duration.band"
+        [refs]="c.duration.refs"
+        [from]="hours().from"
+        [to]="hours().to"
+        unit="min"
+        [format]="minutes"
+        [label]="'Travel time of full runs by departure hour, ' + c.title"
+        [loading]="loading()"
+        empty="No full runs recorded yet."
+      />
+      <details>
+        <summary>Show as a table</summary>
+        <table class="data-table compact">
+          <thead>
+            <tr>
+              <th>Hour</th>
+              <th class="num">Runs</th>
+              <th class="num">Shortest</th>
+              <th class="num">Longest</th>
+              <th class="num">Average</th>
+              <th class="num">Median</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (h of c.t.durations; track h.hour) {
+              <tr>
+                <td>{{ clock(h.hour * 3600) }}–{{ clock((h.hour + 1) * 3600) }}</td>
+                <td class="num">{{ h.runs }}</td>
+                <td class="num">{{ h.min }} min</td>
+                <td class="num">{{ h.max }} min</td>
+                <td class="num">{{ h.avg }} min</td>
+                <td class="num">{{ h.median }} min</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </details>
+    </div>
+
+    <div class="chart">
+      <h3>Average speed · {{ c.title }}</h3>
+      <app-hour-chart
+        [series]="c.speed.series"
+        [band]="c.speed.band"
+        [refs]="c.speed.refs"
+        [from]="hours().from"
+        [to]="hours().to"
+        unit="km/h"
+        [format]="speed"
+        [label]="'Average speed of full runs by departure hour, ' + c.title"
+        [loading]="loading()"
+        empty="No full runs recorded yet."
+      />
+      <details>
+        <summary>Show as a table</summary>
+        <table class="data-table compact">
+          <thead>
+            <tr>
+              <th>Hour</th>
+              <th class="num">Runs</th>
+              <th class="num">Slowest</th>
+              <th class="num">Fastest</th>
+              <th class="num">Average</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (h of c.t.speeds; track h.hour) {
+              <tr>
+                <td>{{ clock(h.hour * 3600) }}–{{ clock((h.hour + 1) * 3600) }}</td>
+                <td class="num">{{ h.runs }}</td>
+                <td class="num">{{ h.min }} km/h</td>
+                <td class="num">{{ h.max }} km/h</td>
+                <td class="num">{{ h.avg }} km/h</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </details>
+    </div>
+  }
+
+  <div class="chart">
+    <h3>Average delay over the weekday</h3>
+    <app-hour-chart
+      [series]="delayChart().series"
+      [from]="hours().from"
+      [to]="hours().to"
+      [step]="0.25"
+      unit="min"
+      [format]="delayMinutes"
+      label="Average delay per 15 minutes over the weekday"
+      [loading]="loading()"
+      empty="No delays recorded yet."
+    />
+    <details>
+      <summary>Show as a table</summary>
+      <table class="data-table compact">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th class="num">Average delay</th>
+            <th class="num">Reports</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of performance()?.delays ?? []; track s.minute) {
+            <tr>
+              <td>{{ clock(s.minute * 60) }}–{{ clock((s.minute + 15) * 60) }}</td>
+              <td class="num">{{ delayMinutes(s.avgDelaySeconds / 60) }} min</td>
+              <td class="num">{{ s.samples }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </details>
+  </div>
+</div>

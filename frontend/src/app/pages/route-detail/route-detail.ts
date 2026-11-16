@@ -14,31 +14,20 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import * as L from 'leaflet';
-import {
-  HourStat,
-  LineDetail,
-  LineVariant,
-  RouteSubtype,
-  VariantKind,
-} from '../../core/models/models';
+import { LineDetail, LineVariant, RouteSubtype } from '../../core/models/models';
 import { RouteDetailActions } from '../../store/route-detail/route-detail.actions';
 import { routeDetailFeature } from '../../store/route-detail/route-detail.reducer';
 import { BrigadeTimeline } from './brigade-timeline';
 import { EndStops } from './end-stops';
 import { LineVehiclesSection } from './line-vehicles';
-import { clock, duration, formatDelay } from '../../shared/format/time';
+import { clock, duration } from '../../shared/format/time';
 import { cssColor } from '../../shared/palette';
 import { SUBTYPES, groupLines, subtypeLabel, variantKindLabel } from './format';
-import { HourBand, HourChart, HourSeries, RefLine } from '../../shared/hour-chart/hour-chart';
 import { SegmentChart } from './segment-chart';
+import { TravelCharts } from './travel-charts';
+import { VariantTiles } from './variant-tiles';
+import { DepotRuns } from './depot-runs';
 import { createBaseMap } from '../../shared/map/base-map';
-
-/** A chart's data: series, band and reference lines for the hour chart. */
-interface HourChartData {
-  series: HourSeries[];
-  band: HourBand | null;
-  refs: RefLine[];
-}
 
 /**
  * Routes in detail: pick a line to see it on the map with its variants, its timetable figures (lengths, travel
@@ -49,7 +38,9 @@ interface HourChartData {
   imports: [
     DatePipe,
     DecimalPipe,
-    HourChart,
+    VariantTiles,
+    DepotRuns,
+    TravelCharts,
     SegmentChart,
     BrigadeTimeline,
     EndStops,
@@ -85,90 +76,15 @@ export class RouteDetail {
   protected readonly duration = duration;
   protected readonly subtypeLabel = subtypeLabel;
   protected readonly kindLabel = variantKindLabel;
-  /** Short kind label for the tile lists. */
-  protected readonly shortKind = (kind: VariantKind) =>
-    ({ main: 'Base', longer: 'Longer', shorter: 'Shorter', depot: 'Depot' })[kind];
 
   protected readonly mains = computed(
     () => this.detail()?.variants.filter((v) => v.kind === 'main') ?? [],
-  );
-  protected readonly trips = computed(
-    () => this.detail()?.variants.reduce((n, v) => n + v.tripsPerDay, 0) ?? 0,
   );
   /** "Piastowska ⇄ Choroszcz/Cmentarz": the two termini of the base route. */
   protected readonly termini = computed(() => {
     const m = this.mains()[0];
     return m ? `${m.firstStop} ⇄ ${m.lastStop}` : '';
   });
-
-  /** Zone 2 entries of the base route first, then of longer variants. */
-  protected readonly zone2 = computed(() => {
-    const zones = this.detail()?.zone2 ?? [];
-    return {
-      base: zones.filter((z) => z.kind === 'main'),
-      longer: zones.filter((z) => z.kind !== 'main'),
-    };
-  });
-
-  /** Visible hours of the charts: the hours with data, at least 05:00–24:00. */
-  protected readonly hours = computed(() => {
-    const p = this.performance();
-    const xs = [
-      ...(p?.travelTimes.flatMap((t) => t.durations.map((d) => d.hour)) ?? []),
-      ...(p?.delays.map((d) => d.minute / 60) ?? []),
-    ];
-    return {
-      from: Math.min(5, ...xs.map(Math.floor)),
-      to: Math.max(24, ...xs.map((x) => Math.floor(x) + 1)),
-    };
-  });
-
-  /** Travel time and speed charts per route pattern: the base route first, then longer variants. */
-  protected readonly travelCharts = computed(() =>
-    (this.performance()?.travelTimes ?? []).map((t) => {
-      const timeRefs: RefLine[] = [];
-      if (t.scheduledShortestMin != null) {
-        timeRefs.push({ label: 'Scheduled shortest', value: t.scheduledShortestMin });
-      }
-      if (t.scheduledLongestMin != null && t.scheduledLongestMin !== t.scheduledShortestMin) {
-        timeRefs.push({ label: 'Scheduled longest', value: t.scheduledLongestMin });
-      }
-      const speedRefs: RefLine[] = [];
-      if (t.scheduledMaxSpeedKmh != null) {
-        speedRefs.push({ label: 'Scheduled fastest', value: t.scheduledMaxSpeedKmh });
-      }
-      if (t.scheduledMinSpeedKmh != null && t.scheduledMinSpeedKmh !== t.scheduledMaxSpeedKmh) {
-        speedRefs.push({ label: 'Scheduled slowest', value: t.scheduledMinSpeedKmh });
-      }
-      return {
-        t,
-        title: `${t.kind === 'main' ? 'Base route' : 'Longer variant'}: ${t.label}`,
-        duration: statChart(t.durations, 'Shortest–longest run', timeRefs, true),
-        speed: statChart(t.speeds, 'Slowest–fastest run', speedRefs, false),
-      };
-    }),
-  );
-
-  protected readonly delayChart = computed<HourChartData>(() => ({
-    series: [
-      {
-        label: 'Average delay',
-        color: 'var(--chart-line)',
-        area: true,
-        points: (this.performance()?.delays ?? []).map((d) => ({
-          x: d.minute / 60 + 0.125,
-          y: d.avgDelaySeconds / 60,
-        })),
-      },
-    ],
-    band: null,
-    refs: [],
-  }));
-
-  protected readonly minutes = (v: number) => String(Math.round(v));
-  protected readonly speed = (v: number) => (Math.round(v * 10) / 10).toFixed(1);
-  /** Minutes as "m:ss" (a delay chart's values are in minutes). */
-  protected readonly delayMinutes = (minutes: number) => formatDelay(minutes * 60);
 
   private map?: L.Map;
   private readonly mapReady = signal(false);
@@ -266,36 +182,4 @@ function variantLabel(v: LineVariant): string {
       ? variantKindLabel(v.kind)
       : `${variantKindLabel(v.kind)} variant`;
   return `${kind} towards ${v.headsign}: ${v.km.toFixed(1)} km, ${v.tripsPerDay} trips a weekday`;
-}
-
-/** Hourly min–max band with average (and median) lines, each at the middle of its hour. */
-function statChart(
-  stats: HourStat[],
-  bandLabel: string,
-  refs: RefLine[],
-  withMedian: boolean,
-): HourChartData {
-  const series: HourSeries[] = [
-    {
-      label: 'Average',
-      color: 'var(--chart-line)',
-      points: stats.map((s) => ({ x: s.hour + 0.5, y: s.avg })),
-    },
-  ];
-  if (withMedian) {
-    series.push({
-      label: 'Median',
-      color: 'var(--chart-series-2)',
-      points: stats.map((s) => ({ x: s.hour + 0.5, y: s.median })),
-    });
-  }
-  return {
-    series,
-    band: {
-      label: bandLabel,
-      color: 'var(--chart-line)',
-      points: stats.map((s) => ({ x: s.hour + 0.5, lo: s.min, hi: s.max })),
-    },
-    refs,
-  };
 }

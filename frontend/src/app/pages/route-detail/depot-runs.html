@@ -1,0 +1,39 @@
+<h2>Depot runs</h2>
+<p class="muted">
+  Runs that leave the depot area for the route (pull-out) or return to it (pull-in): a brigade's
+  first or last run, or the run before or after a break of 30 minutes or more, when it starts or
+  ends away from the standard end stops. A bus waiting long at a standard end stop is on a break
+  there, not at the depot.
+</p>
+@if (depotRuns().length) {
+  <div class="data-table-wrap">
+    <table class="data-table compact">
+      <thead>
+        <tr>
+          <th>Brigade</th>
+          <th>Run</th>
+          <th class="num">Time</th>
+          <th>From → to</th>
+          <th class="num">Length</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of depotRuns(); track r.brigade + r.from) {
+          <tr class="depot-row">
+            <td>{{ r.brigade }}</td>
+            <td>
+              <span class="tag depot">{{ r.kind === 'pull_out' ? 'From depot' : 'To depot' }}</span>
+            </td>
+            <td class="num">{{ clock(r.from) }}–{{ clock(r.to) }}</td>
+            <td>{{ r.fromStop }} → {{ r.toStop }}</td>
+            <td class="num">{{ r.km ?? '—' }} km</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+} @else {
+  <p class="muted">
+    No depot runs in the timetable: every brigade starts and ends its day at the standard end stops.
+  </p>
+}
