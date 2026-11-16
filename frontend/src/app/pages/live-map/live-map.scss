@@ -12,6 +12,33 @@
   flex-wrap: wrap;
 }
 
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+
+  .delay {
+    margin-right: 0.5rem;
+  }
+
+  .input-with-unit {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  input {
+    width: 5.5rem;
+  }
+
+  button.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
+}
+
 .map {
   flex: 1;
   min-height: 400px;

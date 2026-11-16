@@ -1,12 +1,24 @@
 import { DatePipe } from '@angular/common';
-import { Component, DestroyRef, ElementRef, afterNextRender, effect, inject, signal, viewChild } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  afterNextRender,
+  computed,
+  effect,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import * as L from 'leaflet';
-import { timer } from 'rxjs';
+import { map, timer } from 'rxjs';
 import { LivePosition } from '../../core/models/models';
 import { LivePositionsActions } from '../../store/live-positions/live-positions.actions';
 import { livePositionsFeature } from '../../store/live-positions/live-positions.reducer';
+import { delayedOver, parseMinDelay } from './delay-filter';
 
 const REFRESH_MS = 5000;
 const BIALYSTOK: L.LatLngExpression = [53.13, 23.16];
@@ -32,6 +44,15 @@ export class LiveMap {
   protected readonly lastUpdated = this.store.selectSignal(livePositionsFeature.selectLastUpdated);
   protected readonly error = this.store.selectSignal(livePositionsFeature.selectError);
 
+  private readonly router = inject(Router);
+  /** "Delay over N minutes" filter, kept in the URL (?minDelay=5); null = show all vehicles. */
+  protected readonly minDelay = toSignal(
+    inject(ActivatedRoute).queryParamMap.pipe(map((params) => parseMinDelay(params.get('minDelay')))),
+    { initialValue: null },
+  );
+  /** The vehicles on the map. */
+  protected readonly visible = computed(() => delayedOver(this.positions(), this.minDelay()));
+
   constructor() {
     afterNextRender(() => {
       this.map = L.map(this.mapEl().nativeElement).setView(BIALYSTOK, 12);
@@ -49,9 +70,15 @@ export class LiveMap {
       .subscribe(() => this.store.dispatch(LivePositionsActions.load()));
 
     effect(() => {
-      const positions = this.positions();
+      const positions = this.visible();
       if (this.mapReady()) this.render(positions);
     });
+  }
+
+  protected setMinDelay(value: string): void {
+    const minutes = parseMinDelay(value);
+    // replaceUrl: typing a number shouldn't add a history entry per keystroke.
+    void this.router.navigate([], { queryParams: { minDelay: minutes }, queryParamsHandling: 'merge', replaceUrl: true });
   }
 
   private render(positions: LivePosition[]): void {
