@@ -127,3 +127,73 @@ table.bands .share {
     text-align: right;
   }
 }
+
+.delays-card h2 .coverage {
+  margin-left: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: normal;
+  color: var(--muted);
+}
+
+table.bands {
+  th.num,
+  td.num {
+    text-align: right;
+  }
+}
+
+/* Sortable report headers are buttons, so sorting works with the keyboard too. */
+.reports {
+  th.num,
+  td.num {
+    text-align: right;
+  }
+
+  button.sort {
+    all: unset;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
+  }
+
+  th[aria-sort] button.sort {
+    color: var(--fg);
+  }
+
+  th[aria-sort='ascending'] button.sort::after {
+    content: ' ▲';
+    font-size: 0.7em;
+  }
+
+  th[aria-sort='descending'] button.sort::after {
+    content: ' ▼';
+    font-size: 0.7em;
+  }
+}
+
+/* Outliers: more than 30 min late, likely feed errors. Red row plus a text label, so it isn't colour alone. */
+.reports tr.outlier td {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
+.outlier-tag {
+  display: inline-block;
+  margin-right: 0.4rem;
+  padding: 0 0.4rem;
+  border: 1px solid var(--danger);
+  border-radius: 999px;
+  color: var(--danger);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.hide-outliers {
+  margin-top: 0.75rem;
+  gap: 0.5rem;
+}

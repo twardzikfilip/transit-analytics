@@ -67,7 +67,10 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   - `GET /api/positions/delays` — vehicles and reports per minute of delay: under 1 min (incl. early), 1–2, …,
     9–10, 10 min or more. A vehicle counts in every band it was in.
   - `GET /api/positions/routes` — lines recorded in the window.
-  - `GET /api/positions` — the raw position reports, newest first, paged (`page`, `size` ≤ 500; also `vehicle`).
+  - `GET /api/positions` — the raw position reports, paged (`page`, `size` ≤ 500; also `vehicle`), sorted by
+    `sort=time|vehicle|line|duty|towards|delay|nextStop,asc|desc` (default `time,desc`). `excludeOutliers=true`
+    leaves out reports more than 30 min late; those are outliers, most likely feed errors. The page highlights
+    them in red and has a checkbox to hide them.
 - `GET /api/lines/stats` — per line, from the regular weekday timetable: length (main route, km), shortest and
   longest end-to-end travel time, average speed, interval and vehicles in peak (06:00–09:00, 15:00–17:00) and off-peak
   (17:00–22:00) hours. The definitions are on the Line statistics page.

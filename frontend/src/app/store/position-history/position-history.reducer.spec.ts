@@ -35,13 +35,32 @@ describe('position history reducer', () => {
   });
 
   it('stores lines and samples, and stops loading on failure', () => {
-    let state = reduce(undefined, PositionHistoryActions.routesLoaded({ routes: [{ route: '2', samples: 10 }] }));
+    let state = reduce(
+      undefined,
+      PositionHistoryActions.routesLoaded({ routes: [{ route: '2', samples: 10 }] }),
+    );
     expect(state.routes).toHaveLength(1);
-    state = reduce(state, PositionHistoryActions.delaysLoaded({ delays: [{ fromMinutes: 1, toMinutes: 2, vehicles: 3, reports: 9 }] }));
+    state = reduce(
+      state,
+      PositionHistoryActions.delaysLoaded({
+        delays: [{ fromMinutes: 1, toMinutes: 2, vehicles: 3, reports: 9 }],
+      }),
+    );
     expect(state.delays[0].vehicles).toBe(3);
-    state = reduce(state, PositionHistoryActions.loadSamples({ query, page: 0 }));
+    state = reduce(
+      state,
+      PositionHistoryActions.loadSamples({
+        query,
+        page: 0,
+        sort: 'time,desc',
+        excludeOutliers: false,
+      }),
+    );
     expect(state.loadingSamples).toBe(true);
-    state = reduce(state, PositionHistoryActions.failure({ error: 'The time window can be at most 31 days' }));
+    state = reduce(
+      state,
+      PositionHistoryActions.failure({ error: 'The time window can be at most 31 days' }),
+    );
     expect(state.loadingSamples).toBe(false);
     expect(state.error).toBe('The time window can be at most 31 days');
   });

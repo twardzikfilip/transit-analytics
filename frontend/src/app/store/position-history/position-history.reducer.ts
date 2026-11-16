@@ -1,5 +1,11 @@
 import { createFeature, createReducer, on } from '@ngrx/store';
-import { DelayBand, FleetSeries, Page, PositionSample, RouteActivity } from '../../core/models/models';
+import {
+  DelayBand,
+  FleetSeries,
+  Page,
+  PositionSample,
+  RouteActivity,
+} from '../../core/models/models';
 import { HistoryQuery, PositionHistoryActions } from './position-history.actions';
 
 export interface PositionHistoryState {
@@ -32,12 +38,25 @@ export const positionHistoryFeature = createFeature({
   name: 'positionHistory',
   reducer: createReducer(
     initialState,
-    on(PositionHistoryActions.load, (state, { query }) => ({ ...state, query, loadingSeries: true, error: null })),
-    on(PositionHistoryActions.fleetLoaded, (state, { series }) => ({ ...state, series, loadingSeries: false })),
+    on(PositionHistoryActions.load, (state, { query }) => ({
+      ...state,
+      query,
+      loadingSeries: true,
+      error: null,
+    })),
+    on(PositionHistoryActions.fleetLoaded, (state, { series }) => ({
+      ...state,
+      series,
+      loadingSeries: false,
+    })),
     on(PositionHistoryActions.routesLoaded, (state, { routes }) => ({ ...state, routes })),
     on(PositionHistoryActions.delaysLoaded, (state, { delays }) => ({ ...state, delays })),
     on(PositionHistoryActions.loadSamples, (state) => ({ ...state, loadingSamples: true })),
-    on(PositionHistoryActions.samplesLoaded, (state, { samples }) => ({ ...state, samples, loadingSamples: false })),
+    on(PositionHistoryActions.samplesLoaded, (state, { samples }) => ({
+      ...state,
+      samples,
+      loadingSamples: false,
+    })),
     on(PositionHistoryActions.failure, (state, { error }) => ({
       ...state,
       loadingSeries: false,

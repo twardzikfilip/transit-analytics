@@ -68,8 +68,16 @@ class PositionHistoryIntegrationTest {
         assertThat(history.fleet(FROM, TO, "IT-N1").points()).hasSize(1);
         assertThat(history.routes(FROM, TO)).extracting(PositionHistoryDto.RouteActivity::route)
                 .containsExactly("IT-10", "IT-N1");
-        assertThat(history.samples(FROM, TO, "IT-10", null, 0, 2).getTotalElements()).isEqualTo(5);
-        assertThat(history.samples(FROM, TO, null, "IT-H2", 0, 10).getTotalElements()).isEqualTo(2);
+        assertThat(history.samples(FROM, TO, "IT-10", null, 0, 2, null, false).getTotalElements()).isEqualTo(5);
+        assertThat(history.samples(FROM, TO, null, "IT-H2", 0, 10, null, false).getTotalElements()).isEqualTo(2);
+
+        // Sorting: by delay (unknown delays last), by line (naturally), newest first by default.
+        assertThat(history.samples(FROM, TO, null, null, 0, 10, "delay,desc", false).getContent())
+                .extracting(PositionHistoryDto.Sample::delaySeconds).containsExactly(600, 120, 90, 60, -30, null);
+        assertThat(history.samples(FROM, TO, null, null, 0, 10, "delay,asc", false).getContent())
+                .extracting(PositionHistoryDto.Sample::delaySeconds).containsExactly(-30, 60, 90, 120, 600, null);
+        assertThat(history.samples(FROM, TO, null, null, 0, 1, null, false).getContent().get(0).observedAt())
+                .isEqualTo(Instant.parse("2099-01-01T10:05:05Z"));
     }
 
     @Test
@@ -90,6 +98,12 @@ class PositionHistoryIntegrationTest {
         assertThat(bands.get(10)).isEqualTo(new PositionHistoryDto.DelayBand(10, null, 2, 2)); // 600 s and 1 h
         assertThat(bands.subList(2, 9)).allSatisfy(band -> assertThat(band.reports()).isZero());
         assertThat(history.delays(FROM, TO, "other line")).allSatisfy(band -> assertThat(band.reports()).isZero());
+
+        // The 1-hour delay is an outlier (over 30 min); excluding outliers keeps reports without a delay.
+        assertThat(history.samples(FROM, TO, null, null, 0, 20, null, false).getTotalElements()).isEqualTo(8);
+        assertThat(history.samples(FROM, TO, null, null, 0, 20, null, true).getContent())
+                .extracting(PositionHistoryDto.Sample::delaySeconds).doesNotContain(3600).contains((Integer) null)
+                .hasSize(7);
     }
 
     private void poll(String time, LivePositionDto... positions) {

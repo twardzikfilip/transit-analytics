@@ -31,3 +31,29 @@ export function formatDelay(seconds: number | null): string {
   const abs = Math.abs(Math.round(seconds));
   return `${sign}${Math.floor(abs / 60)}:${String(abs % 60).padStart(2, '0')}`;
 }
+
+/**
+ * The window a result covers, e.g. "Mon 16 Nov, 08:36 – 14:36" or "Mon 9 Nov, 14:14 – Mon 16 Nov, 14:14" (local
+ * time). `to` is exclusive, so a window ending at midnight shows 00:00 of the next day.
+ */
+export function windowLabel(from: string, to: string, locale?: string): string {
+  const a = new Date(from);
+  const b = new Date(to);
+  const day = new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'short' });
+  const time = new Intl.DateTimeFormat(locale, {
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  });
+  const start = `${day.format(a)}, ${time.format(a)}`;
+  return a.toDateString() === b.toDateString()
+    ? `${start} – ${time.format(b)}`
+    : `${start} – ${day.format(b)}, ${time.format(b)}`;
+}
+
+/** Reports more than this late are outliers, most likely feed errors (same 30 minutes as the backend). */
+export const OUTLIER_DELAY_SECONDS = 30 * 60;
+
+export function isOutlier(delaySeconds: number | null): boolean {
+  return delaySeconds !== null && delaySeconds > OUTLIER_DELAY_SECONDS;
+}

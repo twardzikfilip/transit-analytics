@@ -31,6 +31,11 @@ public class PositionHistoryService {
             Duration.ofHours(6), Duration.ofDays(1));
     static final int MAX_POINTS = 1500;
     static final int MAX_PAGE_SIZE = 500;
+    /**
+     * Reports more than this late are treated as outliers (likely feed errors). The frontend uses the same 30 minutes
+     * to highlight them.
+     */
+    static final int OUTLIER_DELAY_SECONDS = 30 * 60;
     /** Delay bands are whole minutes from 1 up to this; below is "under 1 minute", from here on "or more". */
     static final int DELAY_BANDS_UP_TO_MINUTES = 10;
 
@@ -150,9 +155,57 @@ public class PositionHistoryService {
         return routes.stream().sorted(Comparator.comparing(PositionHistoryDto.RouteActivity::route, NATURAL)).toList();
     }
 
-    /** Position reports in the window, newest first. */
+    /**
+     * Columns the reports can be sorted by. Vehicle numbers and lines sort naturally (2, 10, 100, then names with
+     * letters such as N1 or BIA 3488C).
+     */
+    enum SampleSort {
+        TIME("p.observed_at"),
+        VEHICLE(natural("v.vehicle_number")),
+        LINE(natural("p.route_name")),
+        DUTY("p.brigade"),
+        TOWARDS("p.headsign"),
+        DELAY("p.delay_seconds"),
+        NEXT_STOP("p.next_stop_name");
+
+        final String[] expressions;
+
+        SampleSort(String... expressions) {
+            this.expressions = expressions;
+        }
+
+        /** "delay,desc" → ORDER BY expressions; ties newest first. Unknown columns are rejected. */
+        static String orderBy(String sort) {
+            String[] parts = (sort == null || sort.isBlank() ? "time,desc" : sort).split(",");
+            SampleSort column;
+            try {
+                column = valueOf(parts[0].strip().replaceAll("([a-z])([A-Z])", "$1_$2").toUpperCase(java.util.Locale.ROOT));
+            } catch (IllegalArgumentException ex) {
+                throw new IllegalArgumentException("sort must be one of time, vehicle, line, duty, towards, delay, "
+                        + "nextStop, optionally followed by ,asc or ,desc");
+            }
+            String direction = parts.length > 1 && parts[1].strip().equalsIgnoreCase("desc") ? " DESC" : " ASC";
+            StringBuilder order = new StringBuilder();
+            for (String expression : column.expressions) {
+                order.append(expression).append(direction).append(" NULLS LAST, ");
+            }
+            return order.append("p.observed_at DESC, p.vehicle_id").toString();
+        }
+
+        private static String[] natural(String column) {
+            return new String[] {"(" + column + " !~ '^[0-9]+$')",
+                    "CASE WHEN " + column + " ~ '^[0-9]{1,18}$' THEN " + column + "::bigint END", column};
+        }
+    }
+
+    /**
+     * Position reports in the window, newest first unless {@code sort} says otherwise (see {@link SampleSort}).
+     *
+     * @param excludeOutliers leave out reports more than {@link #OUTLIER_DELAY_SECONDS} late
+     */
     public Page<PositionHistoryDto.Sample> samples(Instant from, Instant to, String route, String vehicle, int page,
-                                                   int size) {
+                                                   int size, String sort, boolean excludeOutliers) {
+        String orderBy = SampleSort.orderBy(sort);
         validate(from, to);
         if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
             throw new IllegalArgumentException("page must be >= 0 and size between 1 and " + MAX_PAGE_SIZE);
@@ -167,6 +220,10 @@ public class PositionHistoryService {
             where.append(" AND v.vehicle_number = ?");
             args.add(vehicle);
         }
+        if (excludeOutliers) {
+            where.append(" AND (p.delay_seconds IS NULL OR p.delay_seconds <= ").append(OUTLIER_DELAY_SECONDS)
+                    .append(")");
+        }
         String source = " FROM position_sample p JOIN vehicle v ON v.id = p.vehicle_id";
         Long total = jdbc.queryForObject("SELECT count(*)" + source + where, Long.class, args.toArray());
 
@@ -176,7 +233,7 @@ public class PositionHistoryService {
         List<PositionHistoryDto.Sample> content = jdbc.query("""
                 SELECT p.observed_at, p.vehicle_id, v.vehicle_number, p.route_name, p.brigade, p.headsign,
                        p.latitude, p.longitude, p.bearing, p.delay_seconds, p.next_stop_name""" + source + where
-                        + " ORDER BY p.observed_at DESC, p.vehicle_id LIMIT ? OFFSET ?",
+                        + " ORDER BY " + orderBy + " LIMIT ? OFFSET ?",
                 (rs, i) -> new PositionHistoryDto.Sample(instant(rs, "observed_at"), rs.getLong("vehicle_id"),
                         rs.getString("vehicle_number"), rs.getString("route_name"), rs.getString("brigade"),
                         rs.getString("headsign"), rs.getDouble("latitude"), rs.getDouble("longitude"),

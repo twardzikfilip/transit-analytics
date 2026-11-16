@@ -21,13 +21,17 @@ export interface TimeWindow {
  * `?from=2026-11-16T05:00&to=2026-11-16T17:00` (local time, as a datetime-local input gives it) is a custom window;
  * otherwise `?range=6h` or the default preset, ending at the next full minute so it includes the latest recording.
  */
-export function resolveWindow(params: { range: string | null; from: string | null; to: string | null }, now: Date): TimeWindow {
+export function resolveWindow(
+  params: { range: string | null; from: string | null; to: string | null },
+  now: Date,
+): TimeWindow {
   const from = params.from ? new Date(params.from) : null;
   const to = params.to ? new Date(params.to) : null;
   if (from && to && !isNaN(from.getTime()) && !isNaN(to.getTime()) && from < to) {
     return { from, to, preset: null };
   }
-  const preset = PRESETS.find((p) => p.key === params.range) ?? PRESETS.find((p) => p.key === DEFAULT_PRESET)!;
+  const preset =
+    PRESETS.find((p) => p.key === params.range) ?? PRESETS.find((p) => p.key === DEFAULT_PRESET)!;
   const end = new Date(Math.floor(now.getTime() / 60_000) * 60_000 + 60_000);
   return { from: new Date(end.getTime() - preset.ms), to: end, preset: preset.key };
 }

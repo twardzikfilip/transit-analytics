@@ -52,7 +52,9 @@ public class PositionHistoryController {
         return history.routes(from, to);
     }
 
-    @Operation(summary = "Recorded position reports", description = "Newest first, paged (size up to 500).")
+    @Operation(summary = "Recorded position reports",
+            description = "Paged (size up to 500). Sort by time, vehicle, line, duty, towards, delay or nextStop, "
+                    + "with ,asc or ,desc (default time,desc); ties are newest first.")
     @GetMapping
     public Page<PositionHistoryDto.Sample> samples(
             @RequestParam Instant from,
@@ -60,8 +62,12 @@ public class PositionHistoryController {
             @RequestParam(required = false) String route,
             @Parameter(description = "Vehicle number, e.g. 230") @RequestParam(required = false) String vehicle,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size) {
-        return history.samples(from, to, blankToNull(route), blankToNull(vehicle), page, size);
+            @RequestParam(defaultValue = "50") int size,
+            @Parameter(description = "e.g. delay,desc", example = "time,desc")
+            @RequestParam(defaultValue = "time,desc") String sort,
+            @Parameter(description = "Leave out outliers: reports more than 30 min late (likely feed errors)")
+            @RequestParam(defaultValue = "false") boolean excludeOutliers) {
+        return history.samples(from, to, blankToNull(route), blankToNull(vehicle), page, size, sort, excludeOutliers);
     }
 
     private static String blankToNull(String value) {

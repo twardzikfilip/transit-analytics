@@ -35,4 +35,15 @@ class PositionHistoryServiceTest {
         assertThat(List.of("N1", "100", "2", "10", "453", "N2").stream().sorted(PositionHistoryService.NATURAL))
                 .containsExactly("2", "10", "100", "453", "N1", "N2");
     }
+
+    @Test
+    void buildsSortOrderFromAWhitelist() {
+        assertThat(PositionHistoryService.SampleSort.orderBy(null)).startsWith("p.observed_at DESC NULLS LAST");
+        assertThat(PositionHistoryService.SampleSort.orderBy("delay,desc"))
+                .isEqualTo("p.delay_seconds DESC NULLS LAST, p.observed_at DESC, p.vehicle_id");
+        assertThat(PositionHistoryService.SampleSort.orderBy("nextStop")).startsWith("p.next_stop_name ASC");
+        assertThat(PositionHistoryService.SampleSort.orderBy("line,asc")).startsWith("(p.route_name !~ '^[0-9]+$') ASC");
+        assertThatThrownBy(() -> PositionHistoryService.SampleSort.orderBy("latitude; DROP TABLE vehicle"))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("sort must be one of");
+    }
 }

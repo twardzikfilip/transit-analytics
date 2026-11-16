@@ -16,9 +16,14 @@ describe('position history time window', () => {
   });
 
   it('accepts a custom window, but not a reversed one', () => {
-    const custom = resolveWindow({ range: '6h', from: '2026-11-16T05:00', to: '2026-11-16T17:00' }, now);
+    const custom = resolveWindow(
+      { range: '6h', from: '2026-11-16T05:00', to: '2026-11-16T17:00' },
+      now,
+    );
     expect(custom.preset).toBeNull();
     expect(toLocalInput(custom.from)).toBe('2026-11-16T05:00');
-    expect(resolveWindow({ range: null, from: '2026-11-16T17:00', to: '2026-11-16T05:00' }, now).preset).toBe('24h');
+    expect(
+      resolveWindow({ range: null, from: '2026-11-16T17:00', to: '2026-11-16T05:00' }, now).preset,
+    ).toBe('24h');
   });
 });

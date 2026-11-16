@@ -6,9 +6,13 @@ import { Store } from '@ngrx/store';
 import { combineLatest, startWith, timer } from 'rxjs';
 import { Pager } from '../../shared/pager/pager';
 import { TimeSeriesChart } from '../../shared/time-series-chart/time-series-chart';
-import { HistoryQuery, PositionHistoryActions } from '../../store/position-history/position-history.actions';
+import {
+  HistoryQuery,
+  PositionHistoryActions,
+} from '../../store/position-history/position-history.actions';
 import { positionHistoryFeature } from '../../store/position-history/position-history.reducer';
-import { bandRows, formatDelay, formatShare } from './delay-bands';
+import { bandRows, formatDelay, formatShare, isOutlier, windowLabel } from './delay-bands';
+import { ReportSortKey, formatReportSort, nextReportSort, parseReportSort } from './report-sort';
 import { PRESETS, resolveWindow, toLocalInput } from './time-window';
 
 /**
@@ -30,13 +34,40 @@ export class Positions {
   protected readonly series = this.store.selectSignal(positionHistoryFeature.selectSeries);
   protected readonly routes = this.store.selectSignal(positionHistoryFeature.selectRoutes);
   protected readonly samples = this.store.selectSignal(positionHistoryFeature.selectSamples);
-  protected readonly loadingSeries = this.store.selectSignal(positionHistoryFeature.selectLoadingSeries);
-  protected readonly loadingSamples = this.store.selectSignal(positionHistoryFeature.selectLoadingSamples);
+  protected readonly loadingSeries = this.store.selectSignal(
+    positionHistoryFeature.selectLoadingSeries,
+  );
+  protected readonly loadingSamples = this.store.selectSignal(
+    positionHistoryFeature.selectLoadingSamples,
+  );
   protected readonly error = this.store.selectSignal(positionHistoryFeature.selectError);
   protected readonly query = this.store.selectSignal(positionHistoryFeature.selectQuery);
-  protected readonly delayBands = computed(() => bandRows(this.store.selectSignal(positionHistoryFeature.selectDelays)()));
+  private readonly delays = this.store.selectSignal(positionHistoryFeature.selectDelays);
+  protected readonly delayBands = computed(() => bandRows(this.delays()));
+  /** The window and line the loaded results cover, e.g. "Mon 16 Nov, 08:36 – 14:36 · all lines". */
+  protected readonly coverage = computed(() => {
+    const q = this.query();
+    return q ? `${windowLabel(q.from, q.to)} · ${q.route ? 'line ' + q.route : 'all lines'}` : '';
+  });
 
   protected readonly showTable = signal(false);
+
+  protected readonly reportColumns: { key: ReportSortKey; label: string }[] = [
+    { key: 'time', label: 'Time' },
+    { key: 'vehicle', label: 'Vehicle' },
+    { key: 'line', label: 'Line' },
+    { key: 'duty', label: 'Duty' },
+    { key: 'towards', label: 'Towards' },
+    { key: 'delay', label: 'Delay' },
+    { key: 'nextStop', label: 'Next stop' },
+  ];
+
+  /** Sort of the reports table, from the URL (?sort=delay,desc); newest first by default. */
+  protected readonly reportSort = computed(() => parseReportSort(this.params().get('sort')));
+
+  /** Hide reports more than 30 min late (?hideOutliers=1). */
+  protected readonly hideOutliers = computed(() => this.params().get('hideOutliers') === '1');
+  protected readonly isOutlier = isOutlier;
 
   /** URL state. */
   protected readonly route = computed(() => this.params().get('route') ?? '');
@@ -81,16 +112,28 @@ export class Positions {
       .subscribe(([params, tick]) => {
         const w = this.resolve(new Date(), params);
         if (tick >= 0 && !w.preset) return; // custom windows don't move
-        const query: HistoryQuery = { from: w.from.toISOString(), to: w.to.toISOString(), route: params.get('route') || null };
+        const query: HistoryQuery = {
+          from: w.from.toISOString(),
+          to: w.to.toISOString(),
+          route: params.get('route') || null,
+        };
         this.store.dispatch(PositionHistoryActions.load({ query }));
         this.store.dispatch(
-          PositionHistoryActions.loadSamples({ query, page: Math.max(0, (Number(params.get('page')) || 1) - 1) }),
+          PositionHistoryActions.loadSamples({
+            query,
+            page: Math.max(0, (Number(params.get('page')) || 1) - 1),
+            sort: formatReportSort(parseReportSort(params.get('sort'))),
+            excludeOutliers: params.get('hideOutliers') === '1',
+          }),
         );
       });
   }
 
   private resolve(now: Date, params = this.params()) {
-    return resolveWindow({ range: params.get('range'), from: params.get('from'), to: params.get('to') }, now);
+    return resolveWindow(
+      { range: params.get('range'), from: params.get('from'), to: params.get('to') },
+      now,
+    );
   }
 
   protected setPreset(key: string): void {
@@ -107,6 +150,21 @@ export class Positions {
 
   protected setRoute(route: string): void {
     this.navigate({ route: route || null, page: null });
+  }
+
+  /** Sorting goes back to the first page. */
+  protected sortReports(key: ReportSortKey): void {
+    this.navigate({ sort: formatReportSort(nextReportSort(this.reportSort(), key)), page: null });
+  }
+
+  protected reportAriaSort(key: ReportSortKey): 'ascending' | 'descending' | null {
+    const s = this.reportSort();
+    return s.key === key ? (s.descending ? 'descending' : 'ascending') : null;
+  }
+
+  /** Showing or hiding outliers goes back to the first page. */
+  protected setHideOutliers(hide: boolean): void {
+    this.navigate({ hideOutliers: hide ? '1' : null, page: null });
   }
 
   protected setPage(page: number): void {
@@ -126,4 +184,3 @@ export class Positions {
     void this.router.navigate([], { queryParams, queryParamsHandling: 'merge' });
   }
 }
-

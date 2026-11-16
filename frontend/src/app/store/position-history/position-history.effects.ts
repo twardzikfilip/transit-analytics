@@ -6,7 +6,8 @@ import { PositionHistoryApi } from '../../core/api/api.services';
 import { errorMessage } from '../paged';
 import { PositionHistoryActions } from './position-history.actions';
 
-const toFailure = (err: HttpErrorResponse) => of(PositionHistoryActions.failure({ error: errorMessage(err) }));
+const toFailure = (err: HttpErrorResponse) =>
+  of(PositionHistoryActions.failure({ error: errorMessage(err) }));
 
 /** A newer window cancels a request still in flight. */
 export const loadFleet = createEffect(
@@ -55,8 +56,8 @@ export const loadSamples = createEffect(
   (actions$ = inject(Actions), api = inject(PositionHistoryApi)) =>
     actions$.pipe(
       ofType(PositionHistoryActions.loadSamples),
-      switchMap(({ query, page }) =>
-        api.samples(query.from, query.to, query.route, page, 50).pipe(
+      switchMap(({ query, page, sort, excludeOutliers }) =>
+        api.samples(query.from, query.to, query.route, page, 50, sort, excludeOutliers).pipe(
           map((samples) => PositionHistoryActions.samplesLoaded({ samples })),
           catchError(toFailure),
         ),
