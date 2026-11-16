@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { DelayBand, FleetSeries, GtfsImportResult, LivePosition, Page, PositionSample, RouteActivity, Route, Stop, StopTime, Trip, User, UserPayload, UserRole, Vehicle, VehiclePosition } from '../models/models';
+import { DelayBand, FleetSeries, LineStatsReport, GtfsImportResult, LivePosition, Page, PositionSample, RouteActivity, Route, Stop, StopTime, Trip, User, UserPayload, UserRole, Vehicle, VehiclePosition } from '../models/models';
 import { CrudApiService } from './crud-api.service';
 
 @Injectable({ providedIn: 'root' })
@@ -111,4 +111,14 @@ export class PositionHistoryApi {
 
 function withRoute(params: Record<string, string | number>, route: string | null): Record<string, string | number> {
   return route ? { ...params, route } : params;
+}
+
+/** Per-line statistics from the weekday timetable. */
+@Injectable({ providedIn: 'root' })
+export class LineStatsApi {
+  private readonly http = inject(HttpClient);
+
+  weekday(): Observable<LineStatsReport> {
+    return this.http.get<LineStatsReport>('/api/lines/stats');
+  }
 }

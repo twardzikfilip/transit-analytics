@@ -212,6 +212,42 @@ export interface PositionSample {
   nextStopName: string | null;
 }
 
+/** Per-line statistics from the weekday timetable (GET /api/lines/stats). */
+export interface LineStatsReport {
+  /** Weekday service used, e.g. P_1349; null before a timetable is imported. */
+  serviceId: string | null;
+  validDays: number;
+  firstDate: string | null;
+  lastDate: string | null;
+  peak: TimePeriod[];
+  offPeak: TimePeriod;
+  lines: LineStats[];
+}
+
+export interface TimePeriod {
+  from: string;
+  to: string;
+}
+
+export interface LineStats {
+  routeId: number;
+  route: string;
+  color: string | null;
+  textColor: string | null;
+  /** Main route, averaged over directions. */
+  lengthKm: number | null;
+  shortestTravelSeconds: number | null;
+  longestTravelSeconds: number | null;
+  /** Average speed of main-route trips starting in the period (total distance / total time). */
+  peakSpeedKmh: number | null;
+  offPeakSpeedKmh: number | null;
+  peakIntervalMinutes: number | null;
+  offPeakIntervalMinutes: number | null;
+  peakVehicles: number;
+  offPeakVehicles: number;
+  trips: number;
+}
+
 export interface GtfsImportResult {
   feed: string;
   source: string;

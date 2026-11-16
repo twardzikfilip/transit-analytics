@@ -31,6 +31,7 @@ export class Shell {
     { path: '/live-map', label: 'Live map', icon: '🗺' },
     { path: '/positions', label: 'Position history', icon: '📈' },
     { path: '/routes', label: 'Routes', icon: '〰' },
+    { path: '/lines', label: 'Line statistics', icon: '📊' },
     { path: '/stops', label: 'Stops', icon: '🚏' },
     { path: '/trips', label: 'Trips', icon: '⇄' },
     { path: '/stop-times', label: 'Stop times', icon: '🕑' },

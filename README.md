@@ -68,6 +68,9 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
     9–10, 10 min or more. A vehicle counts in every band it was in.
   - `GET /api/positions/routes` — lines recorded in the window.
   - `GET /api/positions` — the raw position reports, newest first, paged (`page`, `size` ≤ 500; also `vehicle`).
+- `GET /api/lines/stats` — per line, from the regular weekday timetable: length (main route, km), shortest and
+  longest end-to-end travel time, average speed, interval and vehicles in peak (06:00–09:00, 15:00–17:00) and off-peak
+  (17:00–22:00) hours. The definitions are on the Line statistics page.
 - `POST /api/gtfs/bialystok/import` (admin) — downloads Białystok's GTFS timetable and loads it; see below.
 - `GET /api/vehicle-positions/latest` — latest stored position per vehicle
 - `GET /api/zbiorkom/bialystok/positions` — live Białystok vehicle positions from [zbiorkom.live](https://zbiorkom.live),
@@ -183,6 +186,7 @@ INTEGRATION_TESTS=true ./gradlew test           # also boots the full context ag
 - Position history: vehicles running and mean delay every minute (SVG line charts with a hover/keyboard tooltip and
   a table view), running now / most at once / different vehicles seen, the delay distribution, and the raw reports, filtered by time range (1 h – 30 days or a custom from/to) and line, all kept in the URL.
   Preset ranges refresh every minute. Store slice `positionHistory`, registered by its lazy route.
+- Line statistics: the figures above for every line in a sortable table (weekday timetable, planned values).
 - Timetable pages (read-only): Routes → Trips (filter by route, direction, service, headsign) → Stop times of a trip;
   Stops (search, zone) → departure board of a stop. Filters and the page number live in the URL, so every view can be
   linked and the back button works.

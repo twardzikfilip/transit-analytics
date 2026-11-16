@@ -10,6 +10,9 @@ import com.transitanalytics.service.ExternalServiceException;
 import com.transitanalytics.service.VehicleService;
 import com.transitanalytics.web.GtfsController;
 import com.transitanalytics.web.PositionHistoryController;
+import com.transitanalytics.web.LineStatsController;
+import com.transitanalytics.service.LineStatsService;
+import com.transitanalytics.dto.LineStatsDto;
 import com.transitanalytics.recording.PositionHistoryService;
 import com.transitanalytics.dto.PositionHistoryDto;
 import com.transitanalytics.web.VehicleController;
@@ -45,7 +48,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = {AuthController.class, VehicleController.class, ZbiorkomController.class,
-        GtfsController.class, PositionHistoryController.class})
+        GtfsController.class, PositionHistoryController.class,
+        LineStatsController.class})
 @Import({SecurityConfig.class, JwtAuthFilter.class, JwtService.class, SecurityWebTest.Metrics.class})
 @TestPropertySource(properties = {
         "app.jwt.secret=test-secret-test-secret-test-secret-123456",
@@ -89,6 +93,9 @@ class SecurityWebTest {
 
     @MockitoBean
     PositionHistoryService positionHistoryService;
+
+    @MockitoBean
+    LineStatsService lineStatsService;
 
     @Test
     void loginReturnsToken() throws Exception {
@@ -242,6 +249,19 @@ class SecurityWebTest {
                 .andExpect(status().isBadRequest());
         mvc.perform(get("/api/positions/fleet").header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void guestCanReadLineStats() throws Exception {
+        given(lineStatsService.weekdayReport()).willReturn(new LineStatsDto.Report("P_1349", 59, null, null, List.of(),
+                new LineStatsDto.Period("17:00", "22:00"),
+                List.of(new LineStatsDto.Line(17L, "103", null, null, 19.8, 2400, 3000, 24.5, 26.0, 31.7, 40.2, 5, 4, 64))));
+
+        mvc.perform(get("/api/lines/stats").header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lines[0].lengthKm").value(19.8))
+                .andExpect(jsonPath("$.offPeak.to").value("22:00"));
+        mvc.perform(get("/api/lines/stats")).andExpect(status().isUnauthorized());
     }
 
     private double loginCount(String outcome) {
