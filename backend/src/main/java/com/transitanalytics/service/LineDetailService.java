@@ -121,7 +121,8 @@ public class LineDetailService {
                 SELECT p.vehicle_id, extract(epoch FROM p.observed_at) AS t, p.brigade, p.headsign,
                        p.next_stop_sequence AS seq, p.next_stop_name
                 FROM position_sample p
-                WHERE p.next_stop_sequence IS NOT NULL AND""" + " " + ofLine + " ORDER BY p.vehicle_id, p.observed_at",
+                WHERE p.next_stop_sequence IS NOT NULL AND %s
+                ORDER BY p.vehicle_id, p.observed_at""".formatted(ofLine),
                 (rs, i) -> new Sample(rs.getLong("vehicle_id"), rs.getDouble("t"), rs.getString("brigade"),
                         rs.getString("headsign"), rs.getInt("seq"), rs.getString("next_stop_name")),
                 route.getGtfsId(), ZbiorkomBialystokService.CITY_AGENCY);
@@ -155,8 +156,9 @@ public class LineDetailService {
                        avg(p.delay_seconds) AS delay, count(*) AS samples
                 FROM position_sample p
                 WHERE p.delay_seconds IS NOT NULL AND p.delay_seconds <= %3$d
-                  AND coalesce(p.next_stop_sequence, 1) > 0 AND""".formatted(ZONE.getId(), DAY_START_HOUR,
-                        DelayOutliers.THRESHOLD_SECONDS) + " " + ofLine + " GROUP BY 1 ORDER BY 1",
+                  AND coalesce(p.next_stop_sequence, 1) > 0 AND %4$s
+                GROUP BY 1 ORDER BY 1""".formatted(ZONE.getId(), DAY_START_HOUR, DelayOutliers.THRESHOLD_SECONDS,
+                        ofLine),
                 (rs, i) -> new LineDetailDto.DelaySlot(rs.getInt("minute"),
                         TimetableMath.round(rs.getDouble("delay"), 0), rs.getLong("samples")),
                 route.getGtfsId(), ZbiorkomBialystokService.CITY_AGENCY);
