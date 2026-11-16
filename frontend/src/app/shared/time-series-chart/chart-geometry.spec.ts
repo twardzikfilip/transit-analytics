@@ -1,4 +1,4 @@
-import { nearestIndex, niceTicks, segments, timeTicks } from './chart-geometry';
+import { MIN_GAP_MS, nearestIndex, niceTicks, segments, timeTicks } from './chart-geometry';
 
 describe('chart geometry', () => {
   it('makes round y ticks from zero', () => {
@@ -14,6 +14,15 @@ describe('chart geometry', () => {
     const p = (min: number) => ({ time: min * 60_000, value: 1 });
     const runs = segments([p(0), p(1), p(2), p(5), p(6), p(9)], 60_000);
     expect(runs.map((r) => r.map((x) => x.time / 60_000))).toEqual([[0, 1, 2], [5, 6], [9]]);
+  });
+
+  it('bridges a single missed 20-second poll, but not a longer pause', () => {
+    const p = (s: number) => ({ time: s * 1000, value: 1 });
+    const runs = segments([p(0), p(20), p(60), p(80), p(200), p(220)], 20_000, MIN_GAP_MS);
+    expect(runs.map((r) => r.map((x) => x.time / 1000))).toEqual([
+      [0, 20, 60, 80],
+      [200, 220],
+    ]);
   });
 
   it('picks round time ticks within the limit', () => {

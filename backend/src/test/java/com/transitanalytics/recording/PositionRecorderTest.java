@@ -46,7 +46,7 @@ class PositionRecorderTest {
 
     private static LivePositionDto position(String number) {
         return new LivePositionDto(1L, number, "BUS", "BKM", null, "18", null, "018-02", "Warzywna", 53.1, 23.1,
-                90.0, 0L, NOON, List.of());
+                90.0, 0L, NOON, List.of(), null);
     }
 
     @Test

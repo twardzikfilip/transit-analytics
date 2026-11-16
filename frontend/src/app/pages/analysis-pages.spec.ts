@@ -1,4 +1,7 @@
 import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
+import { of } from 'rxjs';
+import { BrigadeApi } from '../core/api/api.services';
 import {
   CorridorReport,
   LineDetail,
@@ -166,8 +169,8 @@ describe('Position history page', () => {
     });
 
     const query = {
-      from: '2026-11-16T11:01:00.000Z',
-      to: '2026-11-16T12:01:00.000Z',
+      from: '2026-11-16T11:00:40.000Z',
+      to: '2026-11-16T12:00:40.000Z',
       route: '103',
     };
     expect(store.dispatch).toHaveBeenCalledWith(PositionHistoryActions.load({ query }));
@@ -179,6 +182,20 @@ describe('Position history page', () => {
         excludeOutliers: true,
       }),
     );
+  });
+
+  it('refreshes a short preset window each poll', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-16T12:00:30Z'));
+    const { store } = renderPage(Positions, stateAfter(positionHistoryFeature), { range: '5m' });
+    expect(store.dispatch).toHaveBeenCalledWith(
+      PositionHistoryActions.load({
+        query: { from: '2026-11-16T11:55:40.000Z', to: '2026-11-16T12:00:40.000Z', route: null },
+      }),
+    );
+    const before = vi.mocked(store.dispatch).mock.calls.length;
+    vi.advanceTimersByTime(20_000);
+    expect(vi.mocked(store.dispatch).mock.calls.length).toBe(before + 2);
   });
 
   it('refreshes a preset window every minute, but not a custom one', () => {
@@ -284,15 +301,20 @@ describe('Delays player', () => {
 });
 
 describe('Live map page', () => {
-  const position = (vehicleNumber: string, delaySeconds: number | null): LivePosition => ({
+  const position = (
+    vehicleNumber: string,
+    delaySeconds: number | null,
+    agency = 'BKM',
+    brigade: string | null = '103-01',
+  ): LivePosition => ({
     vehicleId: 1,
     vehicleNumber,
     type: 'BUS',
-    agency: 'BKM',
+    agency,
     model: null,
     routeName: '103',
     routeColor: null,
-    brigade: '103-01',
+    brigade,
     headsign: 'Choroszcz',
     latitude: 53.13,
     longitude: 23.16,
@@ -307,24 +329,102 @@ describe('Live map page', () => {
         scheduledDeparture: null,
       },
     ],
+    subtype: 'suburban',
   });
-
-  it('polls the live positions and filters them by delay from the URL', () => {
-    vi.useFakeTimers();
-    const state = stateAfter(
+  const live = (...positions: LivePosition[]) =>
+    stateAfter(
       livePositionsFeature,
-      LivePositionsActions.loadSuccess({
-        positions: [position('230', 600), position('009', 30), position('512', null)],
-        loadedAt: '2026-11-16T12:00:00Z',
-      }),
+      LivePositionsActions.loadSuccess({ positions, loadedAt: '2026-11-16T12:00:00Z' }),
     );
-    const { el, store, render } = renderPage(LiveMap, state, { minDelay: '5' });
+  const noSchedules = {
+    provide: BrigadeApi,
+    useValue: { schedule: () => of({ brigade: '', serviceDay: '', runs: [] }) },
+  };
+
+  it('polls the live positions and filters them by delay and operator from the URL', () => {
+    vi.useFakeTimers();
+    const { el, store, render } = renderPage(
+      LiveMap,
+      live(
+        position('230', 600),
+        position('009', 30),
+        position('512', null),
+        position('1051', 900, 'WSCHODEXPRESS'),
+      ),
+      { minDelay: '5', agency: 'BKM' },
+      [noSchedules],
+    );
     vi.advanceTimersByTime(0);
     expect(store.dispatch).toHaveBeenCalledWith(LivePositionsActions.load());
     render();
     expect(text(el.querySelector('.header .muted'))).toContain(
-      '1 of 3 vehicles delayed over 5 min',
+      '1 of 4 vehicles (BKM, delayed over 5 min)',
     );
+    expect([...el.querySelectorAll('select.agency option')].map(text)).toEqual([
+      'All operators',
+      'BKM',
+      'WSCHODEXPRESS',
+    ]);
+  });
+
+  it('puts the operator in the URL, and resets every filter', () => {
+    const { el, fixture } = renderPage(LiveMap, live(position('230', 600)), { minDelay: '5' }, [
+      noSchedules,
+    ]);
+    const router = fixture.debugElement.injector.get(Router);
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    const select = el.querySelector('select.agency') as HTMLSelectElement;
+    select.value = 'BKM';
+    select.dispatchEvent(new Event('change'));
+    expect(navigate).toHaveBeenLastCalledWith([], {
+      queryParams: { agency: 'BKM' },
+      queryParamsHandling: 'merge',
+    });
+
+    (el.querySelector('button.reset') as HTMLButtonElement).click();
+    expect(navigate).toHaveBeenLastCalledWith([], {
+      queryParams: { minDelay: null, agency: null },
+      queryParamsHandling: 'merge',
+    });
+  });
+
+  it("colours vehicles by delay, outlined by kind of line, and shows the rest of the brigade's day", async () => {
+    useSvgMaps();
+    const now = Date.now();
+    const at = (minutes: number) => new Date(now + minutes * 60_000).toISOString();
+    const run = (line: string, from: number, to: number) => ({
+      line,
+      headsign: 'Choroszcz',
+      from: 'Piastowska',
+      to: 'Choroszcz',
+      departure: at(from),
+      arrival: at(to),
+    });
+    const schedule = vi.fn(() =>
+      of({
+        brigade: '103-01',
+        serviceDay: '2026-11-16',
+        runs: [run('103', -90, -50), run('103', -10, 30), run('103', 40, 80)],
+      }),
+    );
+    const { el, fixture } = renderPage(LiveMap, live(position('230', 600)), {}, [
+      { provide: BrigadeApi, useValue: { schedule } },
+    ]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const marker = el.querySelector('path.leaflet-interactive') as SVGPathElement;
+    expect(marker.getAttribute('fill')).toBe('#d7301f');
+    expect(marker.getAttribute('stroke')).toBe('#111111');
+
+    marker.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(schedule).toHaveBeenCalledWith('103-01');
+    const popup = el.querySelector('.leaflet-popup-content')!;
+    expect(text(popup.querySelector('.brigade > strong'))).toBe('Brigade 103-01');
+    const runs = [...popup.querySelectorAll('ol.runs li')];
+    expect(runs).toHaveLength(2);
+    expect(runs[0].classList).toContain('now');
   });
 });
 

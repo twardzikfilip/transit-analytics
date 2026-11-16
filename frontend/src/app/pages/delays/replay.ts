@@ -80,39 +80,7 @@ export function positionsAt(replay: Replay, t: number): ReplayPosition[] {
   });
 }
 
-export { DELAY_STOPS, NO_DELAY_COLOR } from '../../shared/palette';
-
-/** The marker colour for a delay, blended between the stops. */
-export function delayColor(seconds: number | null): string {
-  if (seconds === null) return NO_DELAY_COLOR;
-  if (seconds <= DELAY_STOPS[0].seconds) return DELAY_STOPS[0].color;
-  for (let i = 1; i < DELAY_STOPS.length; i++) {
-    const a = DELAY_STOPS[i - 1];
-    const b = DELAY_STOPS[i];
-    if (seconds <= b.seconds)
-      return mix(a.color, b.color, (seconds - a.seconds) / (b.seconds - a.seconds));
-  }
-  return DELAY_STOPS[DELAY_STOPS.length - 1].color;
-}
-
-function mix(from: string, to: string, k: number): string {
-  const a = hex(from);
-  const b = hex(to);
-  return (
-    '#' +
-    a
-      .map((c, i) =>
-        Math.round(c + (b[i] - c) * k)
-          .toString(16)
-          .padStart(2, '0'),
-      )
-      .join('')
-  );
-}
-
-function hex(color: string): number[] {
-  return [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16));
-}
+export { DELAY_STOPS, NO_DELAY_COLOR, delayColor } from '../../shared/palette';
 
 /** Playback speeds: replay seconds per real second. */
 export const SPEEDS: { value: number; label: string }[] = [

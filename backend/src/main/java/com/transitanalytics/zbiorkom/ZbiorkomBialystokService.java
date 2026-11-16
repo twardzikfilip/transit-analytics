@@ -2,6 +2,7 @@ package com.transitanalytics.zbiorkom;
 
 import com.transitanalytics.dto.LivePositionDto;
 import com.transitanalytics.dto.VehicleDto;
+import com.transitanalytics.service.LineSubtypes;
 import com.transitanalytics.service.VehicleService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,12 +36,14 @@ public class ZbiorkomBialystokService {
     private final ZbiorkomClient client;
     private final ZbiorkomProperties properties;
     private final VehicleService vehicleService;
+    private final LineSubtypes lineSubtypes;
 
     public ZbiorkomBialystokService(ZbiorkomClient client, ZbiorkomProperties properties,
-                                    VehicleService vehicleService) {
+                                    VehicleService vehicleService, LineSubtypes lineSubtypes) {
         this.client = client;
         this.properties = properties;
         this.vehicleService = vehicleService;
+        this.lineSubtypes = lineSubtypes;
     }
 
     /**
@@ -103,7 +106,7 @@ public class ZbiorkomBialystokService {
         return agency == null || agency.equalsIgnoreCase("default") ? DEFAULT_AGENCY : agency;
     }
 
-    private static LivePositionDto toDto(ZbiorkomFeed.Position p, Long vehicleId) {
+    private LivePositionDto toDto(ZbiorkomFeed.Position p, Long vehicleId) {
         VehicleDto.Discovered v = toVehicle(p.vehicle());
         List<LivePositionDto.UpcomingStop> stops = p.upcomingStops() == null ? List.of() : p.upcomingStops().stream()
                 .filter(Objects::nonNull)
@@ -114,7 +117,7 @@ public class ZbiorkomBialystokService {
                 p.routeName(), p.routeColor(), p.brigade(), p.headsign(),
                 p.location()[1], p.location()[0], p.bearing(),
                 p.delay() == null ? null : Math.round(p.delay() / 1000.0),
-                instant(p.timestamp()), stops);
+                instant(p.timestamp()), stops, lineSubtypes.of(p.routeName()));
     }
 
     private static Instant instant(Long epochMillis) {

@@ -15,6 +15,12 @@ class RouteSubtypeTest {
         assertThat(RouteSubtype.classify("142")).isEqualTo(RouteSubtype.SUBURBAN);
         assertThat(RouteSubtype.classify("1000")).isEqualTo(RouteSubtype.SUBURBAN);
         assertThat(RouteSubtype.classify("N1")).isEqualTo(RouteSubtype.NIGHT_URBAN);
+        assertThat(RouteSubtype.classify("400")).isEqualTo(RouteSubtype.REGIONAL);
+        assertThat(RouteSubtype.classify("406")).isEqualTo(RouteSubtype.REGIONAL);
+        assertThat(RouteSubtype.classify("499")).isEqualTo(RouteSubtype.REGIONAL);
+        assertThat(RouteSubtype.classify("399")).isEqualTo(RouteSubtype.SUBURBAN);
+        assertThat(RouteSubtype.classify("500")).isEqualTo(RouteSubtype.SUBURBAN);
+        assertThat(RouteSubtype.classify("4")).isEqualTo(RouteSubtype.URBAN);
         assertThat(RouteSubtype.classify("Z")).isEqualTo(RouteSubtype.URBAN);
         assertThat(RouteSubtype.classify(null)).isEqualTo(RouteSubtype.URBAN);
         assertThat(RouteSubtype.of("night_urban")).isEqualTo(RouteSubtype.NIGHT_URBAN);

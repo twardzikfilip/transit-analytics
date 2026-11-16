@@ -12,6 +12,7 @@ describe('live positions reducer', () => {
     model: 'Solaris Urbino 12',
     routeName: '18',
     routeColor: '#006963',
+    subtype: 'suburban',
     brigade: '018-02',
     headsign: 'Warzywna',
     latitude,

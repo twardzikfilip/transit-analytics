@@ -38,11 +38,11 @@ app:
   recording:
     # Poll the zbiorkom Białystok feed and store every vehicle position (position_sample) plus the raw response.
     enabled: ${RECORDING_ENABLED:true}
-    cron: "0 * * * * *"            # every minute, at second 0
+    cron: "*/20 * * * * *"         # every 20 seconds
     zone: Europe/Warsaw
     window-start: "03:30"
     window-end: "01:30"
-    min-interval: 55s              # never poll more than once a minute
+    min-interval: 18s              # never poll more than once in 20 seconds
     archive-dir: ${RECORDING_ARCHIVE_DIR:data/raw}
     import-dir:                    # set to backfill saved snapshots, then the app exits
   gtfs:

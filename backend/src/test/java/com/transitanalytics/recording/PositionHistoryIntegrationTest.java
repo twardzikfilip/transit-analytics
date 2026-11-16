@@ -42,7 +42,7 @@ class PositionHistoryIntegrationTest {
         poll("10:05:00", position(c, "10:05:05", "IT-10", -30L));
 
         PositionHistoryDto.FleetSeries all = history.fleet(FROM, TO, null);
-        assertThat(all.stepSeconds()).isEqualTo(60);
+        assertThat(all.stepSeconds()).as("one poll per point in an hour's window").isEqualTo(20);
         assertThat(all.points()).extracting(PositionHistoryDto.FleetPoint::vehicles).containsExactly(2.0, 3.0, 1.0);
         assertThat(all.points().get(2).time()).as("polls 10:02–10:04 are missing, not zero")
                 .isEqualTo(Instant.parse("2099-01-01T10:05:00Z"));
@@ -69,6 +69,27 @@ class PositionHistoryIntegrationTest {
                 .extracting(PositionHistoryDto.Sample::delaySeconds).containsExactly(-30, 60, 90, 120, 600, null);
         assertThat(history.samples(FROM, TO, null, null, 0, 1, null, false).getContent().get(0).observedAt())
                 .isEqualTo(Instant.parse("2099-01-01T10:05:05Z"));
+    }
+
+    @Test
+    void aVehicleIsRunningUntilAMinuteWithoutReports() {
+        long a = vehicle("IT-R1");
+        long b = vehicle("IT-R2");
+        // Polls every 20 s. b reported before the window, and a has no new report in two polls (the feed skipped it):
+        // both still count as running. At 10:01:20, a minute after a's last report, a has stopped.
+        poll("09:59:40", position(b, "09:59:40", "IT-10", 0L));
+        poll("10:00:00", position(a, "10:00:00", "IT-10", 0L));
+        poll("10:00:20", position(a, "10:00:20", "IT-10", 0L));
+        poll("10:00:40", position(b, "10:00:40", "IT-10", 0L));
+        poll("10:01:00", position(b, "10:01:00", "IT-10", 0L));
+        poll("10:01:20", position(b, "10:01:20", "IT-10", 0L));
+
+        PositionHistoryDto.FleetSeries fleet = history.fleet(FROM, TO, null);
+        assertThat(fleet.points()).extracting(PositionHistoryDto.FleetPoint::vehicles)
+                .containsExactly(2.0, 2.0, 2.0, 2.0, 1.0);
+        assertThat(fleet.summary().samples()).as("reports before the window are left out").isEqualTo(5);
+        assertThat(fleet.summary().latestVehicles()).isEqualTo(1);
+        assertThat(fleet.summary().peakVehicles()).isEqualTo(2);
     }
 
     @Test
@@ -164,6 +185,6 @@ class PositionHistoryIntegrationTest {
 
     private static LivePositionDto position(long vehicleId, String time, String route, Long delay) {
         return new LivePositionDto(vehicleId, "x", "BUS", "BKM", null, route, null, "IT-01", "Test", 53.13, 23.16,
-                90.0, delay, Instant.parse("2099-01-01T" + time + "Z"), List.of());
+                90.0, delay, Instant.parse("2099-01-01T" + time + "Z"), List.of(), null);
     }
 }

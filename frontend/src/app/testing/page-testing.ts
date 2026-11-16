@@ -1,4 +1,4 @@
-import { Type } from '@angular/core';
+import { Provider, Type } from '@angular/core';
 import * as L from 'leaflet';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
@@ -40,6 +40,7 @@ export function renderPage<T>(
   page: Type<T>,
   state: Record<string, unknown>,
   query: Record<string, string> = {},
+  providers: Provider[] = [],
 ): PageSetup<T> {
   const params = new BehaviorSubject(convertToParamMap(query));
   TestBed.configureTestingModule({
@@ -53,6 +54,7 @@ export function renderPage<T>(
           snapshot: { queryParamMap: params.value },
         },
       },
+      ...providers,
     ],
   });
   const store = TestBed.inject(MockStore);

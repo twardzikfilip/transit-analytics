@@ -73,6 +73,8 @@ public class GtfsImporter {
                    r.route_sort_order::integer,
                    -- Same rule as RouteSubtype.classify. Only for new routes: an existing route keeps its subtype.
                    CASE WHEN coalesce(nullif(r.route_short_name, ''), r.route_long_name) ~* '^N[0-9]+$' THEN 'night_urban'
+                        WHEN coalesce(nullif(r.route_short_name, ''), r.route_long_name) ~ '^0*4[0-9]{2}$'
+                        THEN 'regional'
                         WHEN coalesce(nullif(r.route_short_name, ''), r.route_long_name) ~ '^0*[1-9][0-9]{2,}$'
                         THEN 'suburban'
                         ELSE 'urban' END
