@@ -1,12 +1,12 @@
 package com.transitanalytics.repository;
 
 import com.transitanalytics.domain.VehiclePosition;
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.transitanalytics.service.CrudService;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 
-public interface VehiclePositionRepository extends JpaRepository<VehiclePosition, Long> {
+public interface VehiclePositionRepository extends CrudService.Repo<VehiclePosition> {
 
     /** Most recent position of every vehicle. */
     @Query("""

@@ -1,8 +1,8 @@
 package com.transitanalytics.domain;
 
 import jakarta.persistence.*;
-import java.time.Instant;
 
+/** One run of a route on a service day pattern (GTFS trips.txt). */
 @Entity
 @Table(name = "trip")
 public class Trip {
@@ -10,6 +10,9 @@ public class Trip {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "gtfs_id", nullable = false, unique = true, length = 64)
+    private String gtfsId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "route_id", nullable = false)
@@ -19,15 +22,30 @@ public class Trip {
     @JoinColumn(name = "vehicle_id")
     private Vehicle vehicle;
 
+    /** Matches calendar_date.service_id. */
+    @Column(name = "service_id", nullable = false, length = 64)
+    private String serviceId;
+
     private String headsign;
 
+    @Column(name = "short_name", length = 64)
+    private String shortName;
+
+    /** GTFS direction_id: 0 or 1. */
     private Short direction;
 
-    @Column(name = "start_time")
-    private Instant startTime;
+    @Column(name = "block_id", length = 64)
+    private String blockId;
 
-    @Column(name = "end_time")
-    private Instant endTime;
+    /** Matches shape_point.shape_id. */
+    @Column(name = "shape_id", length = 64)
+    private String shapeId;
+
+    @Column(name = "wheelchair_accessible")
+    private Short wheelchairAccessible;
+
+    @Column(name = "bikes_allowed")
+    private Short bikesAllowed;
 
     public Long getId() {
         return id;
@@ -35,6 +53,14 @@ public class Trip {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public String getGtfsId() {
+        return gtfsId;
+    }
+
+    public void setGtfsId(String gtfsId) {
+        this.gtfsId = gtfsId;
     }
 
     public Route getRoute() {
@@ -53,12 +79,28 @@ public class Trip {
         this.vehicle = vehicle;
     }
 
+    public String getServiceId() {
+        return serviceId;
+    }
+
+    public void setServiceId(String serviceId) {
+        this.serviceId = serviceId;
+    }
+
     public String getHeadsign() {
         return headsign;
     }
 
     public void setHeadsign(String headsign) {
         this.headsign = headsign;
+    }
+
+    public String getShortName() {
+        return shortName;
+    }
+
+    public void setShortName(String shortName) {
+        this.shortName = shortName;
     }
 
     public Short getDirection() {
@@ -69,19 +111,35 @@ public class Trip {
         this.direction = direction;
     }
 
-    public Instant getStartTime() {
-        return startTime;
+    public String getBlockId() {
+        return blockId;
     }
 
-    public void setStartTime(Instant startTime) {
-        this.startTime = startTime;
+    public void setBlockId(String blockId) {
+        this.blockId = blockId;
     }
 
-    public Instant getEndTime() {
-        return endTime;
+    public String getShapeId() {
+        return shapeId;
     }
 
-    public void setEndTime(Instant endTime) {
-        this.endTime = endTime;
+    public void setShapeId(String shapeId) {
+        this.shapeId = shapeId;
+    }
+
+    public Short getWheelchairAccessible() {
+        return wheelchairAccessible;
+    }
+
+    public void setWheelchairAccessible(Short wheelchairAccessible) {
+        this.wheelchairAccessible = wheelchairAccessible;
+    }
+
+    public Short getBikesAllowed() {
+        return bikesAllowed;
+    }
+
+    public void setBikesAllowed(Short bikesAllowed) {
+        this.bikesAllowed = bikesAllowed;
     }
 }

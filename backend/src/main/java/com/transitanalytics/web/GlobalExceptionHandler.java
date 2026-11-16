@@ -1,5 +1,7 @@
 package com.transitanalytics.web;
 
+import com.transitanalytics.gtfs.GtfsFeedException;
+import com.transitanalytics.gtfs.GtfsImportInProgressException;
 import com.transitanalytics.service.ExternalServiceException;
 import com.transitanalytics.service.NotFoundException;
 import org.slf4j.Logger;
@@ -42,5 +44,16 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ProblemDetail externalService(ExternalServiceException ex) {
         log.warn(ex.getMessage());
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY, "Live data source unavailable");
+    }
+
+    @ExceptionHandler(GtfsFeedException.class)
+    public ProblemDetail gtfsFeed(GtfsFeedException ex) {
+        log.warn("GTFS import failed: {}", ex.getMessage());
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage());
+    }
+
+    @ExceptionHandler(GtfsImportInProgressException.class)
+    public ProblemDetail gtfsBusy(GtfsImportInProgressException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
     }
 }

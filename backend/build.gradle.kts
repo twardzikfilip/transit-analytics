@@ -27,9 +27,11 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework.boot:spring-boot-starter-webmvc")
 	implementation("org.flywaydb:flyway-database-postgresql")
+	implementation("org.apache.commons:commons-csv:1.14.1")
 	// OpenAPI 3 spec at /v3/api-docs and Swagger UI at /swagger-ui.html. springdoc 3.x targets Spring Boot 4.
 	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.2.0")
-	runtimeOnly("org.postgresql:postgresql")
+	// Compile-time too: the GTFS import uses the driver's COPY API.
+	implementation("org.postgresql:postgresql")
 	implementation("net.ttddyy.observation:datasource-micrometer-spring-boot:2.3.0")
 	// Keep in step with the OpenTelemetry SDK version Spring Boot manages (2.28.x <-> SDK 1.62 for Boot 4.1.2).
 	implementation("io.opentelemetry.instrumentation:opentelemetry-logback-appender-1.0:2.28.1-alpha")

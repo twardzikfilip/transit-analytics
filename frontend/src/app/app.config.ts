@@ -1,4 +1,9 @@
-import { ApplicationConfig, ErrorHandler, isDevMode, provideBrowserGlobalErrorListeners } from '@angular/core';
+import {
+  ApplicationConfig,
+  ErrorHandler,
+  isDevMode,
+  provideBrowserGlobalErrorListeners,
+} from '@angular/core';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 import { provideEffects } from '@ngrx/effects';

@@ -4,6 +4,7 @@ import com.transitanalytics.dto.VehiclePositionDto;
 import com.transitanalytics.service.VehiclePositionService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import com.transitanalytics.service.NoFilter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -13,7 +14,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/vehicle-positions")
 public class VehiclePositionController
-        extends CrudController<VehiclePositionDto.Request, VehiclePositionDto.Response> {
+        extends CrudController<VehiclePositionDto.Request, VehiclePositionDto.Response, NoFilter> {
 
     private final VehiclePositionService positions;
 

@@ -1,0 +1,60 @@
+<div class="page-header">
+  <h1>Routes</h1>
+  <span class="muted">{{ filtered().length }} of {{ routes().length }} routes</span>
+</div>
+
+<div class="list-filters">
+  <label>
+    Search
+    <input type="search" placeholder="Line or name" [value]="search()" (input)="search.set($any($event.target).value)" />
+  </label>
+</div>
+
+@if (error(); as message) {
+  <p class="error">{{ message }}</p>
+}
+
+<div class="card data-table-wrap">
+  <table class="data-table" [class.loading]="loading()">
+    <thead>
+      <tr>
+        <th class="index">#</th>
+        <th>Line</th>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Agency</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (route of filtered(); track route.id; let i = $index) {
+        <tr>
+          <td class="index">{{ i + 1 }}</td>
+          <td>
+            <span
+              class="route-badge"
+              [style.--route-color]="routeColor(route.color)"
+              [style.--route-text-color]="routeColor(route.textColor)"
+              >{{ route.name }}</span
+            >
+          </td>
+          <td>{{ route.longName && route.longName !== route.name ? route.longName : '—' }}</td>
+          <td>{{ routeTypeLabel(route.routeType) }}</td>
+          <td>{{ route.agencyName ?? '—' }}</td>
+          <td class="num">
+            <a [routerLink]="['/trips']" [queryParams]="{ routeId: route.id }">Trips</a>
+            @if (route.url) {
+              · <a [href]="route.url" target="_blank" rel="noopener">Timetable ↗</a>
+            }
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="6" class="muted">
+            {{ loading() ? 'Loading…' : search() ? 'No routes match.' : 'No routes yet. Import a timetable in Settings.' }}
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
