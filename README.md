@@ -45,17 +45,39 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
 | CORS origins | `CORS_ALLOWED_ORIGINS` | `http://localhost:4200` |
 | zbiorkom.live API base URL | `ZBIORKOM_BASE_URL` | `https://api.zbiorkom.live/api6-open` |
 | Białystok bounding box (`minLon,minLat,maxLon,maxLat`) | `ZBIORKOM_BIALYSTOK_BBOX` | `22.921150,53.016270,23.382496,53.243687` |
+| Białystok GTFS feed (zip) | `GTFS_BIALYSTOK_URL` | `https://komunikacja.bialystok.pl/cms/File/download/gtfs/google_transit.zip` |
 
 ### API
 
 - `POST /api/auth/login` `{username, password}` → `{token, username, role}`; `GET /api/auth/me`
 - CRUD (`GET` list paged with `?page=&size=&sort=`, `GET /{id}`, `POST`, `PUT /{id}`, `DELETE /{id}`) on
-  `/api/vehicles`, `/api/vehicle-positions`, `/api/routes`, `/api/stops`, `/api/trips`, `/api/users`, `/api/roles`
+  `/api/vehicles`, `/api/vehicle-positions`, `/api/users`, `/api/roles`, and the timetable (GTFS) tables
+  `/api/agencies`, `/api/routes`, `/api/stops`, `/api/trips`, `/api/stop-times`, `/api/calendar-dates`,
+  `/api/shape-points`. Timetable lists take filters as query parameters, e.g. `/api/trips?routeId=17&direction=1`,
+  `/api/stop-times?stopId=260&sort=departureTime&sort=id`, `/api/stops?q=dworzec` (Swagger lists them all).
+- `POST /api/gtfs/bialystok/import` (admin) — downloads Białystok's GTFS timetable and loads it; see below.
 - `GET /api/vehicle-positions/latest` — latest stored position per vehicle
 - `GET /api/zbiorkom/bialystok/positions` — live Białystok vehicle positions from [zbiorkom.live](https://zbiorkom.live),
   used by the live map. Fetched on every call and not stored. Vehicles seen for the first time are added to the
   vehicle table (number, type, agency, model). The agency `default` is stored as `BKM`, and GTFS type codes become names
   (`3` → `BUS`). If zbiorkom.live fails or times out, the endpoint returns 502.
+
+### Timetable (GTFS) import
+
+`POST /api/gtfs/bialystok/import`, or **Settings → Import Białystok timetable** in the app (admins only), downloads
+the feed and loads agency, routes, stops, trips, stop times, calendar dates and shapes. It takes about 30 s, mostly
+inserting the ~384k stop times.
+
+- The tables follow GTFS (migration V7). Each row keeps its feed id in `gtfs_id`; times stay as GTFS `HH:MM:SS` and can
+  go past 24:00 for trips after midnight. Route colours are stored as `#RRGGBB`.
+- Everything happens in one transaction: the app keeps showing the old timetable until the new one is complete, and a
+  broken feed changes nothing (422). If the download fails the answer is 502; a second import while one runs gets 409.
+- Agencies, routes, stops and trips are updated in place by `gtfs_id`, so their database ids stay the same across
+  imports (and links to them keep working). Stop times, calendar dates and shape points are replaced.
+- Rows that point at a route, trip or stop that isn't in the feed are skipped and counted in the response. Files the
+  app doesn't load (e.g. `feed_info.txt`) are listed as ignored.
+- Code: `gtfs/GtfsImporter` (generic loader: files are streamed from the zip into temporary tables with PostgreSQL
+  `COPY`, then merged with SQL) and `gtfs/GtfsBialystokService` (download + import for Białystok).
 
 Interactive docs: Swagger UI at http://localhost:8080/swagger-ui.html, OpenAPI JSON at `/v3/api-docs`. To try
 the secured endpoints, call `POST /api/auth/login`, copy the `token`, click **Authorize** and paste it. Set
@@ -78,9 +100,15 @@ INTEGRATION_TESTS=true ./gradlew test           # also boots the full context ag
 - `core/auth` — `AuthService`, `authInterceptor` (Bearer token, logout on 401), `authGuard`, `roleGuard`, `*appHasRole`
 - `core/api` — generic `CrudApiService` + one service per backend resource
 - `layout/shell` — sidebar (Home, Vehicles, Live map) + top-right hamburger menu (Settings, Logout)
-- `store` — NgRx `auth`, `vehicles` and `livePositions` slices (entity adapters) with functional effects
+- `store` — NgRx slices with functional effects: `auth`, `vehicles`, `livePositions`, `routes` (all routes), and
+  `stops`, `trips`, `stopTimes`, which hold one server-side page each (shared helpers in `store/paged.ts`);
+  `gtfsImport` tracks the import. The timetable slices and `gtfsImport` are registered by their lazy-loaded routes
+  (`pages/timetable.routes.ts`, `pages/settings/settings.routes.ts`).
 - `pages` — login, home, vehicles (edit actions for ADMIN only), live map (Białystok, Leaflet/OSM; dispatches a
-  `livePositions` load every 5 s and draws markers from the store), settings
+  `livePositions` load every 5 s and draws markers from the store), settings (GTFS import for admins)
+- Timetable pages (read-only): Routes → Trips (filter by route, direction, service, headsign) → Stop times of a trip;
+  Stops (search, zone) → departure board of a stop. Filters and the page number live in the URL, so every view can be
+  linked and the back button works.
 
 ```bash
 npm start        # dev server with API proxy

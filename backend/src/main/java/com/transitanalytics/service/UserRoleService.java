@@ -6,7 +6,7 @@ import com.transitanalytics.repository.UserRoleRepository;
 import org.springframework.stereotype.Service;
 
 @Service
-public class UserRoleService extends CrudService<UserRole, UserRoleDto.Request, UserRoleDto.Response> {
+public class UserRoleService extends CrudService<UserRole, UserRoleDto.Request, UserRoleDto.Response, NoFilter> {
 
     public UserRoleService(UserRoleRepository repository) {
         super(repository, "UserRole");

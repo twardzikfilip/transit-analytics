@@ -13,7 +13,7 @@ import java.util.List;
 
 @Service
 public class VehiclePositionService
-        extends CrudService<VehiclePosition, VehiclePositionDto.Request, VehiclePositionDto.Response> {
+        extends CrudService<VehiclePosition, VehiclePositionDto.Request, VehiclePositionDto.Response, NoFilter> {
 
     private final VehiclePositionRepository positions;
     private final VehicleRepository vehicles;

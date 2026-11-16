@@ -2,8 +2,13 @@ package com.transitanalytics.security;
 
 import com.transitanalytics.dto.LivePositionDto;
 import com.transitanalytics.dto.VehicleDto;
+import com.transitanalytics.gtfs.GtfsBialystokService;
+import com.transitanalytics.gtfs.GtfsFeedException;
+import com.transitanalytics.gtfs.GtfsImportInProgressException;
+import com.transitanalytics.gtfs.GtfsImportResult;
 import com.transitanalytics.service.ExternalServiceException;
 import com.transitanalytics.service.VehicleService;
+import com.transitanalytics.web.GtfsController;
 import com.transitanalytics.web.VehicleController;
 import com.transitanalytics.web.ZbiorkomController;
 import com.transitanalytics.zbiorkom.ZbiorkomBialystokService;
@@ -36,7 +41,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = {AuthController.class, VehicleController.class, ZbiorkomController.class})
+@WebMvcTest(controllers = {AuthController.class, VehicleController.class, ZbiorkomController.class,
+        GtfsController.class})
 @Import({SecurityConfig.class, JwtAuthFilter.class, JwtService.class, SecurityWebTest.Metrics.class})
 @TestPropertySource(properties = {
         "app.jwt.secret=test-secret-test-secret-test-secret-123456",
@@ -74,6 +80,9 @@ class SecurityWebTest {
 
     @MockitoBean
     ZbiorkomBialystokService zbiorkomBialystokService;
+
+    @MockitoBean
+    GtfsBialystokService gtfsBialystokService;
 
     @Test
     void loginReturnsToken() throws Exception {
@@ -156,6 +165,36 @@ class SecurityWebTest {
         mvc.perform(get("/api/zbiorkom/bialystok/positions").header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isBadGateway())
                 .andExpect(jsonPath("$.detail").value("Live data source unavailable"));
+    }
+
+    @Test
+    void guestCannotImportGtfs() throws Exception {
+        mvc.perform(post("/api/gtfs/bialystok/import").header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void adminCanImportGtfs() throws Exception {
+        given(gtfsBialystokService.importFeed()).willReturn(new GtfsImportResult("bialystok", "https://x", 10,
+                Instant.parse("2026-11-16T10:00:00Z"), 1234, java.util.Map.of("stop", 1083L), java.util.Map.of(),
+                List.of()));
+
+        mvc.perform(post("/api/gtfs/bialystok/import").header("Authorization", bearer("admin", "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rows.stop").value(1083));
+    }
+
+    @Test
+    void gtfsImportErrorsMapToStatusCodes() throws Exception {
+        given(gtfsBialystokService.importFeed())
+                .willThrow(new GtfsImportInProgressException("bialystok"))
+                .willThrow(new GtfsFeedException("The feed has no stops.txt"));
+
+        mvc.perform(post("/api/gtfs/bialystok/import").header("Authorization", bearer("admin", "ADMIN")))
+                .andExpect(status().isConflict());
+        mvc.perform(post("/api/gtfs/bialystok/import").header("Authorization", bearer("admin", "ADMIN")))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.detail").value("The feed has no stops.txt"));
     }
 
     private double loginCount(String outcome) {

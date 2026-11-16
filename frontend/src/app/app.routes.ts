@@ -13,7 +13,8 @@ export const routes: Routes = [
       { path: 'home', loadComponent: () => import('./pages/home/home').then((m) => m.Home) },
       { path: 'vehicles', loadComponent: () => import('./pages/vehicles/vehicles').then((m) => m.Vehicles) },
       { path: 'live-map', loadComponent: () => import('./pages/live-map/live-map').then((m) => m.LiveMap) },
-      { path: 'settings', loadComponent: () => import('./pages/settings/settings').then((m) => m.Settings) },
+      { path: '', loadChildren: () => import('./pages/timetable.routes').then((m) => m.TIMETABLE_ROUTES) },
+      { path: 'settings', loadChildren: () => import('./pages/settings/settings.routes').then((m) => m.SETTINGS_ROUTES) },
       // Admin-only pages go here, e.g.:
       // { path: 'users', canActivate: [roleGuard], data: { roles: ['ADMIN'] }, loadComponent: ... },
     ],

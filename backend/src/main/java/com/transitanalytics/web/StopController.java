@@ -2,14 +2,14 @@ package com.transitanalytics.web;
 
 import com.transitanalytics.dto.StopDto;
 import com.transitanalytics.service.StopService;
-import org.springframework.web.bind.annotation.RequestMapping;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "Stops")
+@Tag(name = "Stops (GTFS)")
 @RestController
 @RequestMapping("/api/stops")
-public class StopController extends CrudController<StopDto.Request, StopDto.Response> {
+public class StopController extends CrudController<StopDto.Request, StopDto.Response, StopDto.Filter> {
 
     public StopController(StopService service) {
         super(service);

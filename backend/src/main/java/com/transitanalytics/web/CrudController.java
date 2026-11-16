@@ -9,18 +9,22 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
-/** Standard REST CRUD endpoints; subclasses only add {@code @RequestMapping} and a service. */
-public abstract class CrudController<REQ, RES> {
+/**
+ * Standard REST CRUD endpoints; subclasses only add {@code @RequestMapping} and a service.
+ * List filters ({@code F}) are bound from query parameters, e.g. {@code GET /api/trips?routeId=5}.
+ */
+public abstract class CrudController<REQ, RES, F> {
 
-    protected final CrudService<?, REQ, RES> service;
+    protected final CrudService<?, REQ, RES, F> service;
 
-    protected CrudController(CrudService<?, REQ, RES> service) {
+    protected CrudController(CrudService<?, REQ, RES, F> service) {
         this.service = service;
     }
 
     @GetMapping
-    public Page<RES> list(@ParameterObject @PageableDefault(size = 50, sort = "id") Pageable pageable) {
-        return service.findAll(pageable);
+    public Page<RES> list(@ParameterObject F filter,
+                          @ParameterObject @PageableDefault(size = 50, sort = "id") Pageable pageable) {
+        return service.findAll(filter, pageable);
     }
 
     @GetMapping("/{id}")

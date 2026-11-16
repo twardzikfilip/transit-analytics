@@ -8,7 +8,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
-public class UserService extends CrudService<User, UserDto.Request, UserDto.Response> {
+public class UserService extends CrudService<User, UserDto.Request, UserDto.Response, NoFilter> {
 
     private final UserRoleRepository roles;
     private final PasswordEncoder passwordEncoder;
