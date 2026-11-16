@@ -207,7 +207,12 @@ Adding a new entity: migration `V<n>__*.sql` → entity in `domain/` → reposit
 ```bash
 ./gradlew test                                  # unit + web-slice tests, no DB needed
 INTEGRATION_TESTS=true ./gradlew test           # also boots the full context against the DB
+./gradlew check                                 # tests + coverage floor (50% of lines from unit tests)
 ```
+
+Every test run writes a JaCoCo coverage report to `build/reports/jacoco/test/` (`html/index.html`, and
+`jacocoTestReport.xml` for CI). Unit tests alone cover about 53% of lines; with the database tests about 86%.
+Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixture` inserts a small timetable.
 
 ## Frontend
 
@@ -248,6 +253,8 @@ INTEGRATION_TESTS=true ./gradlew test           # also boots the full context ag
 ```bash
 npm start        # dev server with API proxy
 npm test         # Vitest unit tests
+npm run test:coverage   # once, with coverage of all of src/app (report in coverage/frontend/index.html);
+                        # fails below the thresholds in angular.json (test options)
 npm run build
 ```
 
