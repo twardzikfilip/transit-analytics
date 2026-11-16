@@ -238,7 +238,7 @@ export interface LineStatsReport {
   firstDate: string | null;
   lastDate: string | null;
   peak: TimePeriod[];
-  offPeak: TimePeriod;
+  offPeak: TimePeriod[];
   lines: LineStats[];
 }
 

@@ -3,13 +3,21 @@ package com.transitanalytics.service;
 import com.transitanalytics.domain.Route;
 import com.transitanalytics.dto.LineStatsDto;
 import com.transitanalytics.repository.RouteRepository;
+import com.transitanalytics.service.Periods.Window;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import static com.transitanalytics.service.Periods.OFF_PEAK;
+import static com.transitanalytics.service.Periods.PEAK;
+import static com.transitanalytics.service.TimetableMath.LINE_ORDER;
+import static com.transitanalytics.service.TimetableMath.interval;
+import static com.transitanalytics.service.TimetableMath.mostFrequent;
+import static com.transitanalytics.service.TimetableMath.regularity;
+import static com.transitanalytics.service.TimetableMath.round;
+
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -27,34 +35,6 @@ import java.util.stream.Collectors;
 @Service
 public class LineStatsService {
 
-    /** Peak periods (seconds after midnight): 06:00–09:00 and 15:00–17:00. */
-    static final List<Window> PEAK = List.of(new Window(6 * 3600, 9 * 3600), new Window(15 * 3600, 17 * 3600));
-    /** Off-peak period: 17:00–22:00. */
-    static final Window OFF_PEAK = new Window(17 * 3600, 22 * 3600);
-
-    /** A period of the service day, in seconds after midnight; {@code to} is exclusive. */
-    record Window(int from, int to) {
-        int minutes() {
-            return (to - from) / 60;
-        }
-
-        boolean startsIn(TripTimes t) {
-            return t.start() >= from && t.start() < to;
-        }
-
-        boolean overlaps(TripTimes t) {
-            return t.start() < to && t.end() > from;
-        }
-
-        LineStatsDto.Period toDto() {
-            return new LineStatsDto.Period(hhmm(from), hhmm(to));
-        }
-
-        private static String hhmm(int seconds) {
-            return "%02d:%02d".formatted(seconds / 3600, seconds / 60 % 60);
-        }
-    }
-
     /**
      * One timetable trip, reduced to what the statistics need.
      *
@@ -68,19 +48,21 @@ public class LineStatsService {
 
     private final JdbcTemplate jdbc;
     private final RouteRepository routes;
+    private final WeekdayTimetable weekdayTimetable;
 
-    public LineStatsService(JdbcTemplate jdbc, RouteRepository routes) {
+    public LineStatsService(JdbcTemplate jdbc, RouteRepository routes, WeekdayTimetable weekdayTimetable) {
         this.jdbc = jdbc;
         this.routes = routes;
+        this.weekdayTimetable = weekdayTimetable;
     }
 
     @Transactional(readOnly = true)
     public LineStatsDto.Report weekdayReport() {
-        String service = weekdayService();
+        String service = weekdayTimetable.serviceId();
         if (service == null) {
             // No timetable imported yet.
-            return new LineStatsDto.Report(null, 0, null, null, PEAK.stream().map(Window::toDto).toList(),
-                    OFF_PEAK.toDto(), List.of());
+            return new LineStatsDto.Report(null, 0, null, null, Periods.toDto(PEAK),
+                    Periods.toDto(OFF_PEAK), List.of());
         }
         var days = jdbc.queryForMap("""
                 SELECT count(*) AS days, min(date) AS first, max(date) AS last FROM calendar_date
@@ -143,21 +125,7 @@ public class LineStatsService {
 
         return new LineStatsDto.Report(service, ((Number) days.get("days")).intValue(),
                 toLocalDate(days.get("first")), toLocalDate(days.get("last")),
-                PEAK.stream().map(Window::toDto).toList(), OFF_PEAK.toDto(), lines);
-    }
-
-    /**
-     * The regular weekday timetable: the service that runs on the most upcoming weekdays (else on the most weekdays
-     * overall). Null when no timetable is imported.
-     */
-    String weekdayService() {
-        List<String> services = jdbc.queryForList("""
-                SELECT service_id FROM calendar_date
-                WHERE exception_type = 1 AND extract(isodow FROM date) <= 5
-                GROUP BY service_id
-                ORDER BY count(*) FILTER (WHERE date >= current_date) DESC, count(*) DESC, service_id
-                LIMIT 1""", String.class);
-        return services.isEmpty() ? null : services.get(0);
+                Periods.toDto(PEAK), Periods.toDto(OFF_PEAK), lines);
     }
 
     static LineStatsDto.Line lineStats(Route route, long routeId, List<TripTimes> trips) {
@@ -168,6 +136,9 @@ public class LineStatsService {
     static LineStatsDto.Line lineStats(Route route, long routeId, List<TripTimes> trips,
                                        Map<Integer, List<Integer>> departures) {
         Map<Integer, List<TripTimes>> byDirection = trips.stream().collect(Collectors.groupingBy(TripTimes::direction));
+        // Trip start times per direction: the interval counts every trip starting in a period.
+        Map<Integer, List<Integer>> starts = new HashMap<>();
+        byDirection.forEach((dir, list) -> starts.put(dir, list.stream().map(TripTimes::start).toList()));
 
         // Main variant of each direction: its most frequent shape. Length and travel times use only those trips, so
         // short turns and depot runs don't count as "the line".
@@ -185,26 +156,10 @@ public class LineStatsService {
 
         return new LineStatsDto.Line(routeId, route == null ? String.valueOf(routeId) : route.displayName(),
                 route == null ? null : route.getColor(), route == null ? null : route.getTextColor(), lengthKm,
-                shortest, longest, speed(mainTrips, PEAK), speed(mainTrips, List.of(OFF_PEAK)),
-                interval(byDirection.values(), PEAK), interval(byDirection.values(), List.of(OFF_PEAK)),
-                regularity(departures, PEAK), regularity(departures, List.of(OFF_PEAK)),
-                PEAK.stream().mapToInt(w -> duties(trips, w)).max().orElse(0), duties(trips, OFF_PEAK), trips.size());
-    }
-
-    /**
-     * Average minutes between departures: the periods' total minutes divided by the trips starting in them, per
-     * direction, then averaged over the directions that have trips then. Null when no trip starts in the periods.
-     */
-    static Double interval(Collection<List<TripTimes>> directions, List<Window> windows) {
-        int minutes = windows.stream().mapToInt(Window::minutes).sum();
-        List<Double> perDirection = new ArrayList<>();
-        for (List<TripTimes> direction : directions) {
-            long departures = direction.stream().filter(t -> windows.stream().anyMatch(w -> w.startsIn(t))).count();
-            if (departures > 0) {
-                perDirection.add((double) minutes / departures);
-            }
-        }
-        return perDirection.isEmpty() ? null : round(perDirection.stream().mapToDouble(d -> d).average().orElse(0), 1);
+                shortest, longest, speed(mainTrips, PEAK), speed(mainTrips, OFF_PEAK),
+                interval(starts, PEAK), interval(starts, OFF_PEAK),
+                regularity(departures, PEAK), regularity(departures, OFF_PEAK),
+                duties(trips, PEAK), duties(trips, OFF_PEAK), trips.size());
     }
 
     /**
@@ -215,7 +170,7 @@ public class LineStatsService {
         double km = 0;
         double seconds = 0;
         for (TripTimes t : trips) {
-            if (t.km() != null && t.end() > t.start() && windows.stream().anyMatch(w -> w.startsIn(t))) {
+            if (t.km() != null && t.end() > t.start() && Periods.in(windows, t.start())) {
                 km += t.km();
                 seconds += t.end() - t.start();
             }
@@ -223,72 +178,18 @@ public class LineStatsService {
         return seconds == 0 ? null : round(km / (seconds / 3600), 1);
     }
 
-    /**
-     * How evenly departures are spread: the coefficient of variation of the gaps between consecutive departures
-     * (population standard deviation / mean; 0 = perfectly even). Computed per direction and per period, so the
-     * break between the two peak periods is never a gap, then averaged weighted by the number of gaps. A direction
-     * and period needs at least 3 gaps; null when none qualifies.
-     *
-     * <p>A useful reading: for passengers arriving at random, the expected wait is mean gap / 2 × (1 + CV²).
-     */
-    static Double regularity(Map<Integer, List<Integer>> departuresByDirection, List<Window> windows) {
-        double weightedCv = 0;
-        int gapCount = 0;
-        for (List<Integer> times : departuresByDirection.values()) {
-            for (Window w : windows) {
-                List<Integer> in = times.stream().filter(t -> t >= w.from() && t < w.to()).sorted().toList();
-                if (in.size() < 4) {
-                    continue;
-                }
-                double[] gaps = new double[in.size() - 1];
-                for (int i = 1; i < in.size(); i++) {
-                    gaps[i - 1] = in.get(i) - in.get(i - 1);
-                }
-                double mean = java.util.Arrays.stream(gaps).average().orElse(0);
-                if (mean <= 0) {
-                    continue;
-                }
-                double variance = java.util.Arrays.stream(gaps).map(g -> (g - mean) * (g - mean)).average().orElse(0);
-                weightedCv += Math.sqrt(variance) / mean * gaps.length;
-                gapCount += gaps.length;
-            }
-        }
-        return gapCount == 0 ? null : round(weightedCv / gapCount, 2);
-    }
-
-    /** Duties (buses) with a trip running at some point in the window. */
-    static int duties(List<TripTimes> trips, Window window) {
-        Set<String> duties = new HashSet<>();
-        trips.stream().filter(window::overlaps).map(TripTimes::duty).filter(Objects::nonNull).forEach(duties::add);
-        return duties.size();
-    }
-
-    /** The most common value; ties go to the smallest one, nulls last. */
-    static String mostFrequent(List<String> values) {
-        Map<String, Long> counts = new HashMap<>();
-        values.forEach(v -> counts.merge(v, 1L, Long::sum));
-        return counts.entrySet().stream()
-                .max(Map.Entry.<String, Long>comparingByValue().thenComparing(Map.Entry::getKey,
-                        Comparator.nullsFirst(Comparator.<String>reverseOrder())))
-                .map(Map.Entry::getKey).orElse(null);
-    }
-
-    static double round(double value, int decimals) {
-        double f = Math.pow(10, decimals);
-        return Math.round(value * f) / f;
+    /** Duties (buses) needed: those with a trip under way in a window, for the busiest of the windows. */
+    static int duties(List<TripTimes> trips, List<Window> windows) {
+        return windows.stream().mapToInt(window -> {
+            Set<String> duties = new HashSet<>();
+            trips.stream().filter(t -> window.overlaps(t.start(), t.end())).map(TripTimes::duty)
+                    .filter(Objects::nonNull).forEach(duties::add);
+            return duties.size();
+        }).max().orElse(0);
     }
 
     private static LocalDate toLocalDate(Object value) {
         return value instanceof java.sql.Date d ? d.toLocalDate() : (LocalDate) value;
     }
 
-    /** Numbers in numeric order, then names with letters (N1, N2, …). */
-    static final Comparator<String> LINE_ORDER = (a, b) -> {
-        boolean na = a.chars().allMatch(Character::isDigit);
-        boolean nb = b.chars().allMatch(Character::isDigit);
-        if (na && nb) {
-            return Long.compare(Long.parseLong(a), Long.parseLong(b));
-        }
-        return na != nb ? (na ? -1 : 1) : a.compareTo(b);
-    };
 }

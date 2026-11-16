@@ -7,7 +7,7 @@ import com.transitanalytics.dto.LineDetailDto.HourStat;
 import com.transitanalytics.dto.LineDetailDto.StopPoint;
 import com.transitanalytics.dto.LineDetailDto.Variant;
 import com.transitanalytics.dto.LineDetailDto.Zone2;
-import com.transitanalytics.recording.PositionHistoryService;
+import com.transitanalytics.recording.DelayOutliers;
 import com.transitanalytics.repository.RouteRepository;
 import com.transitanalytics.zbiorkom.ZbiorkomBialystokService;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -115,12 +115,12 @@ public class LineDetailService {
 
     private final JdbcTemplate jdbc;
     private final RouteRepository routes;
-    private final LineStatsService lineStats;
+    private final WeekdayTimetable weekdayTimetable;
 
-    public LineDetailService(JdbcTemplate jdbc, RouteRepository routes, LineStatsService lineStats) {
+    public LineDetailService(JdbcTemplate jdbc, RouteRepository routes, WeekdayTimetable weekdayTimetable) {
         this.jdbc = jdbc;
         this.routes = routes;
-        this.lineStats = lineStats;
+        this.weekdayTimetable = weekdayTimetable;
     }
 
     /** All lines, numbers first in numeric order. */
@@ -128,7 +128,7 @@ public class LineDetailService {
     public List<LineDetailDto.LineRef> lines() {
         return routes.findAll().stream()
                 .map(r -> new LineDetailDto.LineRef(r.getId(), r.getGtfsId(), r.displayName(), r.getSubtype()))
-                .sorted(Comparator.comparing(LineDetailDto.LineRef::name, LineStatsService.LINE_ORDER))
+                .sorted(Comparator.comparing(LineDetailDto.LineRef::name, TimetableMath.LINE_ORDER))
                 .toList();
     }
 
@@ -140,14 +140,14 @@ public class LineDetailService {
         Map<Integer, Variant> mains = tt.mains();
 
         Double length = mains.isEmpty() ? null
-                : LineStatsService.round(mains.values().stream().mapToDouble(Variant::km).average().orElse(0), 1);
+                : TimetableMath.round(mains.values().stream().mapToDouble(Variant::km).average().orElse(0), 1);
         Integer shortest = mainTrips.stream().map(t -> t.duration() / 60).min(Integer::compare).orElse(null);
         Integer longest = mainTrips.stream().map(t -> t.duration() / 60).max(Integer::compare).orElse(null);
         List<Double> speeds = mainTrips.stream().filter(t -> t.km() != null && t.duration() > 0)
                 .map(t -> t.km() / (t.duration() / 3600.0)).toList();
         var base = new LineDetailDto.Base(length, shortest, longest,
-                speeds.stream().min(Double::compare).map(v -> LineStatsService.round(v, 1)).orElse(null),
-                speeds.stream().max(Double::compare).map(v -> LineStatsService.round(v, 1)).orElse(null));
+                speeds.stream().min(Double::compare).map(v -> TimetableMath.round(v, 1)).orElse(null),
+                speeds.stream().max(Double::compare).map(v -> TimetableMath.round(v, 1)).orElse(null));
 
         // Zone 2 on the base route and on longer variants (short turns and depot runs don't reach further).
         List<Zone2> zone2 = tt.variants().stream()
@@ -162,7 +162,7 @@ public class LineDetailService {
                 .sorted(Comparator.comparingInt(TripRow::start).thenComparing(TripRow::duty))
                 .map(t -> new LineDetailDto.DepotRun(t.duty(), t.start(), t.end(), t.firstStop(), t.lastStop(),
                         t.direction(), t.headsign(), tt.depot().get(t.id()),
-                        t.km() == null ? null : LineStatsService.round(t.km(), 1)))
+                        t.km() == null ? null : TimetableMath.round(t.km(), 1)))
                 .toList();
         // Depot-run stops away from the end stops, grouped like them: arrivals (pull-ins) name a place.
         List<StopRef> depotArrivals = new ArrayList<>();
@@ -233,9 +233,9 @@ public class LineDetailService {
                 FROM position_sample p
                 WHERE p.delay_seconds IS NOT NULL AND p.delay_seconds <= %3$d
                   AND coalesce(p.next_stop_sequence, 1) > 0 AND""".formatted(ZONE.getId(), DAY_START_HOUR,
-                        PositionHistoryService.OUTLIER_DELAY_SECONDS) + " " + ofLine + " GROUP BY 1 ORDER BY 1",
+                        DelayOutliers.THRESHOLD_SECONDS) + " " + ofLine + " GROUP BY 1 ORDER BY 1",
                 (rs, i) -> new LineDetailDto.DelaySlot(rs.getInt("minute"),
-                        LineStatsService.round(rs.getDouble("delay"), 0), rs.getLong("samples")),
+                        TimetableMath.round(rs.getDouble("delay"), 0), rs.getLong("samples")),
                 route.getGtfsId(), ZbiorkomBialystokService.CITY_AGENCY);
 
         TreeSet<LocalDate> days = new TreeSet<>();
@@ -277,7 +277,7 @@ public class LineDetailService {
     }
 
     private Timetable timetable(Route route, boolean withShapes) {
-        String service = lineStats.weekdayService();
+        String service = weekdayTimetable.serviceId();
         if (service == null) {
             return new Timetable(null, List.of(), List.of(), List.of(), Map.of());
         }
@@ -313,7 +313,7 @@ public class LineDetailService {
                 t -> variantKey(t.direction(), t.shapeId()), LinkedHashMap::new, Collectors.toList()));
         Map<Integer, String> mainShape = new HashMap<>();
         trips.stream().collect(Collectors.groupingBy(TripRow::direction)).forEach((dir, list) ->
-                mainShape.put(dir, LineStatsService.mostFrequent(list.stream().map(TripRow::shapeId).toList())));
+                mainShape.put(dir, TimetableMath.mostFrequent(list.stream().map(TripRow::shapeId).toList())));
 
         // Stops of each variant from its trip with the most stops.
         Map<String, TripRow> representative = new LinkedHashMap<>();
@@ -354,12 +354,12 @@ public class LineDetailService {
                     : stops.stream().filter(s -> s.lat() != null && s.lon() != null)
                             .map(s -> new double[]{s.lat(), s.lon()}).toList();
             variants.add(new Variant(first.direction(), first.shapeId(),
-                    LineStatsService.mostFrequent(list.stream().map(TripRow::headsign).toList()), kind,
-                    LineStatsService.round(km, 2), list.size(),
+                    TimetableMath.mostFrequent(list.stream().map(TripRow::headsign).toList()), kind,
+                    TimetableMath.round(km, 2), list.size(),
                     list.stream().mapToInt(t -> t.duration() / 60).min().orElse(0),
                     list.stream().mapToInt(t -> t.duration() / 60).max().orElse(0),
-                    speeds.stream().min(Double::compare).map(v -> LineStatsService.round(v, 1)).orElse(null),
-                    speeds.stream().max(Double::compare).map(v -> LineStatsService.round(v, 1)).orElse(null),
+                    speeds.stream().min(Double::compare).map(v -> TimetableMath.round(v, 1)).orElse(null),
+                    speeds.stream().max(Double::compare).map(v -> TimetableMath.round(v, 1)).orElse(null),
                     stops.isEmpty() ? null : stops.get(0).name(),
                     stops.isEmpty() ? null : stops.get(stops.size() - 1).name(), points, stops));
         });
@@ -393,7 +393,7 @@ public class LineDetailService {
                             stopName(rs.getString("name")),
                             rs.getObject("latitude") == null ? null : rs.getDouble("latitude"),
                             rs.getObject("longitude") == null ? null : rs.getDouble("longitude"),
-                            LineStatsService.round(rs.getDouble("shape_dist_traveled"), 3), rs.getString("zone_id")));
+                            TimetableMath.round(rs.getDouble("shape_dist_traveled"), 3), rs.getString("zone_id")));
                 },
                 tripIds.toArray());
         return result;
@@ -410,8 +410,8 @@ public class LineDetailService {
                 WHERE shape_id IN (%s) ORDER BY shape_id, sequence""".formatted(placeholders(distinct.size())),
                 rs -> {
                     result.computeIfAbsent(rs.getString("shape_id"), k -> new ArrayList<>()).add(new double[]{
-                            LineStatsService.round(rs.getDouble("latitude"), 5),
-                            LineStatsService.round(rs.getDouble("longitude"), 5)});
+                            TimetableMath.round(rs.getDouble("latitude"), 5),
+                            TimetableMath.round(rs.getDouble("longitude"), 5)});
                 },
                 distinct.toArray());
         return result;
@@ -673,11 +673,11 @@ public class LineDetailService {
         List<Double> scheduledSpeeds = trips.stream().filter(t -> t.km() != null && t.duration() > 0)
                 .map(t -> t.km() / (t.duration() / 3600.0)).toList();
         return new LineDetailDto.TravelTimes(kind, label,
-                LineStatsService.round(variants.stream().mapToDouble(Variant::km).average().orElse(0), 1), runs.size(),
+                TimetableMath.round(variants.stream().mapToDouble(Variant::km).average().orElse(0), 1), runs.size(),
                 trips.stream().map(t -> t.duration() / 60).min(Integer::compare).orElse(null),
                 trips.stream().map(t -> t.duration() / 60).max(Integer::compare).orElse(null),
-                scheduledSpeeds.stream().min(Double::compare).map(v -> LineStatsService.round(v, 1)).orElse(null),
-                scheduledSpeeds.stream().max(Double::compare).map(v -> LineStatsService.round(v, 1)).orElse(null),
+                scheduledSpeeds.stream().min(Double::compare).map(v -> TimetableMath.round(v, 1)).orElse(null),
+                scheduledSpeeds.stream().max(Double::compare).map(v -> TimetableMath.round(v, 1)).orElse(null),
                 minutes.entrySet().stream().map(e -> hourStat(e.getKey(), e.getValue(), 0)).toList(),
                 speeds.entrySet().stream().map(e -> hourStat(e.getKey(), e.getValue(), 1)).toList());
     }
@@ -703,8 +703,8 @@ public class LineDetailService {
             km += segment * ends / 2.0;
         }
         double total = stops.isEmpty() ? 0 : stops.get(stops.size() - 1).km() - stops.get(0).km();
-        return new Zone2(direction, headsign, kind, count, stops.size(), LineStatsService.round(km, 1),
-                LineStatsService.round(total, 1));
+        return new Zone2(direction, headsign, kind, count, stops.size(), TimetableMath.round(km, 1),
+                TimetableMath.round(total, 1));
     }
 
     private static boolean inZone2(StopPoint s) {
@@ -891,9 +891,9 @@ public class LineDetailService {
         int n = sorted.size();
         double median = n % 2 == 1 ? sorted.get(n / 2) : (sorted.get(n / 2 - 1) + sorted.get(n / 2)) / 2;
         double mean = sorted.stream().mapToDouble(d -> d).average().orElse(0);
-        return new HourStat(hour, n, LineStatsService.round(sorted.get(0), decimals),
-                LineStatsService.round(sorted.get(n - 1), decimals), LineStatsService.round(mean, decimals),
-                LineStatsService.round(median, decimals));
+        return new HourStat(hour, n, TimetableMath.round(sorted.get(0), decimals),
+                TimetableMath.round(sorted.get(n - 1), decimals), TimetableMath.round(mean, decimals),
+                TimetableMath.round(median, decimals));
     }
 
     /**
@@ -910,7 +910,7 @@ public class LineDetailService {
                 seconds += run.times()[k + 1] - run.times()[k];
             }
             Double kmh = runs.isEmpty() || seconds <= 0 ? null
-                    : LineStatsService.round(km * runs.size() / (seconds / 3600), 1);
+                    : TimetableMath.round(km * runs.size() / (seconds / 3600), 1);
             segments.add(new LineDetailDto.Segment(stops.get(k).name(), stops.get(k + 1).name(),
                     stops.get(k).km(), stops.get(k + 1).km(), kmh));
         }
@@ -940,7 +940,7 @@ public class LineDetailService {
     static boolean inPeak(double epochSeconds) {
         int second = ZonedDateTime.ofInstant(Instant.ofEpochSecond((long) epochSeconds), ZONE).toLocalTime()
                 .toSecondOfDay();
-        return LineStatsService.PEAK.stream().anyMatch(w -> second >= w.from() && second < w.to());
+        return Periods.PEAK.stream().anyMatch(w -> second >= w.from() && second < w.to());
     }
 
     private static String placeholders(int n) {

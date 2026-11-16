@@ -37,7 +37,7 @@ public class PositionHistoryService {
      * Reports more than this late are treated as outliers (likely feed errors). The frontend uses the same 30 minutes
      * to highlight them.
      */
-    public static final int OUTLIER_DELAY_SECONDS = 30 * 60;
+    static final int OUTLIER_DELAY_SECONDS = DelayOutliers.THRESHOLD_SECONDS;
     /** Delay bands are whole minutes from 1 up to this; below is "under 1 minute", from here on "or more". */
     static final int DELAY_BANDS_UP_TO_MINUTES = 10;
 

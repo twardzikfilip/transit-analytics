@@ -22,12 +22,8 @@ export class LineStatsPage {
 
   protected readonly sort = signal<Sort>({ key: 'route', descending: false });
   protected readonly lines = computed(() => sortLines(this.report()?.lines ?? [], this.sort()));
-  protected readonly peakText = computed(
-    () =>
-      this.report()
-        ?.peak.map((p) => `${p.from}–${p.to}`)
-        .join(' and ') ?? '',
-  );
+  protected readonly peakText = computed(() => periodsText(this.report()?.peak));
+  protected readonly offPeakText = computed(() => periodsText(this.report()?.offPeak));
 
   /**
    * Top 5 lists under the main table. Speed rankings use peak hours, when speed differs most between lines;
@@ -94,4 +90,9 @@ export class LineStatsPage {
   protected sortBy(key: SortKey): void {
     this.sort.update((current) => nextSort(current, key));
   }
+}
+
+/** "06:30–08:30 and 15:00–17:00". */
+function periodsText(periods: { from: string; to: string }[] | undefined): string {
+  return (periods ?? []).map((p) => `${p.from}–${p.to}`).join(' and ');
 }

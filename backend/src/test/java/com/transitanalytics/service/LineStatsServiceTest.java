@@ -43,50 +43,32 @@ class LineStatsServiceTest {
                 trip(0, "A", "d", 8, 0, 30, 20.0),     // peak: 20 km in 30 min → 40 km / 1.5 h = 26.7 km/h
                 trip(0, "A", "d", 18, 0, 40, 20.0),    // off-peak: 30 km/h
                 trip(0, "SHORT", "d", 7, 30, 2, 5.0),  // short turn, not the main route: ignored
-                trip(0, "A", "d", 12, 0, 20, 20.0));   // midday: in neither period
+                trip(0, "A", "d", 21, 0, 20, 20.0));   // evening after 20:00: in neither period
 
         LineStatsDto.Line line = LineStatsService.lineStats(null, 1, trips);
 
         assertThat(line.peakSpeedKmh()).isEqualTo(26.7);
         assertThat(line.offPeakSpeedKmh()).isEqualTo(30.0);
-        assertThat(LineStatsService.speed(List.of(trip(0, "A", "d", 7, 0, 30, null)), LineStatsService.PEAK))
+        assertThat(LineStatsService.speed(List.of(trip(0, "A", "d", 7, 0, 30, null)), Periods.PEAK))
                 .as("no distance in the feed").isNull();
     }
 
     @Test
-    void intervalIsPeriodMinutesPerDepartureAveragedOverDirections() {
-        List<TripTimes> trips = new ArrayList<>();
-        // Direction 0 every 15 min in both peak periods (06–09, 15–17): 12 + 8 = 20 departures → 300 / 20 = 15 min.
-        for (int m = 0; m < 180; m += 15) trips.add(trip(0, "A", "d", 6, m, 30, 10.0));
-        for (int m = 0; m < 120; m += 15) trips.add(trip(0, "A", "d", 15, m, 30, 10.0));
-        // Direction 1 every 30 min: 6 + 4 = 10 departures → 30 min. Average: 22.5 min.
-        for (int m = 0; m < 180; m += 30) trips.add(trip(1, "B", "d", 6, m, 30, 10.0));
-        for (int m = 0; m < 120; m += 30) trips.add(trip(1, "B", "d", 15, m, 30, 10.0));
-        // Off-peak (17–22): only direction 0, every 60 min → 300 / 5 = 60 min.
-        for (int h = 17; h < 22; h++) trips.add(trip(0, "A", "d", h, 0, 30, 10.0));
-
-        var byDirection = trips.stream().collect(java.util.stream.Collectors.groupingBy(TripTimes::direction));
-        assertThat(LineStatsService.interval(byDirection.values(), LineStatsService.PEAK)).isEqualTo(22.5);
-        assertThat(LineStatsService.interval(byDirection.values(), List.of(LineStatsService.OFF_PEAK))).isEqualTo(60.0);
-        assertThat(LineStatsService.interval(Map.of(0, List.of(trip(0, "A", "d", 12, 0, 30, 1.0))).values(),
-                LineStatsService.PEAK)).as("no peak departures").isNull();
-    }
-
-    @Test
-    void vehiclesAreDutiesRunningInThePeriodAndPeakTakesTheBusierOne() {
+    void vehiclesAreDutiesRunningInAPeriodWindowTakingTheBusiestWindow() {
+        // Peak 06:30–08:30 and 15:00–17:00; off-peak 08:30–15:00 and 17:00–20:00.
         List<TripTimes> trips = List.of(
-                trip(0, "A", "1-01", 5, 40, 30, 10.0),   // runs into 06:00 → counts for the morning peak
+                trip(0, "A", "1-01", 6, 10, 30, 10.0),   // runs into 06:30 → counts for the morning peak
                 trip(0, "A", "1-02", 7, 0, 30, 10.0),
-                trip(1, "B", "1-03", 8, 50, 30, 10.0),
+                trip(1, "B", "1-03", 8, 20, 30, 10.0),   // 08:20–08:50: morning peak and late-morning off-peak
                 trip(0, "A", "1-01", 15, 30, 30, 10.0),
-                trip(1, "B", "1-04", 16, 50, 30, 10.0),  // ends 17:20 → in afternoon peak and off-peak
-                trip(0, "A", "1-05", 21, 59, 30, 10.0),  // starts before 22:00 → off-peak
-                trip(0, "A", "1-06", 22, 0, 30, 10.0));  // starts at 22:00 → not off-peak
+                trip(1, "B", "1-04", 16, 50, 30, 10.0),  // ends 17:20 → afternoon peak and evening off-peak
+                trip(0, "A", "1-05", 19, 59, 30, 10.0),  // starts before 20:00 → evening off-peak
+                trip(0, "A", "1-06", 20, 0, 30, 10.0));  // starts at 20:00 → not off-peak
 
         LineStatsDto.Line line = LineStatsService.lineStats(null, 1, trips);
 
         assertThat(line.peakVehicles()).as("morning 3 duties vs afternoon 2").isEqualTo(3);
-        assertThat(line.offPeakVehicles()).isEqualTo(2);
+        assertThat(line.offPeakVehicles()).as("late morning 1 vs evening 2").isEqualTo(2);
     }
 
     @Test
@@ -100,44 +82,5 @@ class LineStatsServiceTest {
         assertThat(line.peakIntervalMinutes()).isNull();
         assertThat(line.peakVehicles()).isZero();
         assertThat(line.route()).isEqualTo("7");
-    }
-
-    @Test
-    void ordersLinesNaturally() {
-        assertThat(List.of("N1", "100", "2", "10").stream().sorted(LineStatsService.LINE_ORDER))
-                .containsExactly("2", "10", "100", "N1");
-    }
-
-    @Test
-    void regularityIsTheCoefficientOfVariationOfGaps() {
-        // Every 10 min from 06:00 to 08:50: perfectly even.
-        List<Integer> even = new ArrayList<>();
-        for (int m = 0; m < 180; m += 10) even.add(at(6, m));
-        assertThat(LineStatsService.regularity(Map.of(0, even), LineStatsService.PEAK)).isEqualTo(0.0);
-
-        // Gaps 5, 15, 5, 15 min: mean 10, population sd 5 → CV 0.5.
-        List<Integer> bunched = List.of(at(6, 0), at(6, 5), at(6, 20), at(6, 25), at(6, 40));
-        assertThat(LineStatsService.regularity(Map.of(0, bunched), LineStatsService.PEAK)).isEqualTo(0.5);
-    }
-
-    @Test
-    void regularityNeedsThreeGapsAndIgnoresTheBreakBetweenPeaks() {
-        // Two gaps only → not enough.
-        assertThat(LineStatsService.regularity(Map.of(0, List.of(at(6, 0), at(6, 10), at(6, 20))),
-                LineStatsService.PEAK)).isNull();
-        // Even every 20 min in the morning and every 20 min in the afternoon: the 08:40 → 15:00 break isn't a gap.
-        List<Integer> twoPeaks = new ArrayList<>();
-        for (int m = 0; m < 180; m += 20) twoPeaks.add(at(6, m));
-        for (int m = 0; m < 120; m += 20) twoPeaks.add(at(15, m));
-        assertThat(LineStatsService.regularity(Map.of(0, twoPeaks), LineStatsService.PEAK)).isEqualTo(0.0);
-    }
-
-    @Test
-    void regularityWeighsDirectionsByTheirNumberOfGaps() {
-        // Direction 0: 8 gaps, CV 0 (even). Direction 1: 4 gaps 5,15,5,15 → CV 0.5. Weighted: 0.5 × 4 / 12 = 0.17.
-        List<Integer> even = new ArrayList<>();
-        for (int m = 0; m <= 80; m += 10) even.add(at(6, m));
-        List<Integer> bunched = List.of(at(7, 0), at(7, 5), at(7, 20), at(7, 25), at(7, 40));
-        assertThat(LineStatsService.regularity(Map.of(0, even, 1, bunched), LineStatsService.PEAK)).isEqualTo(0.17);
     }
 }

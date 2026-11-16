@@ -20,7 +20,7 @@
     <p class="muted">No timetable yet. An admin can import it under Settings.</p>
   } @else {
     <p class="muted intro">
-      Peak hours: {{ peakText() }}. Off-peak: {{ r.offPeak.from }}–{{ r.offPeak.to }}. Click a
+      Peak hours: {{ peakText() }}. Off-peak: {{ offPeakText() }}. Click a
       column to sort.
     </p>
 
@@ -78,8 +78,9 @@
           same frequency. "—" means fewer than 4 departures in the period.
         </li>
         <li>
-          <strong>Vehicles:</strong> buses (vehicle duties) with a trip running in the period. For
-          peak hours, the busier of the morning and afternoon peak.
+          <strong>Vehicles:</strong> buses (vehicle duties) with a trip running in the period. Each
+          period has two windows (morning and afternoon peak; late morning and evening off-peak): the
+          busier of the two counts.
         </li>
         <li>All figures are planned (from the timetable), for a regular weekday.</li>
       </ul>

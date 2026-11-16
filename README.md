@@ -77,8 +77,8 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
     them in red and has a checkbox to hide them.
 - `GET /api/lines/stats` — per line, from the regular weekday timetable: length (main route, km), shortest and
   longest end-to-end travel time, average speed, interval, regularity (coefficient of variation of the gaps between
-  departures, graded A–F as in TCQSM) and vehicles in peak (06:00–09:00, 15:00–17:00) and off-peak
-  (17:00–22:00) hours. The definitions are on the Line statistics page.
+  departures, graded A–F as in TCQSM) and vehicles in peak (06:30–08:30, 15:00–17:00) and off-peak
+  (08:30–15:00, 17:00–20:00) hours, the same periods as on every timetable page. The definitions are on the Line statistics page.
 - Routes in detail (`{line}` is the route's GTFS id, e.g. `103`):
   - `GET /api/lines` — all lines in numeric order, with their subtype.
   - `GET /api/lines/{line}/detail` — from the weekday timetable: every variant (direction and shape, with its route

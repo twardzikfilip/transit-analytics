@@ -2,7 +2,7 @@ package com.transitanalytics.service;
 
 import com.transitanalytics.dto.CorridorDto;
 import com.transitanalytics.service.LineDetailService.StopRef;
-import com.transitanalytics.service.LineStatsService.Window;
+import com.transitanalytics.service.Periods.Window;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,12 +31,8 @@ public class CorridorService {
 
     /** A corridor has at least this many stops, start and end included. */
     static final int MIN_STOPS = 4;
-    /** Peak: 06:30–08:30 and 15:00–17:00. */
-    static final List<Window> PEAK = List.of(new Window(6 * 3600 + 1800, 8 * 3600 + 1800),
-            new Window(15 * 3600, 17 * 3600));
-    /** Off-peak: 08:30–15:00 and 17:00–20:00. */
-    static final List<Window> OFF_PEAK = List.of(new Window(8 * 3600 + 1800, 15 * 3600),
-            new Window(17 * 3600, 20 * 3600));
+    static final List<Window> PEAK = Periods.PEAK;
+    static final List<Window> OFF_PEAK = Periods.OFF_PEAK;
 
     /**
      * One weekday trip: its stops in order, the departure there (seconds after midnight) and the distance along the
@@ -57,12 +53,12 @@ public class CorridorService {
     }
 
     private final JdbcTemplate jdbc;
-    private final LineStatsService lineStats;
+    private final WeekdayTimetable weekdayTimetable;
     private final Map<String, CorridorDto.Report> cache = new ConcurrentHashMap<>();
 
-    public CorridorService(JdbcTemplate jdbc, LineStatsService lineStats) {
+    public CorridorService(JdbcTemplate jdbc, WeekdayTimetable weekdayTimetable) {
         this.jdbc = jdbc;
-        this.lineStats = lineStats;
+        this.weekdayTimetable = weekdayTimetable;
     }
 
     /** Computes the corridors once at startup, in the background, so the first visit doesn't wait for it. */
@@ -81,7 +77,7 @@ public class CorridorService {
 
     @Transactional(readOnly = true)
     public CorridorDto.Report corridors() {
-        String service = lineStats.weekdayService();
+        String service = weekdayTimetable.serviceId();
         if (service == null) {
             return new CorridorDto.Report(null, periods(PEAK), periods(OFF_PEAK), List.of(), List.of());
         }
@@ -165,7 +161,7 @@ public class CorridorService {
     }
 
     private static List<com.transitanalytics.dto.LineStatsDto.Period> periods(List<Window> windows) {
-        return windows.stream().map(Window::toDto).toList();
+        return Periods.toDto(windows);
     }
 
     // --- pure helpers (unit tested) ------------------------------------------------------------------------------
@@ -455,9 +451,9 @@ public class CorridorService {
             buses[d] = along(parts, p -> (double) p.departures().size());
             addIfPresent(peakIntervals, along(parts, p -> interval(Map.of(0, p.departures()), PEAK)));
             addIfPresent(offPeakIntervals, along(parts, p -> interval(Map.of(0, p.departures()), OFF_PEAK)));
-            addIfPresent(peakCvs, along(parts, p -> LineStatsService.regularity(Map.of(0, p.departures()), PEAK)));
+            addIfPresent(peakCvs, along(parts, p -> TimetableMath.regularity(Map.of(0, p.departures()), PEAK)));
             addIfPresent(offPeakCvs,
-                    along(parts, p -> LineStatsService.regularity(Map.of(0, p.departures()), OFF_PEAK)));
+                    along(parts, p -> TimetableMath.regularity(Map.of(0, p.departures()), OFF_PEAK)));
         }
         // Show the busier direction; on a tie, the one whose first stop comes first alphabetically.
         int main = directions.length == 2 && (buses[1] > buses[0] || buses[1] == buses[0]
@@ -482,9 +478,9 @@ public class CorridorService {
         }
         List<String> names = shown.stops().stream().map(s -> stops.get(s).name()).toList();
         return new CorridorDto.Corridor(names.get(0), names.get(names.size() - 1), names,
-                all.stream().sorted(LineStatsService.LINE_ORDER).toList(),
+                all.stream().sorted(TimetableMath.LINE_ORDER).toList(),
                 through == null ? List.of() : through.stream().filter(all::contains)
-                        .sorted(LineStatsService.LINE_ORDER).toList(),
+                        .sorted(TimetableMath.LINE_ORDER).toList(),
                 lengths.isEmpty() ? null : round(mean(lengths), 2),
                 (int) Math.round(java.util.Arrays.stream(buses).sum()), directions.length == 1,
                 peakIntervals.isEmpty() ? null : round(mean(peakIntervals), 1),
@@ -537,7 +533,7 @@ public class CorridorService {
     }
 
     private static double round(double value, int decimals) {
-        return LineStatsService.round(value, decimals);
+        return TimetableMath.round(value, decimals);
     }
 
     /**
@@ -557,7 +553,7 @@ public class CorridorService {
                 Directed d = directed.computeIfAbsent(List.of(t.stops()[at], t.stops()[i]),
                         k -> new Directed(k.get(0), k.get(1), new int[2], t, at));
                 int departure = t.departures()[at];
-                if (PEAK.stream().anyMatch(w -> departure >= w.from() && departure < w.to())) {
+                if (Periods.in(PEAK, departure)) {
                     d.counts()[0]++;
                 }
                 d.counts()[1]++;
@@ -592,7 +588,7 @@ public class CorridorService {
         StopRef b = stops.get(trip.stops()[at + 1]);
         List<double[]> points = new ArrayList<>();
         if (a.located()) {
-            points.add(new double[]{LineStatsService.round(a.lat(), 5), LineStatsService.round(a.lon(), 5)});
+            points.add(new double[]{TimetableMath.round(a.lat(), 5), TimetableMath.round(a.lon(), 5)});
         }
         Double from = trip.km()[at];
         Double to = trip.km()[at + 1];
@@ -600,12 +596,12 @@ public class CorridorService {
         if (shape != null && from != null && to != null) {
             for (ShapePoint p : shape) {
                 if (p.km() != null && p.km() > from && p.km() < to) {
-                    points.add(new double[]{LineStatsService.round(p.lat(), 5), LineStatsService.round(p.lon(), 5)});
+                    points.add(new double[]{TimetableMath.round(p.lat(), 5), TimetableMath.round(p.lon(), 5)});
                 }
             }
         }
         if (b.located()) {
-            points.add(new double[]{LineStatsService.round(b.lat(), 5), LineStatsService.round(b.lon(), 5)});
+            points.add(new double[]{TimetableMath.round(b.lat(), 5), TimetableMath.round(b.lon(), 5)});
         }
         return points;
     }
@@ -624,22 +620,8 @@ public class CorridorService {
         return -1;
     }
 
-    /**
-     * Average minutes between buses: the periods' minutes divided by the departures in them, per direction, then
-     * averaged over the directions with departures then. Null when there are none.
-     */
     static Double interval(Map<Integer, List<Integer>> departures, List<Window> windows) {
-        int minutes = windows.stream().mapToInt(Window::minutes).sum();
-        List<Double> perDirection = new ArrayList<>();
-        for (List<Integer> times : departures.values()) {
-            long count = times.stream().filter(t -> windows.stream().anyMatch(w -> t >= w.from() && t < w.to()))
-                    .count();
-            if (count > 0) {
-                perDirection.add((double) minutes / count);
-            }
-        }
-        return perDirection.isEmpty() ? null
-                : LineStatsService.round(perDirection.stream().mapToDouble(x -> x).average().orElse(0), 1);
+        return TimetableMath.interval(departures, windows);
     }
 
     private static Long first(Path p) {
