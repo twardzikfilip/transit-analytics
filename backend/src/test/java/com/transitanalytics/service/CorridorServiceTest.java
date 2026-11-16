@@ -1,8 +1,8 @@
 package com.transitanalytics.service;
 
 import com.transitanalytics.dto.CorridorDto;
-import com.transitanalytics.service.CorridorService.TripStops;
-import com.transitanalytics.service.LineDetailService.StopRef;
+import com.transitanalytics.service.CorridorBuilder.TripStops;
+import com.transitanalytics.service.StopPlaces.StopRef;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -113,12 +113,12 @@ class CorridorServiceTest {
 
     @Test
     void overlapIsTheSharedEndAndStart() {
-        assertThat(CorridorService.overlap(List.of(1L, 2L, 3L, 4L), List.of(3L, 4L, 5L, 6L))).isEqualTo(2);
-        assertThat(CorridorService.overlap(List.of(1L, 2L, 3L, 4L), List.of(4L, 5L, 6L))).isEqualTo(1);
+        assertThat(CorridorBuilder.overlap(List.of(1L, 2L, 3L, 4L), List.of(3L, 4L, 5L, 6L))).isEqualTo(2);
+        assertThat(CorridorBuilder.overlap(List.of(1L, 2L, 3L, 4L), List.of(4L, 5L, 6L))).isEqualTo(1);
         // Inside, apart, or making a loop: no join.
-        assertThat(CorridorService.overlap(List.of(1L, 2L, 3L, 4L), List.of(2L, 3L, 4L))).isZero();
-        assertThat(CorridorService.overlap(List.of(1L, 2L, 3L, 4L), List.of(7L, 8L, 9L))).isZero();
-        assertThat(CorridorService.overlap(List.of(1L, 2L, 3L, 4L), List.of(4L, 5L, 1L))).isZero();
+        assertThat(CorridorBuilder.overlap(List.of(1L, 2L, 3L, 4L), List.of(2L, 3L, 4L))).isZero();
+        assertThat(CorridorBuilder.overlap(List.of(1L, 2L, 3L, 4L), List.of(7L, 8L, 9L))).isZero();
+        assertThat(CorridorBuilder.overlap(List.of(1L, 2L, 3L, 4L), List.of(4L, 5L, 1L))).isZero();
     }
 
     @Test
@@ -181,15 +181,15 @@ class CorridorServiceTest {
     @Test
     void segmentLoadsCountPeakBusesBothDirectionsAndFollowTheShape() {
         // Shape "s": points every 0.25 km; trip km at stops are 0, 0.5, 1.0 (see trip()).
-        var shape = new ArrayList<CorridorService.ShapePoint>();
+        var shape = new ArrayList<SegmentLoads.ShapePoint>();
         for (int i = 0; i <= 4; i++) {
-            shape.add(new CorridorService.ShapePoint(53.0 + i * 0.001, 23.0, i * 0.25));
+            shape.add(new SegmentLoads.ShapePoint(53.0 + i * 0.001, 23.0, i * 0.25));
         }
         var trips = List.of(
                 withShape(trip("A", 7 * 60, 1, 2, 3)),          // 07:00: peak
                 withShape(trip("B", 12 * 60, 1, 2, 3)),         // noon: off-peak
                 trip("A", 16 * 60, 103, 102, 101));             // way back at 16:00: peak, no shape
-        var loads = CorridorService.segmentLoads(trips, stops(), Map.of("s", shape));
+        var loads = SegmentLoads.segmentLoads(trips, stops(), Map.of("s", shape));
 
         assertThat(loads).hasSize(2);
         var first = loads.stream().filter(l -> l.from().equals("S1")).findFirst().orElseThrow();
@@ -207,8 +207,8 @@ class CorridorServiceTest {
 
     @Test
     void findsWhereATripRunsAStretch() {
-        assertThat(CorridorService.runsThrough(new long[]{9, 1, 2, 3, 8}, List.of(1L, 2L, 3L))).isEqualTo(1);
-        assertThat(CorridorService.runsThrough(new long[]{1, 2, 9, 3}, List.of(1L, 2L, 3L))).isEqualTo(-1);
-        assertThat(CorridorService.runsThrough(new long[]{1, 2}, List.of(1L, 2L, 3L))).isEqualTo(-1);
+        assertThat(CorridorBuilder.runsThrough(new long[]{9, 1, 2, 3, 8}, List.of(1L, 2L, 3L))).isEqualTo(1);
+        assertThat(CorridorBuilder.runsThrough(new long[]{1, 2, 9, 3}, List.of(1L, 2L, 3L))).isEqualTo(-1);
+        assertThat(CorridorBuilder.runsThrough(new long[]{1, 2}, List.of(1L, 2L, 3L))).isEqualTo(-1);
     }
 }
