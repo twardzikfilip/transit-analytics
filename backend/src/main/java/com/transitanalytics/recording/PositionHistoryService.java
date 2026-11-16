@@ -37,7 +37,7 @@ public class PositionHistoryService {
      * Reports more than this late are treated as outliers (likely feed errors). The frontend uses the same 30 minutes
      * to highlight them.
      */
-    public static final int OUTLIER_DELAY_SECONDS = 30 * 60;
+    static final int OUTLIER_DELAY_SECONDS = DelayOutliers.THRESHOLD_SECONDS;
     /** Delay bands are whole minutes from 1 up to this; below is "under 1 minute", from here on "or more". */
     static final int DELAY_BANDS_UP_TO_MINUTES = 10;
 
@@ -85,14 +85,13 @@ public class PositionHistoryService {
                     SELECT coalesce(fetched_at, observed_at) AS poll, count(*) AS vehicles,
                            sum(delay_seconds) AS delay_sum, count(delay_seconds) AS delay_count
                     FROM position_sample
-                    WHERE """ + " " + WINDOW + routeFilter + """
-
+                    WHERE %s%s
                     GROUP BY 1)
                 SELECT time_bucket(make_interval(secs => ?::integer), poll) AS bucket,
                        avg(vehicles)::double precision AS vehicles, max(vehicles) AS peak, sum(vehicles) AS samples,
                        sum(delay_sum)::double precision / nullif(sum(delay_count), 0) AS mean_delay
                 FROM polls
-                GROUP BY bucket ORDER BY bucket""",
+                GROUP BY bucket ORDER BY bucket""".formatted(WINDOW, routeFilter),
                 (rs, i) -> new PositionHistoryDto.FleetPoint(instant(rs, "bucket"), rs.getDouble("vehicles"),
                         rs.getLong("peak"), rs.getLong("samples"), nullableDouble(rs, "mean_delay")),
                 args.toArray());
@@ -101,7 +100,7 @@ public class PositionHistoryService {
                 WITH r AS (
                     SELECT vehicle_id, observed_at, delay_seconds, coalesce(fetched_at, observed_at) AS poll
                     FROM position_sample
-                    WHERE """ + " " + WINDOW + routeFilter + """
+                    WHERE %s%s
                 ),
                 polls AS (SELECT poll, count(*) AS n FROM r GROUP BY poll)
                 SELECT (SELECT count(*) FROM r) AS samples,
@@ -111,7 +110,7 @@ public class PositionHistoryService {
                        (SELECT max(poll) FROM polls) AS latest_poll,
                        (SELECT avg(delay_seconds)::double precision FROM r) AS mean_delay,
                        (SELECT min(observed_at) FROM r) AS first,
-                       (SELECT max(observed_at) FROM r) AS last""",
+                       (SELECT max(observed_at) FROM r) AS last""".formatted(WINDOW, routeFilter),
                 (rs, i) -> new PositionHistoryDto.Summary(rs.getLong("samples"), rs.getLong("vehicles"),
                         rs.getLong("peak"), rs.getLong("latest"), instant(rs, "latest_poll"),
                         nullableDouble(rs, "mean_delay"), instant(rs, "first"), instant(rs, "last")),
@@ -188,9 +187,8 @@ public class PositionHistoryService {
                        time_bucket(make_interval(secs => ?::integer), coalesce(p.fetched_at, p.observed_at)) AS bucket,
                        v.vehicle_number, p.route_name, p.latitude, p.longitude, p.delay_seconds
                 FROM position_sample p JOIN vehicle v ON v.id = p.vehicle_id
-                WHERE""" + " " + windowCondition("p") + routeFilter + """
-
-                ORDER BY bucket, p.vehicle_id, p.observed_at DESC""",
+                WHERE %s%s
+                ORDER BY bucket, p.vehicle_id, p.observed_at DESC""".formatted(windowCondition("p"), routeFilter),
                 rs -> {
                     int vehicle = vehicleIndex.computeIfAbsent(rs.getString("vehicle_number"), k -> vehicleIndex.size());
                     String route = rs.getString("route_name");
@@ -221,9 +219,8 @@ public class PositionHistoryService {
         List<PositionHistoryDto.RouteActivity> routes = jdbc.query("""
                 SELECT route_name, count(*) AS samples
                 FROM position_sample
-                WHERE """ + " " + WINDOW + """
-                 AND route_name IS NOT NULL
-                GROUP BY route_name""",
+                WHERE %s AND route_name IS NOT NULL
+                GROUP BY route_name""".formatted(WINDOW),
                 (rs, i) -> new PositionHistoryDto.RouteActivity(rs.getString("route_name"), rs.getLong("samples")),
                 window(from, to, null).toArray());
         return routes.stream().sorted(Comparator.comparing(PositionHistoryDto.RouteActivity::route, NATURAL)).toList();
@@ -298,16 +295,17 @@ public class PositionHistoryService {
             where.append(" AND (p.delay_seconds IS NULL OR p.delay_seconds <= ").append(OUTLIER_DELAY_SECONDS)
                     .append(")");
         }
-        String source = " FROM position_sample p JOIN vehicle v ON v.id = p.vehicle_id";
-        Long total = jdbc.queryForObject("SELECT count(*)" + source + where, Long.class, args.toArray());
+        String source = "FROM position_sample p JOIN vehicle v ON v.id = p.vehicle_id";
+        Long total = jdbc.queryForObject("SELECT count(*) %s%s".formatted(source, where), Long.class, args.toArray());
 
         List<Object> pageArgs = new ArrayList<>(args);
         pageArgs.add(size);
         pageArgs.add((long) page * size);
         List<PositionHistoryDto.Sample> content = jdbc.query("""
                 SELECT p.observed_at, p.vehicle_id, v.vehicle_number, p.route_name, p.brigade, p.headsign,
-                       p.latitude, p.longitude, p.bearing, p.delay_seconds, p.next_stop_name""" + source + where
-                        + " ORDER BY " + orderBy + " LIMIT ? OFFSET ?",
+                       p.latitude, p.longitude, p.bearing, p.delay_seconds, p.next_stop_name
+                %s%s
+                ORDER BY %s LIMIT ? OFFSET ?""".formatted(source, where, orderBy),
                 (rs, i) -> new PositionHistoryDto.Sample(instant(rs, "observed_at"), rs.getLong("vehicle_id"),
                         rs.getString("vehicle_number"), rs.getString("route_name"), rs.getString("brigade"),
                         rs.getString("headsign"), rs.getDouble("latitude"), rs.getDouble("longitude"),

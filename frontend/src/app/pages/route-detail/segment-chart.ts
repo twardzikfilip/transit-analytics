@@ -1,4 +1,5 @@
-import { Component, DestroyRef, ElementRef, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, input, signal } from '@angular/core';
+import { hostWidth } from '../../shared/host-width';
 import { SegmentProfile } from '../../core/models/models';
 import { niceTicks } from '../../shared/time-series-chart/chart-geometry';
 import { slowestSegments } from './format';
@@ -19,20 +20,10 @@ const MARGIN = { top: 22, right: 16, bottom: 28, left: 44 };
 export class SegmentChart {
   readonly profile = input.required<SegmentProfile>();
 
-  private readonly host = inject(ElementRef<HTMLElement>);
-  protected readonly width = signal(600);
+  protected readonly width = hostWidth(600, 280);
   protected readonly height = HEIGHT;
   protected readonly margin = MARGIN;
   protected readonly hover = signal<number | null>(null);
-
-  constructor() {
-    if (typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(([e]) =>
-      this.width.set(Math.max(280, Math.floor(e.contentRect.width))),
-    );
-    observer.observe(this.host.nativeElement);
-    inject(DestroyRef).onDestroy(() => observer.disconnect());
-  }
 
   protected readonly plotRight = computed(() => this.width() - MARGIN.right);
   protected readonly plotBottom = HEIGHT - MARGIN.bottom;

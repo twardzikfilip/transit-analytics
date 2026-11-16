@@ -64,7 +64,12 @@ body {
 }
 
 body {
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
   background: var(--bg);
   color: var(--fg);
 }
@@ -277,4 +282,84 @@ a {
   &[data-grade='F'] {
     --grade-color: var(--danger);
   }
+}
+
+/* Chart tooltip: a small card beside the hovered point (.left: on its left, .above: above it). */
+.chart-tooltip {
+  position: absolute;
+  z-index: 2;
+  transform: translate(12px, -50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 12%);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  pointer-events: none;
+
+  &.left {
+    transform: translate(calc(-100% - 12px), -50%);
+  }
+
+  &.above {
+    transform: translate(-50%, calc(-100% - 12px));
+  }
+
+  strong {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Sortable tables (Line statistics, Position history, Important corridors): column headers are buttons, so
+   sorting works with the keyboard too; the active column shows ▲ or ▼. */
+button.sort {
+  all: unset;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  white-space: nowrap;
+
+  &:hover {
+    color: var(--fg);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+th[aria-sort] button.sort {
+  color: var(--fg);
+}
+
+th[aria-sort='ascending'] button.sort::after {
+  content: ' ▲';
+  font-size: 0.7em;
+}
+
+th[aria-sort='descending'] button.sort::after {
+  content: ' ▼';
+  font-size: 0.7em;
+}
+
+/* Depot runs (Routes in detail): a yellow "Depot run" label and row tint, so they never rely on colour alone. */
+.tag.depot {
+  display: inline-block;
+  padding: 0.05rem 0.45rem;
+  border-radius: 4px;
+  background: var(--depot);
+  color: #1f2933;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+tr.depot-row td {
+  background: var(--depot-soft);
 }

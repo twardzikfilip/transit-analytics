@@ -1,3 +1,4 @@
+import { SEQUENTIAL_BLUE } from '../../shared/palette';
 import { niceTicks } from '../../shared/time-series-chart/chart-geometry';
 
 /** Line width in px for the busiest stretch; the others are thinner in proportion. */
@@ -10,8 +11,7 @@ export function widthFor(buses: number, max: number): number {
   return MIN_WIDTH + (MAX_WIDTH - MIN_WIDTH) * (buses / max);
 }
 
-/** Sequential blue, light → dark (palette steps 250–700; the lightest still stands out on a grey map). */
-const RAMP = ['#86b6ef', '#5598e7', '#2a78d6', '#1c5cab', '#104281', '#0d366b'];
+const RAMP = SEQUENTIAL_BLUE;
 
 export interface ColorClass {
   from: number;

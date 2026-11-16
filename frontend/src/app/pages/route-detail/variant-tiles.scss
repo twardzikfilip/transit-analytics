@@ -1,0 +1,70 @@
+:host {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 0.75rem;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  strong {
+    font-size: 1.35rem;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.small {
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+/* Per-variant lines in the summary tiles: the stop name wraps, the value stays on the right. */
+.variant-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0.5rem 0 0;
+  padding: 0.5rem 0 0;
+  border-top: 1px solid var(--border);
+  list-style: none;
+  font-size: 0.8rem;
+  line-height: 1.3;
+
+  li {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.5rem;
+    padding: 0.1rem 0.25rem;
+    border-radius: 3px;
+
+    &.depot {
+      background: var(--depot-soft);
+    }
+  }
+
+  .what {
+    color: var(--muted);
+  }
+
+  .kind {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .value {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  &.stacked li {
+    grid-template-columns: 1fr;
+    gap: 0;
+
+    .value {
+      text-align: left;
+    }
+  }
+}

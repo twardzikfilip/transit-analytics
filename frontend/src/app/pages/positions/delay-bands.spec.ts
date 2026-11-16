@@ -1,11 +1,4 @@
-import {
-  bandLabel,
-  bandRows,
-  formatDelay,
-  formatShare,
-  isOutlier,
-  windowLabel,
-} from './delay-bands';
+import { bandLabel, bandRows, formatShare, isOutlier, windowLabel } from './delay-bands';
 
 describe('delay bands', () => {
   it('labels the open-ended first and last bands', () => {
@@ -33,12 +26,6 @@ describe('delay bands', () => {
     expect(formatShare(4 / 9544)).toBe('<0.1%');
     expect(formatShare(0)).toBe('0.0%');
     expect(formatShare(0.603)).toBe('60.3%');
-  });
-
-  it('formats delays as m:ss', () => {
-    expect(formatDelay(62)).toBe('1:02');
-    expect(formatDelay(-30)).toBe('−0:30');
-    expect(formatDelay(null)).toBe('—');
   });
 
   it('labels the window, with dates only when it spans days', () => {

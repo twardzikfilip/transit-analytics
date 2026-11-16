@@ -121,26 +121,7 @@ svg {
   cursor: crosshair;
 }
 
-.tooltip {
-  position: absolute;
-  z-index: 2;
-  transform: translate(12px, -50%);
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  padding: 0.4rem 0.6rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-  box-shadow: 0 2px 8px rgb(0 0 0 / 12%);
-  font-size: 0.85rem;
-  white-space: nowrap;
-  pointer-events: none;
-
-  &.left {
-    transform: translate(calc(-100% - 12px), -50%);
-  }
-
+.chart-tooltip {
   .row {
     display: flex;
     align-items: center;
@@ -161,7 +142,6 @@ svg {
   strong {
     margin-left: auto;
     padding-left: 0.75rem;
-    font-variant-numeric: tabular-nums;
   }
 }
 

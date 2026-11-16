@@ -19,10 +19,10 @@ import { LivePosition } from '../../core/models/models';
 import { LivePositionsActions } from '../../store/live-positions/live-positions.actions';
 import { livePositionsFeature } from '../../store/live-positions/live-positions.reducer';
 import { delayedOver, parseMinDelay } from './delay-filter';
+import { createBaseMap } from '../../shared/map/base-map';
+import { cssColor } from '../../shared/palette';
 
 const REFRESH_MS = 5000;
-const BIALYSTOK: L.LatLngExpression = [53.13, 23.16];
-const DEFAULT_COLOR = '#1e88e5';
 
 @Component({
   selector: 'app-live-map',
@@ -55,11 +55,7 @@ export class LiveMap {
 
   constructor() {
     afterNextRender(() => {
-      this.map = L.map(this.mapEl().nativeElement).setView(BIALYSTOK, 12);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors',
-      }).addTo(this.map);
+      this.map = createBaseMap(this.mapEl().nativeElement);
       this.mapReady.set(true);
     });
     this.destroyRef.onDestroy(() => this.map?.remove());
@@ -133,7 +129,7 @@ function time(iso: string): string {
 
 /** Route colours come from an external feed; only accept plain hex colours. */
 function safeColor(color: string | null): string {
-  return color && /^#[0-9a-f]{6}$/i.test(color) ? color : DEFAULT_COLOR;
+  return color && /^#[0-9a-f]{6}$/i.test(color) ? color : cssColor('--accent', '#1e88e5');
 }
 
 function escapeHtml(value: string): string {

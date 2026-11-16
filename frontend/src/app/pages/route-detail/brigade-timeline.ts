@@ -1,6 +1,8 @@
-import { Component, DestroyRef, ElementRef, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, input, signal } from '@angular/core';
+import { hostWidth } from '../../shared/host-width';
 import { Brigade, LineVariant } from '../../core/models/models';
-import { clock, duration, hourRange, hourTickStep } from './format';
+import { clock, duration, hourTickStep } from '../../shared/format/time';
+import { hourRange } from './format';
 
 const ROW = 26;
 const BAR = 12;
@@ -35,21 +37,11 @@ export class BrigadeTimeline {
   /** Base routes of the directions, for the legend. */
   readonly mains = input<LineVariant[]>([]);
 
-  private readonly host = inject(ElementRef<HTMLElement>);
-  protected readonly width = signal(800);
+  protected readonly width = hostWidth(800, 320);
   protected readonly hatchId = `hatch-${nextId++}`;
   protected readonly colors = DIRECTION_COLORS;
   protected readonly hover = signal<Hover | null>(null);
   protected readonly clock = clock;
-
-  constructor() {
-    if (typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(([e]) =>
-      this.width.set(Math.max(320, Math.floor(e.contentRect.width))),
-    );
-    observer.observe(this.host.nativeElement);
-    inject(DestroyRef).onDestroy(() => observer.disconnect());
-  }
 
   private readonly range = computed(() =>
     hourRange(this.brigades().flatMap((b) => [b.start, b.end])),

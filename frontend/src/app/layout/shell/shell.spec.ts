@@ -1,0 +1,37 @@
+import { AuthActions } from '../../store/auth/auth.actions';
+import { renderPage, signedIn, text } from '../../testing/page-testing';
+import { Shell } from './shell';
+
+describe('Shell', () => {
+  it('shows the user, every page in the sidebar, and a menu that logs out', () => {
+    const { el, store, render } = renderPage(Shell, signedIn('ADMIN'));
+
+    expect(text(el.querySelector('.user'))).toBe('ann ADMIN');
+    expect([...el.querySelectorAll('aside nav a')].map((a) => a.getAttribute('href'))).toContain('/corridors');
+
+    const toggle = el.querySelector('button.hamburger') as HTMLButtonElement;
+    toggle.click();
+    render();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    const logout = [...el.querySelectorAll('[role=menuitem]')].find((i) => text(i) === 'Logout') as HTMLElement;
+    logout.click();
+    render();
+    expect(store.dispatch).toHaveBeenCalledWith(AuthActions.logout());
+    expect(el.querySelector('.dropdown')).toBeNull();
+  });
+
+  it('closes the menu on a click elsewhere or Escape', () => {
+    const { el, render } = renderPage(Shell, signedIn());
+    (el.querySelector('button.hamburger') as HTMLButtonElement).click();
+    render();
+    document.body.click();
+    render();
+    expect(el.querySelector('.dropdown')).toBeNull();
+
+    (el.querySelector('button.hamburger') as HTMLButtonElement).click();
+    render();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    render();
+    expect(el.querySelector('.dropdown')).toBeNull();
+  });
+});

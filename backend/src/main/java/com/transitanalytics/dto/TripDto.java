@@ -14,7 +14,6 @@ public final class TripDto {
     public record Request(
             @NotBlank @Size(max = 64) String gtfsId,
             @NotNull Long routeId,
-            Long vehicleId,
             @NotBlank @Size(max = 64) String serviceId,
             @Size(max = 255) String headsign,
             @Size(max = 64) String shortName,
@@ -25,7 +24,7 @@ public final class TripDto {
             @Min(0) @Max(2) Short bikesAllowed) {
     }
 
-    public record Response(Long id, String gtfsId, Long routeId, String routeName, String routeColor, Long vehicleId,
+    public record Response(Long id, String gtfsId, Long routeId, String routeName, String routeColor,
                            String serviceId, String headsign, String shortName, Short direction, String blockId,
                            String shapeId, Short wheelchairAccessible, Short bikesAllowed) {
     }

@@ -10,13 +10,35 @@
 >
   <!-- Grid and y axis labels -->
   @for (t of yTicks(); track t) {
-    <line class="grid" [attr.x1]="margin.left" [attr.x2]="plotRight()" [attr.y1]="y(t)" [attr.y2]="y(t)" />
-    <text class="axis-label" [attr.x]="margin.left - 8" [attr.y]="y(t)" text-anchor="end" dominant-baseline="middle">{{ axisFormat()(t) }}</text>
+    <line
+      class="grid"
+      [attr.x1]="margin.left"
+      [attr.x2]="plotRight()"
+      [attr.y1]="y(t)"
+      [attr.y2]="y(t)"
+    />
+    <text
+      class="axis-label"
+      [attr.x]="margin.left - 8"
+      [attr.y]="y(t)"
+      text-anchor="end"
+      dominant-baseline="middle"
+    >
+      {{ axisFormat()(t) }}
+    </text>
   }
   @for (t of xTicks(); track t.x) {
-    <text class="axis-label" [attr.x]="t.x" [attr.y]="plotBottom + 18" text-anchor="middle">{{ t.text }}</text>
+    <text class="axis-label" [attr.x]="t.x" [attr.y]="plotBottom + 18" text-anchor="middle">
+      {{ t.text }}
+    </text>
   }
-  <line class="axis" [attr.x1]="margin.left" [attr.x2]="plotRight()" [attr.y1]="zeroY()" [attr.y2]="zeroY()" />
+  <line
+    class="axis"
+    [attr.x1]="margin.left"
+    [attr.x2]="plotRight()"
+    [attr.y1]="zeroY()"
+    [attr.y2]="zeroY()"
+  />
 
   <!-- Data -->
   @for (run of runs(); track $index) {
@@ -31,7 +53,13 @@
 
   <!-- Hover -->
   @if (hovered(); as h) {
-    <line class="crosshair" [attr.x1]="h.x" [attr.x2]="h.x" [attr.y1]="margin.top" [attr.y2]="plotBottom" />
+    <line
+      class="crosshair"
+      [attr.x1]="h.x"
+      [attr.x2]="h.x"
+      [attr.y1]="margin.top"
+      [attr.y2]="plotBottom"
+    />
     <circle class="marker" [attr.cx]="h.x" [attr.cy]="h.y" r="4" />
   }
   <rect
@@ -46,7 +74,13 @@
 </svg>
 
 @if (hovered(); as h) {
-  <div class="tooltip" [class.left]="h.left" [style.left.px]="h.x" [style.top.px]="h.y" aria-hidden="true">
+  <div
+    class="chart-tooltip"
+    [class.left]="h.left"
+    [style.left.px]="h.x"
+    [style.top.px]="h.y"
+    aria-hidden="true"
+  >
     <strong>{{ h.value }} {{ unit() }}</strong>
     <span>{{ h.when }}</span>
   </div>

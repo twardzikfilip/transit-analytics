@@ -16,10 +16,10 @@ public final class LineStatsDto {
      * @param lastDate  last of those days
      */
     public record Report(String serviceId, int validDays, LocalDate firstDate, LocalDate lastDate,
-                         List<Period> peak, Period offPeak, List<Line> lines) {
+                         List<Period> peak, List<Period> offPeak, List<Line> lines) {
     }
 
-    /** A time period of the day, e.g. 06:00–09:00. */
+    /** A time period of the day, e.g. 06:30–08:30. */
     public record Period(String from, String to) {
     }
 

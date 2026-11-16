@@ -2,7 +2,7 @@ import { EnvironmentProviders, inject, provideAppInitializer } from '@angular/co
 import { Span, SpanStatusCode, trace } from '@opentelemetry/api';
 import { NavigationCancel, NavigationEnd, NavigationError, NavigationStart, Router } from '@angular/router';
 import { TRACER_NAME } from './telemetry.config';
-import { routeOf } from './telemetry';
+import { routeOf } from './route-of';
 
 /** Emits one `navigation` span per Angular route change (path only, never query strings). */
 export function provideRouteTracing(): EnvironmentProviders {

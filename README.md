@@ -54,7 +54,7 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
 
 - `POST /api/auth/login` `{username, password}` → `{token, username, role}`; `GET /api/auth/me`
 - CRUD (`GET` list paged with `?page=&size=&sort=`, `GET /{id}`, `POST`, `PUT /{id}`, `DELETE /{id}`) on
-  `/api/vehicles`, `/api/vehicle-positions`, `/api/users`, `/api/roles`, and the timetable (GTFS) tables
+  `/api/vehicles`, `/api/users`, `/api/roles`, and the timetable (GTFS) tables
   `/api/agencies`, `/api/routes`, `/api/stops`, `/api/trips`, `/api/stop-times`, `/api/calendar-dates`,
   `/api/shape-points`. Timetable lists take filters as query parameters, e.g. `/api/trips?routeId=17&direction=1`,
   `/api/stop-times?stopId=260&sort=departureTime&sort=id`, `/api/stops?q=dworzec` (Swagger lists them all).
@@ -77,8 +77,8 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
     them in red and has a checkbox to hide them.
 - `GET /api/lines/stats` — per line, from the regular weekday timetable: length (main route, km), shortest and
   longest end-to-end travel time, average speed, interval, regularity (coefficient of variation of the gaps between
-  departures, graded A–F as in TCQSM) and vehicles in peak (06:00–09:00, 15:00–17:00) and off-peak
-  (17:00–22:00) hours. The definitions are on the Line statistics page.
+  departures, graded A–F as in TCQSM) and vehicles in peak (06:30–08:30, 15:00–17:00) and off-peak
+  (08:30–15:00, 17:00–20:00) hours, the same periods as on every timetable page. The definitions are on the Line statistics page.
 - Routes in detail (`{line}` is the route's GTFS id, e.g. `103`):
   - `GET /api/lines` — all lines in numeric order, with their subtype.
   - `GET /api/lines/{line}/detail` — from the weekday timetable: every variant (direction and shape, with its route
@@ -107,7 +107,6 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   Also every stretch between two consecutive stops (both directions together) with its peak and all-day buses and
   its route shape, for the maps. Computed in the background at startup and cached per timetable.
 - `POST /api/gtfs/bialystok/import` (admin) — downloads Białystok's GTFS timetable and loads it; see below.
-- `GET /api/vehicle-positions/latest` — latest stored position per vehicle
 - `GET /api/zbiorkom/bialystok/positions` — live Białystok vehicle positions from [zbiorkom.live](https://zbiorkom.live),
   used by the live map. Fetched on every call and not stored. Vehicles seen for the first time are added to the
   vehicle table (number, type, agency, model). The agency `default` is stored as `BKM`, and GTFS type codes become names
@@ -208,7 +207,12 @@ Adding a new entity: migration `V<n>__*.sql` → entity in `domain/` → reposit
 ```bash
 ./gradlew test                                  # unit + web-slice tests, no DB needed
 INTEGRATION_TESTS=true ./gradlew test           # also boots the full context against the DB
+./gradlew check                                 # tests + coverage floor (50% of lines from unit tests)
 ```
+
+Every test run writes a JaCoCo coverage report to `build/reports/jacoco/test/` (`html/index.html`, and
+`jacocoTestReport.xml` for CI). Unit tests alone cover about 53% of lines; with the database tests about 86%.
+Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixture` inserts a small timetable.
 
 ## Frontend
 
@@ -217,8 +221,12 @@ INTEGRATION_TESTS=true ./gradlew test           # also boots the full context ag
 - `layout/shell` — sidebar (Home, Vehicles, Live map) + top-right hamburger menu (Settings, Logout)
 - `store` — NgRx slices with functional effects: `auth`, `vehicles`, `livePositions`, `routes` (all routes), and
   `stops`, `trips`, `stopTimes`, which hold one server-side page each (shared helpers in `store/paged.ts`);
-  `gtfsImport` tracks the import. The timetable slices and `gtfsImport` are registered by their lazy-loaded routes
-  (`pages/timetable.routes.ts`, `pages/settings/settings.routes.ts`).
+  `gtfsImport` tracks the import. Only `auth` is registered at startup; every other slice is registered by its
+  page's lazy-loaded route (`*.routes.ts`), so it loads with the page.
+- `shared` — pieces several pages use: the time-series and hour-of-day charts, `createBaseMap` (Leaflet + OSM),
+  `hostWidth` (chart width), time and delay formatting, and the colour palette (`cssColor` reads theme tokens).
+- Startup bundle: telemetry (the OpenTelemetry SDK) loads as its own chunk right after startup, and the NgRx
+  devtools are only in development builds (`store-devtools.prod.ts` replaces them in production).
 - `pages` — login, home, vehicles (edit actions for ADMIN only), live map (Białystok, Leaflet/OSM; dispatches a
   `livePositions` load every 5 s and draws markers from the store), settings (GTFS import for admins)
 - Position history: vehicles running and mean delay every minute (SVG line charts with a hover/keyboard tooltip and
@@ -245,6 +253,8 @@ INTEGRATION_TESTS=true ./gradlew test           # also boots the full context ag
 ```bash
 npm start        # dev server with API proxy
 npm test         # Vitest unit tests
+npm run test:coverage   # once, with coverage of all of src/app (report in coverage/frontend/index.html);
+                        # fails below the thresholds in angular.json (test options)
 npm run build
 ```
 

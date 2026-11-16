@@ -22,7 +22,7 @@ public class LineStatsController {
     @Operation(summary = "Weekday statistics per line",
             description = "From the regular weekday timetable: length (main route, km), shortest and longest "
                     + "end-to-end travel time, average interval between departures and vehicles needed in peak "
-                    + "(06:00–09:00, 15:00–17:00) and off-peak (17:00–22:00) hours.")
+                    + "(06:30–08:30, 15:00–17:00) and off-peak (08:30–15:00, 17:00–20:00) hours.")
     @GetMapping("/stats")
     public LineStatsDto.Report weekdayStats() {
         return stats.weekdayReport();

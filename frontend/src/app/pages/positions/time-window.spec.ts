@@ -1,4 +1,5 @@
-import { resolveWindow, toLocalInput } from './time-window';
+import { toLocalInput } from '../../shared/format/time';
+import { resolveWindow } from './time-window';
 
 describe('position history time window', () => {
   const now = new Date(2026, 10, 16, 14, 2, 41);

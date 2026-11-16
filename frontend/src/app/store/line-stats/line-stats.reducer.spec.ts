@@ -9,7 +9,7 @@ describe('line stats reducer', () => {
     firstDate: '2026-11-12',
     lastDate: '2027-02-05',
     peak: [{ from: '06:00', to: '09:00' }],
-    offPeak: { from: '17:00', to: '22:00' },
+    offPeak: [{ from: '17:00', to: '20:00' }],
     lines: [],
   };
 

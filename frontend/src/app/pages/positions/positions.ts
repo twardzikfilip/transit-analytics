@@ -11,9 +11,10 @@ import {
   PositionHistoryActions,
 } from '../../store/position-history/position-history.actions';
 import { positionHistoryFeature } from '../../store/position-history/position-history.reducer';
-import { bandRows, formatDelay, formatShare, isOutlier, windowLabel } from './delay-bands';
+import { formatDelay, toLocalInput } from '../../shared/format/time';
+import { bandRows, formatShare, isOutlier, windowLabel } from './delay-bands';
 import { ReportSortKey, formatReportSort, nextReportSort, parseReportSort } from './report-sort';
-import { PRESETS, resolveWindow, toLocalInput } from './time-window';
+import { PRESETS, resolveWindow } from './time-window';
 
 /**
  * Recorded vehicle positions over time for a window and line: vehicles running and mean delay (per poll, i.e. per

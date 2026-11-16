@@ -10,7 +10,12 @@ export abstract class CrudApiService<T, P = Omit<T, 'id'>> {
   protected constructor(protected readonly baseUrl: string) {}
 
   /** @param sort one or more "property[,asc|desc]" */
-  list(page = 0, size = 50, sort: string | string[] = 'id', filters: Filters = {}): Observable<Page<T>> {
+  list(
+    page = 0,
+    size = 50,
+    sort: string | string[] = 'id',
+    filters: Filters = {},
+  ): Observable<Page<T>> {
     let params = new HttpParams().set('page', page).set('size', size);
     for (const s of Array.isArray(sort) ? sort : [sort]) params = params.append('sort', s);
     for (const [key, value] of Object.entries(filters)) {

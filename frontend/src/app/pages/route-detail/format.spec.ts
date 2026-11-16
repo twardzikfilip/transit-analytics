@@ -1,10 +1,7 @@
 import { LineRef, Segment } from '../../core/models/models';
 import {
-  clock,
-  duration,
   groupLines,
   hourRange,
-  hourTickStep,
   slowestSegments,
   spellsText,
   subtypeLabel,
@@ -12,18 +9,6 @@ import {
 } from './format';
 
 describe('route detail formatting', () => {
-  it('formats clock times and wraps after midnight', () => {
-    expect(clock(3 * 3600 + 40 * 60)).toBe('03:40');
-    expect(clock(24 * 3600 + 14 * 60)).toBe('00:14');
-    expect(clock(21 * 3600 + 27 * 60 + 40)).toBe('21:28');
-  });
-
-  it('formats durations in minutes or hours', () => {
-    expect(duration(45)).toBe('45 min');
-    expect(duration(244)).toBe('4 h 04');
-    expect(duration(60)).toBe('1 h 00');
-  });
-
   it('groups lines by subtype in display order', () => {
     const line = (name: string, subtype: LineRef['subtype']): LineRef => ({
       id: 1,
@@ -50,11 +35,9 @@ describe('route detail formatting', () => {
     expect(slowestSegments([seg(null)])).toEqual([]);
   });
 
-  it('pads the hour range and picks a tick step that fits', () => {
+  it('pads the hour range', () => {
     expect(hourRange([3 * 3600 + 40 * 60, 24 * 3600 + 14 * 60])).toEqual({ from: 2, to: 26 });
     expect(hourRange([])).toEqual({ from: 4, to: 24 });
-    expect(hourTickStep(24, 12)).toBe(2);
-    expect(hourTickStep(24, 5)).toBe(6);
   });
 
   it('names variant kinds', () => {

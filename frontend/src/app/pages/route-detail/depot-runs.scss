@@ -1,0 +1,21 @@
+:host {
+  display: block;
+}
+
+h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+}
+
+p.muted {
+  margin: 0 0 0.75rem;
+}
+
+.data-table.compact {
+  font-size: 0.85rem;
+
+  th,
+  td {
+    padding: 0.3rem 0.6rem;
+  }
+}

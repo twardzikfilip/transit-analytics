@@ -54,7 +54,8 @@ public class PositionRecorder {
                 .tag("source", SOURCE).register(meters);
         this.pollTimer = Timer.builder("transit.recording.poll").description("Fetch, archive and store one snapshot")
                 .tag("source", SOURCE).register(meters);
-        Gauge.builder("transit.recording.vehicles", lastVehicles, AtomicInteger::get)
+        // A strong reference: Micrometer otherwise holds the gauge's object weakly, and it reads NaN once collected.
+        Gauge.builder("transit.recording.vehicles", lastVehicles, AtomicInteger::get).strongReference(true)
                 .description("Vehicles in the last snapshot").tag("source", SOURCE).register(meters);
     }
 

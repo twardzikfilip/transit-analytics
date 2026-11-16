@@ -1,14 +1,12 @@
 package com.transitanalytics.service;
 
+import com.transitanalytics.DbIntegrationTest;
 import com.transitanalytics.domain.RouteSubtype;
 import com.transitanalytics.dto.LineDetailDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -18,15 +16,8 @@ import java.time.ZoneId;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /** A small line in a weekday timetable of 2099, with recorded positions; the test data is rolled back. */
-@SpringBootTest
+@DbIntegrationTest
 @Transactional
-@TestPropertySource(properties = {
-        "management.tracing.export.enabled=false",
-        "management.otlp.metrics.export.enabled=false",
-        "management.logging.export.enabled=false",
-        "app.recording.enabled=false"
-})
-@EnabledIfEnvironmentVariable(named = "INTEGRATION_TESTS", matches = "true")
 class LineDetailIntegrationTest {
 
     private static final String SERVICE = "IT_W";
@@ -39,37 +30,34 @@ class LineDetailIntegrationTest {
     @Autowired
     JdbcTemplate jdbc;
 
+    TimetableFixture timetable;
     long route;
 
     @BeforeEach
     void timetable() {
-        // The test service runs on every weekday of 2099, so it is the weekday timetable.
-        jdbc.update("""
-                INSERT INTO calendar_date (service_id, date, exception_type)
-                SELECT ?, d::date, 1 FROM generate_series(date '2099-01-01', date '2099-12-31', interval '1 day') d
-                WHERE extract(isodow FROM d) <= 5""", SERVICE);
-        route = jdbc.queryForObject("""
-                INSERT INTO route (gtfs_id, long_name, route_type, subtype) VALUES ('IT-177', '177', 3, 'suburban')
-                RETURNING id""", Long.class);
+        timetable = new TimetableFixture(jdbc, SERVICE);
+        route = timetable.route("IT-177", "177", "suburban");
         // A (zone 1, km 0) – B (1, km 1) – C (2, km 3) – D (2, km 4); the longer variant goes on to E (2, km 6).
         // About 2 km apart, so each is its own place.
-        stop("IT-A", "Alfa(901)", "1", 53.10);
-        stop("IT-B", "Beta(902)", "1", 53.12);
-        stop("IT-C", "Gamma(903)", "2", 53.14);
-        stop("IT-D", "Delta(904)", "2", 53.16);
-        stop("IT-E", "Epsilon(905)", "2", 53.18);
-        trip("IT-177-01_1", "IT-S0", 0, "Delta", "06:00", 10, "IT-A:0", "IT-B:1", "IT-C:3", "IT-D:4");
-        trip("IT-177-01_2", "IT-S1", 1, "Alfa", "06:15", 10, "IT-D:0", "IT-C:1", "IT-B:3", "IT-A:4");
-        trip("IT-177-01_3", "IT-SL", 0, "Epsilon", "07:30", 15, "IT-A:0", "IT-B:1", "IT-C:3", "IT-D:4", "IT-E:6");
-        trip("IT-177-02_1", "IT-S0", 0, "Delta", "06:05", 7, "IT-A:0", "IT-B:1", "IT-C:3", "IT-D:4");
-        trip("IT-177-01_4", "IT-SL1", 1, "Alfa", "07:50", 15, "IT-E:0", "IT-D:2", "IT-C:3", "IT-B:5", "IT-A:6");
-        trip("IT-177-02_2", "IT-S0", 0, "Delta", "07:00", 10, "IT-A:0", "IT-B:1", "IT-C:3", "IT-D:4");
+        timetable.stop("IT-A", "Alfa(901)", "1", 53.10);
+        timetable.stop("IT-B", "Beta(902)", "1", 53.12);
+        timetable.stop("IT-C", "Gamma(903)", "2", 53.14);
+        timetable.stop("IT-D", "Delta(904)", "2", 53.16);
+        timetable.stop("IT-E", "Epsilon(905)", "2", 53.18);
+        timetable.trip(route, "IT-177-01_1", 0, "Delta", "IT-S0", "06:00", 10, "IT-A:0", "IT-B:1", "IT-C:3", "IT-D:4");
+        timetable.trip(route, "IT-177-01_2", 1, "Alfa", "IT-S1", "06:15", 10, "IT-D:0", "IT-C:1", "IT-B:3", "IT-A:4");
+        timetable.trip(route, "IT-177-01_3", 0, "Epsilon", "IT-SL", "07:30", 15,
+                "IT-A:0", "IT-B:1", "IT-C:3", "IT-D:4", "IT-E:6");
+        timetable.trip(route, "IT-177-02_1", 0, "Delta", "IT-S0", "06:05", 7, "IT-A:0", "IT-B:1", "IT-C:3", "IT-D:4");
+        timetable.trip(route, "IT-177-01_4", 1, "Alfa", "IT-SL1", "07:50", 15,
+                "IT-E:0", "IT-D:2", "IT-C:3", "IT-B:5", "IT-A:6");
+        timetable.trip(route, "IT-177-02_2", 0, "Delta", "IT-S0", "07:00", 10, "IT-A:0", "IT-B:1", "IT-C:3", "IT-D:4");
         // The last run of brigade 02 ends at B, which is not where buses turn round: a pull-in to the depot.
-        trip("IT-177-02_3", "IT-SP", 1, "Beta", "07:15", 5, "IT-D:0", "IT-C:1", "IT-B:3");
-        trip("IT-177-03_1", "IT-SL", 0, "Epsilon", "09:00", 15, "IT-A:0", "IT-B:1", "IT-C:3", "IT-D:4", "IT-E:6");
+        timetable.trip(route, "IT-177-02_3", 1, "Beta", "IT-SP", "07:15", 5, "IT-D:0", "IT-C:1", "IT-B:3");
+        timetable.trip(route, "IT-177-03_1", 0, "Epsilon", "IT-SL", "09:00", 15,
+                "IT-A:0", "IT-B:1", "IT-C:3", "IT-D:4", "IT-E:6");
         for (String shape : new String[]{"IT-S0", "IT-S1", "IT-SL", "IT-SL1", "IT-SP"}) {
-            jdbc.update("INSERT INTO shape_point (shape_id, sequence, latitude, longitude) VALUES (?, 1, 53.1, 23.1), "
-                    + "(?, 2, 53.2, 23.2)", shape, shape);
+            timetable.shape(shape);
         }
     }
 
@@ -174,31 +162,6 @@ class LineDetailIntegrationTest {
         assertThat(toDelta.segments()).extracting(LineDetailDto.Segment::kmh).containsExactly(30.0, 60.0, 30.0);
         assertThat(toDelta.segments().get(1).from()).isEqualTo("Beta");
         assertThat(p.segments().get(1).runs()).isZero();
-    }
-
-    private void stop(String gtfsId, String name, String zone, double latitude) {
-        jdbc.update("INSERT INTO stop (gtfs_id, code, name, latitude, longitude, zone_id) VALUES (?, ?, ?, ?, 23.1, ?)",
-                gtfsId, gtfsId, name, latitude, zone);
-    }
-
-    /** @param stops "stop gtfs id:km", one minute apart except the last, which arrives at start + minutes */
-    private void trip(String gtfsId, String shape, int direction, String headsign, String start, int minutes,
-                      String... stops) {
-        long trip = jdbc.queryForObject("""
-                INSERT INTO trip (gtfs_id, route_id, service_id, direction, headsign, shape_id)
-                VALUES (?, ?, ?, ?, ?, ?) RETURNING id""", Long.class, gtfsId, route, SERVICE, direction, headsign,
-                shape);
-        int startMinute = Integer.parseInt(start.substring(0, 2)) * 60 + Integer.parseInt(start.substring(3));
-        for (int i = 0; i < stops.length; i++) {
-            String[] parts = stops[i].split(":");
-            int m = startMinute + (i == stops.length - 1 ? minutes : i);
-            String time = "%02d:%02d:00".formatted(m / 60, m % 60);
-            jdbc.update("""
-                    INSERT INTO stop_time (trip_id, stop_id, stop_sequence, arrival_time, departure_time,
-                                           shape_dist_traveled)
-                    VALUES (?, (SELECT id FROM stop WHERE gtfs_id = ?), ?, ?, ?, ?)""",
-                    trip, parts[0], i + 1, time, time, Double.parseDouble(parts[1]));
-        }
     }
 
     private void sample(long vehicle, String localTime, String headsign, int nextStop, int delay) {
