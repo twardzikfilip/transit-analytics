@@ -18,8 +18,11 @@
         <option>TRAM</option>
         <option>METRO</option>
         <option>TRAIN</option>
+        <option>TROLLEYBUS</option>
       </select>
     </label>
+    <label>Agency <input formControlName="agency" /></label>
+    <label>Model <input formControlName="model" /></label>
     <label>Capacity <input formControlName="capacity" type="number" min="0" /></label>
     <label class="checkbox"><input formControlName="active" type="checkbox" /> Active</label>
     <div class="actions">
@@ -35,6 +38,8 @@
       <tr>
         <th>Number</th>
         <th>Type</th>
+        <th>Agency</th>
+        <th>Model</th>
         <th>Capacity</th>
         <th>Status</th>
         <th *appHasRole="'ADMIN'"></th>
@@ -45,6 +50,8 @@
         <tr>
           <td>{{ vehicle.vehicleNumber }}</td>
           <td>{{ vehicle.type }}</td>
+          <td>{{ vehicle.agency ?? '—' }}</td>
+          <td>{{ vehicle.model ?? '—' }}</td>
           <td>{{ vehicle.capacity ?? '—' }}</td>
           <td>{{ vehicle.active ? 'Active' : 'Inactive' }}</td>
           <td *appHasRole="'ADMIN'" class="row-actions">
@@ -54,7 +61,7 @@
         </tr>
       } @empty {
         <tr>
-          <td colspan="5" class="muted">{{ loading() ? 'Loading…' : 'No vehicles yet.' }}</td>
+          <td colspan="7" class="muted">{{ loading() ? 'Loading…' : 'No vehicles yet.' }}</td>
         </tr>
       }
     </tbody>

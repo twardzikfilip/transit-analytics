@@ -43,13 +43,23 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
 | JWT signing secret (≥ 32 bytes) | `JWT_SECRET` | dev-only value |
 | JWT lifetime | `JWT_EXPIRATION_MINUTES` | `480` |
 | CORS origins | `CORS_ALLOWED_ORIGINS` | `http://localhost:4200` |
+| zbiorkom.live API base URL | `ZBIORKOM_BASE_URL` | `https://api.zbiorkom.live/api6-open` |
+| Białystok bounding box (`minLon,minLat,maxLon,maxLat`) | `ZBIORKOM_BIALYSTOK_BBOX` | `22.921150,53.016270,23.382496,53.243687` |
 
 ### API
 
 - `POST /api/auth/login` `{username, password}` → `{token, username, role}`; `GET /api/auth/me`
 - CRUD (`GET` list paged with `?page=&size=&sort=`, `GET /{id}`, `POST`, `PUT /{id}`, `DELETE /{id}`) on
   `/api/vehicles`, `/api/vehicle-positions`, `/api/routes`, `/api/stops`, `/api/trips`, `/api/users`, `/api/roles`
-- `GET /api/vehicle-positions/latest` — latest position per vehicle (used by the live map)
+- `GET /api/vehicle-positions/latest` — latest stored position per vehicle
+- `GET /api/zbiorkom/bialystok/positions` — live Białystok vehicle positions from [zbiorkom.live](https://zbiorkom.live),
+  used by the live map. Fetched on every call and not stored. Vehicles seen for the first time are added to the
+  vehicle table (number, type, agency, model). The agency `default` is stored as `BKM`, and GTFS type codes become names
+  (`3` → `BUS`). If zbiorkom.live fails or times out, the endpoint returns 502.
+
+Interactive docs: Swagger UI at http://localhost:8080/swagger-ui.html, OpenAPI JSON at `/v3/api-docs`. To try
+the secured endpoints, call `POST /api/auth/login`, copy the `token`, click **Authorize** and paste it. Set
+`API_DOCS_ENABLED=false` to turn both off (e.g. in production).
 
 Access rules: reads need ADMIN or GUEST; writes need ADMIN; `/api/users` and `/api/roles` are ADMIN only.
 
@@ -67,9 +77,10 @@ INTEGRATION_TESTS=true ./gradlew test           # also boots the full context ag
 
 - `core/auth` — `AuthService`, `authInterceptor` (Bearer token, logout on 401), `authGuard`, `roleGuard`, `*appHasRole`
 - `core/api` — generic `CrudApiService` + one service per backend resource
-- `store` — NgRx `auth` and `vehicles` (entity adapter) slices with functional effects
 - `layout/shell` — sidebar (Home, Vehicles, Live map) + top-right hamburger menu (Settings, Logout)
-- `pages` — login, home, vehicles (edit actions for ADMIN only), live map (Leaflet/OSM, polls every 5 s), settings
+- `store` — NgRx `auth`, `vehicles` and `livePositions` slices (entity adapters) with functional effects
+- `pages` — login, home, vehicles (edit actions for ADMIN only), live map (Białystok, Leaflet/OSM; dispatches a
+  `livePositions` load every 5 s and draws markers from the store), settings
 
 ```bash
 npm start        # dev server with API proxy

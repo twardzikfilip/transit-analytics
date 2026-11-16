@@ -37,6 +37,8 @@ public class SecurityConfig {
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/error", "/actuator/health").permitAll()
+                        // API docs are public; calling the endpoints from Swagger UI still needs a token.
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                         .requestMatchers("/api/users/**", "/api/roles/**").hasRole(RoleName.ADMIN)
                         .requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole(RoleName.ADMIN, RoleName.GUEST)

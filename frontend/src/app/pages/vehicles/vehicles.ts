@@ -27,6 +27,8 @@ export class Vehicles {
     type: ['BUS', Validators.required],
     capacity: [null as number | null, Validators.min(0)],
     active: [true],
+    agency: [null as string | null, Validators.maxLength(64)],
+    model: [null as string | null, Validators.maxLength(128)],
   });
 
   constructor() {
@@ -44,6 +46,8 @@ export class Vehicles {
       type: vehicle.type,
       capacity: vehicle.capacity,
       active: vehicle.active,
+      agency: vehicle.agency,
+      model: vehicle.model,
     });
     this.editingId.set(vehicle.id);
   }
@@ -57,7 +61,9 @@ export class Vehicles {
       this.form.markAllAsTouched();
       return;
     }
-    const vehicle = this.form.getRawValue();
+    const raw = this.form.getRawValue();
+    // Blank optional text fields are stored as null.
+    const vehicle = { ...raw, agency: raw.agency?.trim() || null, model: raw.model?.trim() || null };
     const id = this.editingId();
     this.store.dispatch(id ? VehiclesActions.update({ id, vehicle }) : VehiclesActions.create({ vehicle }));
     this.editingId.set(null);

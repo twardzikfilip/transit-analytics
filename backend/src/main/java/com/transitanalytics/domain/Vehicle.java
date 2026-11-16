@@ -21,6 +21,12 @@ public class Vehicle {
     @Column(nullable = false)
     private boolean active = true;
 
+    @Column(length = 64)
+    private String agency;
+
+    @Column(length = 128)
+    private String model;
+
     public Long getId() {
         return id;
     }
@@ -59,5 +65,21 @@ public class Vehicle {
 
     public void setActive(boolean active) {
         this.active = active;
+    }
+
+    public String getAgency() {
+        return agency;
+    }
+
+    public void setAgency(String agency) {
+        this.agency = agency;
+    }
+
+    public String getModel() {
+        return model;
+    }
+
+    public void setModel(String model) {
+        this.model = model;
     }
 }

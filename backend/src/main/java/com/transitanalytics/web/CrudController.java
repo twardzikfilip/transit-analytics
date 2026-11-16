@@ -2,6 +2,7 @@ package com.transitanalytics.web;
 
 import com.transitanalytics.service.CrudService;
 import jakarta.validation.Valid;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -18,7 +19,7 @@ public abstract class CrudController<REQ, RES> {
     }
 
     @GetMapping
-    public Page<RES> list(@PageableDefault(size = 50, sort = "id") Pageable pageable) {
+    public Page<RES> list(@ParameterObject @PageableDefault(size = 50, sort = "id") Pageable pageable) {
         return service.findAll(pageable);
     }
 

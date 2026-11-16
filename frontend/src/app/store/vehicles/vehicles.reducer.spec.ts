@@ -3,7 +3,7 @@ import { vehiclesFeature } from './vehicles.reducer';
 
 describe('vehicles reducer', () => {
   const reduce = vehiclesFeature.reducer;
-  const bus = { id: 1, vehicleNumber: 'BUS-1', type: 'BUS', capacity: 50, active: true };
+  const bus = { id: 1, vehicleNumber: 'BUS-1', type: 'BUS', capacity: 50, active: true, agency: null, model: null };
 
   it('loads, updates and deletes vehicles', () => {
     let state = reduce(undefined, VehiclesActions.loadSuccess({ vehicles: [bus] }));

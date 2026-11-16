@@ -3,6 +3,9 @@ package com.transitanalytics.security;
 import com.transitanalytics.dto.AuthDto;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -11,6 +14,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "Authentication", description = "Log in and inspect the current user")
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -34,6 +38,8 @@ public class AuthController {
                 .register(meterRegistry);
     }
 
+    @Operation(summary = "Log in", description = "Returns a JWT. In Swagger UI, paste it into Authorize to call the other endpoints.")
+    @SecurityRequirements // no token needed for this one
     @PostMapping("/login")
     public AuthDto.LoginResponse login(@Valid @RequestBody AuthDto.LoginRequest request) {
         Authentication auth;
@@ -50,6 +56,7 @@ public class AuthController {
         return new AuthDto.LoginResponse(jwtService.generateToken(auth.getName(), role), auth.getName(), role);
     }
 
+    @Operation(summary = "Current user and role")
     @GetMapping("/me")
     public AuthDto.Me me(Authentication auth) {
         return new AuthDto.Me(auth.getName(), roleOf(auth));
