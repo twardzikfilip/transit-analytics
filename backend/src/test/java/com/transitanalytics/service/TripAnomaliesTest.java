@@ -17,6 +17,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -166,9 +167,9 @@ class TripAnomaliesTest {
 
         List<Outcome> all = new ArrayList<>(outcomes.values());
         TripAnomalyDto.Summary summary = TripAnomalies.summary(all);
-        assertThat(summary).isEqualTo(new TripAnomalyDto.Summary(10, 8, 2, 1, 1, 1, 1, 1, 1, 1, 1));
+        assertThat(summary).isEqualTo(new TripAnomalyDto.Summary(10, 8, 2, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0));
         assertThat(TripAnomalies.lines(all)).singleElement()
-                .isEqualTo(new TripAnomalyDto.LineCounts("9", 8, 2, 1, 1, 1, 1, 1, 1));
+                .isEqualTo(new TripAnomalyDto.LineCounts("9", 8, 2, 1, 0, 1, 1, 1, 1, 1));
     }
 
     @Test
@@ -207,6 +208,119 @@ class TripAnomaliesTest {
                     assertThat(o.kind()).isEqualTo(Kind.CANCELLED);
                     assertThat(o.trip().note()).startsWith("So far: No bus ran brigade 009-09");
                 });
+    }
+
+    /** Bus 1 runs the trip to D and gives up; bus 2 takes over a minute later, heading to E. */
+    private static List<Report> changeOfBus(ScheduledTrip trip) {
+        List<Report> reports = new ArrayList<>(drive(1, trip, 0, 1, 2, 3));
+        // The feed shows bus 1 on its brigade's next trip (towards South, heading to E) once, where it stands.
+        Report gaveUp = report(1, trip, 4, -60, 0);
+        reports.add(new Report(1, "V1", gaveUp.time(), "9", "009-01", "South", 0, 4, gaveUp.lat(), LON));
+        reports.addAll(drive(2, trip, 4));
+        return reports;
+    }
+
+    private static Report elsewhere(long vehicle, String time, String line, String brigade) {
+        return new Report(vehicle, "V" + vehicle, at(time), line, brigade, "Rynek", 0, 2, 53.2, 23.2);
+    }
+
+    @Test
+    void findsABusChangedMidwayButNotABusLayingOverOrAMislabelledReport() {
+        ScheduledTrip trip = trip("009-01", "North", "07:00");
+        List<Report> reports = new ArrayList<>(changeOfBus(trip));
+        // Bus 3 reports the brigade twice by mistake.
+        reports.add(report(3, trip, 2, 10, 0));
+        reports.add(report(3, trip, 2, 30, 0));
+
+        Outcome changed = judge(List.of(trip), reports, NOON).get(trip.tripId());
+        assertThat(changed.kind()).isEqualTo(Kind.VEHICLE_CHANGED);
+        assertThat(changed.trip().vehicles()).containsExactly("V1", "V3", "V2");
+        assertThat(changed.trip().note()).isEqualTo("Run in full. Bus V1 stopped heading to D (stop 4 of 5) at "
+                + "07:04; 2 min later bus V2 took over at the same place, heading to E (stop 5). Delay +0:00 before, "
+                + "+0:00 after. Bus V2 hadn't run any other brigade that day (from the depot). Bus V1 wasn't seen "
+                + "again that day: possibly broken down.");
+        // It stood heading to D from 07:04:00 (three reports there); bus 2 first reported at 07:06:00.
+        assertThat(changed.trip().changeMinutes()).isEqualTo(2);
+        assertThat(changed.trip().changeStop()).isEqualTo("D");
+        assertThat(changed.trip().joinStop()).isEqualTo("E");
+        assertThat(changed.trip().skippedStops()).isZero();
+        assertThat(changed.trip().delayBeforeChange()).isZero();
+        assertThat(changed.trip().delayAfterChange()).isZero();
+        assertThat(changed.trip().changeFate()).isEqualTo("broken-down");
+        assertThat(changed.trip().replacementLine()).isNull();
+        assertThat(TripAnomalies.summary(List.of(changed))).satisfies(s -> {
+            assertThat(s.vehicleChanged()).isEqualTo(1);
+            assertThat(s.changedBrokenDown()).isEqualTo(1);
+            assertThat(s.changedReassigned()).isZero();
+        });
+
+        // A bus laying over at the first stop while another runs the trip: no change.
+        List<Report> layover = new ArrayList<>(drive(1, trip, 0));
+        layover.addAll(drive(2, trip, 0, 1, 2, 3, 4));
+        assertThat(judge(List.of(trip), layover, NOON).get(trip.tripId()).kind()).isEqualTo(Kind.COMPLETED);
+        assertThat(TripAnomalies.vehicleChange(trip, layover)).isNull();
+    }
+
+    @Test
+    void tellsWhereTheReplacementCameFromAndWhatBecameOfTheReplacedBus() {
+        ScheduledTrip trip = trip("009-01", "North", "07:00");
+        Function<List<Report>, TripAnomalyDto.Trip> judged = extra -> {
+            List<Report> reports = new ArrayList<>(changeOfBus(trip));
+            reports.addAll(extra);
+            return judge(List.of(trip), reports, NOON).get(trip.tripId()).trip();
+        };
+
+        // Bus 2 came straight from line 10; bus 1 runs line 12 from 08:00 for a quarter of an hour: reassigned.
+        TripAnomalyDto.Trip reassigned = judged.apply(List.of(elsewhere(2, "07:05", "10", "010-02"),
+                elsewhere(1, "08:00", "12", "012-01"), elsewhere(1, "08:15", "12", "012-01")));
+        assertThat(reassigned.changeFate()).isEqualTo("reassigned");
+        assertThat(reassigned.replacementLine()).isEqualTo("10");
+        assertThat(reassigned.replacementBrigade()).isEqualTo("010-02");
+        assertThat(reassigned.note()).endsWith("Bus V2 came straight from line 10 (brigade 010-02), until 07:05. "
+                + "Bus V1 was used again on line 12 (brigade 012-01) from 08:00.");
+
+        // Bus 2 ran another brigade of the line hours before; bus 1 is back on its brigade later.
+        TripAnomalyDto.Trip returned = judged.apply(List.of(elsewhere(2, "05:30", "9", "009-07"),
+                elsewhere(1, "09:00", "9", "009-01"), elsewhere(1, "09:20", "9", "009-01")));
+        assertThat(returned.changeFate()).isEqualTo("returned");
+        assertThat(returned.note()).endsWith("Bus V2 had run brigade 009-07 of the same line earlier that day, "
+                + "until 05:30. Bus V1 was back on the brigade at 09:00.");
+
+        // Bus 1 stands where it gave up, then is driven off reporting its brigade once: not used again.
+        Report gaveUp = changeOfBus(trip).get(12);
+        TripAnomalyDto.Trip stood = judged.apply(List.of(
+                new Report(1, "V1", at("07:20"), "9", "009-01", "South", 2000, 4, gaveUp.lat(), LON)));
+        assertThat(stood.note()).endsWith("Bus V1 stood there until 07:20 and wasn't used again that day: "
+                + "possibly broken down.");
+        TripAnomalyDto.Trip towed = judged.apply(List.of(elsewhere(1, "07:30", "9", "009-01")));
+        assertThat(towed.changeFate()).isEqualTo("broken-down");
+        assertThat(towed.note()).endsWith("Bus V1 was last seen at 07:30 and wasn't used again that day: "
+                + "possibly broken down.");
+        // Driven off still logged in to its brigade for 20 minutes, its delay over half an hour: not in service.
+        List<Report> leaving = new ArrayList<>();
+        for (int m = 30; m <= 50; m += 5) {
+            leaving.add(new Report(1, "V1", at("07:" + m), "9", "009-01", "South", 2000 + m * 60, 2, 53.2, 23.2));
+        }
+        assertThat(judged.apply(leaving).changeFate()).isEqualTo("broken-down");
+    }
+
+    @Test
+    void tellsWhetherTheNewBusTookOverAtTheSamePlaceOrFurtherOn() {
+        ScheduledTrip trip = new ScheduledTrip("t", "9", "009-01", "North", at("07:00"), at("07:20"),
+                new int[] {0, 1, 2, 3, 4, 5, 6, 7}, new String[] {"A", "B", "C", "D", "E", "F", "G", "H"},
+                new int[] {0, 120, 240, 360, 480, 600, 720, 840}, "S");
+        Report stopped = new Report(1, "V1", at("07:03"), "9", "009-01", "North", 30, 2, 53.10, LON);
+        Report last = new Report(1, "V1", at("07:05"), "9", "009-01", "North", 150, 2, 53.10, LON);
+        // Joined heading to G, 1 km on: stops D–F unserved.
+        Report far = new Report(2, "V2", at("07:15"), "9", "009-01", "North", 400, 6, 53.109, LON);
+        var further = new TripAnomalies.Change(last, far, 6, stopped, 30, 400);
+        assertThat(further.samePlace(trip)).isFalse();
+        assertThat(further.skippedStops(trip)).isEqualTo(3);
+        assertThat(further.standMinutes()).isEqualTo(12);
+        // Heading to the next stop, or first seen next to the old bus: the same place.
+        assertThat(new TripAnomalies.Change(last, far, 3, stopped, 30, 400).samePlace(trip)).isTrue();
+        Report beside = new Report(2, "V2", at("07:15"), "9", "009-01", "North", 400, 6, 53.1005, LON);
+        assertThat(new TripAnomalies.Change(last, beside, 6, stopped, 30, 400).skippedStops(trip)).isZero();
     }
 
     @Test

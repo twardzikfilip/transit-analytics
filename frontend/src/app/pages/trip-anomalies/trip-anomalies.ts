@@ -13,8 +13,11 @@ import {
   KINDS,
   TRIP_WINDOWS,
   abnormalCount,
+  changeFateLabel,
   coverage,
+  joinedAt,
   kindLabel,
+  replacementFrom,
   parseTripWindow,
   percent,
   signedDelay,
@@ -89,6 +92,9 @@ export class TripAnomalies {
   protected readonly signedDelay = signedDelay;
   protected readonly coverage = coverage;
   protected readonly kindLabel = kindLabel;
+  protected readonly changeFateLabel = changeFateLabel;
+  protected readonly replacementFrom = replacementFrom;
+  protected readonly joinedAt = joinedAt;
   protected readonly abnormalCount = abnormalCount;
   protected readonly firstLines = FIRST_LINES;
 

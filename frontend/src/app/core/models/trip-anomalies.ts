@@ -8,7 +8,7 @@ export type TripWindow = '15m' | '1h' | '3h' | '6h' | 'day' | 'week' | 'month';
 
 /** Kinds of abnormal trip. */
 export type TripAnomalyKind =
-  'cancelled' | 'missed' | 'lost' | 'short-turned' | 'detour' | 'no-signal';
+  'cancelled' | 'missed' | 'lost' | 'short-turned' | 'detour' | 'vehicle-changed' | 'no-signal';
 
 /** Outcomes of the trips scheduled to leave in the window. */
 export interface TripAnomalySummary {
@@ -17,6 +17,8 @@ export interface TripAnomalySummary {
   judged: number;
   completed: number;
   detours: number;
+  /** Run in full, but by two buses: another of the brigade took over midway. */
+  vehicleChanged: number;
   noSignal: number;
   shortTurned: number;
   lost: number;
@@ -26,13 +28,21 @@ export interface TripAnomalySummary {
   notRecorded: number;
   /** Not judged yet: under way, or not due. */
   pending: number;
+  /** Of the bus changes, those whose replaced bus wasn't used again that day: possibly broken down. */
+  changedBrokenDown: number;
+  /** Of the bus changes, those whose replaced bus was used later on another line or brigade. */
+  changedReassigned: number;
 }
+
+/** On a change of bus, what became of the replaced bus that day. */
+export type ChangeFate = 'broken-down' | 'reassigned' | 'returned';
 
 export interface TripAnomalyLine {
   line: string;
   judged: number;
   completed: number;
   detours: number;
+  vehicleChanged: number;
   noSignal: number;
   shortTurned: number;
   lost: number;
@@ -53,6 +63,7 @@ export interface AbnormalTrip {
   scheduledDeparture: string;
   scheduledArrival: string;
   stops: number;
+  /** Buses seen on it, in order: two or more when the bus was changed midway. */
   vehicles: string[];
   /** Stops it was seen heading to, first and last (1-based); null when not run. */
   fromStop: number | null;
@@ -68,6 +79,20 @@ export interface AbnormalTrip {
   detourMinutes: number | null;
   detourFrom: string | null;
   detourTo: string | null;
+  changeFate: ChangeFate | null;
+  /** The line and brigade the replacement bus ran before taking over; null when it hadn't run another that day. */
+  replacementLine: string | null;
+  replacementBrigade: string | null;
+  /** How long the trip stood still at the change: from the old bus stopping to the new bus's first report. */
+  changeMinutes: number | null;
+  /** The old bus's delay when it stopped, and the new bus's first (seconds). */
+  delayBeforeChange: number | null;
+  delayAfterChange: number | null;
+  /** The stop the old bus was heading to when it stopped, and the one the new bus first headed to. */
+  changeStop: string | null;
+  joinStop: string | null;
+  /** Stops between the two neither bus was seen heading to; 0 when the new bus took over at the same place. */
+  skippedStops: number | null;
 }
 
 export interface TripAnomalyReport {

@@ -65,7 +65,7 @@ class TripAnomalyIntegrationTest {
 
         TripAnomalyDto.Report report = anomalies.report(TimeWindow.DAY, local("06:00:00"), local("09:00:00"));
 
-        assertThat(report.summary()).isEqualTo(new TripAnomalyDto.Summary(3, 3, 1, 1, 0, 0, 0, 0, 1, 0, 0));
+        assertThat(report.summary()).isEqualTo(new TripAnomalyDto.Summary(3, 3, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0));
         assertThat(report.tripsTotal()).isEqualTo(2);
         assertThat(report.trips()).extracting(TripAnomalyDto.Trip::kind).containsExactly("detour", "cancelled");
         TripAnomalyDto.Trip detour = report.trips().get(0);

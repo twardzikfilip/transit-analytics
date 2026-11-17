@@ -154,6 +154,53 @@ button.more {
   color: #fff;
 }
 
+.tag.kind-vehicle-changed {
+  background: #17736c;
+  color: #fff;
+}
+
+td.bus {
+  min-width: 6rem;
+}
+
+.changeover {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.chip {
+  padding: 1px 8px;
+  border: 1px solid #17736c;
+  border-radius: 10px;
+  background: rgba(23, 115, 108, 0.12);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.chip.long,
+.chip.skipped {
+  border-color: #d03b3b;
+  background: rgba(208, 59, 59, 0.14);
+}
+
+.fate {
+  margin-top: 2px;
+  font-weight: 600;
+  white-space: normal;
+}
+
+.fate-broken-down {
+  color: #a32626;
+}
+
+@media (prefers-color-scheme: dark) {
+  .fate-broken-down {
+    color: #ec948a;
+  }
+}
+
 .tag.kind-no-signal {
   background: #c3c2b7;
   color: #1f2933;

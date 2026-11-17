@@ -15,7 +15,16 @@ import { load } from '../../store/trip-anomalies/trip-anomalies.effects';
 import { tripAnomaliesFeature } from '../../store/trip-anomalies/trip-anomalies.reducer';
 import { renderPage, stateAfter, text } from '../../testing/page-testing';
 import { PAGE_ROWS, REFRESH_MS, TripAnomalies } from './trip-anomalies';
-import { coverage, kindLabel, parseTripWindow, percent, signedDelay } from './trip-kinds';
+import {
+  changeFateLabel,
+  coverage,
+  joinedAt,
+  kindLabel,
+  parseTripWindow,
+  percent,
+  replacementFrom,
+  signedDelay,
+} from './trip-kinds';
 
 const trip = (kind: TripAnomalyKind, line: string, i = 0): AbnormalTrip => {
   const run = kind !== 'missed' && kind !== 'cancelled';
@@ -31,7 +40,7 @@ const trip = (kind: TripAnomalyKind, line: string, i = 0): AbnormalTrip => {
     scheduledDeparture: new Date(Date.parse('2026-11-17T07:00:00Z') - i * 60_000).toISOString(),
     scheduledArrival: new Date(Date.parse('2026-11-17T07:40:00Z') - i * 60_000).toISOString(),
     stops: 25,
-    vehicles: run ? ['319'] : [],
+    vehicles: kind === 'vehicle-changed' ? ['319', '412'] : run ? ['319'] : [],
     fromStop: run ? 1 : null,
     toStop: run ? 8 : null,
     coveredFrom: run ? 'Rynek' : null,
@@ -45,6 +54,15 @@ const trip = (kind: TripAnomalyKind, line: string, i = 0): AbnormalTrip => {
     detourMinutes: kind === 'detour' ? 6 : null,
     detourFrom: kind === 'detour' ? 'Lipowa' : null,
     detourTo: kind === 'detour' ? 'Rynek' : null,
+    changeFate: kind === 'vehicle-changed' ? 'broken-down' : null,
+    replacementLine: kind === 'vehicle-changed' ? '29' : null,
+    replacementBrigade: kind === 'vehicle-changed' ? '029-05' : null,
+    changeMinutes: kind === 'vehicle-changed' ? 17 : null,
+    delayBeforeChange: kind === 'vehicle-changed' ? 122 : null,
+    delayAfterChange: kind === 'vehicle-changed' ? 1035 : null,
+    changeStop: kind === 'vehicle-changed' ? 'C' : null,
+    joinStop: kind === 'vehicle-changed' ? 'E' : null,
+    skippedStops: kind === 'vehicle-changed' ? 1 : null,
   };
 };
 
@@ -53,6 +71,7 @@ const line = (name: string, judged: number, completed: number, lost = 0): TripAn
   judged,
   completed,
   detours: 0,
+  vehicleChanged: 0,
   noSignal: 0,
   shortTurned: judged - completed - lost,
   lost,
@@ -70,6 +89,7 @@ function report(trips: AbnormalTrip[] = []): TripAnomalyReport {
       judged: 3500,
       completed: 3400,
       detours: 3,
+      vehicleChanged: 2,
       noSignal: 50,
       shortTurned: 30,
       lost: 4,
@@ -77,6 +97,8 @@ function report(trips: AbnormalTrip[] = []): TripAnomalyReport {
       cancelled: 4,
       notRecorded: 300,
       pending: 200,
+      changedBrokenDown: 1,
+      changedReassigned: 1,
     },
     lines: [line('104', 90, 26, 30), line('12', 150, 146), line('9', 120, 120)],
     tripsTotal: trips.length + 5,
@@ -90,7 +112,12 @@ afterEach(() => {
 
 describe('Abnormal trips page', () => {
   it('loads the window in the URL and shows the counts, the lines and the trips', () => {
-    const trips = [trip('lost', '12'), trip('missed', '104', 1), trip('detour', '9', 2)];
+    const trips = [
+      trip('lost', '12'),
+      trip('missed', '104', 1),
+      trip('detour', '9', 2),
+      trip('vehicle-changed', '9', 3),
+    ];
     const { el, store } = renderPage(
       TripAnomalies,
       stateAfter(tripAnomaliesFeature, TripAnomaliesActions.loaded({ report: report(trips) })),
@@ -115,6 +142,7 @@ describe('Abnormal trips page', () => {
       'Lost',
       'Short-turned',
       'Detour',
+      'Bus changed',
       'No signal',
     ]);
 
@@ -123,13 +151,13 @@ describe('Abnormal trips page', () => {
       [...r.querySelectorAll('td')].map(text),
     );
     expect(lines).toEqual([
-      ['104', '90', '29%', '·', '·', '30', '34', '·', '·'],
-      ['12', '150', '97%', '·', '·', '·', '4', '·', '·'],
+      ['104', '90', '29%', '·', '·', '30', '34', '·', '·', '·'],
+      ['12', '150', '97%', '·', '·', '·', '4', '·', '·', '·'],
     ]);
 
     expect(text(el.querySelector('.card .muted:not(.small)'))).not.toBe('');
     const rows = el.querySelectorAll('table.trips tbody tr');
-    expect(rows).toHaveLength(3);
+    expect(rows).toHaveLength(4);
     const cells = rows[0].querySelectorAll('td');
     const lost = [...cells].map(text);
     expect(text(cells[0].querySelector('.tag'))).toBe('Lost');
@@ -150,8 +178,24 @@ describe('Abnormal trips page', () => {
     expect(text(rows[2].querySelector('td.note div'))).toBe(
       'Detour: 430 m off the route for 6 min, Lipowa → Rynek',
     );
+    const changed = [...rows[3].querySelectorAll('td')].map(text);
+    expect(text(rows[3].querySelector('.tag'))).toBe('Bus changed');
+    expect(changed[3]).toBe('319 → 412 New bus from line 29 (029-05)');
+    expect(text(rows[3].querySelector('.fate'))).toBe('Possibly broken down');
+    expect([...rows[3].querySelectorAll('.changeover .chip')].map(text)).toEqual([
+      'No bus for 17 min',
+      'Delay +2:02 → +17:15',
+      'Joined 1 stop further on',
+    ]);
+    expect(rows[3].querySelector('.chip.skipped')?.getAttribute('title')).toBe(
+      'Old bus heading to C; new bus to E',
+    );
+    expect(rows[0].querySelector('.changeover')).toBeNull();
+    expect(text(el.querySelector('.kind-card .changes'))).toBe(
+      '1 possibly broken down · 1 reassigned',
+    );
     expect(text(el.querySelector('section.card:last-of-type p.muted'))).toContain(
-      'the latest 3 of 8 abnormal trips are listed',
+      'the latest 4 of 9 abnormal trips are listed',
     );
   });
 
@@ -263,6 +307,18 @@ describe('Abnormal trips page', () => {
     expect(coverage(trip('missed', '9'))).toBe('Not run');
     expect(coverage(trip('lost', '9'))).toBe('Stops 1–8 of 25');
     expect(kindLabel('no-signal')).toBe('No signal');
+    expect(
+      ['broken-down', 'reassigned', 'returned'].map((f) => changeFateLabel(f as never)),
+    ).toEqual(['Possibly broken down', 'Old bus reassigned', 'Old bus back later']);
+    expect(replacementFrom({ ...trip('vehicle-changed', '9'), replacementLine: null })).toBe(
+      'New bus from the depot',
+    );
+    expect(joinedAt({ ...trip('vehicle-changed', '9'), skippedStops: 0 })).toBe(
+      'Took over at the same place',
+    );
+    expect(joinedAt({ ...trip('vehicle-changed', '9'), skippedStops: 4 })).toBe(
+      'Joined 4 stops further on',
+    );
   });
 });
 
