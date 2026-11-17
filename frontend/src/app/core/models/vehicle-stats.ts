@@ -57,6 +57,14 @@ export interface VehicleIncident {
   replacedAt: string | null;
 }
 
+/** A bus of the fleet that didn't serve any line in the window. */
+export interface IdleVehicle {
+  vehicle: StatsVehicle;
+  /** When it last served a line before, null if never recorded. */
+  lastSeen: string | null;
+  lastLine: string | null;
+}
+
 export interface VehicleStatsReport {
   window: StatsWindow;
   from: string;
@@ -71,4 +79,6 @@ export interface VehicleStatsReport {
   fewestLines: VehicleUsage[];
   multiLineDays: VehicleLineDay[];
   incidents: VehicleIncident[];
+  /** The chosen operators' buses not in service at all in the window, idle the longest first. */
+  unused: IdleVehicle[];
 }

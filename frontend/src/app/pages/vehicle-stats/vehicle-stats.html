@@ -200,6 +200,55 @@
     }
   </section>
 
+  <section class="card unused" [class.loading]="loading()">
+    <h2>Not used at all</h2>
+    <p class="muted">
+      Buses of the fleet that didn't serve any line in this window:
+      {{ r.unused.length }} of {{ r.unused.length + r.vehicles }}. Idle the longest first.
+    </p>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Vehicle</th>
+            <th>Model</th>
+            <th>Operator</th>
+            <th>Last in service</th>
+            <th>Line</th>
+            <th>Idle for</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (u of unused(); track u.vehicle.id) {
+            <tr>
+              <td>{{ u.vehicle.number }}</td>
+              <td>{{ u.vehicle.model ?? '—' }}</td>
+              <td>{{ u.vehicle.agency ?? '—' }}</td>
+              <td class="nowrap">
+                @if (u.lastSeen) {
+                  {{ u.lastSeen | date: 'EEE d MMM' }} {{ time(u.lastSeen) }}
+                } @else {
+                  <span class="muted">—</span>
+                }
+              </td>
+              <td>{{ u.lastLine ?? '—' }}</td>
+              <td class="nowrap">{{ idleFor(u.lastSeen, r.to) }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6" class="muted">Every bus served a line in this window.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (r.unused.length > firstRowsCount) {
+      <button type="button" class="more" (click)="showAllUnused.set(!showAllUnused())">
+        {{ showAllUnused() ? 'Show the first ' + firstRowsCount : 'Show all ' + r.unused.length }}
+      </button>
+    }
+  </section>
+
   <details class="card how">
     <summary>How these are calculated</summary>
     <ul>
@@ -219,6 +268,11 @@
         vehicle was in its schedule (report time minus its delay). <em>Switched</em>: it served
         another line later that day; <em>disappeared</em>: it wasn't seen again. Changing brigade on
         the same line doesn't count, and neither do gaps in recording.
+      </li>
+      <li>
+        <strong>Not used at all:</strong> the fleet is every bus ever seen on the live feed; a bus
+        counts as used when it reported a line in the window. Its last time in service is its last
+        report on a line before the end of the window.
       </li>
       <li>
         <strong>Operators:</strong> all operators' vehicles are counted unless the menu at the top

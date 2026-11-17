@@ -24,7 +24,16 @@ public final class VehicleStatsDto {
     public record Report(String window, Instant from, Instant to, int vehicles, List<Agency> agencies,
                          List<Usage> mostUsed,
                          List<Usage> leastUsed, List<Usage> mostLines, List<Usage> fewestLines,
-                         List<LineDay> multiLineDays, List<Incident> incidents) {
+                         List<LineDay> multiLineDays, List<Incident> incidents, List<Idle> unused) {
+    }
+
+    /**
+     * A bus of the fleet not in service at all in the window.
+     *
+     * @param lastSeen when it was last in service before (on a line), null if never recorded
+     * @param lastLine the line it was on then
+     */
+    public record Idle(Vehicle vehicle, Instant lastSeen, String lastLine) {
     }
 
     /** An operator and how many of its vehicles served a line in the window. */

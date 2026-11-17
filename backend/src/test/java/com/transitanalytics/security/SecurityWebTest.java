@@ -307,13 +307,16 @@ class SecurityWebTest {
                 Instant.parse("2026-11-16T19:00:00Z"));
         var report = new VehicleStatsDto.Report("day", Instant.parse("2026-11-15T20:00:00Z"),
                 Instant.parse("2026-11-16T20:00:00Z"), 1, List.of(new VehicleStatsDto.Agency("BKM", 1)),
-                List.of(usage), List.of(usage), List.of(usage), List.of(usage), List.of(), List.of());
+                List.of(usage), List.of(usage), List.of(usage), List.of(usage), List.of(), List.of(),
+                List.of(new VehicleStatsDto.Idle(new VehicleStatsDto.Vehicle(8L, "231", null, "BKM"),
+                        Instant.parse("2026-11-10T15:00:00Z"), "10")));
         given(vehicleStatsService.report(TimeWindow.DAY, Set.of())).willReturn(report);
         given(vehicleStatsService.report(TimeWindow.WEEK, Set.of("BKM", "KPKM"))).willReturn(report);
 
         mvc.perform(get("/api/vehicle-stats").param("window", "day").header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.agencies[0].name").value("BKM"))
+                .andExpect(jsonPath("$.unused[0].lastLine").value("10"))
                 .andExpect(jsonPath("$.mostUsed[0].vehicle.model").value("Solaris Urbino 12"))
                 .andExpect(jsonPath("$.mostUsed[0].hours").value(12.5));
         mvc.perform(get("/api/vehicle-stats").param("agency", "BKM").param("agency", "KPKM")

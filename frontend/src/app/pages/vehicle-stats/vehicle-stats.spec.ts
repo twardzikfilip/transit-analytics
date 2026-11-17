@@ -4,6 +4,7 @@ import { Actions } from '@ngrx/effects';
 import { Subject, of, throwError } from 'rxjs';
 import { VehicleStatsApi } from '../../core/api/api.services';
 import {
+  IdleVehicle,
   StatsVehicle,
   VehicleIncident,
   VehicleStatsReport,
@@ -14,7 +15,14 @@ import { load } from '../../store/vehicle-stats/vehicle-stats.effects';
 import { vehicleStatsFeature } from '../../store/vehicle-stats/vehicle-stats.reducer';
 import { renderPage, stateAfter, text } from '../../testing/page-testing';
 import { pickerLabel, toggleAgency } from './agency-picker';
-import { FIRST_ROWS, VehicleStats, lastSeenNote, parseWindow, whatHappened } from './vehicle-stats';
+import {
+  FIRST_ROWS,
+  VehicleStats,
+  idleFor,
+  lastSeenNote,
+  parseWindow,
+  whatHappened,
+} from './vehicle-stats';
 
 const bus = (id: number, number: string): StatsVehicle => ({
   id,
@@ -49,7 +57,13 @@ const incident = (v: StatsVehicle, kind: 'switched' | 'disappeared'): VehicleInc
   replacedAt: kind === 'disappeared' ? '2026-11-16T15:21:00Z' : null,
 });
 
-function report(days = 1): VehicleStatsReport {
+const idle = (id: number, lastSeen: string | null): IdleVehicle => ({
+  vehicle: bus(id, `${id}`),
+  lastSeen,
+  lastLine: lastSeen ? '4' : null,
+});
+
+function report(days = 1, unused = 2): VehicleStatsReport {
   const a = bus(1, '230');
   const b = bus(2, '009');
   return {
@@ -86,6 +100,9 @@ function report(days = 1): VehicleStatsReport {
       ],
     })),
     incidents: [incident(a, 'switched'), incident(b, 'disappeared')],
+    unused: Array.from({ length: unused }, (_, i) =>
+      idle(500 + i, i === unused - 1 ? null : '2026-11-12T07:30:00Z'),
+    ),
   };
 }
 
@@ -127,6 +144,45 @@ describe('Vehicles in detail page', () => {
     expect(text(incidents[0].querySelector('.note'))).toBe('before Rynek, 2:00 min late');
     expect(text(incidents[1].querySelector('.tag.danger'))).toBe('Disappeared');
     expect(text(incidents[1].querySelector('td:last-child'))).toBe('261 at 16:21');
+  });
+
+  it('lists the buses not used at all in the window, with when they last served a line', () => {
+    const { el } = renderPage(
+      VehicleStats,
+      stateAfter(vehicleStatsFeature, VehicleStatsActions.loaded({ report: report(1, 3) })),
+    );
+    const section = el.querySelector('section.unused')!;
+    expect(text(section.querySelector('p.muted'))).toContain('3 of 5');
+    const rows = [...section.querySelectorAll('tbody tr')].map((r) =>
+      [...r.querySelectorAll('td')].map(text),
+    );
+    expect(rows[0]).toEqual(['500', 'Solaris Urbino 12', 'BKM', 'Thu 12 Nov 08:30', '4', '4 days']);
+    expect(rows[2]).toEqual(['502', 'Solaris Urbino 12', 'BKM', '—', '—', 'never recorded']);
+  });
+
+  it('shows the first unused buses of a long list until asked for all', () => {
+    const { el, render } = renderPage(
+      VehicleStats,
+      stateAfter(
+        vehicleStatsFeature,
+        VehicleStatsActions.loaded({ report: report(1, FIRST_ROWS + 3) }),
+      ),
+    );
+    const rows = () => el.querySelectorAll('section.unused tbody tr');
+    expect(rows()).toHaveLength(FIRST_ROWS);
+    (el.querySelector('section.unused button.more') as HTMLButtonElement).click();
+    render();
+    expect(rows()).toHaveLength(FIRST_ROWS + 3);
+  });
+
+  it('says when every bus served a line', () => {
+    const { el } = renderPage(
+      VehicleStats,
+      stateAfter(vehicleStatsFeature, VehicleStatsActions.loaded({ report: report(1, 0) })),
+    );
+    expect(text(el.querySelector('section.unused tbody'))).toBe(
+      'Every bus served a line in this window.',
+    );
   });
 
   it('shows the first rows of a long list until asked for all', () => {
@@ -233,6 +289,9 @@ describe('Vehicles in detail page', () => {
     expect(parseWindow('year')).toBe('week');
     expect(parseWindow(null)).toBe('week');
     expect(whatHappened(incident(bus(1, '230'), 'disappeared'))).toBe('not seen again that day');
+    expect(idleFor('2026-11-16T15:00:00Z', '2026-11-16T20:00:00Z')).toBe('5 h');
+    expect(idleFor('2026-11-12T07:30:00Z', '2026-11-16T20:00:00Z')).toBe('4 days');
+    expect(idleFor(null, '2026-11-16T20:00:00Z')).toBe('never recorded');
     expect(
       lastSeenNote({
         ...incident(bus(1, '230'), 'disappeared'),

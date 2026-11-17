@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -57,6 +58,10 @@ class VehicleStatsIntegrationTest {
         record(c, "IT7", "IT7-02", "06:00", "06:35");
         record(c, "IT7", "IT7-02", "09:00", "09:10");
         record(c, "IT8", "IT8-01", "09:20", "09:40");
+        // D ran IT7 the day before and not since; E has never reported.
+        long idle = vehicle("IT-VD", "Solaris Urbino 18", "IT-OTHER");
+        vehicle("IT-VE", null, "IT-OTHER");
+        record(idle, "IT7", "IT7-01", local("17:00").minus(Duration.ofDays(1)), local("17:30").minus(Duration.ofDays(1)));
 
         Instant from = Instant.parse("2099-01-05T04:00:00Z");
         Instant to = Instant.parse("2099-01-05T10:00:00Z");
@@ -93,8 +98,16 @@ class VehicleStatsIntegrationTest {
         assertThat(bkm.mostLines()).extracting(u -> u.vehicle().number()).containsExactly("IT-VB", "IT-VA");
         assertThat(bkm.multiLineDays()).isEmpty();
         assertThat(bkm.incidents()).extracting(i -> i.vehicle().number()).containsExactly("IT-VA");
-        assertThat(stats.report(TimeWindow.DAY, from, to, Set.of("IT-OTHER")).incidents())
-                .extracting(i -> i.vehicle().number()).containsExactly("IT-VC");
+        VehicleStatsDto.Report other = stats.report(TimeWindow.DAY, from, to, Set.of("IT-OTHER"));
+        assertThat(other.incidents()).extracting(i -> i.vehicle().number()).containsExactly("IT-VC");
+
+        // Buses not in service in the window (the database's own fleet too, all seen before 2099).
+        assertThat(other.unused()).extracting(u -> u.vehicle().number()).containsExactly("IT-VD", "IT-VE");
+        assertThat(other.unused().get(0).lastLine()).isEqualTo("IT7");
+        assertThat(other.unused().get(0).lastSeen()).isEqualTo(local("17:30").minus(Duration.ofDays(1)));
+        assertThat(other.unused().get(1).lastSeen()).isNull();
+        assertThat(report.unused()).extracting(u -> u.vehicle().number()).doesNotContain("IT-VA", "IT-VB", "IT-VC")
+                .contains("IT-VD", "IT-VE");
     }
 
     private long vehicle(String number, String model, String agency) {
@@ -105,7 +118,11 @@ class VehicleStatsIntegrationTest {
 
     /** A report every minute from {@code from} to {@code to} (local time), on time. */
     private void record(long vehicle, String line, String brigade, String from, String to) {
-        for (Instant t = local(from); !t.isAfter(local(to)); t = t.plusSeconds(60)) {
+        record(vehicle, line, brigade, local(from), local(to));
+    }
+
+    private void record(long vehicle, String line, String brigade, Instant from, Instant to) {
+        for (Instant t = from; !t.isAfter(to); t = t.plusSeconds(60)) {
             writer.write(List.of(new LivePositionDto(vehicle, "x", "BUS", "BKM", null, line, null, brigade, "Test",
                     53.13, 23.16, 90.0, 0L, t, List.of(), null)), t);
         }

@@ -2,6 +2,7 @@ package com.transitanalytics.service;
 
 import com.transitanalytics.recording.DelayOutliers;
 import com.transitanalytics.dto.VehicleStatsDto;
+import com.transitanalytics.dto.VehicleStatsDto.Idle;
 import com.transitanalytics.dto.VehicleStatsDto.Incident;
 import com.transitanalytics.dto.VehicleStatsDto.LineDay;
 import com.transitanalytics.dto.VehicleStatsDto.LineSpell;
@@ -95,11 +96,39 @@ public class VehicleStatsService {
     private Figures figures(Instant from, Instant to) {
         List<Segment> segments = segments(from, to);
         // Incidents are found among all vehicles: whoever took over a brigade may be another operator's.
-        return new Figures(from, to, usage(segments), lineDays(segments), incidents(segments, schedules(segments)));
+        List<Usage> usage = usage(segments);
+        return new Figures(from, to, usage, lineDays(segments), incidents(segments, schedules(segments)),
+                unused(fleet(to), usage));
+    }
+
+    /** Every bus of the fleet, with when it was last in service (on a line) before {@code to}. */
+    private List<Idle> fleet(Instant to) {
+        return jdbc.query("""
+                SELECT v.id, v.vehicle_number, v.model, v.agency, last.observed_at, last.route_name
+                FROM vehicle v LEFT JOIN LATERAL (
+                    SELECT observed_at, route_name FROM position_sample p
+                    WHERE p.vehicle_id = v.id AND p.observed_at < ? AND p.route_name <> ''
+                    ORDER BY p.observed_at DESC LIMIT 1) last ON true
+                WHERE v.type = 'BUS'""",
+                (rs, i) -> new Idle(new Vehicle(rs.getLong("id"), rs.getString("vehicle_number"),
+                        rs.getString("model"), rs.getString("agency")),
+                        rs.getTimestamp("observed_at") == null ? null : rs.getTimestamp("observed_at").toInstant(),
+                        rs.getString("route_name")),
+                Timestamp.from(to));
+    }
+
+    /** The fleet's buses not in service in the window: idle the longest first, never recorded last. */
+    static List<Idle> unused(List<Idle> fleet, List<Usage> usage) {
+        Set<Long> used = usage.stream().map(u -> u.vehicle().id()).collect(Collectors.toSet());
+        return fleet.stream().filter(b -> !used.contains(b.vehicle().id()))
+                .sorted(Comparator.comparing(Idle::lastSeen, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(b -> b.vehicle().number()))
+                .toList();
     }
 
     /** A window's figures for all operators' vehicles. */
-    record Figures(Instant from, Instant to, List<Usage> usage, List<LineDay> lineDays, List<Incident> incidents) {
+    record Figures(Instant from, Instant to, List<Usage> usage, List<LineDay> lineDays, List<Incident> incidents,
+                   List<Idle> unused) {
 
         /** The report for the operators' vehicles (all when {@code agencies} is empty). */
         VehicleStatsDto.Report report(TimeWindow window, Set<String> agencies) {
@@ -114,7 +143,8 @@ public class VehicleStatsService {
             return new VehicleStatsDto.Report(window.key(), from, to, usage.size(),
                     agencies(), top(byHours), top(byFewestHours), top(byLines), top(byFewestLines),
                     lineDays().stream().filter(d -> chosen.test(d.vehicle())).toList(),
-                    incidents().stream().filter(i -> chosen.test(i.vehicle())).toList());
+                    incidents().stream().filter(i -> chosen.test(i.vehicle())).toList(),
+                    unused().stream().filter(b -> chosen.test(b.vehicle())).toList());
         }
 
         /** Operators with vehicles in service in the window, the most vehicles first. */

@@ -44,6 +44,14 @@ export function lastSeenNote(i: VehicleIncident): string {
   return parts.filter(Boolean).join(', ');
 }
 
+/** How long a bus has been idle at the end of the window: "5 h", "3 days", or "never recorded". */
+export function idleFor(lastSeen: string | null, to: string): string {
+  if (!lastSeen) return 'never recorded';
+  const hours = (Date.parse(to) - Date.parse(lastSeen)) / 3_600_000;
+  if (hours < 48) return `${Math.round(hours)} h`;
+  return `${Math.floor(hours / 24)} days`;
+}
+
 /**
  * Vehicles in detail: the most and least used vehicles, vehicles serving many or few lines, vehicles on several lines
  * in one day, and vehicles that left their brigade while it was scheduled to run. The time window is in the URL.
@@ -80,22 +88,28 @@ export class VehicleStats {
 
   protected readonly showAllDays = signal(false);
   protected readonly showAllIncidents = signal(false);
+  protected readonly showAllUnused = signal(false);
   protected readonly lineDays = computed(() =>
     this.firstRows(this.report()?.multiLineDays ?? [], this.showAllDays()),
   );
   protected readonly incidents = computed(() =>
     this.firstRows(this.report()?.incidents ?? [], this.showAllIncidents()),
   );
+  protected readonly unused = computed(() =>
+    this.firstRows(this.report()?.unused ?? [], this.showAllUnused()),
+  );
   protected readonly firstRowsCount = FIRST_ROWS;
 
   protected readonly time = localTime;
   protected readonly whatHappened = whatHappened;
   protected readonly lastSeenNote = lastSeenNote;
+  protected readonly idleFor = idleFor;
 
   constructor() {
     this.query$.pipe(takeUntilDestroyed()).subscribe(({ window, agencies }) => {
       this.showAllDays.set(false);
       this.showAllIncidents.set(false);
+      this.showAllUnused.set(false);
       this.store.dispatch(VehicleStatsActions.load({ window, agencies }));
     });
   }
