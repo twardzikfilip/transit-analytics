@@ -30,6 +30,14 @@ final class TimetableMath {
         return Math.round(value * f) / f;
     }
 
+    /** Nearest-rank percentile ({@code p} 0–1) of sorted values; 0 when there are none. */
+    static double percentile(double[] sorted, double p) {
+        if (sorted.length == 0) {
+            return 0;
+        }
+        return sorted[Math.max(0, Math.min(sorted.length - 1, (int) Math.ceil(p * sorted.length) - 1))];
+    }
+
     /** The most common value; ties go to the smallest one, nulls last. */
     static String mostFrequent(List<String> values) {
         Map<String, Long> counts = new HashMap<>();

@@ -16,6 +16,10 @@ export const routes: Routes = [
         path: 'vehicle-stats',
         loadChildren: () => import('./pages/vehicle-stats/vehicle-stats.routes').then((m) => m.VEHICLE_STATS_ROUTES),
       },
+      {
+        path: 'hotspots',
+        loadChildren: () => import('./pages/hotspots/hotspots.routes').then((m) => m.HOTSPOTS_ROUTES),
+      },
       { path: 'live-map', loadChildren: () => import('./pages/live-map/live-map.routes').then((m) => m.LIVE_MAP_ROUTES) },
       { path: 'lines', loadChildren: () => import('./pages/line-stats/line-stats.routes').then((m) => m.LINE_STATS_ROUTES) },
       {
