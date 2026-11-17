@@ -1,6 +1,7 @@
 package com.transitanalytics.security;
 
 import com.transitanalytics.dto.BrigadeDto;
+import com.transitanalytics.dto.HotspotDto;
 import com.transitanalytics.dto.LineStatsDto;
 import com.transitanalytics.dto.LivePositionDto;
 import com.transitanalytics.dto.PositionHistoryDto;
@@ -13,12 +14,14 @@ import com.transitanalytics.gtfs.GtfsImportResult;
 import com.transitanalytics.recording.PositionHistoryService;
 import com.transitanalytics.service.BrigadeScheduleService;
 import com.transitanalytics.service.ExternalServiceException;
+import com.transitanalytics.service.HotspotService;
 import com.transitanalytics.service.LineStatsService;
 import com.transitanalytics.service.TimeWindow;
 import com.transitanalytics.service.VehicleService;
 import com.transitanalytics.service.VehicleStatsService;
 import com.transitanalytics.web.BrigadeController;
 import com.transitanalytics.web.GtfsController;
+import com.transitanalytics.web.HotspotController;
 import com.transitanalytics.web.LineStatsController;
 import com.transitanalytics.web.PositionHistoryController;
 import com.transitanalytics.web.VehicleController;
@@ -59,7 +62,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = {AuthController.class, VehicleController.class, ZbiorkomController.class,
         GtfsController.class, PositionHistoryController.class,
-        LineStatsController.class, VehicleStatsController.class, BrigadeController.class})
+        LineStatsController.class, VehicleStatsController.class, BrigadeController.class, HotspotController.class})
 @Import({SecurityConfig.class, JwtAuthFilter.class, JwtService.class, SecurityWebTest.Metrics.class})
 @TestPropertySource(properties = {
         "app.jwt.secret=test-secret-test-secret-test-secret-123456",
@@ -112,6 +115,9 @@ class SecurityWebTest {
 
     @MockitoBean
     BrigadeScheduleService brigadeScheduleService;
+
+    @MockitoBean
+    HotspotService hotspotService;
 
     @Test
     void loginReturnsToken() throws Exception {
@@ -304,6 +310,25 @@ class SecurityWebTest {
         mvc.perform(get("/api/vehicle-stats").param("window", "year").header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isBadRequest());
         mvc.perform(get("/api/vehicle-stats")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void guestCanReadStopHotspotsForAWindowAndLine() throws Exception {
+        var hotspot = new HotspotDto.Hotspot(1, 53.136, 23.151, 19, 2.43, 20.8, 216, 82, 40, 39, 60,
+                "Częstochowska/Piłsudskiego", 70, List.of(new HotspotDto.LineTime("21", 0.5)),
+                List.of(new HotspotDto.Approach("E", 1.0)), 7);
+        var report = new HotspotDto.Report("week", Instant.parse("2026-11-09T20:00:00Z"),
+                Instant.parse("2026-11-16T20:00:00Z"), "21", List.of("21"), 7, 216, 2.9, 2.4, List.of(hotspot));
+        given(hotspotService.report(TimeWindow.MONTH, "21")).willReturn(report);
+
+        mvc.perform(get("/api/hotspots").param("window", "month").param("line", "21")
+                        .header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.hotspots[0].nearestStop").value("Częstochowska/Piłsudskiego"))
+                .andExpect(jsonPath("$.hotspots[0].approaches[0].heading").value("E"));
+        mvc.perform(get("/api/hotspots").param("window", "year").header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/hotspots")).andExpect(status().isUnauthorized());
     }
 
     @Test

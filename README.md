@@ -118,6 +118,13 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   disappeared), with the vehicle that took over. Service days that are over are read once and kept; the last month
   is read at startup in the background. Answers are cached for 2 minutes. `agency` (repeatable) limits the tables
   to those operators' vehicles; `agencies` lists every operator in the window, with its vehicle count.
+- `GET /api/hotspots?window=day|week|month[&line=21]` — Stop hotspots: where buses of the timetable's lines stand
+  still away from stops. A standstill is two or more reports in a row within 10 m (up to 5 min; longer ones are
+  layovers or breakdowns); those within 50 m of a stop or 150 m of a terminal are left out. The rest are clustered
+  with DBSCAN (25 m, at least 5 standstills, 3 different buses) into hotspots, the most time lost first, each with
+  its standstills, buses, typical and long wait, the directions buses were heading, the busiest hour and the lines.
+  Per-day figures are over the days with recordings. Service days that are over are read once and kept; the last
+  month is read at startup in the background. Cached for 2 minutes.
 - `GET /api/brigades/{brigade}/schedule` — a brigade's runs on the current service day (03:00–03:00 Warsaw time) from
   the timetable: line, headsign, first and last stop, scheduled departure and arrival. Brigades are named as on the
   live feed (`103-05`); the timetable's is the trip id's prefix. Used by the live map's popups.
@@ -268,6 +275,11 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
   one day (in the order served), and vehicles that left their brigade outside the schedule. Every table has the
   vehicle's number, model and operator. A dropdown of checkboxes beside the window buttons chooses the operators
   whose vehicles are included (kept in the URL as `?agency=`; all by default). Store slice `vehicleStats`, registered by its lazy route.
+- Stop hotspots: where buses lose time standing still away from stops (traffic lights, junctions, congestion), as
+  circles on a grey map sized by the time lost, and a table of the hotspots, the most time lost first. Pick the last
+  24 hours, 7 days or 30 days and one line or all (kept in the URL as `?window=` and `?line=`). Click a row to show
+  its hotspot on the map (with its spread), or a circle to find its row. Store slice `hotspots`, registered by its
+  lazy route.
 - Timetable pages (read-only): Routes → Trips (filter by route, direction, service, headsign) → Stop times of a trip;
   Stops (search, zone) → departure board of a stop. Filters and the page number live in the URL, so every view can be
   linked and the back button works.

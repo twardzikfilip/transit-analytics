@@ -1,0 +1,161 @@
+<div class="page-header">
+  <h1>Stop hotspots</h1>
+  @if (report(); as r) {
+    <span class="muted">
+      {{ r.from | date: 'd MMM, HH:mm' }} – {{ r.to | date: 'd MMM, HH:mm' }}
+    </span>
+  }
+</div>
+
+<div class="controls">
+  <div class="windows" role="group" aria-label="Time window">
+    @for (w of windows; track w.key) {
+      <button
+        type="button"
+        [class.active]="window() === w.key"
+        [attr.aria-pressed]="window() === w.key"
+        (click)="setWindow(w.key)"
+      >
+        {{ w.label }}
+      </button>
+    }
+  </div>
+  <label class="line">
+    <span class="sr-only">Line</span>
+    <select [value]="line() ?? ''" (change)="setLine($any($event.target).value)">
+      <option value="">All lines</option>
+      @for (l of lineOptions(); track l) {
+        <option [value]="l" [selected]="l === line()">Line {{ l }}</option>
+      }
+    </select>
+  </label>
+  @if (loading()) {
+    <span class="muted" role="status">Loading…</span>
+  }
+</div>
+
+@if (error(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+}
+
+@if (report(); as r) {
+  <p class="summary">
+    Buses{{ r.line ? ' on line ' + r.line : '' }} stood still away from stops
+    <strong>{{ r.standstills }}</strong> times, for
+    <strong>{{ lostTime(r.standstillHours) }}</strong> ({{ lostTime(r.standstillHours / r.days) }} a
+    day over {{ r.days }} {{ r.days === 1 ? 'day' : 'days' }} recorded).
+    <strong>{{ r.hotspots.length }}</strong> hotspots hold {{ inHotspots() }}% of that time.
+  </p>
+
+  <section class="card map-card" [class.loading]="loading()">
+    <app-hotspot-map
+      [hotspots]="r.hotspots"
+      [selected]="selected()"
+      (choose)="chooseOnMap($event)"
+    />
+  </section>
+
+  <section class="card" [class.loading]="loading()">
+    <h2>Where buses lose the most time</h2>
+    <p class="muted">
+      Each hotspot with the time buses stood still there altogether, the most first. Click a row to
+      show it on the map.
+    </p>
+    <div class="data-table-wrap">
+      <table class="data-table hotspots">
+        <thead>
+          <tr>
+            <th class="index">#</th>
+            <th>Near stop</th>
+            <th class="num">Time lost</th>
+            <th class="num">Per day</th>
+            <th class="num">Standstills</th>
+            <th class="num">Buses</th>
+            <th class="num" title="Typical (median) and long (90th percentile) standstill">
+              Wait, typical / long
+            </th>
+            <th>Heading</th>
+            <th>Busiest hour</th>
+            <th>Lines</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (h of rows(); track h.id) {
+            <tr
+              [attr.data-id]="h.id"
+              [class.selected]="selected() === h.id"
+              [attr.aria-selected]="selected() === h.id"
+              tabindex="0"
+              (click)="choose(h.id)"
+              (keydown.enter)="choose(h.id)"
+            >
+              <td class="index">{{ h.id }}</td>
+              <td class="where">
+                {{ h.nearestStop ?? 'No stop nearby' }}
+                @if (h.nearestStop) {
+                  <div class="muted note">{{ h.nearestStopMeters }} m away</div>
+                }
+              </td>
+              <td class="num">{{ lostTime(h.hours) }}</td>
+              <td class="num">{{ h.minutesPerDay.toFixed(1) }} min</td>
+              <td class="num">{{ h.standstills }}</td>
+              <td class="num">{{ h.vehicles }}</td>
+              <td class="num">
+                {{ waitText(h.medianSeconds) }}
+                <span class="muted">/ {{ waitText(h.p90Seconds) }}</span>
+              </td>
+              <td class="headings">
+                @for (a of h.approaches; track a.heading; let last = $last) {
+                  <span class="approach" [title]="approachText(a).long"
+                    >{{ approachText(a).short }}{{ last ? '' : ',' }}</span
+                  >{{ ' ' }}
+                }
+              </td>
+              <td class="time">{{ hourText(h.peakHour) }}</td>
+              <td class="lines" [title]="h.lines.length + ' lines'">{{ linesText(h.lines) }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="10" class="muted">
+                No place where buses repeatedly stood still in this window.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (r.hotspots.length > firstRows) {
+      <button type="button" class="more" (click)="showAll.set(!showAll())">
+        {{ showAll() ? 'Show the first ' + firstRows : 'Show all ' + r.hotspots.length }}
+      </button>
+    }
+  </section>
+
+  <details class="card how">
+    <summary>How hotspots are found</summary>
+    <ul>
+      <li>
+        <strong>Standstill:</strong> a bus on a line reporting twice or more in a row (every 20
+        seconds) within 10 m. Its time counts from the first of those reports to the last, so waits
+        shorter than about 20 seconds are mostly missed.
+      </li>
+      <li>
+        <strong>Away from stops:</strong> standstills within 50 m of a stop are boarding, and within
+        150 m of a terminal are layovers; both are left out, and so are standstills longer than 5
+        minutes (breaks, breakdowns). Only lines in the city timetable count, since other operators'
+        stops aren't known.
+      </li>
+      <li>
+        <strong>Hotspots:</strong> standstills are grouped where they gather (DBSCAN: standstills
+        within 25 m of each other, at least 5 together) and a group needs at least 3 different
+        buses. Time lost is the standing time altogether; slowing down and pulling away aren't
+        included, so the real loss is larger.
+      </li>
+      <li>
+        <strong>Heading</strong> is the direction the buses faced while waiting, so a junction shows
+        which approach holds them up. <strong>Busiest hour</strong> is the hour of the day with the
+        most time lost.
+      </li>
+    </ul>
+  </details>
+}

@@ -5,6 +5,7 @@ import {
   BrigadeApi,
   CorridorApi,
   GtfsApi,
+  HotspotApi,
   LineDetailApi,
   LineStatsApi,
   PositionHistoryApi,
@@ -104,5 +105,16 @@ describe('API clients', () => {
     const some = http.expectOne((r) => r.url === '/api/vehicle-stats');
     expect(some.request.params.getAll('agency')).toEqual(['BKM', 'TUROSN']);
     some.flush({});
+  });
+
+  it('reads the stop hotspots for a window, for all lines or one', () => {
+    TestBed.inject(HotspotApi).report('week').subscribe();
+    const all = http.expectOne((r) => r.url === '/api/hotspots');
+    expect(all.request.params.get('window')).toBe('week');
+    expect(all.request.params.has('line')).toBe(false);
+    all.flush({});
+
+    TestBed.inject(HotspotApi).report('day', '10').subscribe();
+    expect(http.expectOne('/api/hotspots?window=day&line=10').request.method).toBe('GET');
   });
 });
