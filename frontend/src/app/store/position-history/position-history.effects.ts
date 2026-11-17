@@ -15,7 +15,7 @@ export const loadFleet = createEffect(
     actions$.pipe(
       ofType(PositionHistoryActions.load),
       switchMap(({ query }) =>
-        api.fleet(query.from, query.to, query.route).pipe(
+        api.fleet(query, query.route).pipe(
           map((series) => PositionHistoryActions.fleetLoaded({ series })),
           catchError(toFailure),
         ),
@@ -29,7 +29,7 @@ export const loadDelays = createEffect(
     actions$.pipe(
       ofType(PositionHistoryActions.load),
       switchMap(({ query }) =>
-        api.delays(query.from, query.to, query.route).pipe(
+        api.delays(query, query.route).pipe(
           map((delays) => PositionHistoryActions.delaysLoaded({ delays })),
           catchError(toFailure),
         ),
@@ -43,7 +43,7 @@ export const loadRoutes = createEffect(
     actions$.pipe(
       ofType(PositionHistoryActions.load),
       switchMap(({ query }) =>
-        api.routes(query.from, query.to).pipe(
+        api.routes(query).pipe(
           map((routes) => PositionHistoryActions.routesLoaded({ routes })),
           catchError(toFailure),
         ),
@@ -57,7 +57,7 @@ export const loadSamples = createEffect(
     actions$.pipe(
       ofType(PositionHistoryActions.loadSamples),
       switchMap(({ query, page, sort, excludeOutliers }) =>
-        api.samples(query.from, query.to, query.route, page, 50, sort, excludeOutliers).pipe(
+        api.samples(query, query.route, page, 50, sort, excludeOutliers).pipe(
           map((samples) => PositionHistoryActions.samplesLoaded({ samples })),
           catchError(toFailure),
         ),

@@ -2,7 +2,6 @@
  * Delay generation: how much delay buses gain (or recover) between consecutive stops. The delay is the feed's, taken
  * just after a bus leaves each stop; the change between two stops is the delay generated there.
  */
-import { StatsWindow } from './vehicle-stats';
 
 /** A part of the day; the first is the whole day. */
 export interface DayPart {
@@ -40,7 +39,6 @@ export interface DelayLineSummary {
 }
 
 export interface DelayGenerationReport {
-  window: StatsWindow;
   from: string;
   to: string;
   /** Service days with recordings; per-day figures are over these. */
@@ -107,7 +105,6 @@ export interface DelayExample {
 }
 
 export interface DelayLineReport {
-  window: StatsWindow;
   from: string;
   to: string;
   line: string;

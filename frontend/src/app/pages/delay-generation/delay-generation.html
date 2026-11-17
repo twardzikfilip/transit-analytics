@@ -7,19 +7,7 @@
   }
 </div>
 
-<div class="controls">
-  <div class="windows" role="group" aria-label="Time window">
-    @for (w of windows; track w.key) {
-      <button
-        type="button"
-        [class.active]="window() === w.key"
-        [attr.aria-pressed]="window() === w.key"
-        (click)="setWindow(w.key)"
-      >
-        {{ w.label }}
-      </button>
-    }
-  </div>
+<app-time-window [defaultPreset]="defaultPreset">
   @if (report(); as r) {
     <label class="part">
       <span class="sr-only">Part of the day</span>
@@ -33,7 +21,7 @@
   @if (loading()) {
     <span class="muted" role="status">Loading…</span>
   }
-</div>
+</app-time-window>
 
 @if (error(); as message) {
   <p class="error" role="alert">{{ message }}</p>

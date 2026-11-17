@@ -165,8 +165,8 @@ class PositionHistoryIntegrationTest {
         assertThat(one.frames()).hasSize(2);
 
         org.assertj.core.api.Assertions.assertThatThrownBy(
-                () -> history.replay(FROM, FROM.plus(java.time.Duration.ofDays(8)), null))
-                .hasMessageContaining("at most 7 days");
+                () -> history.replay(FROM, FROM.plus(java.time.Duration.ofDays(93)), null))
+                .hasMessageContaining("at most 92 days");
     }
 
     private void poll(String time, LivePositionDto... positions) {

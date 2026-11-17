@@ -4,16 +4,8 @@
   gap: 0.75rem;
 }
 
-.controls,
-.windows {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem 1rem;
-}
-
-.windows {
-  gap: 0.35rem;
+app-time-window {
+  margin-bottom: 0;
 }
 
 .cards {

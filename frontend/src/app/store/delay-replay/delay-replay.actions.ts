@@ -3,7 +3,8 @@ import { ReplayResponse, RouteActivity } from '../../core/models/models';
 
 /** A time window ([from, to), ISO instants) and the lines to show (empty = all). */
 export interface ReplayQuery {
-  from: string;
+  /** Null for all time. */
+  from: string | null;
   to: string;
   routes: string[];
 }

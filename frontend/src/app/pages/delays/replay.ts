@@ -98,30 +98,6 @@ export function defaultSpeed(windowMs: number): number {
   return [...SPEEDS].reverse().find((s) => s.value <= target)?.value ?? SPEEDS[0].value;
 }
 
-/** Time window presets of the page. */
-export const WINDOW_PRESETS = [
-  { key: '15m', label: 'Last 15 min', ms: 15 * 60_000 },
-  { key: '1h', label: 'Last hour', ms: 3_600_000 },
-  { key: '24h', label: 'Last 24 hours', ms: 86_400_000 },
-] as const;
-
-/**
- * The window from the URL: a custom `from`/`to` (local time, as datetime-local inputs give it), otherwise a preset
- * (default: last hour) ending at the next full minute.
- */
-export function resolveDelayWindow(
-  params: { range: string | null; from: string | null; to: string | null },
-  now: Date,
-): { from: Date; to: Date; preset: string | null } {
-  const from = params.from ? new Date(params.from) : null;
-  const to = params.to ? new Date(params.to) : null;
-  if (from && to && !isNaN(from.getTime()) && !isNaN(to.getTime()) && from < to)
-    return { from, to, preset: null };
-  const preset = WINDOW_PRESETS.find((p) => p.key === params.range) ?? WINDOW_PRESETS[1];
-  const end = new Date(Math.floor(now.getTime() / 60_000) * 60_000 + 60_000);
-  return { from: new Date(end.getTime() - preset.ms), to: end, preset: preset.key };
-}
-
 /**
  * Mean delay in seconds of the vehicles shown at one moment; early vehicles count as negative. Vehicles without a
  * delay are left out. Null when none has one.

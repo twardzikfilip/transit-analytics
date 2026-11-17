@@ -15,7 +15,7 @@ export const loadReplay = createEffect(
     actions$.pipe(
       ofType(DelayReplayActions.load),
       switchMap(({ query }) =>
-        api.replay(query.from, query.to, query.routes).pipe(
+        api.replay(query, query.routes).pipe(
           map((replay) => DelayReplayActions.replayLoaded({ replay })),
           catchError(toFailure),
         ),
@@ -29,7 +29,7 @@ export const loadRoutes = createEffect(
     actions$.pipe(
       ofType(DelayReplayActions.load),
       switchMap(({ query }) =>
-        api.routes(query.from, query.to).pipe(
+        api.routes(query).pipe(
           map((routes) => DelayReplayActions.routesLoaded({ routes })),
           catchError(toFailure),
         ),

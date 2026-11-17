@@ -1,4 +1,4 @@
-/** Shared API shapes: pages of results, users and the session. */
+/** Shared API shapes: pages of results, the session and time windows. */
 
 export type RoleName = 'ADMIN' | 'GUEST';
 
@@ -18,25 +18,14 @@ export interface Page<T> {
 /** List filters sent as query parameters; null and empty values are left out. */
 export type Filters = Record<string, string | number | null>;
 
-export interface User {
-  id: number;
-  username: string;
-  role: string;
-  createdAt: string;
-}
-
-export interface UserRole {
-  id: number;
-  name: string;
-}
-
-/** Request payload type: entity without its id (plus write-only fields where needed). */
-export type Payload<T> = Omit<T, 'id'>;
-
-export type UserPayload = { username: string; password?: string; role: string };
-
 export interface Session {
   token: string;
   username: string;
   role: RoleName;
+}
+
+/** A report's time window as the API takes it: ISO instants, `to` exclusive; no `from` for all time. */
+export interface WindowQuery {
+  from: string | null;
+  to: string;
 }

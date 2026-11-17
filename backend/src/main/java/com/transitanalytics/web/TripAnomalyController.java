@@ -1,7 +1,7 @@
 package com.transitanalytics.web;
 
 import com.transitanalytics.dto.TripAnomalyDto;
-import com.transitanalytics.service.TimeWindow;
+import com.transitanalytics.service.ReportWindows;
 import com.transitanalytics.service.TripAnomalyService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -11,15 +11,19 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Instant;
+
 @Tag(name = "Abnormal trips", description = "Scheduled trips not run, run only partly, or off their route")
 @RestController
 @RequestMapping("/api/trip-anomalies")
 public class TripAnomalyController {
 
     private final TripAnomalyService anomalies;
+    private final ReportWindows windows;
 
-    public TripAnomalyController(TripAnomalyService anomalies) {
+    public TripAnomalyController(TripAnomalyService anomalies, ReportWindows windows) {
         this.anomalies = anomalies;
+        this.windows = windows;
     }
 
     @Operation(summary = "Abnormal trips scheduled to run in a time window",
@@ -35,8 +39,8 @@ public class TripAnomalyController {
                     + "brigade, buses, stops covered, delays and what was seen. Cached for a minute.")
     @GetMapping
     public TripAnomalyDto.Report report(
-            @Parameter(description = "15m, 1h, 3h, 6h, day, week or month")
-            @RequestParam(defaultValue = "day") String window) {
-        return anomalies.report(TimeWindow.of(window));
+            @Parameter(description = "Start (ISO-8601); the first recording when absent") @RequestParam(required = false) Instant from,
+            @Parameter(description = "End, exclusive (ISO-8601); now when absent") @RequestParam(required = false) Instant to) {
+        return anomalies.report(windows.resolve(from, to));
     }
 }

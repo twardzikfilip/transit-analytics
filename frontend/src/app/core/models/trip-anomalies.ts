@@ -3,8 +3,6 @@
  * the timetable by brigade and scheduled time.
  */
 
-/** The time windows of the page, ending now. */
-export type TripWindow = '15m' | '1h' | '3h' | '6h' | 'day' | 'week' | 'month';
 
 /** Kinds of abnormal trip. */
 export type TripAnomalyKind =
@@ -93,10 +91,11 @@ export interface AbnormalTrip {
   joinStop: string | null;
   /** Stops between the two neither bus was seen heading to; 0 when the new bus took over at the same place. */
   skippedStops: number | null;
+  /** On a change of bus, when the replaced bus stopped for good. */
+  changeAt: string | null;
 }
 
 export interface TripAnomalyReport {
-  window: TripWindow;
   from: string;
   to: string;
   summary: TripAnomalySummary;

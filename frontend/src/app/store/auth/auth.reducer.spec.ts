@@ -11,7 +11,7 @@ describe('auth reducer', () => {
 
     state = reduce(state, AuthActions.loginSuccess({ session }));
     expect(state.session).toEqual(session);
-    expect(authFeature.selectIsAdmin.projector(state.session)).toBe(true);
+    expect(authFeature.selectRole.projector(state.session)).toBe('ADMIN');
 
     state = reduce(state, AuthActions.logout());
     expect(state.session).toBeNull();

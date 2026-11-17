@@ -84,7 +84,7 @@
                   class="route-badge"
                   [class.partial]="!c.throughLines.includes(l)"
                   [attr.title]="c.throughLines.includes(l) ? 'Runs all of it' : 'Runs part of it'"
-                  [routerLink]="['/route-detail']"
+                  [routerLink]="['/routes']"
                   [queryParams]="{ line: l }"
                   >{{ l }}</a
                 >

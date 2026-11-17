@@ -18,7 +18,7 @@ public final class TripAnomalyDto {
      * @param tripsTotal  abnormal trips in the window; {@code trips} lists the newest {@code trips.size()} of them
      * @param trips       abnormal trips, the latest scheduled departure first
      */
-    public record Report(String window, Instant from, Instant to, Summary summary, List<LineCounts> lines,
+    public record Report(Instant from, Instant to, Summary summary, List<LineCounts> lines,
                          int tripsTotal, List<Trip> trips) {
     }
 
@@ -78,6 +78,7 @@ public final class TripAnomalyDto {
      *                      replacement was first heading to
      * @param skippedStops  stops between the two that neither bus was seen heading to; 0 when the replacement took over
      *                      at the same place
+     * @param changeAt      on a change of bus, when the replaced bus stopped for good
      */
     public record Trip(String kind, String note, String tripId, String line, String brigade, String headsign,
                        String firstStop, String lastStop, Instant scheduledDeparture, Instant scheduledArrival,
@@ -86,6 +87,6 @@ public final class TripAnomalyDto {
                        Integer endDelay, Integer detourMeters, Integer detourMinutes, String detourFrom,
                        String detourTo, String changeFate, String replacementLine, String replacementBrigade,
                        Integer changeMinutes, Integer delayBeforeChange, Integer delayAfterChange, String changeStop,
-                       String joinStop, Integer skippedStops) {
+                       String joinStop, Integer skippedStops, Instant changeAt) {
     }
 }

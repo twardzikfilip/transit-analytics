@@ -27,8 +27,7 @@ export class Shell {
 
   protected readonly navItems: NavItem[] = [
     { path: '/home', label: 'Home', icon: '⌂' },
-    { path: '/vehicles', label: 'Vehicles', icon: '🚌' },
-    { path: '/vehicle-stats', label: 'Vehicles in detail', icon: '🚍' },
+    { path: '/fleet', label: 'Fleet', icon: '🚌' },
     { path: '/live-map', label: 'Live map', icon: '🗺' },
     { path: '/positions', label: 'Position history', icon: '📈' },
     { path: '/delays', label: 'Delays', icon: '⏱' },
@@ -36,7 +35,6 @@ export class Shell {
     { path: '/delay-generation', label: 'Delay generation', icon: '📉' },
     { path: '/trip-anomalies', label: 'Abnormal trips', icon: '⚠' },
     { path: '/routes', label: 'Routes', icon: '〰' },
-    { path: '/route-detail', label: 'Routes in detail', icon: '🔎' },
     { path: '/lines', label: 'Line statistics', icon: '📊' },
     { path: '/corridors', label: 'Important corridors', icon: '🛣' },
     { path: '/stops', label: 'Stops', icon: '🚏' },

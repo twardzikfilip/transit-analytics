@@ -1,15 +1,18 @@
 import { DatePipe } from '@angular/common';
 import { Component, ElementRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { Store } from '@ngrx/store';
+import { injectSetQuery } from '../../shared/url-query';
 import { distinctUntilChanged, map } from 'rxjs';
-import { StatsWindow } from '../../core/models/models';
 import { HotspotsActions } from '../../store/hotspots/hotspots.actions';
 import { hotspotsFeature } from '../../store/hotspots/hotspots.reducer';
-import { WINDOWS, parseWindow } from '../vehicle-stats/vehicle-stats';
+import { TimeWindowPicker } from '../../shared/time-window/time-window-picker';
+import { TimeWindow, readWindow, sameQuery, windowQuery } from '../../shared/time-window/time-window';
 import { approachText, hourText, linesText, lostTime, nearText, waitText } from './hotspot-format';
 import { HotspotMap } from './hotspot-map';
+
+export const DEFAULT_PRESET = '1w';
 
 /** Rows of the table shown before "Show all". */
 export const FIRST_ROWS = 25;
@@ -20,27 +23,29 @@ export const FIRST_ROWS = 25;
  */
 @Component({
   selector: 'app-hotspots',
-  imports: [DatePipe, HotspotMap],
+  imports: [DatePipe, HotspotMap, TimeWindowPicker],
   templateUrl: './hotspots.html',
   styleUrl: './hotspots.scss',
 })
 export class Hotspots {
   private readonly store = inject(Store);
-  private readonly router = inject(Router);
+  private readonly navigate = injectSetQuery();
   private readonly host = inject(ElementRef<HTMLElement>);
 
   protected readonly report = this.store.selectSignal(hotspotsFeature.selectReport);
   protected readonly loading = this.store.selectSignal(hotspotsFeature.selectLoading);
   protected readonly error = this.store.selectSignal(hotspotsFeature.selectError);
 
-  protected readonly windows = WINDOWS;
-  /** The window and line in the URL (?window=month&line=21); a change loads their report. */
+  protected readonly defaultPreset = DEFAULT_PRESET;
+  /** The window and line in the URL (?range=1mo&line=21); a change loads their report. */
   private readonly query$ = inject(ActivatedRoute).queryParamMap.pipe(
-    map((p) => ({ window: parseWindow(p.get('window')), line: p.get('line') || null })),
-    distinctUntilChanged((a, b) => a.window === b.window && a.line === b.line),
+    map((p): { window: TimeWindow; line: string | null } => ({
+      window: readWindow(p, DEFAULT_PRESET),
+      line: p.get('line') || null,
+    })),
+    distinctUntilChanged((a, b) => sameQuery(a, b) && a.line === b.line),
   );
   private readonly query = toSignal(this.query$, { requireSync: true });
-  protected readonly window = computed(() => this.query().window);
   protected readonly line = computed(() => this.query().line);
   /** The window's lines, and the chosen one even without standstills in it, so it stays selected. */
   protected readonly lineOptions = computed(() => {
@@ -74,12 +79,8 @@ export class Hotspots {
     this.query$.pipe(takeUntilDestroyed()).subscribe(({ window, line }) => {
       this.selected.set(null);
       this.showAll.set(false);
-      this.store.dispatch(HotspotsActions.load({ window, line }));
+      this.store.dispatch(HotspotsActions.load({ window: windowQuery(window), line }));
     });
-  }
-
-  protected setWindow(window: StatsWindow): void {
-    this.navigate({ window: window === 'week' ? null : window });
   }
 
   protected setLine(line: string): void {
@@ -101,9 +102,5 @@ export class Hotspots {
         .querySelector(`tr[data-id="${id}"]`)
         ?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' }),
     );
-  }
-
-  private navigate(queryParams: Record<string, string | null>): void {
-    void this.router.navigate([], { queryParams, queryParamsHandling: 'merge' });
   }
 }

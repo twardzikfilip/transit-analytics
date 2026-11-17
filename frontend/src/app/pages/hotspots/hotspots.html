@@ -7,19 +7,7 @@
   }
 </div>
 
-<div class="controls">
-  <div class="windows" role="group" aria-label="Time window">
-    @for (w of windows; track w.key) {
-      <button
-        type="button"
-        [class.active]="window() === w.key"
-        [attr.aria-pressed]="window() === w.key"
-        (click)="setWindow(w.key)"
-      >
-        {{ w.label }}
-      </button>
-    }
-  </div>
+<app-time-window [defaultPreset]="defaultPreset">
   <label class="line">
     <span class="sr-only">Line</span>
     <select [value]="line() ?? ''" (change)="setLine($any($event.target).value)">
@@ -32,7 +20,7 @@
   @if (loading()) {
     <span class="muted" role="status">Loading…</span>
   }
-</div>
+</app-time-window>
 
 @if (error(); as message) {
   <p class="error" role="alert">{{ message }}</p>

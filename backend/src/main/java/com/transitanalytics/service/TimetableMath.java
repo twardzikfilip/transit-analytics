@@ -10,13 +10,13 @@ import java.util.List;
 import java.util.Map;
 
 /** Small calculations shared by the timetable pages (Line statistics, Routes in detail, Important corridors). */
-final class TimetableMath {
+public final class TimetableMath {
 
     private TimetableMath() {
     }
 
     /** Numbers in numeric order, then names with letters (N1, N2, …). */
-    static final Comparator<String> LINE_ORDER = (a, b) -> {
+    public static final Comparator<String> LINE_ORDER = (a, b) -> {
         boolean na = a.chars().allMatch(Character::isDigit);
         boolean nb = b.chars().allMatch(Character::isDigit);
         if (na && nb) {

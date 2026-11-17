@@ -9,7 +9,8 @@ import {
 
 /** A time window ([from, to), ISO instants) and an optional line. */
 export interface HistoryQuery {
-  from: string;
+  /** Null for all time. */
+  from: string | null;
   to: string;
   route: string | null;
 }

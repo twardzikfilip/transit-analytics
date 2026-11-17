@@ -1,0 +1,86 @@
+@let d = detail();
+<div class="card tile">
+  <span class="muted">Length</span>
+  <strong>{{ d.base?.lengthKm ?? '—' }} km</strong>
+  <span class="muted small">base route, both directions averaged</span>
+  <ul class="variant-lines">
+    @for (v of d.variants; track v.direction + '|' + v.shapeId) {
+      <li [class.depot]="v.kind === 'depot'">
+        <span class="what"
+          ><span class="kind">{{ shortKind(v.kind) }}</span> → {{ v.lastStop }}</span
+        >
+        <span class="value">{{ v.km | number: '1.1-1' }} km</span>
+      </li>
+    }
+  </ul>
+</div>
+<div class="card tile">
+  <span class="muted">Scheduled travel time</span>
+  <strong>{{ d.base?.shortestMin ?? '—' }}–{{ d.base?.longestMin ?? '—' }} min</strong>
+  <span class="muted small">base route, shortest–longest run</span>
+  <ul class="variant-lines">
+    @for (v of d.variants; track v.direction + '|' + v.shapeId) {
+      <li [class.depot]="v.kind === 'depot'">
+        <span class="what"
+          ><span class="kind">{{ shortKind(v.kind) }}</span> → {{ v.lastStop }}</span
+        >
+        <span class="value">
+          {{ v.shortestMin === v.longestMin ? v.shortestMin : v.shortestMin + '–' + v.longestMin }}
+          min
+        </span>
+      </li>
+    }
+  </ul>
+</div>
+<div class="card tile">
+  <span class="muted">Scheduled average speed</span>
+  <strong>{{ d.base?.minSpeedKmh ?? '—' }}–{{ d.base?.maxSpeedKmh ?? '—' }} km/h</strong>
+  <span class="muted small">base route, slowest–fastest run</span>
+  <ul class="variant-lines">
+    @for (v of d.variants; track v.direction + '|' + v.shapeId) {
+      <li [class.depot]="v.kind === 'depot'">
+        <span class="what"
+          ><span class="kind">{{ shortKind(v.kind) }}</span> → {{ v.lastStop }}</span
+        >
+        <span class="value">
+          {{
+            v.minSpeedKmh === v.maxSpeedKmh ? v.minSpeedKmh : v.minSpeedKmh + '–' + v.maxSpeedKmh
+          }}
+          km/h
+        </span>
+      </li>
+    }
+  </ul>
+</div>
+<div class="card tile">
+  <span class="muted">Zone 2 (outside the city)</span>
+  @if (d.zone2.length) {
+    @if (zone2().base.length) {
+      <strong>{{ zone2().base[0].km }} km · {{ zone2().base[0].stops }} stops</strong>
+      <span class="muted small">on the base route</span>
+    } @else {
+      <strong>{{ zone2().longer[0].km }} km · {{ zone2().longer[0].stops }} stops</strong>
+      <span class="muted small">only on longer variants</span>
+    }
+    <ul class="variant-lines stacked">
+      @for (z of d.zone2; track $index) {
+        <li>
+          <span class="what"
+            ><span class="kind">{{ shortKind(z.kind) }}</span> → {{ z.headsign }}</span
+          >
+          <span class="value"
+            >{{ z.km }} of {{ z.totalKm }} km · {{ z.stops }} of {{ z.totalStops }} stops</span
+          >
+        </li>
+      }
+    </ul>
+  } @else {
+    <strong>None</strong>
+    <span class="muted small">no variant leaves the city (zone 1)</span>
+  }
+</div>
+<div class="card tile">
+  <span class="muted">Brigades</span>
+  <strong>{{ d.brigades.length }}</strong>
+  <span class="muted small">{{ trips() }} trips a weekday</span>
+</div>

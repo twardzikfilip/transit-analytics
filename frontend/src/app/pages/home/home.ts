@@ -10,9 +10,9 @@ import { authFeature } from '../../store/auth/auth.reducer';
     <h1>Welcome, {{ username() }}</h1>
     <p>You are signed in as <strong>{{ role() }}</strong>.</p>
     <div class="tiles">
-      <a class="card" routerLink="/vehicles">
-        <h2>Vehicles</h2>
-        <p>Browse the fleet{{ isAdmin() ? ' and manage vehicles' : '' }}.</p>
+      <a class="card" routerLink="/fleet">
+        <h2>Fleet</h2>
+        <p>How the buses were used, and each bus in detail.</p>
       </a>
       <a class="card" routerLink="/live-map">
         <h2>Live map</h2>
@@ -44,5 +44,4 @@ export class Home {
   private readonly store = inject(Store);
   protected readonly username = this.store.selectSignal(authFeature.selectUsername);
   protected readonly role = this.store.selectSignal(authFeature.selectRole);
-  protected readonly isAdmin = this.store.selectSignal(authFeature.selectIsAdmin);
 }

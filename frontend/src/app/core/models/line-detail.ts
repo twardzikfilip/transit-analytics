@@ -3,8 +3,9 @@ import { RouteSubtype } from './timetable';
 /** Routes in detail: one line's timetable and its measured performance. */
 
 /** A line to pick on Routes in detail; `line` is the route's GTFS id. */
+/** A line to pick; one only seen on the live feed (another operator's, not in the timetable) has no id. */
 export interface LineRef {
-  id: number;
+  id: number | null;
   line: string;
   name: string;
   subtype: RouteSubtype;
@@ -100,12 +101,16 @@ export interface Brigade {
 }
 
 export interface LineDetail {
-  id: number;
+  /** The route's id (for its trips); null for a line not in the timetable. */
+  id: number | null;
   line: string;
   name: string;
   subtype: RouteSubtype;
+  /** Null when there is no timetable for the line. */
   serviceId: string | null;
-  base: LineBase;
+  /** The line's timetable on the operator's website. */
+  url: string | null;
+  base: LineBase | null;
   variants: LineVariant[];
   zone2: LineZone2[];
   brigades: Brigade[];

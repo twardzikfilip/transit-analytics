@@ -1,19 +1,14 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Actions } from '@ngrx/effects';
 import { Observable, Subject, of, throwError } from 'rxjs';
-import { PositionHistoryApi, VehicleApi } from '../core/api/api.services';
-import { Vehicle } from '../core/models/models';
+import { FleetApi, PositionHistoryApi } from '../core/api/api.services';
 import { DelayReplayActions } from './delay-replay/delay-replay.actions';
 import * as replayEffects from './delay-replay/delay-replay.effects';
 import { PositionHistoryActions } from './position-history/position-history.actions';
 import * as historyEffects from './position-history/position-history.effects';
-import { VehiclesActions } from './vehicles/vehicles.actions';
-import {
-  createVehicle,
-  deleteVehicle,
-  loadVehicles,
-  updateVehicle,
-} from './vehicles/vehicles.effects';
+import { FleetActions } from './fleet/fleet.actions';
+import * as fleetEffects from './fleet/fleet.effects';
+import { fleetFeature } from './fleet/fleet.reducer';
 
 function run<A>(
   effect: (actions$: Actions, api: A) => Observable<unknown>,
@@ -30,47 +25,53 @@ function run<A>(
 const fail = () =>
   throwError(() => new HttpErrorResponse({ status: 500, error: { detail: 'Database down' } }));
 
-describe('vehicle effects', () => {
-  const vehicle: Vehicle = {
-    id: 1,
-    vehicleNumber: '230',
-    type: 'BUS',
-    capacity: null,
-    agency: null,
-    model: null,
-  };
-  const payload = { vehicleNumber: '230', type: 'BUS', capacity: null, agency: null, model: null };
+describe('fleet effects and reducer', () => {
+  const window = { from: 'A', to: 'B' };
+  const report = { inUse: 1 } as never;
+  const vehicle = { vehicle: { id: 7 } } as never;
 
-  it('loads, creates, updates and deletes through the API', () => {
+  it('loads the fleet and a bus, and does nothing when the bus is cleared', () => {
     const api = {
-      list: vi.fn(() =>
-        of({ content: [vehicle], page: { number: 0, size: 500, totalElements: 1, totalPages: 1 } }),
-      ),
-      create: () => of(vehicle),
-      update: () => of(vehicle),
-      delete: () => of(undefined),
-    } as unknown as VehicleApi;
+      report: vi.fn(() => of(report)),
+      vehicle: vi.fn(() => of(vehicle)),
+    } as unknown as FleetApi;
 
-    expect(run(loadVehicles, api, VehiclesActions.load())).toEqual([
-      VehiclesActions.loadSuccess({ vehicles: [vehicle] }),
+    expect(run(fleetEffects.load, api, FleetActions.load({ window, agencies: ['BKM'] }))).toEqual([
+      FleetActions.loaded({ report }),
     ]);
-    expect(api.list).toHaveBeenCalledWith(0, 500, 'vehicleNumber');
-    expect(run(createVehicle, api, VehiclesActions.create({ vehicle: payload }))).toEqual([
-      VehiclesActions.createSuccess({ vehicle }),
+    expect(api.report).toHaveBeenCalledWith(window, ['BKM']);
+    expect(run(fleetEffects.loadVehicle, api, FleetActions.loadVehicle({ id: 7, window }))).toEqual([
+      FleetActions.vehicleLoaded({ vehicle }),
     ]);
-    expect(run(updateVehicle, api, VehiclesActions.update({ id: 1, vehicle: payload }))).toEqual([
-      VehiclesActions.updateSuccess({ vehicle }),
-    ]);
-    expect(run(deleteVehicle, api, VehiclesActions.delete({ id: 1 }))).toEqual([
-      VehiclesActions.deleteSuccess({ id: 1 }),
-    ]);
+    expect(api.vehicle).toHaveBeenCalledWith(7, window);
+    expect(run(fleetEffects.loadVehicle, api, FleetActions.clearVehicle())).toEqual([]);
   });
 
   it("reports the server's message when a request fails", () => {
-    const api = { list: fail, create: fail, update: fail, delete: fail } as unknown as VehicleApi;
-    const failure = VehiclesActions.failure({ error: 'Database down' });
-    expect(run(loadVehicles, api, VehiclesActions.load())).toEqual([failure]);
-    expect(run(deleteVehicle, api, VehiclesActions.delete({ id: 1 }))).toEqual([failure]);
+    const api = { report: fail, vehicle: fail } as unknown as FleetApi;
+    expect(run(fleetEffects.load, api, FleetActions.load({ window, agencies: [] }))).toEqual([
+      FleetActions.failure({ error: 'Database down' }),
+    ]);
+    expect(run(fleetEffects.loadVehicle, api, FleetActions.loadVehicle({ id: 7, window }))).toEqual([
+      FleetActions.vehicleFailure({ error: 'Database down' }),
+    ]);
+  });
+
+  it('keeps the bus shown while it reloads, and drops it for another bus or when cleared', () => {
+    const reduce = (...actions: Parameters<typeof fleetFeature.reducer>[1][]) =>
+      actions.reduce(fleetFeature.reducer, fleetFeature.reducer(undefined, { type: '@@init' }));
+    const loaded = [FleetActions.loadVehicle({ id: 7, window }), FleetActions.vehicleLoaded({ vehicle })];
+
+    expect(reduce(...loaded, FleetActions.loadVehicle({ id: 7, window }))).toMatchObject({
+      vehicle,
+      loadingVehicle: true,
+    });
+    expect(reduce(...loaded, FleetActions.loadVehicle({ id: 8, window })).vehicle).toBeNull();
+    expect(reduce(...loaded, FleetActions.clearVehicle())).toMatchObject({ vehicle: null, loadingVehicle: false });
+    expect(reduce(FleetActions.loadVehicle({ id: 7, window }), FleetActions.vehicleFailure({ error: 'x' })))
+      .toMatchObject({ loadingVehicle: false, vehicleError: 'x' });
+    expect(reduce(FleetActions.load({ window, agencies: [] }), FleetActions.failure({ error: 'y' })))
+      .toMatchObject({ loading: false, error: 'y' });
   });
 });
 
@@ -108,8 +109,7 @@ describe('position history and delay replay effects', () => {
       }),
     );
     expect(api.samples).toHaveBeenCalledWith(
-      query.from,
-      query.to,
+      query,
       '103',
       2,
       50,
@@ -152,7 +152,10 @@ describe('position history and delay replay effects', () => {
     expect(run(replayEffects.loadReplay, api, load)).toEqual([
       DelayReplayActions.replayLoaded({ replay: raw }),
     ]);
-    expect(api.replay).toHaveBeenCalledWith(query.from, query.to, ['103', '5']);
+    expect(api.replay).toHaveBeenCalledWith(
+      { from: query.from, to: query.to, routes: ['103', '5'] },
+      ['103', '5'],
+    );
     expect(run(replayEffects.loadRoutes, api, load)).toEqual([
       DelayReplayActions.routesLoaded({ routes: [] }),
     ]);

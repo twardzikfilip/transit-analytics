@@ -40,7 +40,6 @@ const stretch = (from: string, to: string, mean: number, runs = 100): DelayStret
 
 function report(): DelayGenerationReport {
   return {
-    window: 'week',
     from: '2026-11-10T13:00:00Z',
     to: '2026-11-17T13:00:00Z',
     days: 4,
@@ -115,7 +114,6 @@ const example = (id: number, vehicle: string, delays: number[]): DelayExample =>
 
 function lineReport(): DelayLineReport {
   return {
-    window: 'week',
     from: '2026-11-10T13:00:00Z',
     to: '2026-11-17T13:00:00Z',
     line: '21',
@@ -151,15 +149,22 @@ afterEach(() => {
   TestBed.resetTestingModule();
 });
 
+const URL_WINDOW = { from: '2026-11-10T06:00', to: '2026-11-17T06:00' };
+const CUSTOM = {
+  from: new Date(URL_WINDOW.from).toISOString(),
+  to: new Date(URL_WINDOW.to).toISOString(),
+};
+
 describe('Delay generation page', () => {
   it('maps the stretches and lists where delay is created and recovered, and the lines', () => {
     useSvgMaps();
     const { el, store } = renderPage(
       DelayGeneration,
       stateAfter(delayGenerationFeature, DelayGenerationActions.loaded({ report: report() })),
+      URL_WINDOW,
     );
 
-    expect(store.dispatch).toHaveBeenCalledWith(DelayGenerationActions.load({ window: 'week' }));
+    expect(store.dispatch).toHaveBeenCalledWith(DelayGenerationActions.load({ window: CUSTOM }));
     expect(store.dispatch).toHaveBeenCalledWith(DelayGenerationActions.clearLine());
     expect(text(el.querySelector('.summary'))).toContain('8520 runs measured over 4 days recorded');
     expect(el.querySelectorAll('app-stretch-map path.leaflet-interactive')).toHaveLength(3);
@@ -198,12 +203,12 @@ describe('Delay generation page', () => {
       .spyOn(fixture.debugElement.injector.get(Router), 'navigate')
       .mockResolvedValue(true);
 
-    (el.querySelectorAll('.windows button')[2] as HTMLButtonElement).click();
+    (el.querySelectorAll('app-time-window .presets button')[9] as HTMLButtonElement).click();
     expect(navigate).toHaveBeenLastCalledWith([], {
-      queryParams: { window: 'month' },
+      queryParams: { range: '1mo', from: null, to: null },
       queryParamsHandling: 'merge',
     });
-    const part = el.querySelector('.controls select') as HTMLSelectElement;
+    const part = el.querySelector('app-time-window select') as HTMLSelectElement;
     part.value = 'am-peak';
     part.dispatchEvent(new Event('change'));
     expect(navigate).toHaveBeenLastCalledWith([], {
@@ -216,11 +221,11 @@ describe('Delay generation page', () => {
       queryParamsHandling: 'merge',
     });
 
-    setQuery({ window: 'month', part: 'am-peak', line: '21' });
+    setQuery({ ...URL_WINDOW, part: 'am-peak', line: '21' });
     fixture.detectChanges();
-    expect(store.dispatch).toHaveBeenCalledWith(DelayGenerationActions.load({ window: 'month' }));
+    expect(store.dispatch).toHaveBeenCalledWith(DelayGenerationActions.load({ window: CUSTOM }));
     expect(store.dispatch).toHaveBeenLastCalledWith(
-      DelayGenerationActions.loadLine({ window: 'month', line: '21' }),
+      DelayGenerationActions.loadLine({ window: CUSTOM, line: '21' }),
     );
     // In the morning peak only one stretch was measured 5 times or more.
     expect(text(el.querySelector('table.created tbody'))).toContain('No stretch gains delay');
@@ -279,7 +284,7 @@ describe('Delay generation page', () => {
     const loading = stateAfter(
       delayGenerationFeature,
       DelayGenerationActions.loaded({ report: report() }),
-      DelayGenerationActions.loadLine({ window: 'week', line: '99' }),
+      DelayGenerationActions.loadLine({ window: CUSTOM, line: '99' }),
     );
     const { el, fixture } = renderPage(DelayGeneration, loading, { line: '99' });
     expect(text(el.querySelector('.line-detail [role=status]'))).toBe('Loading line 99…');
@@ -357,11 +362,11 @@ describe('delay generation effects', () => {
   it('loads the network, or reports the failure', () => {
     const r = report();
     const api = { report: vi.fn(() => of(r)) };
-    expect(run(load, api, DelayGenerationActions.load({ window: 'day' }))).toEqual([
+    expect(run(load, api, DelayGenerationActions.load({ window: { from: 'A', to: 'B' } }))).toEqual([
       DelayGenerationActions.loaded({ report: r }),
     ]);
-    expect(api.report).toHaveBeenCalledWith('day');
-    expect(run(load, { report: failing }, DelayGenerationActions.load({ window: 'day' }))).toEqual([
+    expect(api.report).toHaveBeenCalledWith({ from: 'A', to: 'B' });
+    expect(run(load, { report: failing }, DelayGenerationActions.load({ window: { from: 'A', to: 'B' } }))).toEqual([
       DelayGenerationActions.failure({ error: 'Down' }),
     ]);
   });
@@ -369,9 +374,9 @@ describe('delay generation effects', () => {
   it('loads a line, reports a failure, and does nothing on clear', () => {
     const r = lineReport();
     const api = { line: vi.fn(() => of(r)) };
-    const action = DelayGenerationActions.loadLine({ window: 'month', line: '21' });
+    const action = DelayGenerationActions.loadLine({ window: { from: 'A', to: 'B' }, line: '21' });
     expect(run(loadLine, api, action)).toEqual([DelayGenerationActions.lineLoaded({ report: r })]);
-    expect(api.line).toHaveBeenCalledWith('month', '21');
+    expect(api.line).toHaveBeenCalledWith({ from: 'A', to: 'B' }, '21');
     expect(run(loadLine, { line: failing }, action)).toEqual([
       DelayGenerationActions.lineFailure({ error: 'Down' }),
     ]);

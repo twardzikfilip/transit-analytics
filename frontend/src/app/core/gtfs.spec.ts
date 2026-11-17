@@ -1,4 +1,4 @@
-import { boardingRule, formatGtfsTime, routeColor, routeTypeLabel } from './gtfs';
+import { boardingRule, formatGtfsTime, routeColor } from './gtfs';
 
 describe('gtfs display helpers', () => {
   it('formats times, including ones past midnight', () => {
@@ -8,9 +8,7 @@ describe('gtfs display helpers', () => {
     expect(formatGtfsTime(null)).toBe('—');
   });
 
-  it('names route types and boarding rules', () => {
-    expect(routeTypeLabel(3)).toBe('Bus');
-    expect(routeTypeLabel(700)).toBe('Type 700');
+  it('names boarding rules', () => {
     expect(boardingRule(0)).toBeNull();
     expect(boardingRule(3)).toBe('on request');
   });

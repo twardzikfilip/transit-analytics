@@ -20,6 +20,8 @@ class RouteSubtypeTest {
         assertThat(RouteSubtype.classify("499")).isEqualTo(RouteSubtype.REGIONAL);
         assertThat(RouteSubtype.classify("399")).isEqualTo(RouteSubtype.SUBURBAN);
         assertThat(RouteSubtype.classify("500")).isEqualTo(RouteSubtype.SUBURBAN);
+        assertThat(RouteSubtype.classify("700")).as("another operator's regional line").isEqualTo(RouteSubtype.REGIONAL);
+        assertThat(RouteSubtype.classify("701")).isEqualTo(RouteSubtype.SUBURBAN);
         assertThat(RouteSubtype.classify("4")).isEqualTo(RouteSubtype.URBAN);
         assertThat(RouteSubtype.classify("Z")).isEqualTo(RouteSubtype.URBAN);
         assertThat(RouteSubtype.classify(null)).isEqualTo(RouteSubtype.URBAN);

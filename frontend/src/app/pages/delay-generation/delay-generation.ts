@@ -1,20 +1,21 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { Store } from '@ngrx/store';
+import { injectSetQuery } from '../../shared/url-query';
 import { distinctUntilChanged, map } from 'rxjs';
 import {
   DelayExample,
   DelayGenerationReport,
   DelayLineSummary,
   DelayStretch,
-  StatsWindow,
 } from '../../core/models/models';
 import { localTime } from '../../shared/format/time';
 import { DelayGenerationActions } from '../../store/delay-generation/delay-generation.actions';
 import { delayGenerationFeature } from '../../store/delay-generation/delay-generation.reducer';
-import { WINDOWS, parseWindow } from '../vehicle-stats/vehicle-stats';
+import { TimeWindowPicker } from '../../shared/time-window/time-window-picker';
+import { readWindow, sameQuery, windowQuery } from '../../shared/time-window/time-window';
 import { changeClass, delayText, minutesPerDay, signedChange } from './delay-scale';
 import { LineHeatmap } from './line-heatmap';
 import { MIN_MAP_RUNS, StretchMap } from './stretch-map';
@@ -45,6 +46,8 @@ export function bandStretches(report: DelayGenerationReport, band: number): Band
     }));
 }
 
+export const DEFAULT_PRESET = '1w';
+
 /**
  * Delay generation: where on the network buses gain delay between stops (and where they recover it), on a map and
  * in tables, then for a chosen line, when and on which stretches, with example runs and how their delay built up.
@@ -52,13 +55,13 @@ export function bandStretches(report: DelayGenerationReport, band: number): Band
  */
 @Component({
   selector: 'app-delay-generation',
-  imports: [DatePipe, LineHeatmap, StretchMap, TripProfile],
+  imports: [DatePipe, LineHeatmap, StretchMap, TripProfile, TimeWindowPicker],
   templateUrl: './delay-generation.html',
   styleUrl: './delay-generation.scss',
 })
 export class DelayGeneration {
   private readonly store = inject(Store);
-  private readonly router = inject(Router);
+  private readonly navigate = injectSetQuery();
 
   protected readonly report = this.store.selectSignal(delayGenerationFeature.selectReport);
   protected readonly loading = this.store.selectSignal(delayGenerationFeature.selectLoading);
@@ -69,11 +72,11 @@ export class DelayGeneration {
   );
   protected readonly lineError = this.store.selectSignal(delayGenerationFeature.selectLineError);
 
-  protected readonly windows = WINDOWS;
+  protected readonly defaultPreset = DEFAULT_PRESET;
   private readonly params = inject(ActivatedRoute).queryParamMap;
   private readonly window$ = this.params.pipe(
-    map((p) => parseWindow(p.get('window'))),
-    distinctUntilChanged(),
+    map((p) => readWindow(p, DEFAULT_PRESET)),
+    distinctUntilChanged((a, b) => sameQuery({ window: a }, { window: b })),
   );
   private readonly line$ = this.params.pipe(
     map((p) => p.get('line') || null),
@@ -141,11 +144,11 @@ export class DelayGeneration {
 
   constructor() {
     this.window$.pipe(takeUntilDestroyed()).subscribe((window) => {
-      this.store.dispatch(DelayGenerationActions.load({ window }));
+      this.store.dispatch(DelayGenerationActions.load({ window: windowQuery(window) }));
     });
     // A line (or another window for it) loads the line; no line clears it.
     effect(() => {
-      const window = this.window();
+      const window = windowQuery(this.window());
       const line = this.line();
       untracked(() => {
         this.directionIndex.set(0);
@@ -158,10 +161,6 @@ export class DelayGeneration {
         );
       });
     });
-  }
-
-  protected setWindow(window: StatsWindow): void {
-    this.navigate({ window: window === 'week' ? null : window });
   }
 
   protected setBand(key: string): void {
@@ -199,9 +198,5 @@ export class DelayGeneration {
 
   protected worst(l: DelayLineSummary): string {
     return l.worstFrom ? `${l.worstFrom} → ${l.worstTo}` : '—';
-  }
-
-  private navigate(queryParams: Record<string, string | null>): void {
-    void this.router.navigate([], { queryParams, queryParamsHandling: 'merge' });
   }
 }

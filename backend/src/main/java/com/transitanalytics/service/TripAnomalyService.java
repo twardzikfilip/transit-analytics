@@ -36,12 +36,13 @@ public class TripAnomalyService {
     private final Clock clock;
     /** Each service day's outcomes, and when they were computed; a day long over is kept as it is. */
     private final Map<LocalDate, DayOutcomes> days = new ConcurrentHashMap<>();
-    private final Map<TimeWindow, TripAnomalyDto.Report> reports = new ConcurrentHashMap<>();
+    private final RecentCache<ReportWindow, TripAnomalyDto.Report> reports;
     private volatile Shapes shapes;
 
     public TripAnomalyService(JdbcTemplate jdbc, Clock clock) {
         this.jdbc = jdbc;
         this.clock = clock;
+        this.reports = new RecentCache<>(clock, CACHE_FOR, 16);
     }
 
     private record DayOutcomes(Instant computed, List<Outcome> outcomes) {
@@ -54,45 +55,54 @@ public class TripAnomalyService {
     /** Judges the last month's days at startup, in the background, so the first visit doesn't wait for them. */
     @EventListener(ApplicationReadyEvent.class)
     public void warmUp() {
-        WarmUp.inBackground("trip-anomalies", TripAnomalyService.class, () -> report(TimeWindow.MONTH));
-    }
-
-    /** Trips scheduled to run (for any part) in the window ending now. */
-    public TripAnomalyDto.Report report(TimeWindow window) {
         Instant now = clock.instant();
-        TripAnomalyDto.Report cached = reports.get(window);
-        if (cached != null && cached.to().plus(CACHE_FOR).isAfter(now)) {
-            return cached;
-        }
-        TripAnomalyDto.Report report = report(window, now.minus(window.length), now);
-        reports.put(window, report);
-        return report;
+        WarmUp.inBackground("trip-anomalies", TripAnomalyService.class,
+                () -> report(new ReportWindow(now.minus(Duration.ofDays(30)), now)));
     }
 
-    TripAnomalyDto.Report report(TimeWindow window, Instant from, Instant to) {
+    /** Trips scheduled to run (for any part) in the window. */
+    public TripAnomalyDto.Report report(ReportWindow window) {
+        return reports.get(window, () -> report(window.from(), window.to(), clock.instant()));
+    }
+
+    /**
+     * The outcomes of the trips scheduled to run (for any part) in {@code [from, to)}, judged as of now (a window
+     * reaching into the future leaves its trips pending).
+     */
+    List<Outcome> outcomes(Instant from, Instant to) {
+        return outcomes(from, to, clock.instant());
+    }
+
+    /** As {@link #outcomes(Instant, Instant)}, judged as of {@code now}. */
+    List<Outcome> outcomes(Instant from, Instant to, Instant now) {
+        Instant until = to.isAfter(now) ? now : to;
         List<Outcome> outcomes = new ArrayList<>();
         for (LocalDate day = ServiceDay.serviceDay(from).minusDays(1); !day.isAfter(ServiceDay.serviceDay(to));
              day = day.plusDays(1)) {
-            for (Outcome o : outcomes(day, to)) {
-                // Scheduled to run during the window, for any part of it.
+            for (Outcome o : outcomes(day, until)) {
                 if (o.departure().isBefore(to) && !o.arrival().isBefore(from)) {
                     outcomes.add(o);
                 }
             }
         }
+        return outcomes;
+    }
+
+    TripAnomalyDto.Report report(Instant from, Instant to, Instant now) {
+        List<Outcome> outcomes = outcomes(from, to, now);
         List<TripAnomalyDto.Trip> abnormal = outcomes.stream().filter(o -> o.kind().abnormal())
                 .map(Outcome::trip)
                 .sorted(Comparator.comparing(TripAnomalyDto.Trip::scheduledDeparture).reversed()
                         .thenComparing(TripAnomalyDto.Trip::line, TimetableMath.LINE_ORDER))
                 .toList();
-        return new TripAnomalyDto.Report(window.key(), from, to, TripAnomalies.summary(outcomes),
+        return new TripAnomalyDto.Report(from, to, TripAnomalies.summary(outcomes),
                 TripAnomalies.lines(outcomes), abnormal.size(),
                 abnormal.subList(0, Math.min(MAX_TRIPS, abnormal.size())));
     }
 
     /**
      * A service day's outcomes as of {@code now}. A day whose trips were all settled when it was computed is kept;
-     * the running day is computed again after {@link #CACHE_FOR}. Days older than a month are dropped.
+     * the running day is computed again after {@link #CACHE_FOR}. Days older than {@link ServiceDayCache#KEEP_DAYS} are dropped.
      */
     private List<Outcome> outcomes(LocalDate day, Instant now) {
         DayOutcomes cached = days.get(day);
@@ -104,7 +114,7 @@ public class TripAnomalyService {
         }
         List<Outcome> outcomes = judge(day, now);
         days.put(day, new DayOutcomes(now, outcomes));
-        LocalDate oldest = ServiceDay.serviceDay(now.minus(TimeWindow.MONTH.length)).minusDays(2);
+        LocalDate oldest = ServiceDay.serviceDay(now).minusDays(ServiceDayCache.KEEP_DAYS);
         days.keySet().removeIf(d -> d.isBefore(oldest));
         return outcomes;
     }

@@ -18,7 +18,7 @@ public final class HotspotDto {
      * @param hotspotHours     the part of it in the hotspots (the rest is scattered)
      * @param hotspots         places where buses repeatedly stood still, the most time lost first
      */
-    public record Report(String window, Instant from, Instant to, String line, List<String> lines, int days,
+    public record Report(Instant from, Instant to, String line, List<String> lines, int days,
                          int standstills, double standstillHours, double hotspotHours, List<Hotspot> hotspots) {
     }
 

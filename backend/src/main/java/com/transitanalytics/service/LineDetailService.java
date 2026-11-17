@@ -11,13 +11,17 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TreeSet;
 
 import static com.transitanalytics.service.LineTimetable.*;
@@ -36,28 +40,72 @@ import static com.transitanalytics.service.VehicleUsage.*;
 @Service
 public class LineDetailService {
 
+    /** Lines seen on the live feed are read again after this long. */
+    static final Duration FEED_LINES_MAX_AGE = Duration.ofMinutes(5);
+
     private final JdbcTemplate jdbc;
     private final RouteRepository routes;
     private final LineTimetable timetables;
+    private final LineSubtypes subtypes;
+    private final RecentCache<String, List<String>> feedLines;
 
-    public LineDetailService(JdbcTemplate jdbc, RouteRepository routes, LineTimetable timetables) {
+    public LineDetailService(JdbcTemplate jdbc, RouteRepository routes, LineTimetable timetables,
+                             LineSubtypes subtypes, Clock clock) {
         this.jdbc = jdbc;
         this.routes = routes;
         this.timetables = timetables;
+        this.subtypes = subtypes;
+        this.feedLines = new RecentCache<>(clock, FEED_LINES_MAX_AGE, 1);
     }
 
-    /** All lines, numbers first in numeric order. */
+    /**
+     * All lines, numbers first in numeric order: the timetable's, and those only seen on the live feed (other
+     * operators' regional lines).
+     */
     @Transactional(readOnly = true)
     public List<LineDetailDto.LineRef> lines() {
-        return routes.findAll().stream()
+        List<LineDetailDto.LineRef> lines = new ArrayList<>(routes.findAll().stream()
                 .map(r -> new LineDetailDto.LineRef(r.getId(), r.getGtfsId(), r.displayName(), r.getSubtype()))
-                .sorted(Comparator.comparing(LineDetailDto.LineRef::name, TimetableMath.LINE_ORDER))
-                .toList();
+                .toList());
+        Set<String> known = new HashSet<>();
+        lines.forEach(l -> {
+            known.add(l.line());
+            known.add(l.name());
+        });
+        feedLines().stream().filter(name -> !known.contains(name))
+                .forEach(name -> lines.add(new LineDetailDto.LineRef(null, name, name, subtypes.of(name))));
+        lines.sort(Comparator.comparing(LineDetailDto.LineRef::name, TimetableMath.LINE_ORDER));
+        return lines;
+    }
+
+    private void requireOnFeed(String line) {
+        if (!feedLines().contains(line)) {
+            throw new NotFoundException("Line", line);
+        }
+    }
+
+    /** Every line name recorded on the live feed. */
+    private List<String> feedLines() {
+        // A loose index scan over (route_name, observed_at): one index lookup per name, not a scan of every report.
+        return feedLines.get("all", () -> jdbc.queryForList("""
+                WITH RECURSIVE names AS (
+                    (SELECT route_name FROM position_sample WHERE route_name > '' ORDER BY route_name LIMIT 1)
+                    UNION ALL
+                    SELECT (SELECT p.route_name FROM position_sample p WHERE p.route_name > n.route_name
+                            ORDER BY p.route_name LIMIT 1)
+                    FROM names n WHERE n.route_name IS NOT NULL)
+                SELECT route_name FROM names WHERE route_name IS NOT NULL""", String.class));
     }
 
     @Transactional(readOnly = true)
     public LineDetailDto.Detail detail(String line) {
-        Route route = route(line);
+        Route route = findRoute(line);
+        if (route == null) {
+            requireOnFeed(line);
+            // Only on the live feed: no timetable to show.
+            return new LineDetailDto.Detail(null, line, line, subtypes.of(line), null, null, null, List.of(),
+                    List.of(), List.of(), List.of(), List.of(), List.of());
+        }
         Timetable tt = timetables.timetable(route, true);
         List<TripRow> mainTrips = mainTrips(tt);
         Map<Integer, Variant> mains = tt.mains();
@@ -102,13 +150,17 @@ public class LineDetailService {
                 depotDepartures.stream().filter(stop -> !atPlace(tt.endStops(), stop)).toList());
 
         return new LineDetailDto.Detail(route.getId(), route.getGtfsId(), route.displayName(), route.getSubtype(),
-                tt.service(), base, tt.variants(), zone2, brigades(tt.trips(), kinds, tt.depot()),
+                tt.service(), route.getUrl(), base, tt.variants(), zone2, brigades(tt.trips(), kinds, tt.depot()),
                 toDto(tt.endStops()), toDto(depotPlaces), depotRuns);
     }
 
     @Transactional(readOnly = true)
     public LineDetailDto.Performance performance(String line) {
-        Route route = route(line);
+        Route route = findRoute(line);
+        if (route == null) {
+            requireOnFeed(line);
+            return feedOnlyPerformance(line);
+        }
         Timetable tt = timetables.timetable(route, false);
         Map<Integer, Variant> mains = tt.mains();
 
@@ -173,31 +225,55 @@ public class LineDetailService {
 
         return new LineDetailDto.Performance(days.isEmpty() ? null : days.first(),
                 days.isEmpty() ? null : days.last(), days.size(), runs.size(), travelTimes, delays, segments,
-                vehicles(route.getGtfsId()));
+                vehicles(route.getGtfsId(), ZbiorkomBialystokService.CITY_AGENCY));
     }
 
-    /** Which buses served the line, from every recorded day of it. */
-    private LineDetailDto.Vehicles vehicles(String line) {
+    /**
+     * A line not in the timetable (another operator's): with no schedule to match runs against, only the average
+     * delay through the day (all days) and the buses that served it.
+     */
+    private LineDetailDto.Performance feedOnlyPerformance(String line) {
+        List<LocalDate> days = jdbc.queryForList("""
+                SELECT DISTINCT ((observed_at AT TIME ZONE '%s') - make_interval(hours => %d))::date AS day
+                FROM position_sample WHERE route_name = ? ORDER BY day""".formatted(ZONE.getId(), DAY_START_HOUR),
+                LocalDate.class, line);
+        List<LineDetailDto.DelaySlot> delays = jdbc.query("""
+                SELECT (extract(epoch FROM ((p.observed_at AT TIME ZONE '%1$s') - make_interval(hours => %2$d))::time)
+                        ::int / 900) * 15 + %2$d * 60 AS minute,
+                       avg(p.delay_seconds) AS delay, count(*) AS samples
+                FROM position_sample p
+                WHERE p.delay_seconds IS NOT NULL AND abs(p.delay_seconds) <= %3$d AND p.route_name = ?
+                GROUP BY 1 ORDER BY 1""".formatted(ZONE.getId(), DAY_START_HOUR, DelayOutliers.THRESHOLD_SECONDS),
+                (rs, i) -> new LineDetailDto.DelaySlot(rs.getInt("minute"),
+                        TimetableMath.round(rs.getDouble("delay"), 0), rs.getLong("samples")),
+                line);
+        return new LineDetailDto.Performance(days.isEmpty() ? null : days.get(0),
+                days.isEmpty() ? null : days.get(days.size() - 1), days.size(), 0, List.of(), delays, List.of(),
+                vehicles(line, null));
+    }
+
+    /** Which buses (of the operator, or any when null) served the line, from every recorded day of it. */
+    private LineDetailDto.Vehicles vehicles(String line, String agency) {
         List<VehicleDay> rows = jdbc.query("""
                 SELECT ((p.observed_at AT TIME ZONE '%s') - make_interval(hours => %d))::date AS day,
                        coalesce(p.brigade, '') AS brigade, v.vehicle_number, v.model,
                        min(p.observed_at) AS first_seen, max(p.observed_at) AS last_seen, count(*) AS reports
                 FROM position_sample p JOIN vehicle v ON v.id = p.vehicle_id
-                WHERE p.route_name = ? AND v.agency = ?
+                WHERE p.route_name = ? AND (CAST(? AS text) IS NULL OR v.agency = ?)
                 GROUP BY 1, 2, 3, 4""".formatted(ZONE.getId(), DAY_START_HOUR),
                 (rs, i) -> new VehicleDay(rs.getObject("day", LocalDate.class), rs.getString("brigade"),
                         rs.getString("vehicle_number"), rs.getString("model"),
                         rs.getTimestamp("first_seen").toInstant(), rs.getTimestamp("last_seen").toInstant(),
                         rs.getInt("reports")),
-                line, ZbiorkomBialystokService.CITY_AGENCY);
+                line, agency, agency);
         return vehicleUse(rows);
     }
 
     // --- timetable ---------------------------------------------------------------------------------------------
 
-    /** @param line the route's GTFS id, e.g. "103" */
-    private Route route(String line) {
+    /** @param line the route's GTFS id, e.g. "103"; null when the timetable has no such route */
+    private Route findRoute(String line) {
         return jdbc.queryForList("SELECT id FROM route WHERE gtfs_id = ?", Long.class, line).stream().findFirst()
-                .flatMap(routes::findById).orElseThrow(() -> new NotFoundException("Line", line));
+                .flatMap(routes::findById).orElse(null);
     }
 }

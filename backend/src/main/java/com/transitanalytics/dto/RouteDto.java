@@ -23,7 +23,7 @@ public final class RouteDto {
             @Pattern(regexp = "^#[0-9a-fA-F]{6}$") String color,
             @Pattern(regexp = "^#[0-9a-fA-F]{6}$") String textColor,
             Integer sortOrder,
-            /* Kind of line; when left out, derived from the name (400–499 regional, other 100 and up suburban, N… night,
+            /* Kind of line; when left out, derived from the name (400–499 and 700 regional, other 100 and up suburban, N… night,
                else urban). */
             RouteSubtype subtype) {
     }

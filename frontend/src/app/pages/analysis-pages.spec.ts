@@ -27,7 +27,7 @@ import { Delays } from './delays/delays';
 import { LineStatsPage } from './line-stats/line-stats';
 import { LiveMap } from './live-map/live-map';
 import { Positions } from './positions/positions';
-import { RouteDetail } from './route-detail/route-detail';
+import { RoutesPage } from './routes/routes';
 
 afterEach(() => {
   // Destroy the pages (and their maps) first: Leaflet keeps redrawing on animation frames until a map is removed.
@@ -224,10 +224,10 @@ describe('Position history controls', () => {
       { queryParams, queryParamsHandling: 'merge' },
     ];
 
-    const presets = [...el.querySelectorAll('.buttons button')] as HTMLButtonElement[];
-    presets.find((b) => text(b) === '15 min')!.click();
+    const presets = [...el.querySelectorAll('app-time-window .presets button')] as HTMLButtonElement[];
+    presets.find((b) => text(b) === '30 min')!.click();
     expect(navigate).toHaveBeenLastCalledWith(
-      ...merge({ range: '15m', from: null, to: null, page: null }),
+      ...merge({ range: '30m', from: null, to: null, page: null }),
     );
 
     const [from] = [...el.querySelectorAll('input[type=datetime-local]')] as HTMLInputElement[];
@@ -249,21 +249,21 @@ describe('Delays page', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-11-16T12:00:30Z'));
     const { store, el } = renderPage(Delays, stateAfter(delayReplayFeature), {
-      range: '15m',
+      range: '30m',
       lines: '103, 5',
     });
 
     expect(store.dispatch).toHaveBeenCalledWith(
       DelayReplayActions.load({
         query: {
-          from: '2026-11-16T11:46:00.000Z',
-          to: '2026-11-16T12:01:00.000Z',
+          from: '2026-11-16T11:30:40.000Z',
+          to: '2026-11-16T12:00:40.000Z',
           routes: ['103', '5'],
         },
       }),
     );
-    const active = el.querySelector('.range button.active');
-    expect(text(active)).toBe('Last 15 min');
+    const active = el.querySelector('app-time-window .presets button.active');
+    expect(text(active)).toBe('30 min');
   });
 
   it('shows a failure from the store', () => {
@@ -463,7 +463,7 @@ describe('Live map page', () => {
   });
 });
 
-describe('Routes in detail page', () => {
+describe('Routes page', () => {
   const lines = [
     { id: 1, line: '5', name: '5', subtype: 'urban' as const },
     { id: 2, line: '103', name: '103', subtype: 'suburban' as const },
@@ -472,7 +472,7 @@ describe('Routes in detail page', () => {
   it('loads the lines and the line in the URL, defaulting to the first line', () => {
     useSvgMaps();
     const withUrl = renderPage(
-      RouteDetail,
+      RoutesPage,
       stateAfter(routeDetailFeature, RouteDetailActions.linesLoaded({ lines })),
       {
         line: '103',
@@ -495,6 +495,7 @@ describe('Routes in detail page', () => {
       name: '103',
       subtype: 'suburban',
       serviceId: 'P_1349',
+      url: 'https://komunikacja.bialystok.pl/#/route/103',
       base: {
         lengthKm: 19.8,
         shortestMin: 45,
@@ -540,7 +541,7 @@ describe('Routes in detail page', () => {
       vehicles: { days: 7, vehicles: [], brigades: [], switches: [] },
     } as LinePerformance;
     const { el, store } = renderPage(
-      RouteDetail,
+      RoutesPage,
       stateAfter(
         routeDetailFeature,
         RouteDetailActions.linesLoaded({ lines }),
@@ -555,5 +556,63 @@ describe('Routes in detail page', () => {
     expect(text(el.querySelector('.line-title .muted'))).toBe('Suburban line');
     expect(el.querySelectorAll('app-variant-tiles .tile')).toHaveLength(5);
     expect(text(el.querySelector('app-travel-charts'))).toContain('109 full runs');
+    const links = [...el.querySelectorAll('.line-links a')] as HTMLAnchorElement[];
+    expect(links.map(text)).toEqual(['Trips', 'Timetable on the website ↗']);
+    expect(links[0].getAttribute('href')).toBe('/trips?routeId=2');
+    expect(links[1].href).toBe('https://komunikacja.bialystok.pl/#/route/103');
+  });
+
+  it("adds a row of regional lines, and shows one that isn't in the timetable from recordings", () => {
+    useSvgMaps();
+    const regional = [...lines, { id: null, line: '700', name: '700', subtype: 'regional' as const }];
+    const detail = {
+      id: null,
+      line: '700',
+      name: '700',
+      subtype: 'regional',
+      serviceId: null,
+      url: null,
+      base: null,
+      variants: [],
+      zone2: [],
+      brigades: [],
+      endStops: [],
+      depotStops: [],
+      depotRuns: [],
+    } as unknown as LineDetail;
+    const performance = {
+      firstDay: '2026-11-06',
+      lastDay: '2026-11-16',
+      weekdays: 9,
+      fullRuns: 0,
+      travelTimes: [],
+      delays: [{ minute: 420, avgDelaySeconds: 60, samples: 30 }],
+      segments: [],
+      vehicles: {
+        days: 9,
+        vehicles: [{ number: 'BIA 1050', model: null, days: 9, brigades: ['700-01'], lastSeen: '2026-11-16T10:00:00Z' }],
+        brigades: [],
+        switches: [],
+      },
+    } as unknown as LinePerformance;
+    const { el } = renderPage(
+      RoutesPage,
+      stateAfter(
+        routeDetailFeature,
+        RouteDetailActions.linesLoaded({ lines: regional }),
+        RouteDetailActions.select({ line: '700' }),
+        RouteDetailActions.detailLoaded({ detail }),
+        RouteDetailActions.performanceLoaded({ line: '700', performance }),
+      ),
+      { line: '700' },
+    );
+
+    expect([...el.querySelectorAll('.group-label')].map(text)).toEqual(['Urban', 'Suburban', 'Regional']);
+    expect(text(el.querySelector('.chip[aria-pressed=true]'))).toBe('700');
+    expect(text(el.querySelector('.line-title h2'))).toBe('Line 700');
+    expect(el.querySelectorAll('.line-links a')).toHaveLength(0);
+    expect(text(el)).toContain("isn't in the city timetable: it is run by another operator");
+    expect(el.querySelector('app-variant-tiles')).toBeNull();
+    expect(text(el.querySelector('app-line-vehicles'))).toContain('BIA 1050');
   });
 });

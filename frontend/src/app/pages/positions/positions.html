@@ -11,25 +11,7 @@
 </p>
 
 <!-- Filters scope everything below: chart, figures and the reports table. -->
-<div class="list-filters">
-  <div class="range" role="group" aria-label="Time range">
-    <span class="label">Time range</span>
-    <div class="buttons">
-      @for (p of presets; track p.key) {
-        <button type="button" [class.active]="window().preset === p.key" [attr.aria-pressed]="window().preset === p.key" (click)="setPreset(p.key)">
-          {{ p.label }}
-        </button>
-      }
-    </div>
-  </div>
-  <label>
-    From
-    <input type="datetime-local" [value]="localInput(window().from)" (change)="setCustom('from', $any($event.target).value)" />
-  </label>
-  <label>
-    To
-    <input type="datetime-local" [value]="localInput(window().to)" (change)="setCustom('to', $any($event.target).value)" />
-  </label>
+<app-time-window defaultPreset="24h" [reset]="['page']">
   <label>
     Line
     <select (change)="setRoute($any($event.target).value)">
@@ -42,7 +24,7 @@
       }
     </select>
   </label>
-</div>
+</app-time-window>
 
 @if (error(); as message) {
   <p class="error" role="alert">{{ message }}</p>

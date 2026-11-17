@@ -27,14 +27,15 @@ class PositionHistoryServiceTest {
     void rejectsMissingReversedOrTooLongWindows() {
         assertThatThrownBy(() -> PositionHistoryService.validate(null, T)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> PositionHistoryService.validate(T, T)).hasMessageContaining("before");
-        assertThatThrownBy(() -> PositionHistoryService.validate(T, T.plus(Duration.ofDays(32))))
-                .hasMessageContaining("31 days");
-        PositionHistoryService.validate(T, T.plus(Duration.ofDays(31)));
+        assertThatThrownBy(() -> PositionHistoryService.validate(T, T.plus(Duration.ofDays(367))))
+                .hasMessageContaining("366 days");
+        PositionHistoryService.validate(T, T.plus(Duration.ofDays(366)));
+        assertThat(PositionHistoryService.stepFor(T, T.plus(Duration.ofDays(366)))).isEqualTo(Duration.ofHours(6));
     }
 
     @Test
     void sortsLinesNaturally() {
-        assertThat(List.of("N1", "100", "2", "10", "453", "N2").stream().sorted(PositionHistoryService.NATURAL))
+        assertThat(List.of("N1", "100", "2", "10", "453", "N2").stream().sorted(com.transitanalytics.service.TimetableMath.LINE_ORDER))
                 .containsExactly("2", "10", "100", "453", "N1", "N2");
     }
 
