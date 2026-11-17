@@ -2,13 +2,16 @@
   <h1>Vehicles in detail</h1>
   @if (report(); as r) {
     <span class="muted">
-      {{ r.vehicles }} vehicles in service · {{ r.from | date: 'd MMM, HH:mm' }} –
+      {{ r.vehicles }} vehicles in service{{
+        agencies().length ? ' (' + agencies().join(', ') + ')' : ''
+      }}
+      · {{ r.from | date: 'd MMM, HH:mm' }} –
       {{ r.to | date: 'd MMM, HH:mm' }}
     </span>
   }
 </div>
 
-<div class="windows" role="group" aria-label="Time window">
+<div class="windows" role="group" aria-label="Time window and operators">
   @for (w of windows; track w.key) {
     <button
       type="button"
@@ -19,6 +22,11 @@
       {{ w.label }}
     </button>
   }
+  <app-agency-picker
+    [options]="agencyOptions()"
+    [selected]="agencies()"
+    (changed)="setAgencies($event)"
+  />
   @if (loading()) {
     <span class="muted" role="status">Loading…</span>
   }
@@ -213,8 +221,9 @@
         the same line doesn't count, and neither do gaps in recording.
       </li>
       <li>
-        All operators' vehicles are counted; only brigades in the city timetable (BKM) can be
-        checked against it.
+        <strong>Operators:</strong> all operators' vehicles are counted unless the menu at the top
+        limits them; only brigades in the city timetable (BKM) can be checked against it. A brigade
+        taken over by another operator's vehicle still shows who took it over.
       </li>
     </ul>
   </details>

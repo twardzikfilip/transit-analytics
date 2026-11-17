@@ -12,6 +12,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -42,6 +43,32 @@ class VehicleStatsServiceTest {
         assertThat(a.firstSeen()).isEqualTo(local("05:00"));
         assertThat(a.lastSeen()).isEqualTo(Instant.parse("2026-11-17T04:30:00Z"));
         assertThat(usage.get(1).hours()).isEqualTo(0.3);
+    }
+
+    @Test
+    void keepsTheChosenOperatorsVehiclesAndListsAllOperators() {
+        Vehicle c = new Vehicle(3, "W1", "Mercedes Sprinter", "WSCHODEXPRESS");
+        List<Segment> segments = List.of(
+                segment(A, DAY, "9-01", "9", "06:00", "07:00", null),
+                segment(B, DAY, "9-02", "9", "06:00", "08:00", null),
+                segment(c, DAY, "400-01", "400", "06:00", "09:00", null),
+                segment(c, DAY, "401-01", "401", "09:10", "10:00", null));
+        var figures = new VehicleStatsService.Figures(local("05:00"), local("12:00"),
+                VehicleStatsService.usage(segments), VehicleStatsService.lineDays(segments), List.of());
+
+        var all = figures.report(TimeWindow.DAY, Set.of());
+        assertThat(all.vehicles()).isEqualTo(3);
+        assertThat(all.mostUsed().get(0).vehicle()).isEqualTo(c);
+        assertThat(all.multiLineDays()).hasSize(1);
+        assertThat(all.agencies()).extracting(a -> a.name() + " " + a.vehicles())
+                .containsExactly("BKM 2", "WSCHODEXPRESS 1");
+
+        var bkm = figures.report(TimeWindow.DAY, Set.of("BKM"));
+        assertThat(bkm.vehicles()).isEqualTo(2);
+        assertThat(bkm.mostUsed()).extracting(Usage::vehicle).containsExactly(B, A);
+        assertThat(bkm.leastUsed()).extracting(Usage::vehicle).containsExactly(A, B);
+        assertThat(bkm.multiLineDays()).isEmpty();
+        assertThat(bkm.agencies()).as("still all, to choose from").hasSize(2);
     }
 
     @Test
@@ -112,10 +139,10 @@ class VehicleStatsServiceTest {
     }
 
     @Test
-    void acceptsOnlyDayWeekOrMonth() {
-        assertThat(VehicleStatsService.Window.of("Week")).isEqualTo(VehicleStatsService.Window.WEEK);
-        assertThatThrownBy(() -> VehicleStatsService.Window.of("year")).hasMessageContaining("day, week or month");
-        assertThatThrownBy(() -> VehicleStatsService.Window.of(null)).isInstanceOf(IllegalArgumentException.class);
+    void acceptsTheWindowsByKey() {
+        assertThat(TimeWindow.of("Week")).isEqualTo(TimeWindow.WEEK);
+        assertThatThrownBy(() -> TimeWindow.of("year")).hasMessageContaining("day, week, month");
+        assertThatThrownBy(() -> TimeWindow.of(null)).isInstanceOf(IllegalArgumentException.class);
     }
 
     /** A segment from {@code from} to {@code to}, local time on its day, in service the whole time. */

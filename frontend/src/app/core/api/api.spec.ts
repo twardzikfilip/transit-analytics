@@ -97,6 +97,12 @@ describe('API clients', () => {
     TestBed.inject(VehicleStatsApi).report('month').subscribe();
     const req = http.expectOne((r) => r.url === '/api/vehicle-stats');
     expect(req.request.params.get('window')).toBe('month');
+    expect(req.request.params.has('agency')).toBe(false);
     req.flush({});
+
+    TestBed.inject(VehicleStatsApi).report('day', ['BKM', 'TUROSN']).subscribe();
+    const some = http.expectOne((r) => r.url === '/api/vehicle-stats');
+    expect(some.request.params.getAll('agency')).toEqual(['BKM', 'TUROSN']);
+    some.flush({});
   });
 });

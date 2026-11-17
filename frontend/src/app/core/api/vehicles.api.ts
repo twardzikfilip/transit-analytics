@@ -43,7 +43,10 @@ export class BrigadeApi {
 export class VehicleStatsApi {
   private readonly http = inject(HttpClient);
 
-  report(window: StatsWindow): Observable<VehicleStatsReport> {
-    return this.http.get<VehicleStatsReport>('/api/vehicle-stats', { params: { window } });
+  /** The report for a window, for the given operators' vehicles (all when none are given). */
+  report(window: StatsWindow, agencies: string[] = []): Observable<VehicleStatsReport> {
+    return this.http.get<VehicleStatsReport>('/api/vehicle-stats', {
+      params: { window, agency: agencies },
+    });
   }
 }

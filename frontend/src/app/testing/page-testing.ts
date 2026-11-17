@@ -27,7 +27,7 @@ export interface PageSetup<T> {
   store: MockStore;
   el: HTMLElement;
   /** Changes the URL's query parameters, as navigating would. */
-  setQuery: (params: Record<string, string>) => void;
+  setQuery: (params: Record<string, string | string[]>) => void;
   /** Re-renders after a store or input change. */
   render: () => void;
 }
@@ -39,7 +39,7 @@ export interface PageSetup<T> {
 export function renderPage<T>(
   page: Type<T>,
   state: Record<string, unknown>,
-  query: Record<string, string> = {},
+  query: Record<string, string | string[]> = {},
   providers: Provider[] = [],
 ): PageSetup<T> {
   const params = new BehaviorSubject(convertToParamMap(query));

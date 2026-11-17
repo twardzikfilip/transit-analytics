@@ -14,6 +14,7 @@ import com.transitanalytics.recording.PositionHistoryService;
 import com.transitanalytics.service.BrigadeScheduleService;
 import com.transitanalytics.service.ExternalServiceException;
 import com.transitanalytics.service.LineStatsService;
+import com.transitanalytics.service.TimeWindow;
 import com.transitanalytics.service.VehicleService;
 import com.transitanalytics.service.VehicleStatsService;
 import com.transitanalytics.web.BrigadeController;
@@ -45,6 +46,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -284,14 +286,21 @@ class SecurityWebTest {
         var vehicle = new VehicleStatsDto.Vehicle(7L, "230", "Solaris Urbino 12", "BKM");
         var usage = new VehicleStatsDto.Usage(vehicle, 12.5, 1, List.of("103"), Instant.parse("2026-11-16T05:00:00Z"),
                 Instant.parse("2026-11-16T19:00:00Z"));
-        given(vehicleStatsService.report(VehicleStatsService.Window.DAY)).willReturn(new VehicleStatsDto.Report("day",
-                Instant.parse("2026-11-15T20:00:00Z"), Instant.parse("2026-11-16T20:00:00Z"), 1, List.of(usage),
-                List.of(usage), List.of(usage), List.of(usage), List.of(), List.of()));
+        var report = new VehicleStatsDto.Report("day", Instant.parse("2026-11-15T20:00:00Z"),
+                Instant.parse("2026-11-16T20:00:00Z"), 1, List.of(new VehicleStatsDto.Agency("BKM", 1)),
+                List.of(usage), List.of(usage), List.of(usage), List.of(usage), List.of(), List.of());
+        given(vehicleStatsService.report(TimeWindow.DAY, Set.of())).willReturn(report);
+        given(vehicleStatsService.report(TimeWindow.WEEK, Set.of("BKM", "KPKM"))).willReturn(report);
 
         mvc.perform(get("/api/vehicle-stats").param("window", "day").header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.agencies[0].name").value("BKM"))
                 .andExpect(jsonPath("$.mostUsed[0].vehicle.model").value("Solaris Urbino 12"))
                 .andExpect(jsonPath("$.mostUsed[0].hours").value(12.5));
+        mvc.perform(get("/api/vehicle-stats").param("agency", "BKM").param("agency", "KPKM")
+                        .header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.vehicles").value(1));
         mvc.perform(get("/api/vehicle-stats").param("window", "year").header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isBadRequest());
         mvc.perform(get("/api/vehicle-stats")).andExpect(status().isUnauthorized());

@@ -9,6 +9,12 @@ export interface StatsVehicle {
   agency: string | null;
 }
 
+/** An operator and how many of its vehicles served a line in the window. */
+export interface StatsAgency {
+  name: string;
+  vehicles: number;
+}
+
 export interface VehicleUsage {
   vehicle: StatsVehicle;
   /** In service: each report counts until the vehicle's next one, up to a minute. */
@@ -55,8 +61,10 @@ export interface VehicleStatsReport {
   window: StatsWindow;
   from: string;
   to: string;
-  /** Vehicles that served a line in the window. */
+  /** Vehicles that served a line in the window (of the chosen operators). */
   vehicles: number;
+  /** All operators with vehicles in service in the window, to choose from. */
+  agencies: StatsAgency[];
   mostUsed: VehicleUsage[];
   leastUsed: VehicleUsage[];
   mostLines: VehicleUsage[];
