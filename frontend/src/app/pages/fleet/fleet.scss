@@ -1,0 +1,253 @@
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.tile {
+  margin: 0;
+
+  h2 {
+    margin: 0 0 0.25rem;
+    font-size: 1rem;
+  }
+
+  p {
+    margin: 0.25rem 0;
+  }
+}
+
+.hero {
+  font-size: 2rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+
+  .muted {
+    font-size: 1rem;
+    font-weight: 400;
+  }
+}
+
+.meter {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--hover);
+  overflow: hidden;
+
+  span {
+    display: block;
+    height: 100%;
+    background: var(--chart-line);
+  }
+}
+
+.model-bars {
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+
+  /* Name and count on one line, the bar across the tile below them. */
+  li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.15rem 0.5rem;
+  }
+
+  .track {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .track {
+    position: relative;
+    height: 10px;
+  }
+
+  .fleet,
+  .used {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    border-radius: 0 4px 4px 0;
+  }
+
+  .fleet {
+    background: var(--hover);
+  }
+
+  .used {
+    background: var(--chart-line);
+  }
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.mini-list {
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+
+  li {
+    display: grid;
+    grid-template-columns: 3.5rem minmax(0, 1fr) auto;
+    gap: 0 0.5rem;
+    align-items: baseline;
+  }
+
+  .model {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .lines {
+    grid-column: 2 / -1;
+    font-size: 0.8rem;
+  }
+
+  .tag {
+    grid-column: 2 / -1;
+    justify-self: start;
+  }
+}
+
+/* Breakdowns list more per row: two tiles wide where there is room. */
+@media (min-width: 900px) {
+  .breakdowns {
+    grid-column: span 2;
+  }
+}
+
+.breakdowns .mini-list li {
+  grid-template-columns: 3.5rem minmax(0, 1fr) auto auto;
+
+  .tag {
+    grid-column: auto;
+  }
+}
+
+button.link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.section {
+  margin-bottom: 1rem;
+
+  h2 {
+    margin-top: 0;
+  }
+}
+
+.more {
+  margin-top: 0.5rem;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+.search {
+  position: relative;
+  max-width: 420px;
+
+  input {
+    width: 100%;
+  }
+}
+
+.matches {
+  position: absolute;
+  z-index: 10;
+  left: 0;
+  right: 0;
+  margin: 4px 0 0;
+  padding: 0.25rem;
+  list-style: none;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+
+  button {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.35rem 0.5rem;
+    border: none;
+    background: none;
+    text-align: left;
+    font-size: 0.9rem;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--hover);
+    }
+  }
+}
+
+.detail {
+  margin-top: 1rem;
+
+  h4 {
+    margin: 1.25rem 0 0.25rem;
+  }
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+
+  h3 {
+    margin: 0;
+  }
+
+  .close {
+    margin-left: auto;
+  }
+}
+
+.badge {
+  min-width: 3rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  background: var(--chart-line);
+  color: #fff;
+  font-weight: 700;
+  text-align: center;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.loading {
+  opacity: 0.6;
+}
+
+.how ul {
+  padding-left: 1.2rem;
+}

@@ -8,7 +8,7 @@ import com.transitanalytics.dto.LivePositionDto;
 import com.transitanalytics.dto.PositionHistoryDto;
 import com.transitanalytics.dto.TripAnomalyDto;
 import com.transitanalytics.dto.VehicleDto;
-import com.transitanalytics.dto.VehicleStatsDto;
+import com.transitanalytics.dto.FleetDto;
 import com.transitanalytics.gtfs.GtfsBialystokService;
 import com.transitanalytics.gtfs.GtfsFeedException;
 import com.transitanalytics.gtfs.GtfsImportInProgressException;
@@ -19,10 +19,12 @@ import com.transitanalytics.service.DelayGenerationService;
 import com.transitanalytics.service.ExternalServiceException;
 import com.transitanalytics.service.HotspotService;
 import com.transitanalytics.service.LineStatsService;
-import com.transitanalytics.service.TimeWindow;
+import com.transitanalytics.service.FleetService;
+import com.transitanalytics.service.ReportWindow;
+import com.transitanalytics.service.ReportWindows;
 import com.transitanalytics.service.TripAnomalyService;
 import com.transitanalytics.service.VehicleService;
-import com.transitanalytics.service.VehicleStatsService;
+
 import com.transitanalytics.web.BrigadeController;
 import com.transitanalytics.web.DelayGenerationController;
 import com.transitanalytics.web.GtfsController;
@@ -31,7 +33,7 @@ import com.transitanalytics.web.LineStatsController;
 import com.transitanalytics.web.PositionHistoryController;
 import com.transitanalytics.web.TripAnomalyController;
 import com.transitanalytics.web.VehicleController;
-import com.transitanalytics.web.VehicleStatsController;
+import com.transitanalytics.web.FleetController;
 import com.transitanalytics.web.ZbiorkomController;
 import com.transitanalytics.zbiorkom.ZbiorkomBialystokService;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -51,7 +53,12 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import org.springframework.jdbc.core.JdbcTemplate;
+
 import java.io.IOException;
+import java.sql.Timestamp;
+import java.time.Clock;
+import java.time.ZoneOffset;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -59,6 +66,9 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -68,7 +78,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = {AuthController.class, VehicleController.class, ZbiorkomController.class,
         GtfsController.class, PositionHistoryController.class,
-        LineStatsController.class, VehicleStatsController.class, BrigadeController.class, HotspotController.class,
+        LineStatsController.class, FleetController.class, BrigadeController.class, HotspotController.class,
         DelayGenerationController.class, TripAnomalyController.class})
 @Import({SecurityConfig.class, JwtAuthFilter.class, JwtService.class, SecurityWebTest.Metrics.class})
 @TestPropertySource(properties = {
@@ -91,11 +101,22 @@ class SecurityWebTest {
     @Autowired
     MeterRegistry meterRegistry;
 
+    /** "Now" for windows left open, and the first recording ("all time"). */
+    static final Instant NOW = Instant.parse("2026-11-17T12:00:00Z");
+    static final Instant FIRST_RECORDING = Instant.parse("2026-11-01T09:30:00Z");
+
     @TestConfiguration
     static class Metrics {
         @Bean
         MeterRegistry meterRegistry() {
             return new SimpleMeterRegistry();
+        }
+
+        @Bean
+        ReportWindows reportWindows() {
+            JdbcTemplate jdbc = mock(JdbcTemplate.class);
+            when(jdbc.queryForObject(anyString(), eq(Timestamp.class))).thenReturn(Timestamp.from(FIRST_RECORDING));
+            return new ReportWindows(jdbc, Clock.fixed(NOW, ZoneOffset.UTC));
         }
     }
 
@@ -118,7 +139,7 @@ class SecurityWebTest {
     LineStatsService lineStatsService;
 
     @MockitoBean
-    VehicleStatsService vehicleStatsService;
+    FleetService fleetService;
 
     @MockitoBean
     BrigadeScheduleService brigadeScheduleService;
@@ -301,31 +322,52 @@ class SecurityWebTest {
     }
 
     @Test
-    void guestCanReadVehicleStatsForADayWeekOrMonth() throws Exception {
-        var vehicle = new VehicleStatsDto.Vehicle(7L, "230", "Solaris Urbino 12", "BKM");
-        var usage = new VehicleStatsDto.Usage(vehicle, 12.5, 1, List.of("103"), Instant.parse("2026-11-16T05:00:00Z"),
-                Instant.parse("2026-11-16T19:00:00Z"));
-        var report = new VehicleStatsDto.Report("day", Instant.parse("2026-11-15T20:00:00Z"),
-                Instant.parse("2026-11-16T20:00:00Z"), 1, List.of(new VehicleStatsDto.Agency("BKM", 1)),
-                List.of(usage), List.of(usage), List.of(usage), List.of(usage), List.of(), List.of(),
-                List.of(new VehicleStatsDto.Idle(new VehicleStatsDto.Vehicle(8L, "231", null, "BKM"),
-                        Instant.parse("2026-11-10T15:00:00Z"), "10")));
-        given(vehicleStatsService.report(TimeWindow.DAY, Set.of())).willReturn(report);
-        given(vehicleStatsService.report(TimeWindow.WEEK, Set.of("BKM", "KPKM"))).willReturn(report);
+    void guestCanReadTheFleetForAWindowAndOperators() throws Exception {
+        var vehicle = new FleetDto.Vehicle(7L, "230", "Solaris Urbino 12", "BKM");
+        var usage = new FleetDto.Usage(vehicle, 12.5, 1, List.of("103"));
+        var from = Instant.parse("2026-11-15T20:00:00Z");
+        var to = Instant.parse("2026-11-16T20:00:00Z");
+        var report = new FleetDto.Report(from, to, 1, 2, List.of(new FleetDto.Agency("BKM", 2)),
+                List.of(new FleetDto.ModelCount("Solaris Urbino 12", 1, 2)), List.of(usage), List.of(usage),
+                List.of(usage), List.of(new FleetDto.Breakdown(vehicle, Instant.parse("2026-11-16T07:00:00Z"), "103",
+                "103-05", "Choroszcz", "Rynek", null, 1.2)));
+        given(fleetService.report(new ReportWindow(from, to), Set.of())).willReturn(report);
+        given(fleetService.report(new ReportWindow(FIRST_RECORDING, NOW), Set.of("BKM", "KPKM"))).willReturn(report);
 
-        mvc.perform(get("/api/vehicle-stats").param("window", "day").header("Authorization", bearer("guest", "GUEST")))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.agencies[0].name").value("BKM"))
-                .andExpect(jsonPath("$.unused[0].lastLine").value("10"))
-                .andExpect(jsonPath("$.mostUsed[0].vehicle.model").value("Solaris Urbino 12"))
-                .andExpect(jsonPath("$.mostUsed[0].hours").value(12.5));
-        mvc.perform(get("/api/vehicle-stats").param("agency", "BKM").param("agency", "KPKM")
+        mvc.perform(get("/api/fleet").param("from", from.toString()).param("to", to.toString())
                         .header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.vehicles").value(1));
-        mvc.perform(get("/api/vehicle-stats").param("window", "year").header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(jsonPath("$.agencies[0].name").value("BKM"))
+                .andExpect(jsonPath("$.models[0].fleet").value(2))
+                .andExpect(jsonPath("$.breakdowns[0].daysOut").value(1.2))
+                .andExpect(jsonPath("$.mostUsed[0].hours").value(12.5));
+        // No window: all time, from the first recording until now.
+        mvc.perform(get("/api/fleet").param("agency", "BKM").param("agency", "KPKM")
+                        .header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.inUse").value(1));
+        mvc.perform(get("/api/fleet").param("from", to.toString()).param("to", from.toString())
+                        .header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isBadRequest());
-        mvc.perform(get("/api/vehicle-stats")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/fleet")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void guestCanReadOneBusOfTheFleet() throws Exception {
+        var from = Instant.parse("2026-11-16T03:00:00Z");
+        var detail = new FleetDto.VehicleDetail(new FleetDto.Vehicle(7L, "230", null, "BKM"), from, NOW, 1.5,
+                List.of("103"), NOW, List.of(new FleetDto.Day(LocalDate.of(2026, 11, 16), from, 1.5,
+                List.of(new FleetDto.Run(18000, 21000, "103", "103-05", "Choroszcz")), List.of())),
+                List.of(new FleetDto.Incident("missed", LocalDate.of(2026, 11, 16), "103", "103-05", "Choroszcz",
+                        from, "Between the brigade's runs.")));
+        given(fleetService.vehicle(7L, new ReportWindow(from, NOW))).willReturn(detail);
+
+        mvc.perform(get("/api/fleet/vehicles/7").param("from", from.toString())
+                        .header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.days[0].runs[0].brigade").value("103-05"))
+                .andExpect(jsonPath("$.incidents[0].kind").value("missed"));
+        mvc.perform(get("/api/fleet/vehicles/7")).andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -333,41 +375,41 @@ class SecurityWebTest {
         var hotspot = new HotspotDto.Hotspot(1, 53.136, 23.151, 19, 2.43, 20.8, 216, 82, 40, 39, 60,
                 "Częstochowska/Piłsudskiego", 70, List.of(new HotspotDto.LineTime("21", 0.5)),
                 List.of(new HotspotDto.Approach("E", 1.0)), 7);
-        var report = new HotspotDto.Report("week", Instant.parse("2026-11-09T20:00:00Z"),
-                Instant.parse("2026-11-16T20:00:00Z"), "21", List.of("21"), 7, 216, 2.9, 2.4, List.of(hotspot));
-        given(hotspotService.report(TimeWindow.MONTH, "21")).willReturn(report);
+        var from = Instant.parse("2026-11-09T20:00:00Z");
+        var report = new HotspotDto.Report(from, NOW, "21", List.of("21"), 7, 216, 2.9, 2.4, List.of(hotspot));
+        given(hotspotService.report(new ReportWindow(from, NOW), "21")).willReturn(report);
 
-        mvc.perform(get("/api/hotspots").param("window", "month").param("line", "21")
+        mvc.perform(get("/api/hotspots").param("from", from.toString()).param("line", "21")
                         .header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.hotspots[0].nearestStop").value("Częstochowska/Piłsudskiego"))
                 .andExpect(jsonPath("$.hotspots[0].approaches[0].heading").value("E"));
-        mvc.perform(get("/api/hotspots").param("window", "year").header("Authorization", bearer("guest", "GUEST")))
+        mvc.perform(get("/api/hotspots").param("from", "last week").header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isBadRequest());
         mvc.perform(get("/api/hotspots")).andExpect(status().isUnauthorized());
     }
 
     @Test
     void guestCanReadDelayGenerationForTheNetworkAndALine() throws Exception {
-        var report = new DelayGenerationDto.Report("week", Instant.parse("2026-11-09T20:00:00Z"),
-                Instant.parse("2026-11-16T20:00:00Z"), 4, 8479, List.of(new DelayGenerationDto.Band("all", "All day")),
+        var report = new DelayGenerationDto.Report(FIRST_RECORDING, NOW, 4, 8479, List.of(new DelayGenerationDto.Band("all", "All day")),
                 List.of(new DelayGenerationDto.Stretch("Lipowa/Nowy Świat", "pl. Niepodległości", 53.13, 23.15,
                         53.131, 23.152, List.of("2"), List.of(707), List.of(35.6))),
                 List.of());
-        given(delayGenerationService.report(TimeWindow.WEEK)).willReturn(report);
-        var line = new DelayGenerationDto.LineReport("month", Instant.parse("2026-10-17T20:00:00Z"),
-                Instant.parse("2026-11-16T20:00:00Z"), "21", 8, List.of(), List.of(
+        given(delayGenerationService.report(new ReportWindow(FIRST_RECORDING, NOW))).willReturn(report);
+        var from = Instant.parse("2026-10-17T20:00:00Z");
+        var to = Instant.parse("2026-11-16T20:00:00Z");
+        var line = new DelayGenerationDto.LineReport(from, to, "21", 8, List.of(), List.of(
                 new DelayGenerationDto.BrigadeGain("021-07", 84, 124.0, 664)), List.of());
-        given(delayGenerationService.line(TimeWindow.MONTH, "21")).willReturn(line);
+        given(delayGenerationService.line(new ReportWindow(from, to), "21")).willReturn(line);
 
         mvc.perform(get("/api/delay-generation").header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.stretches[0].meanSeconds[0]").value(35.6));
-        mvc.perform(get("/api/delay-generation/lines/21").param("window", "month")
+        mvc.perform(get("/api/delay-generation/lines/21").param("from", from.toString()).param("to", to.toString())
                         .header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.brigades[0].brigade").value("021-07"));
-        mvc.perform(get("/api/delay-generation").param("window", "year")
+        mvc.perform(get("/api/delay-generation").param("from", NOW.plusSeconds(60).toString())
                 .header("Authorization", bearer("guest", "GUEST"))).andExpect(status().isBadRequest());
         mvc.perform(get("/api/delay-generation/lines/21")).andExpect(status().isUnauthorized());
     }
@@ -378,18 +420,18 @@ class SecurityWebTest {
                 "Hetmańska", "Starosielce", "Hetmańska", Instant.parse("2026-11-15T08:15:00Z"),
                 Instant.parse("2026-11-15T09:00:00Z"), 25, List.of("319"), 1, 8, "Starosielce", "Gen. Fieldorfa",
                 Instant.parse("2026-11-15T08:16:00Z"), Instant.parse("2026-11-15T09:24:00Z"), 0, 120, 60, null,
-                null, null, null, null, null, null, null, null, null, null, null, null);
-        var report = new TripAnomalyDto.Report("15m", Instant.parse("2026-11-17T14:00:00Z"),
-                Instant.parse("2026-11-17T14:15:00Z"),
+                null, null, null, null, null, null, null, null, null, null, null, null, null);
+        var from = Instant.parse("2026-11-17T11:45:00Z");
+        var report = new TripAnomalyDto.Report(from, NOW,
                 new TripAnomalyDto.Summary(40, 30, 29, 0, 0, 0, 0, 1, 0, 0, 0, 10, 0, 0), List.of(), 1, List.of(trip));
-        given(tripAnomalyService.report(TimeWindow.MINUTES_15)).willReturn(report);
+        given(tripAnomalyService.report(new ReportWindow(from, NOW))).willReturn(report);
 
-        mvc.perform(get("/api/trip-anomalies").param("window", "15m")
+        mvc.perform(get("/api/trip-anomalies").param("from", from.toString()).param("to", NOW.toString())
                         .header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.summary.lost").value(1))
                 .andExpect(jsonPath("$.trips[0].vehicles[0]").value("319"));
-        mvc.perform(get("/api/trip-anomalies").param("window", "2h")
+        mvc.perform(get("/api/trip-anomalies").param("from", NOW.toString()).param("to", from.toString())
                 .header("Authorization", bearer("guest", "GUEST"))).andExpect(status().isBadRequest());
         mvc.perform(get("/api/trip-anomalies")).andExpect(status().isUnauthorized());
     }

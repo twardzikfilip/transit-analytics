@@ -59,8 +59,8 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   `/api/shape-points`. Timetable lists take filters as query parameters, e.g. `/api/trips?routeId=17&direction=1`,
   `/api/stop-times?stopId=260&sort=departureTime&sort=id`, `/api/stops?q=dworzec` (Swagger lists them all).
 - Position history (recorded time series, city operator BKM's lines only; regional operators such as WSCHODEXPRESS
-  and TUROSN are left out), each with a required window `from`/`to` (ISO-8601, `to` exclusive, at
-  most 31 days) and an optional `route` (line):
+  and TUROSN are left out), each with a window `from`/`to` (ISO-8601, `to` exclusive, at most a year; see
+  *Time windows* below) and an optional `route` (line):
   - `GET /api/positions/fleet` — per bucket of polls: vehicles running (average per poll), the most at once,
     reports and mean delay. Buckets are 1 minute (one poll) for windows up to 24 h and coarser beyond, keeping
     ≤ 1,500 points. The totals separate *running now* (latest poll) and *most at once* (peak poll) from *different
@@ -69,7 +69,7 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
     9–10, 10 min or more. A vehicle counts in every band it was in.
   - `GET /api/positions/routes` — lines recorded in the window.
   - `GET /api/positions/replay` — animation frames (latest position of every vehicle per step; 1 min for short
-    windows, up to 30 min for a week, at most 360 frames) as compact rows `[vehicle, lat, lon, delay, line]`.
+    windows, coarser for longer ones up to 6 h, at most 360 frames, windows up to 92 days) as compact rows `[vehicle, lat, lon, delay, line]`.
     Repeat `route` for several lines. Responses are gzipped.
   - `GET /api/positions` — the raw position reports, paged (`page`, `size` ≤ 500; also `vehicle`), sorted by
     `sort=time|vehicle|line|duty|towards|delay|nextStop,asc|desc` (default `time,desc`). `excludeOutliers=true`
@@ -79,9 +79,16 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   longest end-to-end travel time, average speed, interval, regularity (coefficient of variation of the gaps between
   departures, graded A–F as in TCQSM) and vehicles in peak (06:30–08:30, 15:00–17:00) and off-peak
   (08:30–15:00, 17:00–20:00) hours, the same periods as on every timetable page. The definitions are on the Line statistics page.
-- Routes in detail (`{line}` is the route's GTFS id, e.g. `103`):
-  - `GET /api/lines` — all lines in numeric order, with their subtype.
-  - `GET /api/lines/{line}/detail` — from the weekday timetable: every variant (direction and shape, with its route
+- **Time windows.** Every report over recorded positions (position history, Fleet, hotspots, delay generation,
+  abnormal trips) takes `from` and `to` (ISO-8601 instants, `to` exclusive). Both are optional: `to` defaults to now,
+  and without `from` the window starts at the first recorded position (*all time*). `from` after `to` is a 400.
+  Answers for the same window are kept for a minute or two; service days that are over are computed once and kept
+  for 92 days.
+- Routes (`{line}` is the route's GTFS id, e.g. `103`):
+  - `GET /api/lines` — all lines in numeric order, with their subtype: the timetable's, and the lines only seen on the
+    live feed (other operators' regional lines, 400–499 and 700), which have no `id`.
+  - `GET /api/lines/{line}/detail` — the route's `id` (for its trips) and `url` (its timetable on the operator's
+    website); from the weekday timetable: every variant (direction and shape, with its route
     shape, stops, length, trips and scheduled travel times; the most frequent one per direction is the base route,
     the others are longer, shorter or depot runs) with its scheduled travel times and average speeds, the base
     route's length, travel time and speed, the part in fare zone 2 on the base route and longer variants (stops
@@ -112,22 +119,23 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   vehicle table (number, type, agency, model). The agency `default` is stored as `BKM`, and GTFS type codes become names
   (`3` → `BUS`). Each position carries its line's `subtype` (the stored one, else from the name, for other operators'
   lines). If zbiorkom.live fails or times out, the endpoint returns 502.
-- `GET /api/vehicle-stats?window=day|week|month[&agency=BKM&agency=…]` — Vehicles in detail, from recorded positions over the last 24 hours,
-  7 days or 30 days: hours in service and lines served per vehicle (top and bottom 10), vehicles on several lines on
-  one day, and vehicles that left their brigade while the timetable had it running (switched to another line, or
-  disappeared), with the vehicle that took over. Service days that are over are read once and kept; the last month
-  is read at startup in the background. Answers are cached for 2 minutes. `agency` (repeatable) limits the tables
-  to those operators' vehicles; `agencies` lists every operator in the window, with its vehicle count. `unused`
-  lists the fleet's buses (every bus ever seen on the feed) that served no line in the window, with when and on
-  which line each last did, idle the longest first.
-- `GET /api/hotspots?window=day|week|month[&line=21]` — Stop hotspots: where buses of the timetable's lines stand
+- `GET /api/fleet?from=&to=[&agency=BKM&agency=…]` — Fleet, from recorded positions: buses in use and in the fleet
+  (every bus ever seen on the feed) and per model, the 10 most and least used (hours in service and lines), every
+  bus's hours (unused ones with 0), and the buses that broke down (replaced midway through a trip and not used again
+  that day, as on Abnormal trips) with when they served a line again and how many days that took. `agency`
+  (repeatable) limits everything to those operators' buses; `agencies` lists every operator of the fleet. The last
+  month is computed at startup in the background.
+- `GET /api/fleet/vehicles/{id}?from=&to=` — one bus: its runs (consecutive reports on one line, brigade and headsign)
+  and breaks of 30 min or more per service day, hours per day, and the abnormal trips it was involved in (trips it
+  broke down on, and its brigade's trips it missed).
+- `GET /api/hotspots?from=&to=[&line=21]` — Stop hotspots: where buses of the timetable's lines stand
   still away from stops. A standstill is two or more reports in a row within 10 m (up to 5 min; longer ones are
   layovers or breakdowns); those within 50 m of a stop or 150 m of a terminal are left out. The rest are clustered
   with DBSCAN (25 m, at least 5 standstills, 3 different buses) into hotspots, the most time lost first, each with
   its standstills, buses, typical and long wait, the directions buses were heading, the busiest hour and the lines.
   Per-day figures are over the days with recordings. Service days that are over are read once and kept; the last
   month is read at startup in the background. Cached for 2 minutes.
-- `GET /api/delay-generation?window=day|week|month` — Delay generation: how much delay buses gain (or recover)
+- `GET /api/delay-generation?from=&to=` — Delay generation: how much delay buses gain (or recover)
   between consecutive stops, on the timetable's lines. A passage is a report whose next stop moved on by one; the
   feed's delay then is the delay on leaving the stop just passed, and the change between two consecutive stops is the
   delay generated there (the drive and the dwell at the second stop). Reports that skip a stop, and delays over
@@ -137,11 +145,11 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   stretch. Feed stop names are matched to the timetable's by name (without the stop code and "NŻ") and the nearest
   position. Service days that are over are read once and kept; the last month is read at startup in the
   background. Cached for 2 minutes.
-- `GET /api/delay-generation/lines/{line}?window=…` — one line: per headsign, its stretches in route order with
+- `GET /api/delay-generation/lines/{line}?from=&to=` — one line: per headsign, its stretches in route order with
   the average, median and 90th percentile change, the share of buses gaining a minute or more, the delay on leaving,
   and the average by hour of the day; its brigades by delay gained per run; and example runs (the most delay gained
   overall, and on each stretch) with the time and delay on leaving every stop.
-- `GET /api/trip-anomalies?window=15m|1h|3h|6h|day|week|month` — Abnormal trips: every trip of the timetable
+- `GET /api/trip-anomalies?from=&to=` — Abnormal trips: every trip of the timetable
   scheduled to run in the window (for any part of it), judged against the recorded positions. A report belongs to
   the trip of its brigade and line scheduled to leave the report's next stop closest to the report's time minus its
   delay (within 20 min; the headsign only breaks ties, as the feed's don't always read as the timetable's); blank
@@ -175,7 +183,8 @@ inserting the ~384k stop times.
 - Agencies, routes, stops and trips are updated in place by `gtfs_id`, so their database ids stay the same across
   imports (and links to them keep working). Stop times, calendar dates and shape points are replaced.
 - Each route has a `subtype`: `urban`, `suburban` (numbers from 100 up), `night_urban` (N1, N2, …) or `regional`
-  (400–499, or set by hand). New routes get it from their name (`RouteSubtype.classify`, migrations V10 and V12); an
+  (400–499 and 700, or set by hand). New routes get it from their name (`RouteSubtype.classify`, migrations V10, V12
+  and V13); an
   import keeps the subtype of existing routes, so a manual change stays.
 - Rows that point at a route, trip or stop that isn't in the feed are skipped and counted in the response. Files the
   app doesn't load (e.g. `feed_info.txt`) are listed as ignored.
@@ -273,27 +282,35 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
 - `core/auth` — `AuthService`, `authInterceptor` (Bearer token, logout on 401), `authGuard`, `roleGuard`, `*appHasRole`
 - `core/api` — generic `CrudApiService` + one service per backend resource
 - `layout/shell` — sidebar with every page + top-right hamburger menu (Settings, Logout)
-- `store` — NgRx slices with functional effects: `auth`, `vehicles`, `livePositions`, `routes` (all routes), and
+- `store` — NgRx slices with functional effects: `auth`, `livePositions`, `routes` (all routes), and
   `stops`, `trips`, `stopTimes`, which hold one server-side page each (shared helpers in `store/paged.ts`);
   `gtfsImport` tracks the import. Only `auth` is registered at startup; every other slice is registered by its
   page's lazy-loaded route (`*.routes.ts`), so it loads with the page.
-- `shared` — pieces several pages use: the time-series and hour-of-day charts, `createBaseMap` (Leaflet + OSM),
-  `hostWidth` (chart width), time and delay formatting, and the colour palette (`cssColor` reads theme tokens).
+- `shared` — pieces several pages use: `app-time-window` (the time window and operators of every report page, see
+  below), the time-series, hour-of-day and bar charts, the timeline styles, `createBaseMap` (Leaflet + OSM),
+  `hostWidth` (chart width), `injectSetQuery` (merge changes into the URL's query parameters), time and delay
+  formatting, and the colour palette (`cssColor` reads theme tokens).
+- Time window: every page over recorded positions (Fleet, Position history, Delays, Stop hotspots, Delay
+  generation, Abnormal trips) has the same control: from/to pickers in the first row, then buttons for the last
+  1 min, 5 min, 30 min, 1 h, 2 h, 12 h, 24 h, 3 days, 1 week, 1 month and all time, a dropdown of checkboxes for the
+  operators where the page can filter by them (Fleet), and the page's own filters. It is kept in the URL
+  (`?range=1w`, or `?from=…&to=…` in local time, and `?agency=`).
 - Startup bundle: telemetry (the OpenTelemetry SDK) loads as its own chunk right after startup, and the NgRx
   devtools are only in development builds (`store-devtools.prod.ts` replaces them in production).
-- `pages` — login, home, vehicles (edit actions for ADMIN only), live map (Białystok, Leaflet/OSM; dispatches a
+- `pages` — login, home, live map (Białystok, Leaflet/OSM; dispatches a
   `livePositions` load every 5 s and draws markers from the store; filled by delay as on the Delays map, outlined by
   kind of line: urban blue, suburban black, regional magenta; filters by operator and delay in the URL, with a reset;
   the popup shows the brigade and its remaining runs today), settings (GTFS import for admins)
 - Position history: vehicles running and mean delay every 20 s (each poll) for windows up to an hour, else every
   minute or coarser (SVG line charts with a hover/keyboard tooltip and
-  a table view), running now / most at once / different vehicles seen, the delay distribution, and the raw reports, filtered by time range (1 min – 30 days or a custom from/to) and line, all kept in the URL.
+  a table view), running now / most at once / different vehicles seen, the delay distribution, and the raw reports, filtered by time window and line, all kept in the URL.
   Preset ranges refresh with each poll (up to 1 h) or every minute. Store slice `positionHistory`, registered by its lazy route.
 - Delays: an animated replay of recorded positions on a map, each bus coloured by delay (green on time → yellow →
-  orange → red at 10+ min). Filter by one, several or all lines and by time window (last 15 min / hour / 24 hours
-  or custom). Play/pause, speed, loop and a timeline are at the top; the filters are kept in the URL.
+  orange → red at 10+ min). Filter by one, several or all lines and by time window. Play/pause, speed, loop and a timeline are at the top; the filters are kept in the URL.
 - Line statistics: the figures above for every line in a sortable table (weekday timetable, planned values).
-- Routes in detail: pick a line from labels grouped by subtype (kept in the URL as `?line=`). The map shows the base
+- Routes: pick a line from labels grouped by subtype — urban, suburban, night and regional (kept in the URL as
+  `?line=`); its title links to its trips and its timetable on the operator's website. Regional lines of other
+  operators aren't in the timetable: for them only the delay over the day and the buses are shown, from recordings. The map shows the base
   route thick and other variants thin and dashed in the same colour, with zone-2 stops filled. Below: length,
   scheduled travel time and speed, zone 2, the variants, charts of measured travel time, speed and delay over the
   day (each with a table view), speed between stops in peak hours with the slowest stretches numbered, and a
@@ -302,16 +319,16 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
   Store slice `routeDetail`, registered by its lazy route.
 - Important corridors: two maps of every stretch between stops by its buses in peak hours (one by line width, one
   by colour in equal classes of a sequential blue), then the corridors above in a sortable table (busiest first), with each corridor's stops in an
-  expandable list and its lines linking to Routes in detail. Store slice `corridors`, registered by its lazy route.
-- Vehicles in detail: pick the last 24 hours, 7 days or 30 days (kept in the URL as `?window=`). Top 10 most and
-  least used vehicles (hours in service), top 10 on the most and fewest lines, vehicles that served several lines on
-  one day (in the order served), and vehicles that left their brigade outside the schedule. Every table has the
-  vehicle's number, model and operator. A dropdown of checkboxes beside the window buttons chooses the operators
-  whose vehicles are included (kept in the URL as `?agency=`; all by default). A table lists the buses not used at
-  all in the window, with their last time in service and line, and how long they've been idle. Store slice `vehicleStats`, registered by its lazy route.
+  expandable list and its lines linking to Routes. Store slice `corridors`, registered by its lazy route.
+- Fleet: tiles with the buses in use, the fleet by model (bars of in use / in the fleet), the 10 most and least used
+  buses and the buses that broke down (when, and how many days until they were back, or that they aren't yet); a
+  bar chart of every bus's hours, the most used first; and a search by number or model. A chosen bus (`?vehicle=`)
+  shows its runs and breaks as a timeline (a row per day, or per run for a window of a day or less), its hours per
+  day (days with an abnormal trip marked) and the abnormal trips it broke down on or missed. Store slice `fleet`,
+  registered by its lazy route.
 - Stop hotspots: where buses lose time standing still away from stops (traffic lights, junctions, congestion), as
-  circles on a grey map sized by the time lost, and a table of the hotspots, the most time lost first. Pick the last
-  24 hours, 7 days or 30 days and one line or all (kept in the URL as `?window=` and `?line=`). Click a row to show
+  circles on a grey map sized by the time lost, and a table of the hotspots, the most time lost first. Pick the time
+  window and one line or all (kept in the URL with `?line=`). Click a row to show
   its hotspot on the map (with its spread), or a circle to find its row. Store slice `hotspots`, registered by its
   lazy route.
 - Delay generation: a map of every stretch between stops coloured by the delay buses gain on it (red) or recover
@@ -319,15 +336,14 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
   the most delay altogether; and each line's gain per run. Click a line for, per direction, a table of its stretches
   in route order with the change by hour of the day (a heatmap with the numbers in the cells), the runs that gained
   the most (overall or on a chosen stretch) with a chart and table of how their delay built up stop by stop, and
-  its brigades. Window, part of the day and line are kept in the URL (`?window=`, `?part=`, `?line=`). Store slice
+  its brigades. Window, part of the day and line are kept in the URL (`?part=`, `?line=`). Store slice
   `delayGeneration`, registered by its lazy route.
-- Abnormal trips: windows from the last 15 minutes to 30 days (kept in the URL as `?window=`; windows up to 6 hours
-  refresh every minute). Cards count the trips by outcome (click a kind to list only those), a table shows the
+- Abnormal trips: the trips of any time window (preset windows up to 12 hours refresh every minute). Cards count the trips by outcome (click a kind to list only those), a table shows the
   lines with abnormal trips, and the trips table lists each abnormal trip with its kind, scheduled times, line and
   brigade, buses, the stops it was seen on, its delays and what happened (filter by line). Bus changes show
   where the new bus came from and whether the old one was possibly broken down or reassigned. Store slice
   `tripAnomalies`, registered by its lazy route.
-- Timetable pages (read-only): Routes → Trips (filter by route, direction, service, headsign) → Stop times of a trip;
+- Timetable pages (read-only): Trips (filter by route, direction, service, headsign) → Stop times of a trip;
   Stops (search, zone) → departure board of a stop. Filters and the page number live in the URL, so every view can be
   linked and the back button works.
 

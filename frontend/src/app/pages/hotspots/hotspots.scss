@@ -4,17 +4,8 @@
   gap: 0.75rem;
 }
 
-.controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 1rem;
-}
-
-.windows {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
+app-time-window {
+  margin-bottom: 0;
 }
 
 .summary {

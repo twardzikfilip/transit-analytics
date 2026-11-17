@@ -63,7 +63,7 @@ class TripAnomalyIntegrationTest {
             report(other, "ITA-99", t, 1, 53.10, 23.10);
         }
 
-        TripAnomalyDto.Report report = anomalies.report(TimeWindow.DAY, local("06:00:00"), local("09:00:00"));
+        TripAnomalyDto.Report report = anomalies.report(local("06:00:00"), local("09:00:00"), local("09:00:00"));
 
         assertThat(report.summary()).isEqualTo(new TripAnomalyDto.Summary(3, 3, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0));
         assertThat(report.tripsTotal()).isEqualTo(2);
@@ -88,7 +88,7 @@ class TripAnomalyIntegrationTest {
         });
 
         // Only the trips leaving in the window count.
-        assertThat(anomalies.report(TimeWindow.HOUR, local("07:20:00"), local("09:00:00")).summary().scheduled())
+        assertThat(anomalies.report(local("07:20:00"), local("09:00:00"), local("09:00:00")).summary().scheduled())
                 .isEqualTo(1);
     }
 

@@ -12,28 +12,31 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { Store } from '@ngrx/store';
+import { injectSetQuery } from '../../shared/url-query';
 import * as L from 'leaflet';
 import { DelayReplayActions } from '../../store/delay-replay/delay-replay.actions';
 import { delayReplayFeature } from '../../store/delay-replay/delay-replay.reducer';
-import { formatDelay, toLocalInput } from '../../shared/format/time';
+import { formatDelay } from '../../shared/format/time';
+import { TimeWindowPicker } from '../../shared/time-window/time-window-picker';
+import { readWindow, windowQuery } from '../../shared/time-window/time-window';
 import {
   DELAY_STOPS,
   NO_DELAY_COLOR,
   Replay,
   ReplayPosition,
   SPEEDS,
-  WINDOW_PRESETS,
   averageDelay,
   defaultSpeed,
   delayColor,
   parseReplay,
   positionsAt,
-  resolveDelayWindow,
 } from './replay';
 import { escapeHtml } from '../../shared/format/html';
 import { createBaseMap } from '../../shared/map/base-map';
+
+export const DEFAULT_PRESET = '1h';
 
 /**
  * Delays: an animated replay of recorded vehicle positions for a time window and lines, each vehicle coloured by how
@@ -41,18 +44,18 @@ import { createBaseMap } from '../../shared/map/base-map';
  */
 @Component({
   selector: 'app-delays',
-  imports: [DatePipe],
+  imports: [DatePipe, TimeWindowPicker],
   templateUrl: './delays.html',
   styleUrl: './delays.scss',
 })
 export class Delays {
   private readonly store = inject(Store);
-  private readonly router = inject(Router);
+  private readonly navigate = injectSetQuery();
   private readonly destroyRef = inject(DestroyRef);
   private readonly params = toSignal(inject(ActivatedRoute).queryParamMap, { requireSync: true });
   private readonly mapEl = viewChild.required<ElementRef<HTMLDivElement>>('map');
 
-  protected readonly presets = WINDOW_PRESETS;
+  protected readonly defaultPreset = DEFAULT_PRESET;
   protected readonly speeds = SPEEDS;
   protected readonly legend = DELAY_STOPS;
   protected readonly noDelayColor = NO_DELAY_COLOR;
@@ -66,17 +69,7 @@ export class Delays {
     return raw ? parseReplay(raw) : null;
   });
 
-  /** URL state: ?range=1h or ?from=…&to=…, and ?lines=103,22 (none = all lines). */
-  protected readonly window = computed(() =>
-    resolveDelayWindow(
-      {
-        range: this.params().get('range'),
-        from: this.params().get('from'),
-        to: this.params().get('to'),
-      },
-      new Date(),
-    ),
-  );
+  /** URL state: the time window (see app-time-window) and ?lines=103,22 (none = all lines). */
   protected readonly selectedLines = computed(() =>
     (this.params().get('lines') ?? '')
       .split(',')
@@ -124,17 +117,14 @@ export class Delays {
     inject(ActivatedRoute)
       .queryParamMap.pipe(takeUntilDestroyed())
       .subscribe((params) => {
-        const w = resolveDelayWindow(
-          { range: params.get('range'), from: params.get('from'), to: params.get('to') },
-          new Date(),
-        );
+        const w = readWindow(params, DEFAULT_PRESET);
         const routes = (params.get('lines') ?? '')
           .split(',')
           .map((l) => l.trim())
           .filter(Boolean);
         this.store.dispatch(
           DelayReplayActions.load({
-            query: { from: w.from.toISOString(), to: w.to.toISOString(), routes },
+            query: { ...windowQuery(w), routes },
           }),
         );
       });
@@ -153,20 +143,6 @@ export class Delays {
 
   // --- filters -------------------------------------------------------------------------------------------------
 
-  protected setPreset(key: string): void {
-    this.navigate({ range: key, from: null, to: null });
-  }
-
-  protected setCustom(which: 'from' | 'to', value: string): void {
-    if (!value) return;
-    const w = this.window();
-    this.navigate({
-      range: null,
-      from: which === 'from' ? value : toLocalInput(w.from),
-      to: which === 'to' ? value : toLocalInput(w.to),
-    });
-  }
-
   protected toggleLine(line: string, on: boolean): void {
     const lines = new Set(this.selectedLines());
     if (on) lines.add(line);
@@ -178,13 +154,6 @@ export class Delays {
     this.navigate({ lines: null });
   }
 
-  protected localInput(date: Date): string {
-    return toLocalInput(date);
-  }
-
-  private navigate(queryParams: Record<string, string | null>): void {
-    void this.router.navigate([], { queryParams, queryParamsHandling: 'merge' });
-  }
 
   // --- playback ------------------------------------------------------------------------------------------------
 

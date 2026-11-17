@@ -3,18 +3,6 @@
   font-size: 0.9rem;
 }
 
-.range {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  font-size: 0.9rem;
-
-  .buttons {
-    display: flex;
-    gap: 0.35rem;
-  }
-}
-
 .figures {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));

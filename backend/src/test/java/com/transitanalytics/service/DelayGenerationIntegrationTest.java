@@ -58,7 +58,7 @@ class DelayGenerationIntegrationTest {
         // A bus of a line not in the timetable.
         drive(vehicle("IT-DGX"), "IT-X7", "08:00:00", 0, 0, 0, 0, 0, 0, 0, 0);
 
-        DelayGenerationDto.Report report = delays.report(TimeWindow.DAY, FROM, TO);
+        DelayGenerationDto.Report report = delays.report(new ReportWindow(FROM, TO));
 
         assertThat(report.days()).isEqualTo(1);
         assertThat(report.runs()).as("the skipping bus has two passages: no run").isEqualTo(6);
@@ -69,7 +69,7 @@ class DelayGenerationIntegrationTest {
         assertThat(bc.runs().get(2)).as("morning peak").isEqualTo(6);
         assertThat(report.lines()).as("runs of 3 stops are too short for a gain from first stop to last").isEmpty();
 
-        DelayGenerationDto.LineReport line = delays.line(TimeWindow.DAY, FROM, TO, "IT-DG");
+        DelayGenerationDto.LineReport line = delays.line(new ReportWindow(FROM, TO), "IT-DG");
         assertThat(line.directions()).singleElement().satisfies(d -> {
             assertThat(d.headsign()).isEqualTo("IT-DG D");
             assertThat(d.stretches()).extracting(DelayGenerationDto.LineStretch::medianSeconds)

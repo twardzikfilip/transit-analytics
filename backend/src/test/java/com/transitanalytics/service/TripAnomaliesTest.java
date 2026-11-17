@@ -147,6 +147,9 @@ class TripAnomaliesTest {
 
         assertThat(outcomes.get(missed.tripId()).trip().note())
                 .isEqualTo("Between the brigade's runs. Bus V1 was on line 10 (brigade 010-01).");
+        assertThat(outcomes.get(missed.tripId()).vehicleIds()).as("the brigade's bus that day").containsExactly(1L);
+        assertThat(outcomes.get(detour.tripId()).vehicleIds()).containsExactly(1L);
+        assertThat(outcomes.get(full.tripId()).vehicleIds()).as("normal trips aren't listed").isEmpty();
 
         TripAnomalyDto.Trip s = outcomes.get(shortTurn.tripId()).trip();
         assertThat(s.fromStop()).isEqualTo(1);
@@ -247,6 +250,8 @@ class TripAnomaliesTest {
         assertThat(changed.trip().delayBeforeChange()).isZero();
         assertThat(changed.trip().delayAfterChange()).isZero();
         assertThat(changed.trip().changeFate()).isEqualTo("broken-down");
+        assertThat(changed.trip().changeAt()).as("when bus 1 stopped for good").isEqualTo(at("07:04"));
+        assertThat(changed.vehicleIds()).containsExactly(1L, 3L, 2L);
         assertThat(changed.trip().replacementLine()).isNull();
         assertThat(TripAnomalies.summary(List.of(changed))).satisfies(s -> {
             assertThat(s.vehicleChanged()).isEqualTo(1);

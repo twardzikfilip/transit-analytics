@@ -4,26 +4,8 @@ import {
   TripAnomalyKind,
   TripAnomalyLine,
   TripAnomalySummary,
-  TripWindow,
 } from '../../core/models/models';
 import { formatDelay } from '../../shared/format/time';
-
-/** The page's time windows, ending now; short ones refresh every minute. */
-export const TRIP_WINDOWS: { key: TripWindow; label: string; refresh: boolean }[] = [
-  { key: '15m', label: '15 min', refresh: true },
-  { key: '1h', label: '1 hour', refresh: true },
-  { key: '3h', label: '3 hours', refresh: true },
-  { key: '6h', label: '6 hours', refresh: true },
-  { key: 'day', label: '24 hours', refresh: false },
-  { key: 'week', label: '7 days', refresh: false },
-  { key: 'month', label: '30 days', refresh: false },
-];
-export const DEFAULT_TRIP_WINDOW: TripWindow = 'day';
-
-/** The window in the URL (?window=1h), else the default. */
-export function parseTripWindow(value: string | null): TripWindow {
-  return TRIP_WINDOWS.find((w) => w.key === value)?.key ?? DEFAULT_TRIP_WINDOW;
-}
 
 /** Kinds of abnormal trip, the most serious first, with where their count is in the summary and per line. */
 export const KINDS: {

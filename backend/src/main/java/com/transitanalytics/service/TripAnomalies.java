@@ -135,12 +135,17 @@ final class TripAnomalies {
         }
     }
 
-    /** A judged trip: its line, scheduled run and outcome, and the details when it is abnormal. */
-    record Outcome(String line, Instant departure, Instant arrival, Kind kind, TripAnomalyDto.Trip trip) {
+    /**
+     * A judged trip: its line, scheduled run and outcome, and the details when it is abnormal.
+     *
+     * @param vehicleIds the buses seen on it, in order (ids; the trip lists their numbers)
+     */
+    record Outcome(String line, Instant departure, Instant arrival, Kind kind, TripAnomalyDto.Trip trip,
+                   List<Long> vehicleIds) {
     }
 
     private static Outcome outcome(ScheduledTrip trip, Kind kind) {
-        return new Outcome(trip.line(), trip.departure(), trip.arrival(), kind, null);
+        return new Outcome(trip.line(), trip.departure(), trip.arrival(), kind, null, List.of());
     }
 
     // ---- Recording ------------------------------------------------------------------------------------------
@@ -562,7 +567,11 @@ final class TripAnomalies {
                     ? "After the brigade's last run that day (it finished early, at %s)."
                     .formatted(ServiceDay.localTime(last.arrival()))
                     : "Between the brigade's runs.";
-            return abnormal(trip, Kind.MISSED, sofar + where + " " + whereabouts(trip, run), List.of(), null, null);
+            Outcome missed = abnormal(trip, Kind.MISSED, sofar + where + " " + whereabouts(trip, run), List.of(), null,
+                    null);
+            // Not seen on the trip, but the brigade's bus that day (of its nearest run) is the one that missed it.
+            return new Outcome(missed.line(), missed.departure(), missed.arrival(), missed.kind(), missed.trip(),
+                    List.of(nearestBus(trip, run).vehicleId()));
         }
 
         /** Whether the brigade's bus is still on an earlier trip of the brigade, so this one can't have started. */
@@ -579,12 +588,17 @@ final class TripAnomalies {
                     && Duration.between(latest.time(), now).compareTo(Duration.ofMinutes(5)) <= 0;
         }
 
-        /** Where the brigade's bus (from its nearest run) was while this trip should have run. */
-        private String whereabouts(ScheduledTrip trip, List<ScheduledTrip> run) {
+        /** The last report of the brigade's bus on its run nearest before this trip (else its first run). */
+        private Report nearestBus(ScheduledTrip trip, List<ScheduledTrip> run) {
             ScheduledTrip near = run.stream().filter(t -> t.departure().isBefore(trip.departure()))
                     .reduce((a, b) -> b).orElse(run.get(0));
             List<Report> nearReports = matched.get(near);
-            Report anyReport = nearReports.get(nearReports.size() - 1);
+            return nearReports.get(nearReports.size() - 1);
+        }
+
+        /** Where the brigade's bus (from its nearest run) was while this trip should have run. */
+        private String whereabouts(ScheduledTrip trip, List<ScheduledTrip> run) {
+            Report anyReport = nearestBus(trip, run);
             String bus = "Bus " + anyReport.vehicle();
             List<Report> during = between(byVehicle.get(anyReport.vehicleId()), trip.departure(), trip.arrival());
             if (during.isEmpty()) {
@@ -803,8 +817,10 @@ final class TripAnomalies {
                     handover == null ? null : handover.change().delayAfter(),
                     handover == null ? null : trip.stops()[handover.change().stoppedIndex(trip)],
                     handover == null ? null : trip.stops()[handover.change().toIndex()],
-                    handover == null ? null : handover.change().skippedStops(trip));
-            return new Outcome(trip.line(), trip.departure(), trip.arrival(), kind, dto);
+                    handover == null ? null : handover.change().skippedStops(trip),
+                    handover == null ? null : handover.change().stopped().time());
+            return new Outcome(trip.line(), trip.departure(), trip.arrival(), kind, dto,
+                    reports.stream().map(Report::vehicleId).distinct().toList());
         }
 
         private static Instant min(Instant a, Instant b) {

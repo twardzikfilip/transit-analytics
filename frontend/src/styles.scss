@@ -379,3 +379,10 @@ th[aria-sort='descending'] button.sort::after {
 tr.depot-row td {
   background: var(--depot-soft);
 }
+
+/* Filters a page adds to the time window's row (a line, a part of the day) sit inline with the presets. */
+app-time-window label {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+}

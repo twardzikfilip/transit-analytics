@@ -12,8 +12,11 @@ public final class LineDetailDto {
     private LineDetailDto() {
     }
 
-    /** A line to pick from. {@code line} is the route's GTFS id, used in the detail URLs. */
-    public record LineRef(long id, String line, String name, RouteSubtype subtype) {
+    /**
+     * A line to pick from. {@code line} is the route's GTFS id, used in the detail URLs; for a line only seen on the
+     * live feed (another operator's, not in the timetable) it is the line's name, and {@code id} is null.
+     */
+    public record LineRef(Long id, String line, String name, RouteSubtype subtype) {
     }
 
     /**
@@ -23,10 +26,12 @@ public final class LineDetailDto {
      * @param endStops   where buses turn round in service (the termini); stops closer than 500 m count as one
      * @param depotStops where depot runs start or end, away from the end stops; grouped the same way
      * @param depotRuns  runs from the depot into service (pull-out) or back (pull-in), by time
+     * @param id         the route's id (for its trips), null for a line not in the timetable
+     * @param url        the line's timetable on the operator's website, if any
      */
-    public record Detail(long id, String line, String name, RouteSubtype subtype, String serviceId, Base base,
-                         List<Variant> variants, List<Zone2> zone2, List<Brigade> brigades, List<EndStop> endStops,
-                         List<EndStop> depotStops, List<DepotRun> depotRuns) {
+    public record Detail(Long id, String line, String name, RouteSubtype subtype, String serviceId, String url,
+                         Base base, List<Variant> variants, List<Zone2> zone2, List<Brigade> brigades,
+                         List<EndStop> endStops, List<EndStop> depotStops, List<DepotRun> depotRuns) {
     }
 
     /**

@@ -13,7 +13,7 @@ import java.util.function.BiFunction;
 /**
  * Rows computed from recorded positions, read one service day (03:00–03:00) at a time. Days that are over don't
  * change, so their rows are kept; only the days at a window's edges (cut by it, or still running) are read again.
- * Days older than the longest window are dropped.
+ * Days older than {@link #KEEP_DAYS} are dropped (an "all time" window reads them again).
  *
  * @param <T> a row
  */
@@ -21,6 +21,8 @@ final class ServiceDayCache<T> {
 
     /** A service day's rows are kept once it ended this long ago (late reports have arrived by then). */
     static final Duration DAY_SETTLES = Duration.ofMinutes(10);
+    /** How many days back computed days are kept. */
+    static final int KEEP_DAYS = 92;
 
     private final Clock clock;
     /** Reads the rows in {@code [from, to)}, which never spans more than one service day. */
@@ -46,7 +48,7 @@ final class ServiceDayCache<T> {
                 all.addAll(query.apply(start.isBefore(from) ? from : start, end.isAfter(to) ? to : end));
             }
         }
-        LocalDate oldest = ServiceDay.serviceDay(now.minus(TimeWindow.MONTH.length)).minusDays(1);
+        LocalDate oldest = ServiceDay.serviceDay(now).minusDays(KEEP_DAYS);
         days.keySet().removeIf(d -> d.isBefore(oldest));
         return all;
     }

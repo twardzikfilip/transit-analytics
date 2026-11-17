@@ -1,5 +1,4 @@
 /** Stop hotspots: where buses stand still away from stops, from recorded positions. */
-import { StatsWindow } from './vehicle-stats';
 
 export interface HotspotLineTime {
   line: string;
@@ -42,7 +41,6 @@ export interface Hotspot {
 }
 
 export interface HotspotReport {
-  window: StatsWindow;
   from: string;
   to: string;
   /** The line the report is limited to, or null for all. */

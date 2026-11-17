@@ -26,7 +26,7 @@ public final class DelayGenerationDto {
      * @param stretches  directed stretches between consecutive stops, all lines together
      * @param lines      each line's delay gained per run
      */
-    public record Report(String window, Instant from, Instant to, int days, int runs, List<Band> bands,
+    public record Report(Instant from, Instant to, int days, int runs, List<Band> bands,
                          List<Stretch> stretches, List<LineSummary> lines) {
     }
 
@@ -52,7 +52,7 @@ public final class DelayGenerationDto {
     }
 
     /** One line: per direction, where and when delay is generated, with example runs. */
-    public record LineReport(String window, Instant from, Instant to, String line, int days,
+    public record LineReport(Instant from, Instant to, String line, int days,
                              List<Direction> directions, List<BrigadeGain> brigades, List<Example> examples) {
     }
 

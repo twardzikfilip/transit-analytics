@@ -164,7 +164,7 @@ class DelayGenerationTest {
         }
         passages.addAll(drive(20, "9", "009-04", "Zajezdnia", "09:00", 0, 0, 0));
 
-        var report = DelayGeneration.lineReport("week", at("00:00"), at("23:00"), "9", runs(passages), 1);
+        var report = DelayGeneration.lineReport(at("00:00"), at("23:00"), "9", runs(passages), 1);
 
         assertThat(report.directions()).extracting(DelayGenerationDto.Direction::headsign)
                 .containsExactly("Dworzec", "Rynek");

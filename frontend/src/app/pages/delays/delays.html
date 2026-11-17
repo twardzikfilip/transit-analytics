@@ -4,7 +4,7 @@
 </div>
 
 <!-- Filters: they decide what is loaded and replayed below. -->
-<div class="list-filters">
+<app-time-window [defaultPreset]="defaultPreset">
   <details class="lines" #linesMenu>
     <summary>
       <span class="label">Lines</span>
@@ -32,38 +32,7 @@
     </div>
   </details>
 
-  <div class="range" role="group" aria-label="Time window">
-    <span class="label">Time window</span>
-    <div class="buttons">
-      @for (p of presets; track p.key) {
-        <button
-          type="button"
-          [class.active]="window().preset === p.key"
-          [attr.aria-pressed]="window().preset === p.key"
-          (click)="setPreset(p.key)"
-        >
-          {{ p.label }}
-        </button>
-      }
-    </div>
-  </div>
-  <label>
-    From
-    <input
-      type="datetime-local"
-      [value]="localInput(window().from)"
-      (change)="setCustom('from', $any($event.target).value)"
-    />
-  </label>
-  <label>
-    To
-    <input
-      type="datetime-local"
-      [value]="localInput(window().to)"
-      (change)="setCustom('to', $any($event.target).value)"
-    />
-  </label>
-</div>
+</app-time-window>
 
 @if (error(); as message) {
   <p class="error" role="alert">{{ message }}</p>

@@ -2,13 +2,13 @@ import { renderPage, signedIn, text } from '../../testing/page-testing';
 import { Home } from './home';
 
 describe('Home page', () => {
-  it('greets the user and mentions managing vehicles only to admins', () => {
-    const guest = renderPage(Home, signedIn('GUEST')).el;
-    expect(text(guest.querySelector('h1'))).toBe('Welcome, ann');
-    expect(text(guest)).toContain('Browse the fleet.');
-  });
-
-  it('tells admins they can manage vehicles', () => {
-    expect(text(renderPage(Home, signedIn('ADMIN')).el)).toContain('Browse the fleet and manage vehicles.');
+  it('greets the user and links to the fleet and the live map', () => {
+    const el = renderPage(Home, signedIn('GUEST')).el;
+    expect(text(el.querySelector('h1'))).toBe('Welcome, ann');
+    expect(text(el)).toContain('You are signed in as GUEST.');
+    expect([...el.querySelectorAll('a.card')].map((a) => a.getAttribute('href'))).toEqual([
+      '/fleet',
+      '/live-map',
+    ]);
   });
 });

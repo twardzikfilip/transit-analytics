@@ -3,19 +3,12 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
   BrigadeSchedule,
+  FleetReport,
   LivePosition,
-  StatsWindow,
-  Vehicle,
-  VehicleStatsReport,
+  VehicleDetail,
+  WindowQuery,
 } from '../models/models';
-import { CrudApiService } from './crud-api.service';
-
-@Injectable({ providedIn: 'root' })
-export class VehicleApi extends CrudApiService<Vehicle> {
-  constructor() {
-    super('/api/vehicles');
-  }
-}
+import { windowParams } from './window-params';
 
 /** Live data from zbiorkom.live, passed through by the backend. */
 @Injectable({ providedIn: 'root' })
@@ -38,15 +31,20 @@ export class BrigadeApi {
   }
 }
 
-/** Vehicles in detail: usage of each vehicle in a time window. */
+/** The fleet: how its buses were used in a time window. */
 @Injectable({ providedIn: 'root' })
-export class VehicleStatsApi {
+export class FleetApi {
   private readonly http = inject(HttpClient);
 
-  /** The report for a window, for the given operators' vehicles (all when none are given). */
-  report(window: StatsWindow, agencies: string[] = []): Observable<VehicleStatsReport> {
-    return this.http.get<VehicleStatsReport>('/api/vehicle-stats', {
-      params: { window, agency: agencies },
+  /** The fleet in a window, for the given operators' buses (all when none are given). */
+  report(window: WindowQuery, agencies: string[] = []): Observable<FleetReport> {
+    return this.http.get<FleetReport>('/api/fleet', {
+      params: { ...windowParams(window), agency: agencies },
     });
+  }
+
+  /** One bus in a window: its runs per day and the abnormal trips it was involved in. */
+  vehicle(id: number, window: WindowQuery): Observable<VehicleDetail> {
+    return this.http.get<VehicleDetail>(`/api/fleet/vehicles/${id}`, { params: windowParams(window) });
   }
 }

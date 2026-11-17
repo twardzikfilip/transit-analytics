@@ -29,6 +29,5 @@ export const authFeature = createFeature({
     selectUsername: createSelector(selectSession, (s) => s?.username ?? null),
     selectRole: createSelector(selectSession, (s) => s?.role ?? null),
     selectIsAuthenticated: createSelector(selectSession, (s) => s !== null),
-    selectIsAdmin: createSelector(selectSession, (s) => s?.role === 'ADMIN'),
   }),
 });

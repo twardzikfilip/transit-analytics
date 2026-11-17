@@ -1,24 +1,29 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { concat, distinctUntilChanged, interval, map, of, switchMap } from 'rxjs';
-import { TripAnomalyKind, TripWindow } from '../../core/models/models';
+import { TripAnomalyKind } from '../../core/models/models';
+import { TimeWindowPicker } from '../../shared/time-window/time-window-picker';
+import {
+  TimeWindow,
+  readWindow,
+  sameQuery,
+  windowLength,
+  windowQuery,
+} from '../../shared/time-window/time-window';
 import { localTime } from '../../shared/format/time';
 import { TripAnomaliesActions } from '../../store/trip-anomalies/trip-anomalies.actions';
 import { tripAnomaliesFeature } from '../../store/trip-anomalies/trip-anomalies.reducer';
 import {
-  DEFAULT_TRIP_WINDOW,
   KINDS,
-  TRIP_WINDOWS,
   abnormalCount,
   changeFateLabel,
   coverage,
   joinedAt,
   kindLabel,
   replacementFrom,
-  parseTripWindow,
   percent,
   signedDelay,
 } from './trip-kinds';
@@ -29,6 +34,15 @@ export const PAGE_ROWS = 50;
 export const FIRST_LINES = 12;
 /** How often short windows reload. */
 export const REFRESH_MS = 60_000;
+/** Preset windows up to this long move on (and reload) every minute. */
+export const REFRESH_UP_TO_MS = 12 * 3_600_000;
+export const DEFAULT_PRESET = '24h';
+
+/** Whether a window reloads every minute: a preset (ending now) of up to 12 hours. */
+export function refreshes(w: TimeWindow): boolean {
+  const length = windowLength(w);
+  return w.preset !== null && length !== null && length <= REFRESH_UP_TO_MS;
+}
 
 /**
  * Abnormal trips: every trip scheduled to leave in the window, judged against the recorded positions, with counts
@@ -37,27 +51,26 @@ export const REFRESH_MS = 60_000;
  */
 @Component({
   selector: 'app-trip-anomalies',
-  imports: [DatePipe],
+  imports: [DatePipe, TimeWindowPicker],
   templateUrl: './trip-anomalies.html',
   styleUrl: './trip-anomalies.scss',
 })
 export class TripAnomalies {
   private readonly store = inject(Store);
-  private readonly router = inject(Router);
 
   protected readonly report = this.store.selectSignal(tripAnomaliesFeature.selectReport);
   protected readonly loading = this.store.selectSignal(tripAnomaliesFeature.selectLoading);
   protected readonly error = this.store.selectSignal(tripAnomaliesFeature.selectError);
 
-  protected readonly windows = TRIP_WINDOWS;
+  protected readonly defaultPreset = DEFAULT_PRESET;
   protected readonly kinds = KINDS;
-  private readonly window$ = inject(ActivatedRoute).queryParamMap.pipe(
-    map((p) => parseTripWindow(p.get('window'))),
-    distinctUntilChanged(),
+  private readonly query$ = inject(ActivatedRoute).queryParamMap.pipe(
+    map((params) => ({ params, window: readWindow(params, DEFAULT_PRESET) })),
+    distinctUntilChanged(sameQuery),
   );
-  protected readonly window = toSignal(this.window$, { requireSync: true });
+  protected readonly window = toSignal(this.query$.pipe(map((q) => q.window)), { requireSync: true });
   protected readonly refreshing = computed(
-    () => TRIP_WINDOWS.find((w) => w.key === this.window())?.refresh ?? false,
+    () => refreshes(this.window()),
   );
 
   /** The kinds shown in the table (none chosen: all), and one line or all. */
@@ -100,24 +113,22 @@ export class TripAnomalies {
 
   constructor() {
     // Load the window; short windows again every minute.
-    this.window$
+    this.query$
       .pipe(
-        switchMap((window) =>
-          TRIP_WINDOWS.find((w) => w.key === window)?.refresh
-            ? concat(of(window), interval(REFRESH_MS).pipe(map(() => window)))
-            : of(window),
-        ),
+        switchMap(({ params, window }) => {
+          this.rowsShown.set(PAGE_ROWS);
+          return refreshes(window)
+            ? concat(
+                of(window),
+                interval(REFRESH_MS).pipe(map(() => readWindow(params, DEFAULT_PRESET))),
+              )
+            : of(window);
+        }),
         takeUntilDestroyed(),
       )
-      .subscribe((window) => this.store.dispatch(TripAnomaliesActions.load({ window })));
-  }
-
-  protected setWindow(window: TripWindow): void {
-    this.rowsShown.set(PAGE_ROWS);
-    void this.router.navigate([], {
-      queryParams: { window: window === DEFAULT_TRIP_WINDOW ? null : window },
-      queryParamsHandling: 'merge',
-    });
+      .subscribe((window) =>
+        this.store.dispatch(TripAnomaliesActions.load({ window: windowQuery(window) })),
+      );
   }
 
   /** Shows only this kind, or all kinds again when it is the only one shown. */

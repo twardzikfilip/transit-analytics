@@ -3,6 +3,7 @@ package com.transitanalytics.service;
 import com.transitanalytics.DbIntegrationTest;
 import com.transitanalytics.domain.RouteSubtype;
 import com.transitanalytics.dto.LineDetailDto;
+import com.transitanalytics.repository.RouteRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +15,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /** A small line in a weekday timetable of 2099, with recorded positions; the test data is rolled back. */
 @DbIntegrationTest
@@ -162,6 +164,51 @@ class LineDetailIntegrationTest {
         assertThat(toDelta.segments()).extracting(LineDetailDto.Segment::kmh).containsExactly(30.0, 60.0, 30.0);
         assertThat(toDelta.segments().get(1).from()).isEqualTo("Beta");
         assertThat(p.segments().get(1).runs()).isZero();
+    }
+
+    @Autowired
+    RouteRepository routes;
+
+    @Autowired
+    LineTimetable timetables;
+
+    @Autowired
+    LineSubtypes subtypes;
+
+    @Test
+    void showsAnotherOperatorsLineOnlySeenOnTheFeed() {
+        long bus = jdbc.queryForObject(
+                "INSERT INTO vehicle (vehicle_number, type, agency) VALUES ('IT-LD7', 'BUS', 'IT-OTHER') RETURNING id",
+                Long.class);
+        for (String time : new String[]{"07:00", "07:01", "07:02", "07:03", "07:04"}) {
+            var at = LocalDateTime.of(DAY, java.time.LocalTime.parse(time)).atZone(ZoneId.of("Europe/Warsaw"));
+            jdbc.update("""
+                    INSERT INTO position_sample (observed_at, vehicle_id, route_name, brigade, latitude, longitude,
+                                                 delay_seconds)
+                    VALUES (?, ?, '700', '700-01', 53.1, 23.1, 120)""", at.toOffsetDateTime(), bus);
+        }
+        // A service of its own, so the feed's lines are read now, not from another test's cache.
+        var service = new LineDetailService(jdbc, routes, timetables, subtypes, java.time.Clock.systemUTC());
+
+        assertThat(service.lines()).filteredOn(l -> l.line().equals("700")).singleElement().satisfies(l -> {
+            assertThat(l.id()).as("not in the timetable").isNull();
+            assertThat(l.subtype()).isEqualTo(RouteSubtype.REGIONAL);
+        });
+        assertThat(service.lines()).extracting(LineDetailDto.LineRef::line).contains("IT-177");
+
+        LineDetailDto.Detail detail = service.detail("700");
+        assertThat(detail.serviceId()).isNull();
+        assertThat(detail.url()).isNull();
+        assertThat(detail.variants()).isEmpty();
+
+        LineDetailDto.Performance p = service.performance("700");
+        assertThat(p.fullRuns()).isZero();
+        assertThat(p.lastDay()).isEqualTo(DAY);
+        assertThat(p.vehicles().vehicles()).extracting(LineDetailDto.VehicleUse::number).contains("IT-LD7");
+        assertThat(p.delays()).anySatisfy(d -> assertThat(d.minute()).isEqualTo(420));
+
+        assertThatThrownBy(() -> service.detail("IT-NOWHERE")).isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> service.performance("IT-NOWHERE")).isInstanceOf(NotFoundException.class);
     }
 
     private void sample(long vehicle, String localTime, String headsign, int nextStop, int delay) {

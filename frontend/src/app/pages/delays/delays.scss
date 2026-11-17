@@ -4,18 +4,6 @@
   height: 100%;
 }
 
-.range {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  font-size: 0.9rem;
-
-  .buttons {
-    display: flex;
-    gap: 0.35rem;
-  }
-}
-
 /* Multi-select for lines: a disclosure with checkboxes. */
 .lines {
   position: relative;

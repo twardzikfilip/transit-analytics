@@ -284,7 +284,7 @@ final class DelayGeneration {
     }
 
     /** A line's report: per headsign, its stretches in route order with hours and examples; its brigades. */
-    static DelayGenerationDto.LineReport lineReport(String window, Instant from, Instant to, String line,
+    static DelayGenerationDto.LineReport lineReport(Instant from, Instant to, String line,
                                                     List<Run> lineRuns, int days) {
         Map<Run, Integer> exampleIds = new IdentityHashMap<>();
         Function<Run, Integer> idOf = r -> exampleIds.computeIfAbsent(r, k -> exampleIds.size() + 1);
@@ -311,7 +311,7 @@ final class DelayGeneration {
                 .sorted(Map.Entry.comparingByValue())
                 .map(e -> example(e.getValue(), e.getKey()))
                 .toList();
-        return new DelayGenerationDto.LineReport(window, from, to, line, days, directions, brigades, examples);
+        return new DelayGenerationDto.LineReport(from, to, line, days, directions, brigades, examples);
     }
 
     private static Direction direction(String headsign, List<Run> runs, Function<Run, Integer> idOf) {

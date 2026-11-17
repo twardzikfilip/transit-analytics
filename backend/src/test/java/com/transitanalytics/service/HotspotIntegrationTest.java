@@ -58,7 +58,7 @@ class HotspotIntegrationTest {
         java.util.Arrays.fill(parked, LIGHTS + 0.0001);
         drive(vehicle("IT-HD"), "IT-H1", "09:00:00", parked);
 
-        HotspotDto.Report report = hotspots.report(TimeWindow.DAY, Instant.parse("2099-01-05T04:00:00Z"),
+        HotspotDto.Report report = hotspots.compute(Instant.parse("2099-01-05T04:00:00Z"),
                 Instant.parse("2099-01-05T12:00:00Z"), null);
 
         assertThat(report.lines()).containsExactly("IT-H1");
@@ -78,7 +78,7 @@ class HotspotIntegrationTest {
         });
         assertThat(report.hotspotHours()).isEqualTo(0.1);
 
-        assertThat(hotspots.report(TimeWindow.DAY, Instant.parse("2099-01-05T04:00:00Z"),
+        assertThat(hotspots.compute(Instant.parse("2099-01-05T04:00:00Z"),
                 Instant.parse("2099-01-05T12:00:00Z"), "IT-X9").hotspots()).isEmpty();
     }
 

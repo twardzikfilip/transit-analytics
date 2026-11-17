@@ -11,7 +11,8 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
+import { injectSetQuery } from '../../shared/url-query';
 import { Store } from '@ngrx/store';
 import * as L from 'leaflet';
 import { timer } from 'rxjs';
@@ -59,7 +60,7 @@ export class LiveMap {
   protected readonly lastUpdated = this.store.selectSignal(livePositionsFeature.selectLastUpdated);
   protected readonly error = this.store.selectSignal(livePositionsFeature.selectError);
 
-  private readonly router = inject(Router);
+  private readonly setQuery = injectSetQuery();
   private readonly brigades = inject(BrigadeApi);
   private readonly params = toSignal(inject(ActivatedRoute).queryParamMap, { requireSync: true });
   /** "Delay over N minutes" filter, kept in the URL (?minDelay=5); null = show all vehicles. */
@@ -101,18 +102,12 @@ export class LiveMap {
   }
 
   protected setAgency(agency: string): void {
-    void this.router.navigate([], {
-      queryParams: { agency: agency || null },
-      queryParamsHandling: 'merge',
-    });
+    this.setQuery({ agency: agency || null });
   }
 
   /** Clears every filter: all vehicles on the map again. */
   protected resetFilters(): void {
-    void this.router.navigate([], {
-      queryParams: { minDelay: null, agency: null },
-      queryParamsHandling: 'merge',
-    });
+    this.setQuery({ minDelay: null, agency: null });
   }
 
   /** Fetches a brigade's schedule for its popup, unless a recent one is at hand; the popup updates when it arrives. */
@@ -146,11 +141,7 @@ export class LiveMap {
   protected setMinDelay(value: string): void {
     const minutes = parseMinDelay(value);
     // replaceUrl: typing a number shouldn't add a history entry per keystroke.
-    void this.router.navigate([], {
-      queryParams: { minDelay: minutes },
-      queryParamsHandling: 'merge',
-      replaceUrl: true,
-    });
+    this.setQuery({ minDelay: minutes }, { replaceUrl: true });
   }
 
   private popup(p: LivePosition): string {

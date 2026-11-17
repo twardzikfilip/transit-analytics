@@ -13,14 +13,14 @@ public enum RouteSubtype {
     URBAN, SUBURBAN, NIGHT_URBAN, REGIONAL;
 
     private static final Pattern NIGHT = Pattern.compile("(?i)N\\d+");
-    /** 400–499: regional lines, reaching the towns of the region. */
-    private static final Pattern REGIONAL_NUMBER = Pattern.compile("0*4\\d{2}");
+    /** 400–499 and 700: regional lines, run by other operators to the towns of the region. */
+    private static final Pattern REGIONAL_NUMBER = Pattern.compile("0*(4\\d{2}|700)");
     /** A number of 100 or more. */
     private static final Pattern SUBURBAN_NUMBER = Pattern.compile("0*[1-9]\\d{2,}");
 
     /**
-     * The default subtype for a line name: N1, N2, … are night lines, 400–499 regional, other numbers from 100 up
-     * suburban, everything else urban. Keep in sync with V12__regional_lines.sql and the GTFS import.
+     * The default subtype for a line name: N1, N2, … are night lines, 400–499 and 700 regional, other numbers from
+     * 100 up suburban, everything else urban. Keep in sync with V13__regional_line_700.sql and the GTFS import.
      */
     public static RouteSubtype classify(String name) {
         if (name == null) {

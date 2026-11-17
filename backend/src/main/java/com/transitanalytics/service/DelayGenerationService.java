@@ -14,8 +14,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /** Delay generation: where on the network, and when, buses gain or recover delay between stops. */
 @Service
@@ -29,84 +27,48 @@ public class DelayGenerationService {
     private final JdbcTemplate jdbc;
     private final Clock clock;
     private final ServiceDayCache<Run> runs;
-    /** Each window's runs, read for the network report and reused for line reports while it is cached. */
-    private final Map<TimeWindow, WindowRuns> windowRuns = new ConcurrentHashMap<>();
-    private final Map<TimeWindow, DelayGenerationDto.Report> networks = new ConcurrentHashMap<>();
-    private final Map<String, DelayGenerationDto.LineReport> lines = new ConcurrentHashMap<>();
+    /** Each window's runs, read for the network report and reused for its line reports while kept. */
+    private final RecentCache<ReportWindow, List<Run>> windowRuns;
+    private final RecentCache<ReportWindow, DelayGenerationDto.Report> networks;
+    private final RecentCache<String, DelayGenerationDto.LineReport> lines;
 
     public DelayGenerationService(JdbcTemplate jdbc, Clock clock) {
         this.jdbc = jdbc;
         this.clock = clock;
         this.runs = new ServiceDayCache<>(clock, this::query);
+        this.windowRuns = new RecentCache<>(clock, CACHE_FOR, 8);
+        this.networks = new RecentCache<>(clock, CACHE_FOR, 8);
+        this.lines = new RecentCache<>(clock, CACHE_FOR, 16);
     }
 
     /** Reads the last month's days at startup, in the background, so the first visit doesn't wait for them. */
     @EventListener(ApplicationReadyEvent.class)
     public void warmUp() {
-        WarmUp.inBackground("delay-generation", DelayGenerationService.class, () -> report(TimeWindow.MONTH));
-    }
-
-    /** The whole network, for the window ending now. */
-    public DelayGenerationDto.Report report(TimeWindow window) {
         Instant now = clock.instant();
-        DelayGenerationDto.Report cached = networks.get(window);
-        if (cached != null && cached.to().plus(CACHE_FOR).isAfter(now)) {
-            return cached;
-        }
-        WindowRuns current = runs(window, now);
-        DelayGenerationDto.Report report = report(window, current.from(), current.to(), current.runs());
-        networks.put(window, report);
-        return report;
+        WarmUp.inBackground("delay-generation", DelayGenerationService.class,
+                () -> report(new ReportWindow(now.minus(Duration.ofDays(30)), now)));
     }
 
-    /** One line, for the window ending now. */
-    public DelayGenerationDto.LineReport line(TimeWindow window, String line) {
-        Instant now = clock.instant();
-        String key = window + "|" + line;
-        DelayGenerationDto.LineReport cached = lines.get(key);
-        if (cached != null && cached.to().plus(CACHE_FOR).isAfter(now)) {
-            return cached;
-        }
-        lines.values().removeIf(r -> !r.to().plus(CACHE_FOR).isAfter(now));
-        WindowRuns current = runs(window, now);
-        DelayGenerationDto.LineReport report = line(window, current.from(), current.to(), line, current.runs());
-        lines.put(key, report);
-        return report;
+    /** The whole network in a window. */
+    public DelayGenerationDto.Report report(ReportWindow window) {
+        return networks.get(window, () -> {
+            List<Run> all = runs(window);
+            int days = days(all);
+            return new DelayGenerationDto.Report(window.from(), window.to(), days, all.size(),
+                    DelayGeneration.BANDS, DelayGeneration.stretches(all), DelayGeneration.lines(all, days));
+        });
     }
 
-    /** The runs of a window ending at most {@link #CACHE_FOR} ago. */
-    private record WindowRuns(Instant from, Instant to, List<Run> runs) {
+    /** One line in a window. */
+    public DelayGenerationDto.LineReport line(ReportWindow window, String line) {
+        return lines.get(window + "|" + line, () -> {
+            List<Run> lineRuns = runs(window).stream().filter(r -> r.line().equals(line)).toList();
+            return DelayGeneration.lineReport(window.from(), window.to(), line, lineRuns, days(lineRuns));
+        });
     }
 
-    private WindowRuns runs(TimeWindow window, Instant now) {
-        WindowRuns cached = windowRuns.get(window);
-        if (cached != null && cached.to().plus(CACHE_FOR).isAfter(now)) {
-            return cached;
-        }
-        Instant from = now.minus(window.length);
-        WindowRuns fresh = new WindowRuns(from, now, runs.get(from, now));
-        windowRuns.put(window, fresh);
-        return fresh;
-    }
-
-    DelayGenerationDto.Report report(TimeWindow window, Instant from, Instant to) {
-        return report(window, from, to, runs.get(from, to));
-    }
-
-    private DelayGenerationDto.Report report(TimeWindow window, Instant from, Instant to, List<Run> all) {
-        int days = days(all);
-        return new DelayGenerationDto.Report(window.key(), from, to, days, all.size(), DelayGeneration.BANDS,
-                DelayGeneration.stretches(all), DelayGeneration.lines(all, days));
-    }
-
-    DelayGenerationDto.LineReport line(TimeWindow window, Instant from, Instant to, String line) {
-        return line(window, from, to, line, runs.get(from, to));
-    }
-
-    private DelayGenerationDto.LineReport line(TimeWindow window, Instant from, Instant to, String line,
-                                               List<Run> all) {
-        List<Run> lineRuns = all.stream().filter(r -> r.line().equals(line)).toList();
-        return DelayGeneration.lineReport(window.key(), from, to, line, lineRuns, days(lineRuns));
+    private List<Run> runs(ReportWindow window) {
+        return windowRuns.get(window, () -> runs.get(window.from(), window.to()));
     }
 
     /** Service days with runs; per-day figures are over these, not the window (recording may have gaps). */

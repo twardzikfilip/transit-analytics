@@ -1,8 +1,9 @@
 import { DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, ParamMap, Router } from '@angular/router';
+import { ActivatedRoute, ParamMap } from '@angular/router';
 import { Filters } from '../core/models/models';
 import { PageQuery } from '../store/paged';
+import { injectSetQuery } from './url-query';
 
 /**
  * Keeps a list page's filters and page number in the URL (e.g. /trips?routeId=17&page=2), so links can point at
@@ -17,7 +18,7 @@ export function listQuery(options: {
   onChange: (query: PageQuery) => void;
 }) {
   const route = inject(ActivatedRoute);
-  const router = inject(Router);
+  const setQuery = injectSetQuery();
   const params = toSignal(route.queryParamMap, { requireSync: true });
 
   const read = (map: ParamMap): PageQuery => {
@@ -38,10 +39,9 @@ export function listQuery(options: {
     setFilters: (changes: Record<string, string | number | null>) => {
       const queryParams: Record<string, string | number | null> = { page: null };
       for (const [key, value] of Object.entries(changes)) queryParams[key] = value === '' ? null : value;
-      void router.navigate([], { queryParams, queryParamsHandling: 'merge' });
+      setQuery(queryParams);
     },
     /** Zero-based page index. */
-    setPage: (page: number) =>
-      void router.navigate([], { queryParams: { page: page > 0 ? page + 1 : null }, queryParamsHandling: 'merge' }),
+    setPage: (page: number) => setQuery({ page: page > 0 ? page + 1 : null }),
   };
 }

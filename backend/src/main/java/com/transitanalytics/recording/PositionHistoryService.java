@@ -1,6 +1,7 @@
 package com.transitanalytics.recording;
 
 import com.transitanalytics.dto.PositionHistoryDto;
+import com.transitanalytics.service.TimetableMath;
 import com.transitanalytics.zbiorkom.ZbiorkomBialystokService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -23,7 +24,7 @@ import java.util.Map;
 public class PositionHistoryService {
 
     /** Longest window one request may cover. */
-    static final Duration MAX_WINDOW = Duration.ofDays(31);
+    static final Duration MAX_WINDOW = Duration.ofDays(366);
     /**
      * Bucket sizes to choose from; the smallest that keeps a chart at or under {@link #MAX_POINTS} points wins:
      * 1 minute up to 24 hours, 10 minutes for a week, 30 minutes for a month. Windows of up to {@link #FINE_WINDOW}
@@ -174,10 +175,11 @@ public class PositionHistoryService {
     }
 
     /** Longest window a replay may cover. */
-    static final Duration MAX_REPLAY_WINDOW = Duration.ofDays(7);
+    static final Duration MAX_REPLAY_WINDOW = Duration.ofDays(92);
     /** Frame steps to choose from; the smallest keeping a replay at or under {@link #MAX_FRAMES} frames wins. */
     static final List<Duration> REPLAY_STEPS = List.of(Duration.ofMinutes(1), Duration.ofMinutes(2),
-            Duration.ofMinutes(5), Duration.ofMinutes(10), Duration.ofMinutes(15), Duration.ofMinutes(30));
+            Duration.ofMinutes(5), Duration.ofMinutes(10), Duration.ofMinutes(15), Duration.ofMinutes(30),
+            Duration.ofHours(1), Duration.ofHours(2), Duration.ofHours(3), Duration.ofHours(6));
     static final int MAX_FRAMES = 360;
 
     /**
@@ -246,7 +248,7 @@ public class PositionHistoryService {
                 GROUP BY route_name""".formatted(WINDOW),
                 (rs, i) -> new PositionHistoryDto.RouteActivity(rs.getString("route_name"), rs.getLong("samples")),
                 window(from, to, null).toArray());
-        return routes.stream().sorted(Comparator.comparing(PositionHistoryDto.RouteActivity::route, NATURAL)).toList();
+        return routes.stream().sorted(Comparator.comparing(PositionHistoryDto.RouteActivity::route, TimetableMath.LINE_ORDER)).toList();
     }
 
     /**
@@ -375,19 +377,6 @@ public class PositionHistoryService {
             throw new IllegalArgumentException("The time window can be at most " + MAX_WINDOW.toDays() + " days");
         }
     }
-
-    /** Numbers in natural order, then names with letters (N1, N2, …). */
-    static final Comparator<String> NATURAL = (a, b) -> {
-        boolean na = a.chars().allMatch(Character::isDigit);
-        boolean nb = b.chars().allMatch(Character::isDigit);
-        if (na && nb) {
-            return Long.compare(Long.parseLong(a), Long.parseLong(b));
-        }
-        if (na != nb) {
-            return na ? -1 : 1;
-        }
-        return a.compareTo(b);
-    };
 
     private static Timestamp ts(Instant instant) {
         return Timestamp.from(instant);

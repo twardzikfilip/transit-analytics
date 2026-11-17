@@ -14,10 +14,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import static com.transitanalytics.service.TimetableMath.LINE_ORDER;
@@ -37,39 +35,33 @@ public class HotspotService {
     private final JdbcTemplate jdbc;
     private final Clock clock;
     private final ServiceDayCache<Standstill> standstills;
-    private final Map<String, HotspotDto.Report> cache = new ConcurrentHashMap<>();
+    private final RecentCache<String, HotspotDto.Report> cache;
 
     public HotspotService(JdbcTemplate jdbc, Clock clock) {
         this.jdbc = jdbc;
         this.clock = clock;
         this.standstills = new ServiceDayCache<>(clock, this::query);
+        this.cache = new RecentCache<>(clock, CACHE_FOR, 16);
     }
 
     /** Reads the last month's days at startup, in the background, so the first visit doesn't wait for them. */
     @EventListener(ApplicationReadyEvent.class)
     public void warmUp() {
-        WarmUp.inBackground("hotspots", HotspotService.class, () -> report(TimeWindow.MONTH, null));
+        Instant now = clock.instant();
+        WarmUp.inBackground("hotspots", HotspotService.class,
+                () -> report(new ReportWindow(now.minus(Duration.ofDays(30)), now), null));
     }
 
     /**
-     * The report for the window ending now.
+     * The report for a window; asked again for the same window and line within {@link #CACHE_FOR}, the same one.
      *
      * @param line only this line's standstills, or null for all lines
      */
-    public HotspotDto.Report report(TimeWindow window, String line) {
-        Instant now = clock.instant();
-        String key = window + "|" + line;
-        HotspotDto.Report cached = cache.get(key);
-        if (cached != null && cached.to().plus(CACHE_FOR).isAfter(now)) {
-            return cached;
-        }
-        cache.values().removeIf(r -> !r.to().plus(CACHE_FOR).isAfter(now));
-        HotspotDto.Report report = report(window, now.minus(window.length), now, line);
-        cache.put(key, report);
-        return report;
+    public HotspotDto.Report report(ReportWindow window, String line) {
+        return cache.get(window + "|" + line, () -> compute(window.from(), window.to(), line));
     }
 
-    HotspotDto.Report report(TimeWindow window, Instant from, Instant to, String line) {
+    HotspotDto.Report compute(Instant from, Instant to, String line) {
         List<StopPoint> stops = stops();
         // Only lines in the timetable: other operators' stops and terminals aren't known, so their boarding and
         // layovers would look like waiting in traffic.
@@ -82,7 +74,7 @@ public class HotspotService {
         // Per day of recording, not of the window: a month's window may hold only a few recorded days.
         int days = (int) Math.max(1, away.stream().map(s -> ServiceDay.serviceDay(s.start())).distinct().count());
         List<HotspotDto.Hotspot> hotspots = StandstillHotspots.hotspots(chosen, stops, days);
-        return new HotspotDto.Report(window.key(), from, to, line, lines, days, chosen.size(),
+        return new HotspotDto.Report(from, to, line, lines, days, chosen.size(),
                 round(StandstillHotspots.seconds(chosen) / 3600, 1),
                 round(hotspots.stream().mapToDouble(HotspotDto.Hotspot::hours).sum(), 1), hotspots);
     }

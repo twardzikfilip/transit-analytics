@@ -1,6 +1,4 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
 import { Actions } from '@ngrx/effects';
 import { Subject, of, throwError } from 'rxjs';
 import { TripAnomalyApi } from '../../core/api/api.services';
@@ -14,13 +12,13 @@ import { TripAnomaliesActions } from '../../store/trip-anomalies/trip-anomalies.
 import { load } from '../../store/trip-anomalies/trip-anomalies.effects';
 import { tripAnomaliesFeature } from '../../store/trip-anomalies/trip-anomalies.reducer';
 import { renderPage, stateAfter, text } from '../../testing/page-testing';
-import { PAGE_ROWS, REFRESH_MS, TripAnomalies } from './trip-anomalies';
+import { PAGE_ROWS, REFRESH_MS, TripAnomalies, refreshes } from './trip-anomalies';
+import { resolveWindow } from '../../shared/time-window/time-window';
 import {
   changeFateLabel,
   coverage,
   joinedAt,
   kindLabel,
-  parseTripWindow,
   percent,
   replacementFrom,
   signedDelay,
@@ -63,6 +61,7 @@ const trip = (kind: TripAnomalyKind, line: string, i = 0): AbnormalTrip => {
     changeStop: kind === 'vehicle-changed' ? 'C' : null,
     joinStop: kind === 'vehicle-changed' ? 'E' : null,
     skippedStops: kind === 'vehicle-changed' ? 1 : null,
+    changeAt: null,
   };
 };
 
@@ -81,7 +80,6 @@ const line = (name: string, judged: number, completed: number, lost = 0): TripAn
 
 function report(trips: AbnormalTrip[] = []): TripAnomalyReport {
   return {
-    window: 'day',
     from: '2026-11-16T15:00:00Z',
     to: '2026-11-17T15:00:00Z',
     summary: {
@@ -121,11 +119,18 @@ describe('Abnormal trips page', () => {
     const { el, store } = renderPage(
       TripAnomalies,
       stateAfter(tripAnomaliesFeature, TripAnomaliesActions.loaded({ report: report(trips) })),
-      { window: '6h' },
+      { from: '2026-11-17T09:00', to: '2026-11-17T15:00' },
     );
 
-    expect(store.dispatch).toHaveBeenCalledWith(TripAnomaliesActions.load({ window: '6h' }));
-    expect(text(el.querySelector('.controls'))).toContain('Refreshes every minute');
+    expect(store.dispatch).toHaveBeenCalledWith(
+      TripAnomaliesActions.load({
+        window: {
+          from: new Date('2026-11-17T09:00').toISOString(),
+          to: new Date('2026-11-17T15:00').toISOString(),
+        },
+      }),
+    );
+    expect(text(el.querySelector('app-time-window'))).not.toContain('Refreshes every minute');
     const cards = [...el.querySelectorAll('.cards .stat')].map((c) =>
       ['.label', '.value', '.small'].map((part) => text(c.querySelector(part))),
     );
@@ -244,59 +249,44 @@ describe('Abnormal trips page', () => {
     expect(rows()).toHaveLength(PAGE_ROWS);
   });
 
-  it('switches the window through the URL and refreshes short windows every minute', () => {
+  it('reloads preset windows of up to 12 hours every minute, as they move on', () => {
     vi.useFakeTimers();
-    const { el, store, fixture, setQuery } = renderPage(
+    vi.setSystemTime(new Date('2026-11-17T12:00:30Z'));
+    const { el, store, setQuery } = renderPage(
       TripAnomalies,
       stateAfter(tripAnomaliesFeature, TripAnomaliesActions.loaded({ report: report() })),
     );
     vi.advanceTimersByTime(0);
-    const navigate = vi
-      .spyOn(fixture.debugElement.injector.get(Router), 'navigate')
-      .mockResolvedValue(true);
     const loads = () =>
-      (store.dispatch as unknown as { mock: { calls: unknown[][] } }).mock.calls.filter(
-        ([a]) => (a as { type: string }).type === TripAnomaliesActions.load.type,
-      ).length;
+      (store.dispatch as unknown as { mock: { calls: unknown[][] } }).mock.calls
+        .map(([a]) => a as ReturnType<typeof TripAnomaliesActions.load>)
+        .filter((a) => a.type === TripAnomaliesActions.load.type);
 
-    expect(loads()).toBe(1);
+    // The default, 24 hours, doesn't refresh.
+    expect(loads()).toHaveLength(1);
+    expect(loads()[0].window.to).toBe('2026-11-17T12:01:00.000Z');
     vi.advanceTimersByTime(REFRESH_MS * 2);
-    expect(loads()).toBe(1);
+    expect(loads()).toHaveLength(1);
     expect(text(el.querySelector('table.trips tbody'))).toContain('No abnormal trips here.');
 
-    const buttons = [...el.querySelectorAll('.windows button')] as HTMLButtonElement[];
-    expect(buttons.map(text)).toEqual([
-      '15 min',
-      '1 hour',
-      '3 hours',
-      '6 hours',
-      '24 hours',
-      '7 days',
-      '30 days',
-    ]);
-    buttons[0].click();
-    expect(navigate).toHaveBeenLastCalledWith([], {
-      queryParams: { window: '15m' },
-      queryParamsHandling: 'merge',
-    });
-    buttons[4].click();
-    expect(navigate).toHaveBeenLastCalledWith([], {
-      queryParams: { window: null },
-      queryParamsHandling: 'merge',
-    });
-
-    setQuery({ window: '15m' });
+    setQuery({ range: '1h' });
     vi.advanceTimersByTime(0);
-    expect(store.dispatch).toHaveBeenLastCalledWith(TripAnomaliesActions.load({ window: '15m' }));
-    expect(loads()).toBe(2);
+    expect(loads()).toHaveLength(2);
+    expect(text(el.querySelector('app-time-window'))).toContain('Refreshes every minute');
     vi.advanceTimersByTime(REFRESH_MS);
-    expect(loads()).toBe(3);
+    expect(loads()).toHaveLength(3);
+    expect(loads()[2].window.from).toBe('2026-11-17T11:03:40.000Z');
   });
 
-  it('reads the window and formats the figures', () => {
-    expect(parseTripWindow('3h')).toBe('3h');
-    expect(parseTripWindow('year')).toBe('day');
-    expect(parseTripWindow(null)).toBe('day');
+  it('tells which windows refresh and formats the figures', () => {
+    const now = new Date('2026-11-17T12:00:00Z');
+    const window = (range: string) => resolveWindow({ range, from: null, to: null }, now, '24h');
+    expect(refreshes(window('12h'))).toBe(true);
+    expect(refreshes(window('24h'))).toBe(false);
+    expect(refreshes(window('all'))).toBe(false);
+    expect(
+      refreshes(resolveWindow({ range: null, from: '2026-11-17T09:00', to: '2026-11-17T10:00' }, now, '24h')),
+    ).toBe(false);
     expect(percent(4, 3500)).toBe('0.1%');
     expect(percent(0, 10)).toBe('0%');
     expect(percent(1, 0)).toBe('—');
@@ -327,7 +317,7 @@ describe('trip anomalies effect', () => {
     const actions = new Subject<unknown>();
     const out: unknown[] = [];
     load(actions as unknown as Actions, api as TripAnomalyApi).subscribe((a) => out.push(a));
-    actions.next(TripAnomaliesActions.load({ window: '1h' }));
+    actions.next(TripAnomaliesActions.load({ window: { from: 'A', to: 'B' } }));
     return out;
   };
 
@@ -335,7 +325,7 @@ describe('trip anomalies effect', () => {
     const r = report();
     const api = { report: vi.fn(() => of(r)) };
     expect(run(api)).toEqual([TripAnomaliesActions.loaded({ report: r })]);
-    expect(api.report).toHaveBeenCalledWith('1h');
+    expect(api.report).toHaveBeenCalledWith({ from: 'A', to: 'B' });
     const failing = {
       report: () =>
         throwError(() => new HttpErrorResponse({ status: 503, error: { detail: 'Busy' } })),

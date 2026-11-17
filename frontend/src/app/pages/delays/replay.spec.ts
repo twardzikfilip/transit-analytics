@@ -5,7 +5,6 @@ import {
   delayColor,
   parseReplay,
   positionsAt,
-  resolveDelayWindow,
 } from './replay';
 
 describe('delay replay', () => {
@@ -74,18 +73,6 @@ describe('delay replay', () => {
     expect(defaultSpeed(3_600_000)).toBe(60);
     expect(defaultSpeed(86_400_000)).toBe(900);
     expect(defaultSpeed(10_000)).toBe(1);
-  });
-
-  it('resolves presets and custom windows', () => {
-    const now = new Date(2026, 10, 16, 14, 2, 41);
-    const w = resolveDelayWindow({ range: '15m', from: null, to: null }, now);
-    expect(w.preset).toBe('15m');
-    expect(w.to.getTime() - w.from.getTime()).toBe(15 * 60_000);
-    expect(resolveDelayWindow({ range: null, from: null, to: null }, now).preset).toBe('1h');
-    expect(
-      resolveDelayWindow({ range: null, from: '2026-11-16T06:00', to: '2026-11-16T09:00' }, now)
-        .preset,
-    ).toBeNull();
   });
 
   it('averages the delays of the vehicles shown, early ones counting as negative', () => {

@@ -1,8 +1,9 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
+import { injectSetQuery } from '../../shared/url-query';
 import { combineLatest, startWith, timer } from 'rxjs';
 import { Pager, rowNumber } from '../../shared/pager/pager';
 import { TimeSeriesChart } from '../../shared/time-series-chart/time-series-chart';
@@ -11,10 +12,11 @@ import {
   PositionHistoryActions,
 } from '../../store/position-history/position-history.actions';
 import { positionHistoryFeature } from '../../store/position-history/position-history.reducer';
-import { formatDelay, toLocalInput } from '../../shared/format/time';
+import { formatDelay } from '../../shared/format/time';
+import { TimeWindowPicker } from '../../shared/time-window/time-window-picker';
+import { POLL_MS, readWindow, refreshMs, windowQuery } from '../../shared/time-window/time-window';
 import { bandRows, formatShare, isOutlier, windowLabel } from './delay-bands';
 import { ReportSortKey, formatReportSort, nextReportSort, parseReportSort } from './report-sort';
-import { POLL_MS, PRESETS, refreshMs, resolveWindow } from './time-window';
 
 /**
  * Recorded vehicle positions over time for a window and line: vehicles running and mean delay (per poll, i.e. per
@@ -22,16 +24,15 @@ import { POLL_MS, PRESETS, refreshMs, resolveWindow } from './time-window';
  */
 @Component({
   selector: 'app-positions',
-  imports: [TimeSeriesChart, Pager, DecimalPipe, DatePipe, RouterLink],
+  imports: [TimeSeriesChart, Pager, DecimalPipe, DatePipe, RouterLink, TimeWindowPicker],
   templateUrl: './positions.html',
   styleUrl: './positions.scss',
 })
 export class Positions {
   private readonly store = inject(Store);
-  private readonly router = inject(Router);
+  private readonly navigate = injectSetQuery();
   private readonly params = toSignal(inject(ActivatedRoute).queryParamMap, { requireSync: true });
 
-  protected readonly presets = PRESETS;
   protected readonly series = this.store.selectSignal(positionHistoryFeature.selectSeries);
   protected readonly routes = this.store.selectSignal(positionHistoryFeature.selectRoutes);
   protected readonly samples = this.store.selectSignal(positionHistoryFeature.selectSamples);
@@ -48,7 +49,11 @@ export class Positions {
   /** The window and line the loaded results cover, e.g. "Mon 16 Nov, 08:36 – 14:36 · all lines". */
   protected readonly coverage = computed(() => {
     const q = this.query();
-    return q ? `${windowLabel(q.from, q.to)} · ${q.route ? 'line ' + q.route : 'all lines'}` : '';
+    if (!q) return '';
+    // All time: the series says where the recording starts.
+    const from = q.from ?? this.series()?.from ?? null;
+    const window = from ? windowLabel(from, q.to) : `until ${windowLabel(q.to, q.to).split(' – ')[0]}`;
+    return `${window} · ${q.route ? 'line ' + q.route : 'all lines'}`;
   });
 
   protected readonly showTable = signal(false);
@@ -72,7 +77,6 @@ export class Positions {
 
   /** URL state. */
   protected readonly route = computed(() => this.params().get('route') ?? '');
-  protected readonly window = computed(() => this.resolve(new Date()));
 
   /** Chart inputs derived from the loaded series: vehicles running, and mean delay in minutes. */
   protected readonly charts = computed(() => {
@@ -117,8 +121,7 @@ export class Positions {
         if (tick >= 0 && !w.preset) return; // custom windows don't move
         if (tick >= 0 && (tick + 1) % (refreshMs(w) / POLL_MS) !== 0) return;
         const query: HistoryQuery = {
-          from: w.from.toISOString(),
-          to: w.to.toISOString(),
+          ...windowQuery(w),
           route: params.get('route') || null,
         };
         this.store.dispatch(PositionHistoryActions.load({ query }));
@@ -134,22 +137,7 @@ export class Positions {
   }
 
   private resolve(now: Date, params = this.params()) {
-    return resolveWindow(
-      { range: params.get('range'), from: params.get('from'), to: params.get('to') },
-      now,
-    );
-  }
-
-  protected setPreset(key: string): void {
-    this.navigate({ range: key, from: null, to: null, page: null });
-  }
-
-  protected setCustom(which: 'from' | 'to', value: string): void {
-    if (!value) return;
-    const w = this.window();
-    const from = which === 'from' ? value : toLocalInput(w.from);
-    const to = which === 'to' ? value : toLocalInput(w.to);
-    this.navigate({ range: null, from, to, page: null });
+    return readWindow(params, '24h', now);
   }
 
   protected setRoute(route: string): void {
@@ -175,15 +163,7 @@ export class Positions {
     this.navigate({ page: page > 0 ? page + 1 : null });
   }
 
-  protected localInput(date: Date): string {
-    return toLocalInput(date);
-  }
-
   protected index(i: number): number {
     return rowNumber(this.samples()?.page, i);
-  }
-
-  private navigate(queryParams: Record<string, string | number | null>): void {
-    void this.router.navigate([], { queryParams, queryParamsHandling: 'merge' });
   }
 }
