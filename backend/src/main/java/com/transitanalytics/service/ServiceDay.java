@@ -52,6 +52,14 @@ final class ServiceDay {
         return day.atTime(LocalTime.NOON).atZone(ZONE).minusHours(12).toInstant();
     }
 
+    private static final java.time.format.DateTimeFormatter HH_MM =
+            java.time.format.DateTimeFormatter.ofPattern("HH:mm").withZone(ZONE);
+
+    /** Local time of day, "07:41". */
+    static String localTime(Instant instant) {
+        return HH_MM.format(instant);
+    }
+
     /** Whether a run departing then starts in the peak hours of Line statistics. */
     static boolean inPeak(double epochSeconds) {
         int second = ZonedDateTime.ofInstant(Instant.ofEpochSecond((long) epochSeconds), ZONE).toLocalTime()

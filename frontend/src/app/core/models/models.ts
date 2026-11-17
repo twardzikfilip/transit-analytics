@@ -9,3 +9,4 @@ export * from './corridors';
 export * from './vehicle-stats';
 export * from './hotspots';
 export * from './delay-generation';
+export * from './trip-anomalies';

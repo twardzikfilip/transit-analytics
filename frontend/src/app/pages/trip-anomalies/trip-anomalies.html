@@ -1,0 +1,264 @@
+<div class="page-header">
+  <h1>Abnormal trips</h1>
+  @if (report(); as r) {
+    <span class="muted">
+      Trips scheduled to run {{ r.from | date: 'd MMM, HH:mm' }} –
+      {{ r.to | date: 'd MMM, HH:mm' }}
+    </span>
+  }
+</div>
+
+<div class="controls">
+  <div class="windows" role="group" aria-label="Time window">
+    @for (w of windows; track w.key) {
+      <button
+        type="button"
+        [class.active]="window() === w.key"
+        [attr.aria-pressed]="window() === w.key"
+        (click)="setWindow(w.key)"
+      >
+        {{ w.label }}
+      </button>
+    }
+  </div>
+  @if (refreshing()) {
+    <span class="muted">Refreshes every minute</span>
+  }
+  @if (loading()) {
+    <span class="muted" role="status">Loading…</span>
+  }
+</div>
+
+@if (error(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+}
+
+@if (report(); as r) {
+  <div class="cards" [class.loading]="loading()">
+    <div class="card stat">
+      <span class="label">Scheduled</span>
+      <strong class="value">{{ r.summary.scheduled }}</strong>
+      <span class="muted small">
+        {{ r.summary.judged }} judged · {{ r.summary.notRecorded }} not recorded ·
+        {{ r.summary.pending }} under way
+      </span>
+    </div>
+    <div class="card stat">
+      <span class="label">Run in full</span>
+      <strong class="value">{{ r.summary.completed }}</strong>
+      <span class="muted small"
+        >{{ percent(r.summary.completed, r.summary.judged) }} of judged</span
+      >
+    </div>
+    @for (k of kinds; track k.key) {
+      <button
+        type="button"
+        class="card stat kind-card"
+        [class.chosen]="shownKinds().includes(k.key)"
+        [attr.aria-pressed]="shownKinds().includes(k.key)"
+        [title]="k.description"
+        (click)="toggleKind(k.key)"
+      >
+        <span class="label"
+          ><span class="tag" [class]="'kind-' + k.key">{{ k.label }}</span></span
+        >
+        <strong class="value">{{ r.summary[k.count] }}</strong>
+        <span class="muted small"
+          >{{ percent(r.summary[k.count], r.summary.judged) }} of judged</span
+        >
+      </button>
+    }
+  </div>
+
+  @if (abnormalLines().length) {
+    <section class="card" [class.loading]="loading()">
+      <h2>By line</h2>
+      <p class="muted">
+        Lines with abnormal trips, the most first. Click a line to list its trips.
+      </p>
+      <div class="data-table-wrap">
+        <table class="data-table by-line">
+          <thead>
+            <tr>
+              <th>Line</th>
+              <th class="num">Judged</th>
+              <th class="num">Run in full</th>
+              @for (k of kinds; track k.key) {
+                <th class="num">{{ k.label }}</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (l of lines(); track l.line) {
+              <tr
+                [class.selected]="line() === l.line"
+                [attr.aria-selected]="line() === l.line"
+                tabindex="0"
+                (click)="setLine(line() === l.line ? null : l.line)"
+                (keydown.enter)="setLine(line() === l.line ? null : l.line)"
+              >
+                <td>
+                  <strong>{{ l.line }}</strong>
+                </td>
+                <td class="num">{{ l.judged }}</td>
+                <td class="num">{{ percent(l.completed, l.judged) }}</td>
+                @for (k of kinds; track k.key) {
+                  <td class="num" [class.muted]="!l[k.count]">{{ l[k.count] || '·' }}</td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (abnormalLines().length > firstLines) {
+        <button type="button" class="more" (click)="allLines.set(!allLines())">
+          {{
+            allLines()
+              ? 'Show the first ' + firstLines
+              : 'Show all ' + abnormalLines().length + ' lines'
+          }}
+        </button>
+      }
+    </section>
+  }
+
+  <section class="card" [class.loading]="loading()">
+    <div class="table-head">
+      <h2>Trips</h2>
+      <div class="filters">
+        <label>
+          <span class="sr-only">Line</span>
+          <select (change)="setLine($any($event.target).value)">
+            <option value="" [selected]="!line()">All lines</option>
+            @for (l of lineOptions(); track l) {
+              <option [value]="l" [selected]="line() === l">Line {{ l }}</option>
+            }
+          </select>
+        </label>
+        @if (shownKinds().length || line()) {
+          <button type="button" (click)="clearFilters()">Show all</button>
+        }
+      </div>
+    </div>
+    <p class="muted">
+      {{ filtered().length }} {{ filtered().length === 1 ? 'trip' : 'trips' }}
+      @if (shownKinds().length) {
+        · {{ kindLabel(shownKinds()[0]) }} only
+      }
+      @if (line()) {
+        · line {{ line() }}
+      }
+      @if (r.tripsTotal > r.trips.length) {
+        · the latest {{ r.trips.length }} of {{ r.tripsTotal }} abnormal trips are listed
+      }
+    </p>
+    <div class="data-table-wrap">
+      <table class="data-table trips">
+        <thead>
+          <tr>
+            <th>Kind, scheduled</th>
+            <th>Line</th>
+            <th>Trip</th>
+            <th>Bus</th>
+            <th>Seen</th>
+            <th class="num" title="The feed's delay: at the first report, the most, at the last">
+              Delay
+              <div class="small">first · most · last</div>
+            </th>
+            <th>What happened</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (t of rows(); track t.tripId + t.scheduledDeparture) {
+            <tr>
+              <td class="nowrap">
+                <span class="tag" [class]="'kind-' + t.kind">{{ kindLabel(t.kind) }}</span>
+                <div>{{ t.scheduledDeparture | date: 'EEE d MMM' }}</div>
+                <div class="time">
+                  {{ time(t.scheduledDeparture) }}–{{ time(t.scheduledArrival) }}
+                </div>
+              </td>
+              <td class="nowrap">
+                <strong>{{ t.line }}</strong>
+                <div class="muted small">{{ t.brigade ?? '—' }}</div>
+              </td>
+              <td class="trip" [title]="'Trip ' + t.tripId">
+                {{ t.firstStop }} <span class="muted">→</span> {{ t.lastStop }}
+                <div class="muted small">{{ t.stops }} stops</div>
+              </td>
+              <td>{{ t.vehicles.length ? t.vehicles.join(', ') : '—' }}</td>
+              <td
+                class="nowrap"
+                [title]="t.coveredFrom ? 'Heading to ' + t.coveredFrom + ' … ' + t.coveredTo : ''"
+              >
+                {{ coverage(t) }}
+                @if (t.coveredFrom) {
+                  <div class="muted small time">
+                    {{ time(t.firstSeen!) }}–{{ time(t.lastSeen!) }}
+                  </div>
+                }
+              </td>
+              <td class="num nowrap">
+                {{ signedDelay(t.startDelay) }} · {{ signedDelay(t.maxDelay) }} ·
+                {{ signedDelay(t.endDelay) }}
+              </td>
+              <td class="note">
+                {{ t.note }}
+                @if (t.detourMeters !== null) {
+                  <div class="muted small">
+                    Detour: {{ t.detourMeters }} m off the route for {{ t.detourMinutes }} min,
+                    {{ t.detourFrom }} → {{ t.detourTo }}
+                  </div>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="7" class="muted">No abnormal trips here.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (filtered().length > rows().length) {
+      <button type="button" class="more" (click)="showMore()">
+        Show more ({{ filtered().length - rows().length }} left)
+      </button>
+    }
+  </section>
+}
+
+<details class="card how">
+  <summary>How trips are judged</summary>
+  <ul>
+    <li>
+      <strong>Every trip of the timetable</strong> scheduled to run in the window (for any part of
+      it) is matched to the recorded positions: a report belongs to the trip of its brigade and line
+      scheduled to leave its next stop closest to the report's time minus its delay (the headsign
+      helps, but the feed's don't always read as the timetable's).
+    </li>
+    <li>
+      <strong>Seen</strong> is the stretch of the trip the bus reported heading to. A trip counts as
+      run in full when first seen heading to one of its first 3 stops and last to one of its last 2
+      (reports come every 20 seconds).
+    </li>
+    @for (k of kinds; track k.key) {
+      <li>
+        <span class="tag" [class]="'kind-' + k.key">{{ k.label }}</span> {{ k.description }}
+      </li>
+    }
+    <li>
+      Only a bus reporting all along (reports at most 90 s apart) shows that it short-turned; when
+      its reports stop and it comes back for its brigade's next trip, it's a gap in tracking (no
+      signal). A <strong>detour</strong> is 3 reports in a row more than 150 m from the trip's route
+      shape, between its first and last stops.
+    </li>
+    <li>
+      A trip is judged as soon as it's clear what the bus did; until then it's under way. Trips
+      during a <strong>gap in recording</strong> (3 minutes or more without any report) aren't
+      judged. A trip not seen 10 minutes after it was due is listed as missing "so far" until 15
+      minutes after its scheduled arrival; a bus is lost after 15 minutes without reports. Only
+      lines in the city timetable count.
+    </li>
+  </ul>
+</details>

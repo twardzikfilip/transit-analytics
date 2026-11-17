@@ -139,6 +139,19 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   the average, median and 90th percentile change, the share of buses gaining a minute or more, the delay on leaving,
   and the average by hour of the day; its brigades by delay gained per run; and example runs (the most delay gained
   overall, and on each stretch) with the time and delay on leaving every stop.
+- `GET /api/trip-anomalies?window=15m|1h|3h|6h|day|week|month` — Abnormal trips: every trip of the timetable
+  scheduled to run in the window (for any part of it), judged against the recorded positions. A report belongs to
+  the trip of its brigade and line scheduled to leave the report's next stop closest to the report's time minus its
+  delay (within 20 min; the headsign only breaks ties, as the feed's don't always read as the timetable's); blank
+  brigades are taken from the same bus's neighbouring reports. Outcomes: run in full (first seen heading to one of
+  the first 3 stops, last to one of the last 2), detour (3 reports in a row over 150 m from the route shape),
+  short-turned (the bus, reporting all along, joined midway or left before the end), no signal (it stopped
+  reporting partway but was back for its brigade's next trip), lost (it stopped reporting midway and didn't come
+  back within 15 min), missed (not run while the brigade ran other trips; with where the brigade's bus was instead)
+  and cancelled (no bus on the brigade all day). Trips during gaps in recording (3+ minutes without any report)
+  aren't judged; trips are judged as soon as it's clear what the bus did. Counts overall and per line, and the
+  abnormal trips (the latest 2000) with brigade, buses, stops seen, delays and a note. Each finished service day is
+  judged once; the running day again after a minute. The last month is judged at startup in the background.
 - `GET /api/brigades/{brigade}/schedule` — a brigade's runs on the current service day (03:00–03:00 Warsaw time) from
   the timetable: line, headsign, first and last stop, scheduled departure and arrival. Brigades are named as on the
   live feed (`103-05`); the timetable's is the trip id's prefix. Used by the live map's popups.
@@ -301,6 +314,11 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
   the most (overall or on a chosen stretch) with a chart and table of how their delay built up stop by stop, and
   its brigades. Window, part of the day and line are kept in the URL (`?window=`, `?part=`, `?line=`). Store slice
   `delayGeneration`, registered by its lazy route.
+- Abnormal trips: windows from the last 15 minutes to 30 days (kept in the URL as `?window=`; windows up to 6 hours
+  refresh every minute). Cards count the trips by outcome (click a kind to list only those), a table shows the
+  lines with abnormal trips, and the trips table lists each abnormal trip with its kind, scheduled times, line and
+  brigade, buses, the stops it was seen on, its delays and what happened (filter by line). Store slice
+  `tripAnomalies`, registered by its lazy route.
 - Timetable pages (read-only): Routes → Trips (filter by route, direction, service, headsign) → Stop times of a trip;
   Stops (search, zone) → departure board of a stop. Filters and the page number live in the URL, so every view can be
   linked and the back button works.
@@ -332,7 +350,7 @@ in Grafana at http://localhost:3000: Tempo for traces, Prometheus for metrics, L
 
 | | Backend (`transit-backend`) | Frontend (`transit-frontend`) |
 |---|---|---|
-| Traces | every HTTP request, with JDBC query spans | page load, every fetch/XHR, route changes, login attempts (`auth.login`), uncaught errors (`ui.error`) |
+| Traces | every HTTP request, with JDBC connection and query spans (result-set reads aren't traced: that made large reads 8× slower) | page load, every fetch/XHR, route changes, login attempts (`auth.login`), uncaught errors (`ui.error`) |
 | Metrics | HTTP server, JVM, Hikari pool, `transit.auth.logins{outcome,role}` | Core Web Vitals `web_vitals.{lcp,inp,cls,fcp,ttfb}` by route |
 | Logs | exported over OTLP with `trace_id`; console lines show `[traceId-spanId]` | — |
 
