@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { Pager } from './pager';
+import { Pager, rowNumber } from './pager';
 
 describe('Pager', () => {
   it('shows the position and moves between pages, disabling buttons at the ends', () => {
@@ -22,5 +22,12 @@ describe('Pager', () => {
     fixture.detectChanges();
     expect(buttons()).toHaveLength(0);
     expect(el.textContent?.trim()).toBe('12 stops');
+  });
+});
+
+describe('rowNumber', () => {
+  it('counts rows across pages', () => {
+    expect(rowNumber({ number: 1, size: 50, totalElements: 120, totalPages: 3 }, 0)).toBe(51);
+    expect(rowNumber(null, 4)).toBe(5);
   });
 });

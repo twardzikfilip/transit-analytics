@@ -2,6 +2,11 @@ import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import { PageMeta } from '../../core/models/models';
 
+/** Number of the `i`-th row of a page, counted across pages (row 1 of page 2 of 50 is 51). */
+export function rowNumber(page: PageMeta | null | undefined, i: number): number {
+  return (page ? page.number * page.size : 0) + i + 1;
+}
+
 /** "Page 2 of 31 · 1,083 stops" with previous/next buttons. */
 @Component({
   selector: 'app-pager',

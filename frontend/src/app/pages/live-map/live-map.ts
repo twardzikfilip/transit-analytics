@@ -20,6 +20,8 @@ import { BrigadeSchedule, LivePosition } from '../../core/models/models';
 import { LivePositionsActions } from '../../store/live-positions/live-positions.actions';
 import { livePositionsFeature } from '../../store/live-positions/live-positions.reducer';
 import { agencies, delayedOver, ofAgency, parseMinDelay } from './delay-filter';
+import { escapeHtml } from '../../shared/format/html';
+import { formatDelay, localTime } from '../../shared/format/time';
 import { createBaseMap } from '../../shared/map/base-map';
 import {
   DELAY_STOPS,
@@ -199,9 +201,9 @@ function popup(p: LivePosition, schedule: ScheduleState | undefined): string {
     .join(' · ');
   const next = p.upcomingStops[0];
   const nextStop = next
-    ? `<br>Next: ${escapeHtml(next.name)}${next.scheduledArrival ? ` (${time(next.scheduledArrival)})` : ''}`
+    ? `<br>Next: ${escapeHtml(next.name)}${next.scheduledArrival ? ` (${localTime(next.scheduledArrival)})` : ''}`
     : '';
-  const seen = p.timestamp ? `<br><span class="muted">as of ${time(p.timestamp)}</span>` : '';
+  const seen = p.timestamp ? `<br><span class="muted">as of ${localTime(p.timestamp)}</span>` : '';
   return (
     `<strong>${line || escapeHtml(p.vehicleNumber)}</strong><br>${vehicle}<br>${delay(p.delaySeconds)}${nextStop}${seen}` +
     brigadeSection(p.brigade, schedule)
@@ -222,7 +224,7 @@ function brigadeSection(brigade: string | null, state: ScheduleState | undefined
   const rows = runs
     .map(
       ({ run, now }) =>
-        `<li${now ? ' class="now"' : ''}><span class="t">${time(run.departure)}–${time(run.arrival)}</span> ` +
+        `<li${now ? ' class="now"' : ''}><span class="t">${localTime(run.departure)}–${localTime(run.arrival)}</span> ` +
         `<strong>${escapeHtml(run.line)}</strong> ${escapeHtml(run.from)} → ${escapeHtml(run.to)}</li>`,
     )
     .join('');
@@ -232,15 +234,5 @@ function brigadeSection(brigade: string | null, state: ScheduleState | undefined
 function delay(seconds: number | null): string {
   if (seconds === null) return 'Delay unknown';
   if (Math.abs(seconds) < 30) return 'On time';
-  const abs = Math.abs(seconds);
-  const text = `${Math.floor(abs / 60)}:${String(abs % 60).padStart(2, '0')}`;
-  return seconds > 0 ? `${text} late` : `${text} early`;
-}
-
-function time(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+  return `${formatDelay(Math.abs(seconds))} ${seconds > 0 ? 'late' : 'early'}`;
 }

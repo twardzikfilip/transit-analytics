@@ -2,12 +2,15 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import {
+  BrigadeApi,
   CorridorApi,
   GtfsApi,
   LineDetailApi,
   LineStatsApi,
   PositionHistoryApi,
   VehicleApi,
+  VehicleStatsApi,
+  ZbiorkomApi,
 } from './api.services';
 
 /** The API clients call the backend endpoints with the parameters it expects. */
@@ -80,5 +83,20 @@ describe('API clients', () => {
     }
     http.expectOne('/api/lines/N%201%2Fx/detail');
     expect(http.expectOne('/api/gtfs/bialystok/import').request.method).toBe('POST');
+  });
+
+  it("reads live positions, a brigade's schedule and the vehicle statistics for a window", () => {
+    TestBed.inject(ZbiorkomApi).bialystokPositions().subscribe();
+    http.expectOne('/api/zbiorkom/bialystok/positions').flush([]);
+
+    TestBed.inject(BrigadeApi).schedule('103-05').subscribe();
+    http.expectOne('/api/brigades/103-05/schedule').flush({});
+    TestBed.inject(BrigadeApi).schedule('a/b').subscribe();
+    http.expectOne('/api/brigades/a%2Fb/schedule').flush({});
+
+    TestBed.inject(VehicleStatsApi).report('month').subscribe();
+    const req = http.expectOne((r) => r.url === '/api/vehicle-stats');
+    expect(req.request.params.get('window')).toBe('month');
+    req.flush({});
   });
 });

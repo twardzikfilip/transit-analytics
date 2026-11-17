@@ -149,6 +149,12 @@ button {
   }
 }
 
+/* A toggle among buttons (time ranges, filters): the chosen one. */
+button.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
 /* Shared list pages (routes, stops, trips, stop times) */
 .page-header {
   display: flex;
@@ -349,15 +355,25 @@ th[aria-sort='descending'] button.sort::after {
 }
 
 /* Depot runs (Routes in detail): a yellow "Depot run" label and row tint, so they never rely on colour alone. */
-.tag.depot {
+/* A small label in a table cell: .tag.depot (depot runs), .tag.warning, .tag.danger. */
+.tag {
   display: inline-block;
   padding: 0.05rem 0.45rem;
   border-radius: 4px;
-  background: var(--depot);
-  color: #1f2933;
   font-size: 0.75rem;
   font-weight: 600;
   white-space: nowrap;
+}
+
+.tag.depot,
+.tag.warning {
+  background: var(--depot);
+  color: #1f2933;
+}
+
+.tag.danger {
+  background: var(--danger);
+  color: #fff;
 }
 
 tr.depot-row td {

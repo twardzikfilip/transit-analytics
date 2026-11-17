@@ -68,17 +68,17 @@ public class LineStatsService {
                 SELECT count(*) AS days, min(date) AS first, max(date) AS last FROM calendar_date
                 WHERE service_id = ? AND exception_type = 1 AND extract(isodow FROM date) <= 5""", service);
 
-        // One row per trip: start/end in seconds (GTFS times can pass 24:00) and distance along the shape. The vehicle
-        // duty is the trip id's prefix in this feed (e.g. 103-01_P_1349_…); block_id is used where a feed provides it.
+        // One row per trip: start/end in seconds (GTFS times can pass 24:00), distance along the shape and the vehicle
+        // duty (brigade).
         List<TripTimes> trips = jdbc.query("""
                 SELECT t.route_id, coalesce(t.direction, 0) AS direction, t.shape_id,
-                       coalesce(t.block_id, split_part(t.gtfs_id, '_', 1)) AS duty,
+                       %s AS duty,
                        extract(epoch FROM min(st.departure_time)::interval)::int AS start_s,
                        extract(epoch FROM max(st.arrival_time)::interval)::int AS end_s,
                        max(st.shape_dist_traveled) AS km
                 FROM trip t JOIN stop_time st ON st.trip_id = t.id
                 WHERE t.service_id = ?
-                GROUP BY t.id""",
+                GROUP BY t.id""".formatted(ServiceDay.BRIGADE_SQL),
                 (rs, i) -> new TripTimes(rs.getLong("route_id"), rs.getInt("direction"), rs.getString("shape_id"),
                         rs.getString("duty"), rs.getInt("start_s"), rs.getInt("end_s"),
                         rs.getObject("km") == null ? null : rs.getDouble("km")),

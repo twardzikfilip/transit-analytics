@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { boardingRule, formatGtfsTime, routeColor } from '../../core/gtfs';
 import { StopTime } from '../../core/models/models';
-import { Pager } from '../../shared/pager/pager';
+import { Pager, rowNumber } from '../../shared/pager/pager';
 import { listQuery } from '../../shared/list-query';
 import { StopTimesActions } from '../../store/stop-times/stop-times.actions';
 import { stopTimesFeature } from '../../store/stop-times/stop-times.reducer';
@@ -49,7 +49,6 @@ export class StopTimes {
   }
 
   protected index(i: number): number {
-    const p = this.page();
-    return (p ? p.number * p.size : 0) + i + 1;
+    return rowNumber(this.page(), i);
   }
 }

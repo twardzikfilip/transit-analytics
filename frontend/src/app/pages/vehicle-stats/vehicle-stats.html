@@ -1,0 +1,221 @@
+<div class="page-header">
+  <h1>Vehicles in detail</h1>
+  @if (report(); as r) {
+    <span class="muted">
+      {{ r.vehicles }} vehicles in service · {{ r.from | date: 'd MMM, HH:mm' }} –
+      {{ r.to | date: 'd MMM, HH:mm' }}
+    </span>
+  }
+</div>
+
+<div class="windows" role="group" aria-label="Time window">
+  @for (w of windows; track w.key) {
+    <button
+      type="button"
+      [class.active]="window() === w.key"
+      [attr.aria-pressed]="window() === w.key"
+      (click)="setWindow(w.key)"
+    >
+      {{ w.label }}
+    </button>
+  }
+  @if (loading()) {
+    <span class="muted" role="status">Loading…</span>
+  }
+</div>
+
+@if (error(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+}
+
+@if (report(); as r) {
+  <div class="pairs" [class.loading]="loading()">
+    <app-usage-table
+      title="Top 10 most used"
+      description="Most hours in service (on a line) in the window."
+      [rows]="r.mostUsed"
+    />
+    <app-usage-table
+      title="Top 10 least used"
+      description="Fewest hours in service, of the vehicles that served a line at all."
+      [rows]="r.leastUsed"
+    />
+    <app-usage-table
+      title="Top 10 on the most lines"
+      description="Most different lines served in the window."
+      [rows]="r.mostLines"
+      by="lines"
+    />
+    <app-usage-table
+      title="Top 10 on the fewest lines"
+      description="Fewest different lines; of those, the longest in service first."
+      [rows]="r.fewestLines"
+      by="lines"
+    />
+  </div>
+
+  <section class="card" [class.loading]="loading()">
+    <h2>Several lines on one day</h2>
+    <p class="muted">
+      Vehicles that served two or more lines on the same day (03:00 to 03:00), newest day first.
+      {{ r.multiLineDays.length }}
+      vehicle days.
+    </p>
+    <div class="data-table-wrap">
+      <table class="data-table line-days">
+        <thead>
+          <tr>
+            <th>Day</th>
+            <th>Vehicle</th>
+            <th>Model</th>
+            <th>Operator</th>
+            <th>Lines, in the order served</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (d of lineDays(); track d.day + d.vehicle.id) {
+            <tr>
+              <td class="nowrap">{{ d.day | date: 'EEE d MMM' }}</td>
+              <td>{{ d.vehicle.number }}</td>
+              <td>{{ d.vehicle.model ?? '—' }}</td>
+              <td>{{ d.vehicle.agency ?? '—' }}</td>
+              <td>
+                <ol class="spells">
+                  @for (s of d.lines; track s.line) {
+                    <li>
+                      <strong>{{ s.line }}</strong>
+                      <span class="muted">
+                        {{ time(s.from) }}–{{ time(s.to) }}, {{ s.hours.toFixed(1) }} h{{
+                          s.brigade ? ', brigade ' + s.brigade : ''
+                        }}
+                      </span>
+                    </li>
+                  }
+                </ol>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5" class="muted">
+                No vehicle served more than one line on a day in this window.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (r.multiLineDays.length > firstRowsCount) {
+      <button type="button" class="more" (click)="showAllDays.set(!showAllDays())">
+        {{
+          showAllDays() ? 'Show the first ' + firstRowsCount : 'Show all ' + r.multiLineDays.length
+        }}
+      </button>
+    }
+  </section>
+
+  <section class="card" [class.loading]="loading()">
+    <h2>Left their brigade outside the schedule</h2>
+    <p class="muted">
+      Vehicles that stopped serving their brigade while the timetable still had it running: they
+      went to another line, or disappeared. {{ r.incidents.length }} in this window.
+    </p>
+    <div class="data-table-wrap">
+      <table class="data-table incidents">
+        <thead>
+          <tr>
+            <th>Day</th>
+            <th>Vehicle</th>
+            <th>Model</th>
+            <th>Operator</th>
+            <th>Line</th>
+            <th>Last seen</th>
+            <th>Scheduled until</th>
+            <th class="num">Runs missed</th>
+            <th>What happened</th>
+            <th>Taken over by</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (i of incidents(); track i.day + i.vehicle.id + i.brigade) {
+            <tr>
+              <td class="nowrap">{{ i.day | date: 'EEE d MMM' }}</td>
+              <td>{{ i.vehicle.number }}</td>
+              <td>{{ i.vehicle.model ?? '—' }}</td>
+              <td>{{ i.vehicle.agency ?? '—' }}</td>
+              <td class="nowrap">
+                {{ i.line }} <span class="muted">{{ i.brigade }}</span>
+              </td>
+              <td>
+                {{ time(i.lastSeen) }}
+                <div class="muted note">{{ lastSeenNote(i) }}</div>
+              </td>
+              <td class="nowrap">
+                {{ time(i.scheduledUntil) }}
+                @if (i.scheduledUntil !== i.scheduledEnd) {
+                  <span class="muted">(day ends {{ time(i.scheduledEnd) }})</span>
+                }
+              </td>
+              <td class="num">{{ i.missedRuns }}</td>
+              <td>
+                <span
+                  class="tag"
+                  [class.warning]="i.kind === 'switched'"
+                  [class.danger]="i.kind === 'disappeared'"
+                  >{{ i.kind === 'switched' ? 'Switched' : 'Disappeared' }}</span
+                >
+                {{ whatHappened(i) }}
+              </td>
+              <td>
+                @if (i.replacedBy; as v) {
+                  {{ v.number }} <span class="muted">at {{ time(i.replacedAt!) }}</span>
+                } @else {
+                  <span class="muted">nobody</span>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="10" class="muted">
+                No vehicle left its brigade outside the schedule in this window.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (r.incidents.length > firstRowsCount) {
+      <button type="button" class="more" (click)="showAllIncidents.set(!showAllIncidents())">
+        {{
+          showAllIncidents() ? 'Show the first ' + firstRowsCount : 'Show all ' + r.incidents.length
+        }}
+      </button>
+    }
+  </section>
+
+  <details class="card how">
+    <summary>How these are calculated</summary>
+    <ul>
+      <li>
+        <strong>Hours in service</strong> come from the recorded positions (every 20 seconds): each
+        report on a line counts until the vehicle's next report, up to a minute, so gaps in the feed
+        don't count as service.
+      </li>
+      <li>
+        <strong>Days</strong> are service days, 03:00 to 03:00, so a night run belongs to the
+        evening before.
+      </li>
+      <li>
+        <strong>Left their brigade:</strong> the vehicle's last report on its brigade that day came
+        while the timetable had the brigade running (mid-run or in a short layover; not at a break
+        of 30 minutes or more, and not in the last 15 minutes of its day), compared with where the
+        vehicle was in its schedule (report time minus its delay). <em>Switched</em>: it served
+        another line later that day; <em>disappeared</em>: it wasn't seen again. Changing brigade on
+        the same line doesn't count, and neither do gaps in recording.
+      </li>
+      <li>
+        All operators' vehicles are counted; only brigades in the city timetable (BKM) can be
+        checked against it.
+      </li>
+    </ul>
+  </details>
+}

@@ -76,9 +76,8 @@ public class LineTimetable {
         if (service == null) {
             return new Timetable(null, List.of(), List.of(), List.of(), Map.of());
         }
-        // The brigade (vehicle duty) is the trip id's prefix in this feed (e.g. 103-01_P_1349_…), as in Line statistics.
         List<TripRow> trips = jdbc.query("""
-                SELECT t.id, coalesce(t.block_id, split_part(t.gtfs_id, '_', 1)) AS duty,
+                SELECT t.id, %s AS duty,
                        coalesce(t.direction, 0) AS direction, t.shape_id, t.headsign,
                        extract(epoch FROM min(st.departure_time)::interval)::int AS start_s,
                        extract(epoch FROM max(st.arrival_time)::interval)::int AS end_s,
@@ -92,7 +91,7 @@ public class LineTimetable {
                 FROM trip t JOIN stop_time st ON st.trip_id = t.id JOIN stop s ON s.id = st.stop_id
                 WHERE t.route_id = ? AND t.service_id = ?
                 GROUP BY t.id
-                ORDER BY t.id""",
+                ORDER BY t.id""".formatted(ServiceDay.BRIGADE_SQL),
                 (rs, i) -> new TripRow(rs.getLong("id"), rs.getString("duty"), rs.getInt("direction"),
                         rs.getString("shape_id"), rs.getString("headsign"), rs.getInt("start_s"), rs.getInt("end_s"),
                         rs.getObject("km") == null ? null : rs.getDouble("km"), rs.getInt("stops"),

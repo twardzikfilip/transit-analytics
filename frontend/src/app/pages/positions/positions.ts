@@ -4,7 +4,7 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { combineLatest, startWith, timer } from 'rxjs';
-import { Pager } from '../../shared/pager/pager';
+import { Pager, rowNumber } from '../../shared/pager/pager';
 import { TimeSeriesChart } from '../../shared/time-series-chart/time-series-chart';
 import {
   HistoryQuery,
@@ -180,8 +180,7 @@ export class Positions {
   }
 
   protected index(i: number): number {
-    const p = this.samples()?.page;
-    return (p ? p.number * p.size : 0) + i + 1;
+    return rowNumber(this.samples()?.page, i);
   }
 
   private navigate(queryParams: Record<string, string | number | null>): void {

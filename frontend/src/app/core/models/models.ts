@@ -6,3 +6,4 @@ export * from './position-history';
 export * from './line-stats';
 export * from './line-detail';
 export * from './corridors';
+export * from './vehicle-stats';

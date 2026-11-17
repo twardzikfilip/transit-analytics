@@ -1,0 +1,69 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.windows {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.pairs {
+  display: grid;
+  /* Side by side only when each table fits without cutting its last column. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 700px), 1fr));
+  gap: 0.75rem;
+}
+
+.loading {
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.05rem;
+}
+
+.card > p.muted {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+}
+
+.note {
+  font-size: 0.85rem;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+ol.spells {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li + li {
+    margin-top: 0.15rem;
+  }
+}
+
+button.more {
+  margin-top: 0.5rem;
+}
+
+.how {
+  font-size: 0.9rem;
+
+  summary {
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  li + li {
+    margin-top: 0.35rem;
+  }
+}

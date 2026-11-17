@@ -15,4 +15,17 @@ describe('vehicles reducer', () => {
     state = reduce(state, VehiclesActions.deleteSuccess({ id: 1 }));
     expect(state.ids).toEqual([]);
   });
+
+  it('adds a created vehicle, and keeps an error until the next request', () => {
+    let state = reduce(undefined, VehiclesActions.create({ vehicle: { ...bus, id: undefined } as never }));
+    expect(state.loading).toBe(true);
+    state = reduce(state, VehiclesActions.createSuccess({ vehicle: bus }));
+    expect(state.ids).toEqual([1]);
+    expect(state.loading).toBe(false);
+
+    state = reduce(state, VehiclesActions.failure({ error: 'Vehicle number already exists' }));
+    expect(state.error).toBe('Vehicle number already exists');
+    state = reduce(state, VehiclesActions.load());
+    expect(state.error).toBeNull();
+  });
 });

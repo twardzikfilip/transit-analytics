@@ -11,9 +11,14 @@ import { HasRoleDirective } from './has-role.directive';
 class Host {}
 
 describe('HasRoleDirective', () => {
+  let store: MockStore;
+
+  // Overrides are set on the shared memoized selectors; spec files share them (the runner doesn't isolate files).
+  afterEach(() => store.resetSelectors());
+
   it('shows content only for the listed roles and follows role changes', () => {
     TestBed.configureTestingModule({ providers: [provideMockStore()] });
-    const store = TestBed.inject(MockStore);
+    store = TestBed.inject(MockStore);
     const role = store.overrideSelector(authFeature.selectRole, 'GUEST');
     const fixture = TestBed.createComponent(Host);
     fixture.detectChanges();

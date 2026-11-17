@@ -13,11 +13,6 @@
     display: flex;
     gap: 0.35rem;
   }
-
-  button.active {
-    background: var(--accent-soft);
-    border-color: var(--accent);
-  }
 }
 
 .figures {

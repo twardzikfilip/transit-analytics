@@ -2,8 +2,12 @@ package com.transitanalytics.service;
 
 import com.transitanalytics.DbIntegrationTest;
 import com.transitanalytics.domain.RouteSubtype;
+import com.transitanalytics.dto.AgencyDto;
+import com.transitanalytics.dto.CalendarDateDto;
 import com.transitanalytics.dto.RouteDto;
+import com.transitanalytics.dto.ShapePointDto;
 import com.transitanalytics.dto.StopDto;
+import com.transitanalytics.dto.StopTimeDto;
 import com.transitanalytics.dto.TripDto;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +15,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -82,5 +88,62 @@ class TimetableCrudIntegrationTest {
         assertThat(second.getContent()).extracting(RouteDto.Response::longName).containsExactly("ITPAGE3");
         assertThat(routes.findById(id).longName()).isEqualTo("ITPAGE1");
         assertThatThrownBy(() -> routes.findById(-1L)).isInstanceOf(NotFoundException.class);
+    }
+
+    @Autowired
+    AgencyService agencies;
+
+    @Autowired
+    StopTimeService stopTimes;
+
+    @Autowired
+    ShapePointService shapePoints;
+
+    @Autowired
+    CalendarDateService calendarDates;
+
+    @Test
+    void editsATimetableThroughEveryResource() {
+        var page = PageRequest.of(0, 10);
+        var agency = agencies.create(new AgencyDto.Request("IT-AG", "IT Agency", "https://it.example", "Europe/Warsaw",
+                "pl", "+48 1", "https://it.example/fares", "it@example.com"));
+        var route = routes.create(new RouteDto.Request("IT-R9", agency.id(), "IT9", "Rynek – Dworzec", null, (short) 3,
+                null, "#006963", "#FFFFFF", 9, null));
+        assertThat(route.agencyName()).isEqualTo("IT Agency");
+        assertThat(route.subtype()).as("from the name").isEqualTo(RouteSubtype.URBAN);
+
+        var rynek = stops.create(new StopDto.Request("IT-S9", "901", "Rynek", "Market square", 53.13, 23.16, "1",
+                null, (short) 0, null, (short) 1, "A"));
+        var dworzec = stops.create(new StopDto.Request("IT-S8", "902", "Dworzec", null, 53.14, 23.17, "1", null, null,
+                null, null, null));
+        var trip = trips.create(new TripDto.Request("IT9-01_X", route.id(), "IT_EDIT", "Dworzec", null, (short) 0,
+                "IT9-01", "IT-SH9", (short) 1, (short) 2));
+        assertThat(trip.routeName()).isEqualTo("IT9");
+        var first = stopTimes.create(new StopTimeDto.Request(trip.id(), rynek.id(), 1, "06:00:00", "06:00:00", null,
+                (short) 0, (short) 1, 0.0, (short) 1));
+        stopTimes.create(new StopTimeDto.Request(trip.id(), dworzec.id(), 2, "06:07:00", "06:07:00", null, null, null,
+                1.4, null));
+        assertThat(first.stopName()).isEqualTo("Rynek");
+        assertThat(first.tripHeadsign()).isEqualTo("Dworzec");
+        shapePoints.create(new ShapePointDto.Request("IT-SH9", 1, 53.13, 23.16, 0.0));
+        var date = calendarDates.create(new CalendarDateDto.Request("IT_EDIT", LocalDate.of(2099, 3, 2), (short) 1));
+
+        assertThat(stopTimes.findAll(new StopTimeDto.Filter(trip.id(), null), page).getContent())
+                .extracting(StopTimeDto.Response::stopName).containsExactlyInAnyOrder("Rynek", "Dworzec");
+        assertThat(shapePoints.findAll(new ShapePointDto.Filter("IT-SH9"), page).getTotalElements()).isEqualTo(1);
+        assertThat(calendarDates.findAll(new CalendarDateDto.Filter("IT_EDIT"), page).getContent())
+                .extracting(CalendarDateDto.Response::date).containsExactly(LocalDate.of(2099, 3, 2));
+
+        var renamed = stops.update(rynek.id(), new StopDto.Request("IT-S9", "901", "Rynek Kościuszki", null, 53.13,
+                23.16, "2", null, null, null, null, null));
+        assertThat(renamed.zoneId()).isEqualTo("2");
+        assertThat(stopTimes.findById(first.id()).stopName()).isEqualTo("Rynek Kościuszki");
+        assertThat(agencies.update(agency.id(), new AgencyDto.Request("IT-AG", "IT Transit", "https://it.example",
+                "Europe/Warsaw", null, null, null, null)).name()).isEqualTo("IT Transit");
+        assertThat(trips.update(trip.id(), new TripDto.Request("IT9-01_X", route.id(), "IT_EDIT", "Rynek", null,
+                (short) 1, null, null, null, null)).direction()).isEqualTo((short) 1);
+
+        calendarDates.delete(date.id());
+        assertThatThrownBy(() -> calendarDates.findById(date.id())).isInstanceOf(NotFoundException.class);
     }
 }
