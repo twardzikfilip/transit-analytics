@@ -375,10 +375,10 @@ class SecurityWebTest {
                 "Hetmańska", "Starosielce", "Hetmańska", Instant.parse("2026-11-15T08:15:00Z"),
                 Instant.parse("2026-11-15T09:00:00Z"), 25, List.of("319"), 1, 8, "Starosielce", "Gen. Fieldorfa",
                 Instant.parse("2026-11-15T08:16:00Z"), Instant.parse("2026-11-15T09:24:00Z"), 0, 120, 60, null,
-                null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null);
         var report = new TripAnomalyDto.Report("15m", Instant.parse("2026-11-17T14:00:00Z"),
                 Instant.parse("2026-11-17T14:15:00Z"),
-                new TripAnomalyDto.Summary(40, 30, 29, 0, 0, 0, 1, 0, 0, 0, 10), List.of(), 1, List.of(trip));
+                new TripAnomalyDto.Summary(40, 30, 29, 0, 0, 0, 0, 1, 0, 0, 0, 10, 0, 0), List.of(), 1, List.of(trip));
         given(tripAnomalyService.report(TimeWindow.MINUTES_15)).willReturn(report);
 
         mvc.perform(get("/api/trip-anomalies").param("window", "15m")

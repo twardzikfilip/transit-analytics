@@ -145,6 +145,10 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   delay (within 20 min; the headsign only breaks ties, as the feed's don't always read as the timetable's); blank
   brigades are taken from the same bus's neighbouring reports. Outcomes: run in full (first seen heading to one of
   the first 3 stops, last to one of the last 2), detour (3 reports in a row over 150 m from the route shape),
+  bus changed (run in full by two buses of the brigade, each reporting 3+ times on it, one after the other: the
+  first past the first 3 stops, the second further than the first got; a change on a partial trip is in its note;
+  each change says where the replacement came from, and whether the replaced bus was used again that day: moving
+  500 m away and reporting a brigade for 10 minutes, else it's possibly broken down),
   short-turned (the bus, reporting all along, joined midway or left before the end), no signal (it stopped
   reporting partway but was back for its brigade's next trip), lost (it stopped reporting midway and didn't come
   back within 15 min), missed (not run while the brigade ran other trips; with where the brigade's bus was instead)
@@ -317,7 +321,8 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
 - Abnormal trips: windows from the last 15 minutes to 30 days (kept in the URL as `?window=`; windows up to 6 hours
   refresh every minute). Cards count the trips by outcome (click a kind to list only those), a table shows the
   lines with abnormal trips, and the trips table lists each abnormal trip with its kind, scheduled times, line and
-  brigade, buses, the stops it was seen on, its delays and what happened (filter by line). Store slice
+  brigade, buses, the stops it was seen on, its delays and what happened (filter by line). Bus changes show
+  where the new bus came from and whether the old one was possibly broken down or reassigned. Store slice
   `tripAnomalies`, registered by its lazy route.
 - Timetable pages (read-only): Routes → Trips (filter by route, direction, service, headsign) → Stop times of a trip;
   Stops (search, zone) → departure board of a stop. Filters and the page number live in the URL, so every view can be

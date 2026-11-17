@@ -1,5 +1,6 @@
 import {
   AbnormalTrip,
+  ChangeFate,
   TripAnomalyKind,
   TripAnomalyLine,
   TripAnomalySummary,
@@ -63,6 +64,13 @@ export const KINDS: {
     count: 'detours',
   },
   {
+    key: 'vehicle-changed',
+    label: 'Bus changed',
+    description:
+      'Run in full, but by two buses: one ran part of it and another bus of the brigade took over midway (a breakdown, typically).',
+    count: 'vehicleChanged',
+  },
+  {
     key: 'no-signal',
     label: 'No signal',
     description:
@@ -70,6 +78,31 @@ export const KINDS: {
     count: 'noSignal',
   },
 ];
+
+/** What became of the replaced bus, in short. */
+export function changeFateLabel(fate: ChangeFate): string {
+  switch (fate) {
+    case 'broken-down':
+      return 'Possibly broken down';
+    case 'reassigned':
+      return 'Old bus reassigned';
+    case 'returned':
+      return 'Old bus back later';
+  }
+}
+
+/** Where the replacement bus came from: "from line 29 (029-05)", "from the depot". */
+export function replacementFrom(trip: AbnormalTrip): string {
+  return trip.replacementLine
+    ? `New bus from line ${trip.replacementLine} (${trip.replacementBrigade})`
+    : 'New bus from the depot';
+}
+
+/** Where the new bus joined: "Same place" or "Joined 3 stops further on". */
+export function joinedAt(trip: AbnormalTrip): string {
+  if (!trip.skippedStops) return 'Took over at the same place';
+  return `Joined ${trip.skippedStops} ${trip.skippedStops === 1 ? 'stop' : 'stops'} further on`;
+}
 
 export function kindLabel(kind: TripAnomalyKind): string {
   return KINDS.find((k) => k.key === kind)?.label ?? kind;

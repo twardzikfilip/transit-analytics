@@ -66,6 +66,12 @@
         <span class="muted small"
           >{{ percent(r.summary[k.count], r.summary.judged) }} of judged</span
         >
+        @if (k.key === 'vehicle-changed' && r.summary.vehicleChanged) {
+          <span class="muted small changes"
+            >{{ r.summary.changedBrokenDown }} possibly broken down ·
+            {{ r.summary.changedReassigned }} reassigned</span
+          >
+        }
       </button>
     }
   </div>
@@ -173,6 +179,11 @@
             <tr>
               <td class="nowrap">
                 <span class="tag" [class]="'kind-' + t.kind">{{ kindLabel(t.kind) }}</span>
+                @if (t.changeFate) {
+                  <div class="fate small" [class]="'fate-' + t.changeFate">
+                    {{ changeFateLabel(t.changeFate) }}
+                  </div>
+                }
                 <div>{{ t.scheduledDeparture | date: 'EEE d MMM' }}</div>
                 <div class="time">
                   {{ time(t.scheduledDeparture) }}–{{ time(t.scheduledArrival) }}
@@ -186,7 +197,12 @@
                 {{ t.firstStop }} <span class="muted">→</span> {{ t.lastStop }}
                 <div class="muted small">{{ t.stops }} stops</div>
               </td>
-              <td>{{ t.vehicles.length ? t.vehicles.join(', ') : '—' }}</td>
+              <td class="bus">
+                {{ t.vehicles.length ? t.vehicles.join(' → ') : '—' }}
+                @if (t.changeFate) {
+                  <div class="muted small">{{ replacementFrom(t) }}</div>
+                }
+              </td>
               <td
                 class="nowrap"
                 [title]="t.coveredFrom ? 'Heading to ' + t.coveredFrom + ' … ' + t.coveredTo : ''"
@@ -204,6 +220,23 @@
               </td>
               <td class="note">
                 {{ t.note }}
+                @if (t.changeMinutes !== null) {
+                  <div class="changeover">
+                    <span class="chip" [class.long]="t.changeMinutes >= 10"
+                      >No bus for {{ t.changeMinutes }} min</span
+                    >
+                    <span class="chip"
+                      >Delay {{ signedDelay(t.delayBeforeChange) }} →
+                      {{ signedDelay(t.delayAfterChange) }}</span
+                    >
+                    <span
+                      class="chip"
+                      [class.skipped]="!!t.skippedStops"
+                      [title]="'Old bus heading to ' + t.changeStop + '; new bus to ' + t.joinStop"
+                      >{{ joinedAt(t) }}</span
+                    >
+                  </div>
+                }
                 @if (t.detourMeters !== null) {
                   <div class="muted small">
                     Detour: {{ t.detourMeters }} m off the route for {{ t.detourMinutes }} min,
@@ -251,7 +284,14 @@
       Only a bus reporting all along (reports at most 90 s apart) shows that it short-turned; when
       its reports stop and it comes back for its brigade's next trip, it's a gap in tracking (no
       signal). A <strong>detour</strong> is 3 reports in a row more than 150 m from the trip's route
-      shape, between its first and last stops.
+      shape, between its first and last stops. A <strong>bus change</strong> needs both buses to
+      report at least 3 times on the trip under its brigade, one after the other, the first past the
+      trip's first 3 stops and the second going further than the first got. A change on a trip run
+      only partly is described in its note. The replaced bus is
+      <strong>possibly broken down</strong> when it isn't used again that day: it doesn't move 500 m
+      away and keep reporting a brigade for 10 minutes (a broken bus keeps reporting where it
+      stands, sometimes under its brigade's other trips); otherwise it was reassigned to another
+      line or brigade, or came back to the same brigade later.
     </li>
     <li>
       A trip is judged as soon as it's clear what the bus did; until then it's under way. Trips

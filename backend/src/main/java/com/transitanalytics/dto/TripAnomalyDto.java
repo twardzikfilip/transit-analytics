@@ -29,6 +29,7 @@ public final class TripAnomalyDto {
      * @param judged       those with recordings throughout and over (or already abnormal)
      * @param completed    run in full, on the route
      * @param detours      run in full, but off the route for a while
+     * @param vehicleChanged run in full, but by two buses: one ran part of it and another of the brigade took over
      * @param noSignal     the bus stopped reporting partway (started reporting late, or came back only on its
      *                     brigade's next trip): most likely run, but unseen
      * @param shortTurned  run only partly: the bus, reporting all along, joined midway or left before the end
@@ -37,20 +38,23 @@ public final class TripAnomalyDto {
      * @param cancelled    not run, and no bus ran the brigade at all that day
      * @param notRecorded  recording had a gap during the trip (or its line couldn't be matched): not judged
      * @param pending      under way and not clear yet (or not due)
+     * @param changedBrokenDown of the bus changes, those whose replaced bus wasn't used again that day
+     * @param changedReassigned of the bus changes, those whose replaced bus was used later on another line or brigade
      */
-    public record Summary(int scheduled, int judged, int completed, int detours, int noSignal, int shortTurned,
-                          int lost, int missed, int cancelled, int notRecorded, int pending) {
+    public record Summary(int scheduled, int judged, int completed, int detours, int vehicleChanged, int noSignal,
+                          int shortTurned, int lost, int missed, int cancelled, int notRecorded, int pending,
+                          int changedBrokenDown, int changedReassigned) {
     }
 
     /** Outcomes per line (judged trips). */
-    public record LineCounts(String line, int judged, int completed, int detours, int noSignal, int shortTurned,
-                             int lost, int missed, int cancelled) {
+    public record LineCounts(String line, int judged, int completed, int detours, int vehicleChanged,
+                             int noSignal, int shortTurned, int lost, int missed, int cancelled) {
     }
 
     /**
      * An abnormal trip.
      *
-     * @param kind          cancelled, missed, lost, short-turned, no-signal or detour
+     * @param kind          cancelled, missed, lost, short-turned, vehicle-changed, no-signal or detour
      * @param note          what was seen, in words: why it counts as abnormal and what the bus did instead
      * @param stops         stops on the trip
      * @param vehicles      buses seen on it, in order
@@ -62,12 +66,26 @@ public final class TripAnomalyDto {
      * @param detourMeters  how far it went from the route at most
      * @param detourMinutes how long it was off the route
      * @param detourFrom    the stop before the detour, and {@code detourTo} the next stop it reported after
+     * @param changeFate    on a change of bus, what became of the replaced bus: broken-down (not used again that
+     *                      day), reassigned (used on another line or brigade) or returned (back on the brigade)
+     * @param replacementLine the line the replacement bus ran before taking over, and {@code replacementBrigade}
+     *                      its brigade; null when it hadn't run another brigade that day
+     * @param changeMinutes on a change of bus, how long the trip stood still: from the replaced bus stopping for good
+     *                      to the replacement's first report
+     * @param delayBeforeChange the replaced bus's delay when it stopped, and {@code delayAfterChange} the
+     *                      replacement's first
+     * @param changeStop    the stop the replaced bus was heading to when it stopped, and {@code joinStop} the one the
+     *                      replacement was first heading to
+     * @param skippedStops  stops between the two that neither bus was seen heading to; 0 when the replacement took over
+     *                      at the same place
      */
     public record Trip(String kind, String note, String tripId, String line, String brigade, String headsign,
                        String firstStop, String lastStop, Instant scheduledDeparture, Instant scheduledArrival,
                        int stops, List<String> vehicles, Integer fromStop, Integer toStop, String coveredFrom,
                        String coveredTo, Instant firstSeen, Instant lastSeen, Integer startDelay, Integer maxDelay,
                        Integer endDelay, Integer detourMeters, Integer detourMinutes, String detourFrom,
-                       String detourTo) {
+                       String detourTo, String changeFate, String replacementLine, String replacementBrigade,
+                       Integer changeMinutes, Integer delayBeforeChange, Integer delayAfterChange, String changeStop,
+                       String joinStop, Integer skippedStops) {
     }
 }
