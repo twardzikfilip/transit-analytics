@@ -20,6 +20,11 @@ export const routes: Routes = [
         path: 'hotspots',
         loadChildren: () => import('./pages/hotspots/hotspots.routes').then((m) => m.HOTSPOTS_ROUTES),
       },
+      {
+        path: 'delay-generation',
+        loadChildren: () =>
+          import('./pages/delay-generation/delay-generation.routes').then((m) => m.DELAY_GENERATION_ROUTES),
+      },
       { path: 'live-map', loadChildren: () => import('./pages/live-map/live-map.routes').then((m) => m.LIVE_MAP_ROUTES) },
       { path: 'lines', loadChildren: () => import('./pages/line-stats/line-stats.routes').then((m) => m.LINE_STATS_ROUTES) },
       {

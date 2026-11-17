@@ -1,6 +1,7 @@
 package com.transitanalytics.security;
 
 import com.transitanalytics.dto.BrigadeDto;
+import com.transitanalytics.dto.DelayGenerationDto;
 import com.transitanalytics.dto.HotspotDto;
 import com.transitanalytics.dto.LineStatsDto;
 import com.transitanalytics.dto.LivePositionDto;
@@ -13,6 +14,7 @@ import com.transitanalytics.gtfs.GtfsImportInProgressException;
 import com.transitanalytics.gtfs.GtfsImportResult;
 import com.transitanalytics.recording.PositionHistoryService;
 import com.transitanalytics.service.BrigadeScheduleService;
+import com.transitanalytics.service.DelayGenerationService;
 import com.transitanalytics.service.ExternalServiceException;
 import com.transitanalytics.service.HotspotService;
 import com.transitanalytics.service.LineStatsService;
@@ -20,6 +22,7 @@ import com.transitanalytics.service.TimeWindow;
 import com.transitanalytics.service.VehicleService;
 import com.transitanalytics.service.VehicleStatsService;
 import com.transitanalytics.web.BrigadeController;
+import com.transitanalytics.web.DelayGenerationController;
 import com.transitanalytics.web.GtfsController;
 import com.transitanalytics.web.HotspotController;
 import com.transitanalytics.web.LineStatsController;
@@ -62,7 +65,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = {AuthController.class, VehicleController.class, ZbiorkomController.class,
         GtfsController.class, PositionHistoryController.class,
-        LineStatsController.class, VehicleStatsController.class, BrigadeController.class, HotspotController.class})
+        LineStatsController.class, VehicleStatsController.class, BrigadeController.class, HotspotController.class,
+        DelayGenerationController.class})
 @Import({SecurityConfig.class, JwtAuthFilter.class, JwtService.class, SecurityWebTest.Metrics.class})
 @TestPropertySource(properties = {
         "app.jwt.secret=test-secret-test-secret-test-secret-123456",
@@ -118,6 +122,9 @@ class SecurityWebTest {
 
     @MockitoBean
     HotspotService hotspotService;
+
+    @MockitoBean
+    DelayGenerationService delayGenerationService;
 
     @Test
     void loginReturnsToken() throws Exception {
@@ -329,6 +336,31 @@ class SecurityWebTest {
         mvc.perform(get("/api/hotspots").param("window", "year").header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isBadRequest());
         mvc.perform(get("/api/hotspots")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void guestCanReadDelayGenerationForTheNetworkAndALine() throws Exception {
+        var report = new DelayGenerationDto.Report("week", Instant.parse("2026-11-09T20:00:00Z"),
+                Instant.parse("2026-11-16T20:00:00Z"), 4, 8479, List.of(new DelayGenerationDto.Band("all", "All day")),
+                List.of(new DelayGenerationDto.Stretch("Lipowa/Nowy Świat", "pl. Niepodległości", 53.13, 23.15,
+                        53.131, 23.152, List.of("2"), List.of(707), List.of(35.6))),
+                List.of());
+        given(delayGenerationService.report(TimeWindow.WEEK)).willReturn(report);
+        var line = new DelayGenerationDto.LineReport("month", Instant.parse("2026-10-17T20:00:00Z"),
+                Instant.parse("2026-11-16T20:00:00Z"), "21", 8, List.of(), List.of(
+                new DelayGenerationDto.BrigadeGain("021-07", 84, 124.0, 664)), List.of());
+        given(delayGenerationService.line(TimeWindow.MONTH, "21")).willReturn(line);
+
+        mvc.perform(get("/api/delay-generation").header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.stretches[0].meanSeconds[0]").value(35.6));
+        mvc.perform(get("/api/delay-generation/lines/21").param("window", "month")
+                        .header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.brigades[0].brigade").value("021-07"));
+        mvc.perform(get("/api/delay-generation").param("window", "year")
+                .header("Authorization", bearer("guest", "GUEST"))).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/delay-generation/lines/21")).andExpect(status().isUnauthorized());
     }
 
     @Test

@@ -1,0 +1,155 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.controls,
+.windows,
+.directions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 1rem;
+}
+
+.windows,
+.directions {
+  gap: 0.35rem;
+}
+
+.summary {
+  margin: 0;
+}
+
+.gain {
+  color: #a32626;
+  font-weight: 600;
+}
+
+.recover {
+  color: #2a78d6;
+  font-weight: 600;
+}
+
+.map-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.pairs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 560px), 1fr));
+  gap: 0.75rem;
+}
+
+.loading {
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.05rem;
+}
+
+h3 {
+  margin: 1rem 0 0.4rem;
+  font-size: 0.98rem;
+}
+
+.card > p.muted,
+.line-detail p.muted {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+}
+
+.chip {
+  display: inline-block;
+  min-width: 3.4rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+  text-align: right;
+  color: #1f2933;
+  font-variant-numeric: tabular-nums;
+}
+
+.light-text {
+  color: #fff;
+}
+
+td.lines {
+  min-width: 6rem;
+}
+
+.lines-table tbody tr,
+.examples tbody tr {
+  cursor: pointer;
+
+  &:hover td {
+    background: var(--hover);
+  }
+
+  &.selected td {
+    background: var(--accent-soft);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+}
+
+.line-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.directions {
+  margin: 0.5rem 0;
+
+  button .muted {
+    margin-left: 0.35rem;
+    font-size: 0.85rem;
+  }
+}
+
+.examples-row {
+  display: grid;
+  gap: 0 1.5rem;
+  align-items: start;
+}
+
+/* Wide screens: the runs beside the chosen run's profile. */
+@media (min-width: 1500px) {
+  .examples-row {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  }
+}
+
+.profile {
+  min-width: 0;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.how {
+  font-size: 0.9rem;
+
+  summary {
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  li + li {
+    margin-top: 0.35rem;
+  }
+}
