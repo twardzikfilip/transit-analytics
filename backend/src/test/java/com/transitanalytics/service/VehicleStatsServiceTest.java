@@ -141,7 +141,9 @@ class VehicleStatsServiceTest {
     @Test
     void acceptsTheWindowsByKey() {
         assertThat(TimeWindow.of("Week")).isEqualTo(TimeWindow.WEEK);
-        assertThatThrownBy(() -> TimeWindow.of("year")).hasMessageContaining("day, week, month");
+        assertThatThrownBy(() -> TimeWindow.of("year")).hasMessageContaining("15m, 1h, 3h, 6h, day, week, month");
+        assertThat(TimeWindow.of("1H")).isEqualTo(TimeWindow.HOUR);
+        assertThat(TimeWindow.MINUTES_15.key()).isEqualTo("15m");
         assertThatThrownBy(() -> TimeWindow.of(null)).isInstanceOf(IllegalArgumentException.class);
     }
 

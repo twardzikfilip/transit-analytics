@@ -21,6 +21,11 @@ export const routes: Routes = [
         loadChildren: () => import('./pages/hotspots/hotspots.routes').then((m) => m.HOTSPOTS_ROUTES),
       },
       {
+        path: 'trip-anomalies',
+        loadChildren: () =>
+          import('./pages/trip-anomalies/trip-anomalies.routes').then((m) => m.TRIP_ANOMALIES_ROUTES),
+      },
+      {
         path: 'delay-generation',
         loadChildren: () =>
           import('./pages/delay-generation/delay-generation.routes').then((m) => m.DELAY_GENERATION_ROUTES),

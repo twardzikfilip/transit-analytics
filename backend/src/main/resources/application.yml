@@ -64,6 +64,13 @@ springdoc:
   # Only document our REST API, not actuator or error endpoints.
   paths-to-match: /api/**
 
+# JDBC tracing (datasource-micrometer): spans for connections and queries. Result-set operations aren't observed:
+# that wraps every ResultSet call in a proxy, which made reading a day of positions (340,000 rows) take 12 s, not 1.5.
+jdbc:
+  includes: CONNECTION, QUERY
+  resultset-operations:
+    enabled: false
+
 management:
   endpoints:
     web:

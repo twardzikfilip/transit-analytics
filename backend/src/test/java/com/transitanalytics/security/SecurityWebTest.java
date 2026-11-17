@@ -6,6 +6,7 @@ import com.transitanalytics.dto.HotspotDto;
 import com.transitanalytics.dto.LineStatsDto;
 import com.transitanalytics.dto.LivePositionDto;
 import com.transitanalytics.dto.PositionHistoryDto;
+import com.transitanalytics.dto.TripAnomalyDto;
 import com.transitanalytics.dto.VehicleDto;
 import com.transitanalytics.dto.VehicleStatsDto;
 import com.transitanalytics.gtfs.GtfsBialystokService;
@@ -19,6 +20,7 @@ import com.transitanalytics.service.ExternalServiceException;
 import com.transitanalytics.service.HotspotService;
 import com.transitanalytics.service.LineStatsService;
 import com.transitanalytics.service.TimeWindow;
+import com.transitanalytics.service.TripAnomalyService;
 import com.transitanalytics.service.VehicleService;
 import com.transitanalytics.service.VehicleStatsService;
 import com.transitanalytics.web.BrigadeController;
@@ -27,6 +29,7 @@ import com.transitanalytics.web.GtfsController;
 import com.transitanalytics.web.HotspotController;
 import com.transitanalytics.web.LineStatsController;
 import com.transitanalytics.web.PositionHistoryController;
+import com.transitanalytics.web.TripAnomalyController;
 import com.transitanalytics.web.VehicleController;
 import com.transitanalytics.web.VehicleStatsController;
 import com.transitanalytics.web.ZbiorkomController;
@@ -66,7 +69,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(controllers = {AuthController.class, VehicleController.class, ZbiorkomController.class,
         GtfsController.class, PositionHistoryController.class,
         LineStatsController.class, VehicleStatsController.class, BrigadeController.class, HotspotController.class,
-        DelayGenerationController.class})
+        DelayGenerationController.class, TripAnomalyController.class})
 @Import({SecurityConfig.class, JwtAuthFilter.class, JwtService.class, SecurityWebTest.Metrics.class})
 @TestPropertySource(properties = {
         "app.jwt.secret=test-secret-test-secret-test-secret-123456",
@@ -125,6 +128,9 @@ class SecurityWebTest {
 
     @MockitoBean
     DelayGenerationService delayGenerationService;
+
+    @MockitoBean
+    TripAnomalyService tripAnomalyService;
 
     @Test
     void loginReturnsToken() throws Exception {
@@ -361,6 +367,28 @@ class SecurityWebTest {
         mvc.perform(get("/api/delay-generation").param("window", "year")
                 .header("Authorization", bearer("guest", "GUEST"))).andExpect(status().isBadRequest());
         mvc.perform(get("/api/delay-generation/lines/21")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void guestCanReadAbnormalTripsForAWindow() throws Exception {
+        var trip = new TripAnomalyDto.Trip("lost", "Bus 319 stopped reporting.", "012-02_P_1", "12", "012-02",
+                "Hetmańska", "Starosielce", "Hetmańska", Instant.parse("2026-11-15T08:15:00Z"),
+                Instant.parse("2026-11-15T09:00:00Z"), 25, List.of("319"), 1, 8, "Starosielce", "Gen. Fieldorfa",
+                Instant.parse("2026-11-15T08:16:00Z"), Instant.parse("2026-11-15T09:24:00Z"), 0, 120, 60, null,
+                null, null, null);
+        var report = new TripAnomalyDto.Report("15m", Instant.parse("2026-11-17T14:00:00Z"),
+                Instant.parse("2026-11-17T14:15:00Z"),
+                new TripAnomalyDto.Summary(40, 30, 29, 0, 0, 0, 1, 0, 0, 0, 10), List.of(), 1, List.of(trip));
+        given(tripAnomalyService.report(TimeWindow.MINUTES_15)).willReturn(report);
+
+        mvc.perform(get("/api/trip-anomalies").param("window", "15m")
+                        .header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.summary.lost").value(1))
+                .andExpect(jsonPath("$.trips[0].vehicles[0]").value("319"));
+        mvc.perform(get("/api/trip-anomalies").param("window", "2h")
+                .header("Authorization", bearer("guest", "GUEST"))).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/trip-anomalies")).andExpect(status().isUnauthorized());
     }
 
     @Test

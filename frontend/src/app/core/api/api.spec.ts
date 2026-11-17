@@ -9,6 +9,7 @@ import {
   HotspotApi,
   LineDetailApi,
   LineStatsApi,
+  TripAnomalyApi,
   PositionHistoryApi,
   VehicleApi,
   VehicleStatsApi,
@@ -126,5 +127,10 @@ describe('API clients', () => {
     expect(http.expectOne('/api/delay-generation/lines/N%2F1?window=week').request.method).toBe(
       'GET',
     );
+  });
+
+  it('reads the abnormal trips for a window', () => {
+    TestBed.inject(TripAnomalyApi).report('15m').subscribe();
+    expect(http.expectOne('/api/trip-anomalies?window=15m').request.method).toBe('GET');
   });
 });

@@ -7,3 +7,4 @@ export * from './lines.api';
 export * from './corridors.api';
 export * from './hotspots.api';
 export * from './delay-generation.api';
+export * from './trip-anomalies.api';
