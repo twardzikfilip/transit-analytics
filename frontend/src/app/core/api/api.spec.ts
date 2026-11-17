@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import {
   BrigadeApi,
   CorridorApi,
+  DelayGenerationApi,
   GtfsApi,
   HotspotApi,
   LineDetailApi,
@@ -116,5 +117,14 @@ describe('API clients', () => {
 
     TestBed.inject(HotspotApi).report('day', '10').subscribe();
     expect(http.expectOne('/api/hotspots?window=day&line=10').request.method).toBe('GET');
+  });
+
+  it('reads delay generation for the network and for a line', () => {
+    TestBed.inject(DelayGenerationApi).report('month').subscribe();
+    expect(http.expectOne('/api/delay-generation?window=month').request.method).toBe('GET');
+    TestBed.inject(DelayGenerationApi).line('week', 'N/1').subscribe();
+    expect(http.expectOne('/api/delay-generation/lines/N%2F1?window=week').request.method).toBe(
+      'GET',
+    );
   });
 });

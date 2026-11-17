@@ -6,3 +6,4 @@ export * from './position-history.api';
 export * from './lines.api';
 export * from './corridors.api';
 export * from './hotspots.api';
+export * from './delay-generation.api';

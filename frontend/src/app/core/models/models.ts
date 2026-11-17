@@ -8,3 +8,4 @@ export * from './line-detail';
 export * from './corridors';
 export * from './vehicle-stats';
 export * from './hotspots';
+export * from './delay-generation';

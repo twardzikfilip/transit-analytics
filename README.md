@@ -125,6 +125,20 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   its standstills, buses, typical and long wait, the directions buses were heading, the busiest hour and the lines.
   Per-day figures are over the days with recordings. Service days that are over are read once and kept; the last
   month is read at startup in the background. Cached for 2 minutes.
+- `GET /api/delay-generation?window=day|week|month` — Delay generation: how much delay buses gain (or recover)
+  between consecutive stops, on the timetable's lines. A passage is a report whose next stop moved on by one; the
+  feed's delay then is the delay on leaving the stop just passed, and the change between two consecutive stops is the
+  delay generated there (the drive and the dwell at the second stop). Reports that skip a stop, and delays over
+  30 minutes, are left out. Every directed stretch measured at least 5 times (all lines together) with its buses
+  and average change for the whole day and per part of it (before 06:30, morning peak, midday, afternoon peak,
+  evening, after 20:00), and each line's gain per run (first stop to last, runs of 5 stops or more) with its worst
+  stretch. Feed stop names are matched to the timetable's by name (without the stop code and "NŻ") and the nearest
+  position. Service days that are over are read once and kept; the last month is read at startup in the
+  background. Cached for 2 minutes.
+- `GET /api/delay-generation/lines/{line}?window=…` — one line: per headsign, its stretches in route order with
+  the average, median and 90th percentile change, the share of buses gaining a minute or more, the delay on leaving,
+  and the average by hour of the day; its brigades by delay gained per run; and example runs (the most delay gained
+  overall, and on each stretch) with the time and delay on leaving every stop.
 - `GET /api/brigades/{brigade}/schedule` — a brigade's runs on the current service day (03:00–03:00 Warsaw time) from
   the timetable: line, headsign, first and last stop, scheduled departure and arrival. Brigades are named as on the
   live feed (`103-05`); the timetable's is the trip id's prefix. Used by the live map's popups.
@@ -280,6 +294,13 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
   24 hours, 7 days or 30 days and one line or all (kept in the URL as `?window=` and `?line=`). Click a row to show
   its hotspot on the map (with its spread), or a circle to find its row. Store slice `hotspots`, registered by its
   lazy route.
+- Delay generation: a map of every stretch between stops coloured by the delay buses gain on it (red) or recover
+  (blue), both directions side by side, for the whole day or a part of it; the stretches creating and recovering
+  the most delay altogether; and each line's gain per run. Click a line for, per direction, a table of its stretches
+  in route order with the change by hour of the day (a heatmap with the numbers in the cells), the runs that gained
+  the most (overall or on a chosen stretch) with a chart and table of how their delay built up stop by stop, and
+  its brigades. Window, part of the day and line are kept in the URL (`?window=`, `?part=`, `?line=`). Store slice
+  `delayGeneration`, registered by its lazy route.
 - Timetable pages (read-only): Routes → Trips (filter by route, direction, service, headsign) → Stop times of a trip;
   Stops (search, zone) → departure board of a stop. Filters and the page number live in the URL, so every view can be
   linked and the back button works.
