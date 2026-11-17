@@ -117,7 +117,9 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   one day, and vehicles that left their brigade while the timetable had it running (switched to another line, or
   disappeared), with the vehicle that took over. Service days that are over are read once and kept; the last month
   is read at startup in the background. Answers are cached for 2 minutes. `agency` (repeatable) limits the tables
-  to those operators' vehicles; `agencies` lists every operator in the window, with its vehicle count.
+  to those operators' vehicles; `agencies` lists every operator in the window, with its vehicle count. `unused`
+  lists the fleet's buses (every bus ever seen on the feed) that served no line in the window, with when and on
+  which line each last did, idle the longest first.
 - `GET /api/hotspots?window=day|week|month[&line=21]` — Stop hotspots: where buses of the timetable's lines stand
   still away from stops. A standstill is two or more reports in a row within 10 m (up to 5 min; longer ones are
   layovers or breakdowns); those within 50 m of a stop or 150 m of a terminal are left out. The rest are clustered
@@ -305,7 +307,8 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
   least used vehicles (hours in service), top 10 on the most and fewest lines, vehicles that served several lines on
   one day (in the order served), and vehicles that left their brigade outside the schedule. Every table has the
   vehicle's number, model and operator. A dropdown of checkboxes beside the window buttons chooses the operators
-  whose vehicles are included (kept in the URL as `?agency=`; all by default). Store slice `vehicleStats`, registered by its lazy route.
+  whose vehicles are included (kept in the URL as `?agency=`; all by default). A table lists the buses not used at
+  all in the window, with their last time in service and line, and how long they've been idle. Store slice `vehicleStats`, registered by its lazy route.
 - Stop hotspots: where buses lose time standing still away from stops (traffic lights, junctions, congestion), as
   circles on a grey map sized by the time lost, and a table of the hotspots, the most time lost first. Pick the last
   24 hours, 7 days or 30 days and one line or all (kept in the URL as `?window=` and `?line=`). Click a row to show

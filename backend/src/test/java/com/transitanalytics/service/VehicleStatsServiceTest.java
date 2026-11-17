@@ -1,5 +1,6 @@
 package com.transitanalytics.service;
 
+import com.transitanalytics.dto.VehicleStatsDto.Idle;
 import com.transitanalytics.dto.VehicleStatsDto.Incident;
 import com.transitanalytics.dto.VehicleStatsDto.LineDay;
 import com.transitanalytics.dto.VehicleStatsDto.Usage;
@@ -54,7 +55,13 @@ class VehicleStatsServiceTest {
                 segment(c, DAY, "400-01", "400", "06:00", "09:00", null),
                 segment(c, DAY, "401-01", "401", "09:10", "10:00", null));
         var figures = new VehicleStatsService.Figures(local("05:00"), local("12:00"),
-                VehicleStatsService.usage(segments), VehicleStatsService.lineDays(segments), List.of());
+                VehicleStatsService.usage(segments), VehicleStatsService.lineDays(segments), List.of(),
+                VehicleStatsService.unused(List.of(
+                        new Idle(A, local("04:00"), "9"),
+                        new Idle(new Vehicle(4, "W2", null, "WSCHODEXPRESS"), null, null),
+                        new Idle(new Vehicle(5, "B9", null, "BKM"), local("03:00"), "4"),
+                        new Idle(new Vehicle(6, "B8", null, "BKM"), null, null)),
+                        VehicleStatsService.usage(segments)));
 
         var all = figures.report(TimeWindow.DAY, Set.of());
         assertThat(all.vehicles()).isEqualTo(3);
@@ -69,6 +76,11 @@ class VehicleStatsServiceTest {
         assertThat(bkm.leastUsed()).extracting(Usage::vehicle).containsExactly(A, B);
         assertThat(bkm.multiLineDays()).isEmpty();
         assertThat(bkm.agencies()).as("still all, to choose from").hasSize(2);
+
+        // Buses not in service at all: idle the longest first, never recorded last; the chosen operators' only.
+        assertThat(all.unused()).extracting(b -> b.vehicle().number()).containsExactly("B9", "B8", "W2");
+        assertThat(bkm.unused()).extracting(b -> b.vehicle().number()).containsExactly("B9", "B8");
+        assertThat(bkm.unused().get(0).lastLine()).isEqualTo("4");
     }
 
     @Test
