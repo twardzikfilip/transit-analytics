@@ -112,11 +112,12 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   vehicle table (number, type, agency, model). The agency `default` is stored as `BKM`, and GTFS type codes become names
   (`3` → `BUS`). Each position carries its line's `subtype` (the stored one, else from the name, for other operators'
   lines). If zbiorkom.live fails or times out, the endpoint returns 502.
-- `GET /api/vehicle-stats?window=day|week|month` — Vehicles in detail, from recorded positions over the last 24 hours,
+- `GET /api/vehicle-stats?window=day|week|month[&agency=BKM&agency=…]` — Vehicles in detail, from recorded positions over the last 24 hours,
   7 days or 30 days: hours in service and lines served per vehicle (top and bottom 10), vehicles on several lines on
   one day, and vehicles that left their brigade while the timetable had it running (switched to another line, or
   disappeared), with the vehicle that took over. Service days that are over are read once and kept; the last month
-  is read at startup in the background. Answers are cached for 2 minutes.
+  is read at startup in the background. Answers are cached for 2 minutes. `agency` (repeatable) limits the tables
+  to those operators' vehicles; `agencies` lists every operator in the window, with its vehicle count.
 - `GET /api/brigades/{brigade}/schedule` — a brigade's runs on the current service day (03:00–03:00 Warsaw time) from
   the timetable: line, headsign, first and last stop, scheduled departure and arrival. Brigades are named as on the
   live feed (`103-05`); the timetable's is the trip id's prefix. Used by the live map's popups.
@@ -265,7 +266,8 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
 - Vehicles in detail: pick the last 24 hours, 7 days or 30 days (kept in the URL as `?window=`). Top 10 most and
   least used vehicles (hours in service), top 10 on the most and fewest lines, vehicles that served several lines on
   one day (in the order served), and vehicles that left their brigade outside the schedule. Every table has the
-  vehicle's number, model and operator. Store slice `vehicleStats`, registered by its lazy route.
+  vehicle's number, model and operator. A dropdown of checkboxes beside the window buttons chooses the operators
+  whose vehicles are included (kept in the URL as `?agency=`; all by default). Store slice `vehicleStats`, registered by its lazy route.
 - Timetable pages (read-only): Routes → Trips (filter by route, direction, service, headsign) → Stop times of a trip;
   Stops (search, zone) → departure board of a stop. Filters and the page number live in the URL, so every view can be
   linked and the back button works.

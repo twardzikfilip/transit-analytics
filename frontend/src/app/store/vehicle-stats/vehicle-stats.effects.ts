@@ -6,13 +6,13 @@ import { VehicleStatsApi } from '../../core/api/api.services';
 import { errorMessage } from '../paged';
 import { VehicleStatsActions } from './vehicle-stats.actions';
 
-/** Loads the report for a window; choosing another window cancels the one still loading. */
+/** Loads the report for a window and operators; choosing others cancels the one still loading. */
 export const load = createEffect(
   (actions$ = inject(Actions), api = inject(VehicleStatsApi)) =>
     actions$.pipe(
       ofType(VehicleStatsActions.load),
-      switchMap(({ window }) =>
-        api.report(window).pipe(
+      switchMap(({ window, agencies }) =>
+        api.report(window, agencies).pipe(
           map((report) => VehicleStatsActions.loaded({ report })),
           catchError((err: HttpErrorResponse) =>
             of(VehicleStatsActions.failure({ error: errorMessage(err) })),

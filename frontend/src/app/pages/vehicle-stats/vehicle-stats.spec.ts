@@ -13,6 +13,7 @@ import { VehicleStatsActions } from '../../store/vehicle-stats/vehicle-stats.act
 import { load } from '../../store/vehicle-stats/vehicle-stats.effects';
 import { vehicleStatsFeature } from '../../store/vehicle-stats/vehicle-stats.reducer';
 import { renderPage, stateAfter, text } from '../../testing/page-testing';
+import { pickerLabel, toggleAgency } from './agency-picker';
 import { FIRST_ROWS, VehicleStats, lastSeenNote, parseWindow, whatHappened } from './vehicle-stats';
 
 const bus = (id: number, number: string): StatsVehicle => ({
@@ -56,6 +57,10 @@ function report(days = 1): VehicleStatsReport {
     from: '2026-11-09T20:00:00Z',
     to: '2026-11-16T20:00:00Z',
     vehicles: 2,
+    agencies: [
+      { name: 'BKM', vehicles: 2 },
+      { name: 'TUROSN', vehicles: 1 },
+    ],
     mostUsed: [usage(a, 37.6, ['11', '19']), usage(b, 12.5, ['9'])],
     leastUsed: [usage(b, 12.5, ['9']), usage(a, 37.6, ['11', '19'])],
     mostLines: [usage(a, 37.6, ['11', '19'])],
@@ -92,7 +97,9 @@ describe('Vehicles in detail page', () => {
       { window: 'month' },
     );
 
-    expect(store.dispatch).toHaveBeenCalledWith(VehicleStatsActions.load({ window: 'month' }));
+    expect(store.dispatch).toHaveBeenCalledWith(
+      VehicleStatsActions.load({ window: 'month', agencies: [] }),
+    );
     const tables = [...el.querySelectorAll('app-usage-table')];
     expect(tables.map((t) => text(t.querySelector('h2')))).toEqual([
       'Top 10 most used',
@@ -147,8 +154,10 @@ describe('Vehicles in detail page', () => {
       .spyOn(fixture.debugElement.injector.get(Router), 'navigate')
       .mockResolvedValue(true);
 
-    expect(store.dispatch).toHaveBeenCalledWith(VehicleStatsActions.load({ window: 'week' }));
-    const buttons = [...el.querySelectorAll('.windows button')] as HTMLButtonElement[];
+    expect(store.dispatch).toHaveBeenCalledWith(
+      VehicleStatsActions.load({ window: 'week', agencies: [] }),
+    );
+    const buttons = [...el.querySelectorAll('.windows > button')] as HTMLButtonElement[];
     expect(buttons.map(text)).toEqual(['Last 24 hours', 'Last 7 days', 'Last 30 days']);
     expect(buttons[1].classList).toContain('active');
     buttons[0].click();
@@ -158,7 +167,65 @@ describe('Vehicles in detail page', () => {
     });
 
     setQuery({ window: 'day' });
-    expect(store.dispatch).toHaveBeenLastCalledWith(VehicleStatsActions.load({ window: 'day' }));
+    expect(store.dispatch).toHaveBeenLastCalledWith(
+      VehicleStatsActions.load({ window: 'day', agencies: [] }),
+    );
+  });
+
+  it('chooses operators in a dropdown of checkboxes, through the URL', () => {
+    const { el, store, fixture, setQuery } = renderPage(
+      VehicleStats,
+      stateAfter(vehicleStatsFeature, VehicleStatsActions.loaded({ report: report() })),
+    );
+    const navigate = vi
+      .spyOn(fixture.debugElement.injector.get(Router), 'navigate')
+      .mockResolvedValue(true);
+    const toggle = el.querySelector('app-agency-picker button.toggle') as HTMLButtonElement;
+    expect(text(toggle)).toBe('All operators ▾');
+    expect(el.querySelector('app-agency-picker fieldset')).toBeNull();
+
+    toggle.click();
+    fixture.detectChanges();
+    const boxes = () =>
+      [...el.querySelectorAll('app-agency-picker input[type=checkbox]')] as HTMLInputElement[];
+    expect(boxes().map((b) => [text(b.parentElement), b.checked])).toEqual([
+      ['BKM 2', true],
+      ['TUROSN 1', true],
+    ]);
+    boxes()[1].click();
+    expect(navigate).toHaveBeenLastCalledWith([], {
+      queryParams: { agency: ['BKM'] },
+      queryParamsHandling: 'merge',
+    });
+
+    setQuery({ agency: ['BKM'] });
+    fixture.detectChanges();
+    expect(store.dispatch).toHaveBeenLastCalledWith(
+      VehicleStatsActions.load({ window: 'week', agencies: ['BKM'] }),
+    );
+    expect(text(toggle)).toBe('BKM ▾');
+    expect(boxes().map((b) => [b.checked, b.disabled])).toEqual([
+      [true, true],
+      [false, false],
+    ]);
+    (el.querySelector('app-agency-picker button.all') as HTMLButtonElement).click();
+    expect(navigate).toHaveBeenLastCalledWith([], {
+      queryParams: { agency: null },
+      queryParamsHandling: 'merge',
+    });
+
+    document.body.click();
+    fixture.detectChanges();
+    expect(el.querySelector('app-agency-picker fieldset')).toBeNull();
+  });
+
+  it('keeps the operator selection minimal, empty for all', () => {
+    const options = report().agencies.concat({ name: 'WSCHODEXPRESS', vehicles: 5 });
+    expect(toggleAgency(options, [], 'TUROSN')).toEqual(['BKM', 'WSCHODEXPRESS']);
+    expect(toggleAgency(options, ['WSCHODEXPRESS', 'BKM'], 'TUROSN')).toEqual([]);
+    expect(toggleAgency(options, ['BKM'], 'WSCHODEXPRESS')).toEqual(['BKM', 'WSCHODEXPRESS']);
+    expect(pickerLabel(options, [])).toBe('All operators');
+    expect(pickerLabel(options, ['BKM', 'TUROSN'])).toBe('2 of 3 operators');
   });
 
   it('reads the window and describes what happened', () => {
@@ -181,7 +248,7 @@ describe('vehicle stats effect', () => {
     const actions = new Subject<unknown>();
     const out: unknown[] = [];
     load(actions as unknown as Actions, api as VehicleStatsApi).subscribe((a) => out.push(a));
-    actions.next(VehicleStatsActions.load({ window }));
+    actions.next(VehicleStatsActions.load({ window, agencies: ['BKM'] }));
     return out;
   };
 
@@ -189,7 +256,7 @@ describe('vehicle stats effect', () => {
     const r = report();
     const api = { report: vi.fn(() => of(r)) };
     expect(run(api)).toEqual([VehicleStatsActions.loaded({ report: r })]);
-    expect(api.report).toHaveBeenCalledWith('day');
+    expect(api.report).toHaveBeenCalledWith('day', ['BKM']);
 
     const failing = {
       report: () =>

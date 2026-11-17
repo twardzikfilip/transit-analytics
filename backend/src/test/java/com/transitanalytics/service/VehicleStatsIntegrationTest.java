@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -46,9 +47,9 @@ class VehicleStatsIntegrationTest {
         timetable.trip(it7, "IT7-02_IT_VS_1", 0, "Dworzec", null, "06:00", 40, "IT-V1", "IT-V2");
         timetable.trip(it7, "IT7-02_IT_VS_2", 1, "Rynek", null, "09:00", 40, "IT-V2", "IT-V1");
 
-        long a = vehicle("IT-VA", "Solaris Urbino 12");
-        long b = vehicle("IT-VB", "Yutong U12");
-        long c = vehicle("IT-VC", "MAN Lion's City");
+        long a = vehicle("IT-VA", "Solaris Urbino 12", "BKM");
+        long b = vehicle("IT-VB", "Yutong U12", "BKM");
+        long c = vehicle("IT-VC", "MAN Lion's City", "IT-OTHER");
         // A leaves IT7-01 at 06:30, mid-run; B takes it over from 06:50.
         record(a, "IT7", "IT7-01", "06:00", "06:30");
         record(b, "IT7", "IT7-01", "06:50", "08:20");
@@ -57,10 +58,13 @@ class VehicleStatsIntegrationTest {
         record(c, "IT7", "IT7-02", "09:00", "09:10");
         record(c, "IT8", "IT8-01", "09:20", "09:40");
 
-        VehicleStatsDto.Report report = stats.report(VehicleStatsService.Window.DAY,
-                Instant.parse("2099-01-05T04:00:00Z"), Instant.parse("2099-01-05T10:00:00Z"));
+        Instant from = Instant.parse("2099-01-05T04:00:00Z");
+        Instant to = Instant.parse("2099-01-05T10:00:00Z");
+        VehicleStatsDto.Report report = stats.report(TimeWindow.DAY, from, to, Set.of());
 
         assertThat(report.vehicles()).isEqualTo(3);
+        assertThat(report.agencies()).containsExactly(new VehicleStatsDto.Agency("BKM", 2),
+                new VehicleStatsDto.Agency("IT-OTHER", 1));
         assertThat(report.mostUsed()).extracting(u -> u.vehicle().number() + " " + u.hours())
                 .containsExactly("IT-VB 1.5", "IT-VC 1.1", "IT-VA 0.5");
         assertThat(report.mostUsed().get(0).vehicle().model()).isEqualTo("Yutong U12");
@@ -80,12 +84,23 @@ class VehicleStatsIntegrationTest {
         assertThat(disappeared.scheduledUntil()).as("no break: the whole day").isEqualTo(local("08:20"));
         assertThat(disappeared.missedRuns()).as("06:50–07:30 and 07:40–08:20; it nearly finished its first run").isEqualTo(2);
         assertThat(report.incidents().get(0).nextLine()).isEqualTo("IT8");
+
+        // Only BKM's vehicles: C (IT-OTHER) drops out of every table, the operators to choose from stay.
+        VehicleStatsDto.Report bkm = stats.report(TimeWindow.DAY, from, to, Set.of("BKM"));
+        assertThat(bkm.vehicles()).isEqualTo(2);
+        assertThat(bkm.agencies()).hasSize(2);
+        assertThat(bkm.mostUsed()).extracting(u -> u.vehicle().number()).containsExactly("IT-VB", "IT-VA");
+        assertThat(bkm.mostLines()).extracting(u -> u.vehicle().number()).containsExactly("IT-VB", "IT-VA");
+        assertThat(bkm.multiLineDays()).isEmpty();
+        assertThat(bkm.incidents()).extracting(i -> i.vehicle().number()).containsExactly("IT-VA");
+        assertThat(stats.report(TimeWindow.DAY, from, to, Set.of("IT-OTHER")).incidents())
+                .extracting(i -> i.vehicle().number()).containsExactly("IT-VC");
     }
 
-    private long vehicle(String number, String model) {
+    private long vehicle(String number, String model, String agency) {
         return jdbc.queryForObject(
-                "INSERT INTO vehicle (vehicle_number, type, agency, model) VALUES (?, 'BUS', 'BKM', ?) RETURNING id",
-                Long.class, number, model);
+                "INSERT INTO vehicle (vehicle_number, type, agency, model) VALUES (?, 'BUS', ?, ?) RETURNING id",
+                Long.class, number, agency, model);
     }
 
     /** A report every minute from {@code from} to {@code to} (local time), on time. */

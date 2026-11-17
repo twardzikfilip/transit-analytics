@@ -4,10 +4,11 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { distinctUntilChanged, map } from 'rxjs';
-import { StatsWindow, VehicleIncident } from '../../core/models/models';
+import { StatsAgency, StatsWindow, VehicleIncident } from '../../core/models/models';
 import { formatDelay, localTime } from '../../shared/format/time';
 import { VehicleStatsActions } from '../../store/vehicle-stats/vehicle-stats.actions';
 import { vehicleStatsFeature } from '../../store/vehicle-stats/vehicle-stats.reducer';
+import { AgencyPicker } from './agency-picker';
 import { UsageTable } from './usage-table';
 
 export const WINDOWS: { key: StatsWindow; label: string }[] = [
@@ -49,7 +50,7 @@ export function lastSeenNote(i: VehicleIncident): string {
  */
 @Component({
   selector: 'app-vehicle-stats',
-  imports: [DatePipe, UsageTable],
+  imports: [AgencyPicker, DatePipe, UsageTable],
   templateUrl: './vehicle-stats.html',
   styleUrl: './vehicle-stats.scss',
 })
@@ -62,12 +63,20 @@ export class VehicleStats {
   protected readonly error = this.store.selectSignal(vehicleStatsFeature.selectError);
 
   protected readonly windows = WINDOWS;
-  /** The window in the URL; a change loads its report. */
-  private readonly window$ = inject(ActivatedRoute).queryParamMap.pipe(
-    map((p) => parseWindow(p.get('window'))),
-    distinctUntilChanged(),
+  /** The window and operators in the URL (?window=month&agency=BKM&agency=…); a change loads their report. */
+  private readonly query$ = inject(ActivatedRoute).queryParamMap.pipe(
+    map((p) => ({ window: parseWindow(p.get('window')), agencies: p.getAll('agency') })),
+    distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
   );
-  protected readonly window = toSignal(this.window$, { requireSync: true });
+  private readonly query = toSignal(this.query$, { requireSync: true });
+  protected readonly window = computed(() => this.query().window);
+  protected readonly agencies = computed(() => this.query().agencies);
+  /** The window's operators, and any chosen one without vehicles in it, so it can still be unticked. */
+  protected readonly agencyOptions = computed((): StatsAgency[] => {
+    const options = this.report()?.agencies ?? [];
+    const missing = this.agencies().filter((a) => !options.some((o) => o.name === a));
+    return [...options, ...missing.map((name) => ({ name, vehicles: 0 }))];
+  });
 
   protected readonly showAllDays = signal(false);
   protected readonly showAllIncidents = signal(false);
@@ -84,16 +93,24 @@ export class VehicleStats {
   protected readonly lastSeenNote = lastSeenNote;
 
   constructor() {
-    this.window$.pipe(takeUntilDestroyed()).subscribe((window) => {
+    this.query$.pipe(takeUntilDestroyed()).subscribe(({ window, agencies }) => {
       this.showAllDays.set(false);
       this.showAllIncidents.set(false);
-      this.store.dispatch(VehicleStatsActions.load({ window }));
+      this.store.dispatch(VehicleStatsActions.load({ window, agencies }));
     });
   }
 
   protected setWindow(window: StatsWindow): void {
     void this.router.navigate([], {
       queryParams: { window: window === DEFAULT_WINDOW ? null : window },
+      queryParamsHandling: 'merge',
+    });
+  }
+
+  /** Keeps the operators whose vehicles the tables include; none for all. */
+  protected setAgencies(agencies: string[]): void {
+    void this.router.navigate([], {
+      queryParams: { agency: agencies.length ? agencies : null },
       queryParamsHandling: 'merge',
     });
   }

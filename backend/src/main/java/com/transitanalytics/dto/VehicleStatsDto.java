@@ -12,7 +12,8 @@ public final class VehicleStatsDto {
 
     /**
      * @param window         day, week or month: the last 24 hours, 7 days or 30 days
-     * @param vehicles       vehicles that served a line in the window
+     * @param vehicles       vehicles that served a line in the window (of the chosen operators)
+     * @param agencies       all operators with vehicles in service in the window, to choose from
      * @param mostUsed       the 10 vehicles in service the longest
      * @param leastUsed      the 10 in service the shortest (of those that served at all)
      * @param mostLines      the 10 that served the most different lines
@@ -20,9 +21,14 @@ public final class VehicleStatsDto {
      * @param multiLineDays  vehicles that served two or more lines on one day, newest day first
      * @param incidents      vehicles that stopped serving their brigade while it was scheduled to run, newest first
      */
-    public record Report(String window, Instant from, Instant to, int vehicles, List<Usage> mostUsed,
+    public record Report(String window, Instant from, Instant to, int vehicles, List<Agency> agencies,
+                         List<Usage> mostUsed,
                          List<Usage> leastUsed, List<Usage> mostLines, List<Usage> fewestLines,
                          List<LineDay> multiLineDays, List<Incident> incidents) {
+    }
+
+    /** An operator and how many of its vehicles served a line in the window. */
+    public record Agency(String name, int vehicles) {
     }
 
     public record Vehicle(long id, String number, String model, String agency) {

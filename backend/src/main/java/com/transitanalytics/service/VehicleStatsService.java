@@ -23,11 +23,12 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static com.transitanalytics.service.ServiceDay.DAY_START_HOUR;
@@ -39,58 +40,41 @@ import static com.transitanalytics.service.TimetableMath.round;
 @Service
 public class VehicleStatsService {
 
-    /** Time windows, ending now. */
-    public enum Window {
-        DAY(Duration.ofDays(1)), WEEK(Duration.ofDays(7)), MONTH(Duration.ofDays(30));
-
-        final Duration length;
-
-        Window(Duration length) {
-            this.length = length;
-        }
-
-        public static Window of(String value) {
-            try {
-                return valueOf(value.toUpperCase(Locale.ROOT));
-            } catch (IllegalArgumentException | NullPointerException ex) {
-                throw new IllegalArgumentException("window must be day, week or month");
-            }
-        }
-    }
-
     static final int TOP = 10;
     /** A report is computed at most this often per window; the month's takes a few seconds. */
     static final Duration CACHE_FOR = Duration.ofMinutes(2);
-    /** A service day's segments are kept once it ended this long ago (late reports have arrived by then). */
-    static final Duration DAY_SETTLES = Duration.ofMinutes(10);
 
     private final JdbcTemplate jdbc;
     private final Clock clock;
-    private final Map<Window, VehicleStatsDto.Report> cache = new ConcurrentHashMap<>();
-    /** Segments of service days that are over, by day. */
-    private final Map<LocalDate, List<Segment>> daySegments = new ConcurrentHashMap<>();
+    /** Each window's figures for all operators; a report keeps the chosen operators' vehicles. */
+    private final Map<TimeWindow, Figures> cache = new ConcurrentHashMap<>();
+    private final ServiceDayCache<Segment> segments;
 
     public VehicleStatsService(JdbcTemplate jdbc, Clock clock) {
         this.jdbc = jdbc;
         this.clock = clock;
+        this.segments = new ServiceDayCache<>(clock, this::query);
     }
 
     /** Reads the last month's days at startup, in the background, so the first visit doesn't wait for them. */
     @EventListener(ApplicationReadyEvent.class)
     public void warmUp() {
-        WarmUp.inBackground("vehicle-stats", VehicleStatsService.class, () -> report(Window.MONTH));
+        WarmUp.inBackground("vehicle-stats", VehicleStatsService.class, () -> report(TimeWindow.MONTH, Set.of()));
     }
 
-    /** The report for the window ending now. */
-    public VehicleStatsDto.Report report(Window window) {
+    /**
+     * The report for the window ending now.
+     *
+     * @param agencies the operators whose vehicles to include; empty for all
+     */
+    public VehicleStatsDto.Report report(TimeWindow window, Set<String> agencies) {
         Instant now = clock.instant();
-        VehicleStatsDto.Report cached = cache.get(window);
-        if (cached != null && cached.to().plus(CACHE_FOR).isAfter(now)) {
-            return cached;
+        Figures figures = cache.get(window);
+        if (figures == null || !figures.to().plus(CACHE_FOR).isAfter(now)) {
+            figures = figures(now.minus(window.length), now);
+            cache.put(window, figures);
         }
-        VehicleStatsDto.Report report = report(window, now.minus(window.length), now);
-        cache.put(window, report);
-        return report;
+        return figures.report(window, agencies);
     }
 
     /**
@@ -104,44 +88,54 @@ public class VehicleStatsService {
                    double seconds, Integer lastDelay, String lastStop) {
     }
 
-    VehicleStatsDto.Report report(Window window, Instant from, Instant to) {
+    VehicleStatsDto.Report report(TimeWindow window, Instant from, Instant to, Set<String> agencies) {
+        return figures(from, to).report(window, agencies);
+    }
+
+    private Figures figures(Instant from, Instant to) {
         List<Segment> segments = segments(from, to);
-        List<Usage> usage = usage(segments);
-        List<Usage> byHours = usage.stream().sorted(Comparator.comparingDouble(Usage::hours).reversed()).toList();
-        List<Usage> byFewestHours = usage.stream().sorted(Comparator.comparingDouble(Usage::hours)).toList();
-        List<Usage> byLines = usage.stream().sorted(Comparator.comparingInt((Usage u) -> u.lines().size())
-                .reversed().thenComparing(Comparator.comparingDouble(Usage::hours).reversed())).toList();
-        List<Usage> byFewestLines = usage.stream().sorted(Comparator.comparingInt((Usage u) -> u.lines().size())
-                .thenComparing(Comparator.comparingDouble(Usage::hours).reversed())).toList();
-        return new VehicleStatsDto.Report(window.name().toLowerCase(Locale.ROOT), from, to, usage.size(),
-                top(byHours), top(byFewestHours), top(byLines), top(byFewestLines), lineDays(segments),
-                incidents(segments, schedules(segments)));
+        // Incidents are found among all vehicles: whoever took over a brigade may be another operator's.
+        return new Figures(from, to, usage(segments), lineDays(segments), incidents(segments, schedules(segments)));
+    }
+
+    /** A window's figures for all operators' vehicles. */
+    record Figures(Instant from, Instant to, List<Usage> usage, List<LineDay> lineDays, List<Incident> incidents) {
+
+        /** The report for the operators' vehicles (all when {@code agencies} is empty). */
+        VehicleStatsDto.Report report(TimeWindow window, Set<String> agencies) {
+            Predicate<Vehicle> chosen = v -> agencies.isEmpty() || agencies.contains(v.agency());
+            List<Usage> usage = usage().stream().filter(u -> chosen.test(u.vehicle())).toList();
+            List<Usage> byHours = usage.stream().sorted(Comparator.comparingDouble(Usage::hours).reversed()).toList();
+            List<Usage> byFewestHours = usage.stream().sorted(Comparator.comparingDouble(Usage::hours)).toList();
+            List<Usage> byLines = usage.stream().sorted(Comparator.comparingInt((Usage u) -> u.lines().size())
+                    .reversed().thenComparing(Comparator.comparingDouble(Usage::hours).reversed())).toList();
+            List<Usage> byFewestLines = usage.stream().sorted(Comparator.comparingInt((Usage u) -> u.lines().size())
+                    .thenComparing(Comparator.comparingDouble(Usage::hours).reversed())).toList();
+            return new VehicleStatsDto.Report(window.key(), from, to, usage.size(),
+                    agencies(), top(byHours), top(byFewestHours), top(byLines), top(byFewestLines),
+                    lineDays().stream().filter(d -> chosen.test(d.vehicle())).toList(),
+                    incidents().stream().filter(i -> chosen.test(i.vehicle())).toList());
+        }
+
+        /** Operators with vehicles in service in the window, the most vehicles first. */
+        private List<VehicleStatsDto.Agency> agencies() {
+            Map<String, Long> counts = usage().stream().map(u -> u.vehicle().agency()).filter(Objects::nonNull)
+                    .collect(Collectors.groupingBy(a -> a, Collectors.counting()));
+            return counts.entrySet().stream()
+                    .map(e -> new VehicleStatsDto.Agency(e.getKey(), e.getValue().intValue()))
+                    .sorted(Comparator.comparingInt(VehicleStatsDto.Agency::vehicles).reversed()
+                            .thenComparing(VehicleStatsDto.Agency::name))
+                    .toList();
+        }
     }
 
     private static <T> List<T> top(List<T> list) {
         return List.copyOf(list.subList(0, Math.min(TOP, list.size())));
     }
 
-    /**
-     * Segments in {@code [from, to)}, one service day at a time. Days that are over don't change, so their segments
-     * are kept; only the days at the window's edges (cut by it, or still running) are read again.
-     */
+    /** Segments in {@code [from, to)}, in time order. */
     private List<Segment> segments(Instant from, Instant to) {
-        Instant now = clock.instant();
-        List<Segment> all = new ArrayList<>();
-        for (LocalDate day = ServiceDay.serviceDay(from); !ServiceDay.start(day).isAfter(to.minusNanos(1)); day = day.plusDays(1)) {
-            Instant start = ServiceDay.start(day);
-            Instant end = ServiceDay.start(day.plusDays(1));
-            boolean whole = !start.isBefore(from) && !end.isAfter(to) && end.plus(DAY_SETTLES).isBefore(now);
-            if (whole) {
-                all.addAll(daySegments.computeIfAbsent(day, d -> query(start, end)));
-            } else {
-                all.addAll(query(start.isBefore(from) ? from : start, end.isAfter(to) ? to : end));
-            }
-        }
-        // Days older than the longest window are not needed again.
-        LocalDate oldest = ServiceDay.serviceDay(now.minus(Window.MONTH.length)).minusDays(1);
-        daySegments.keySet().removeIf(d -> d.isBefore(oldest));
+        List<Segment> all = new ArrayList<>(segments.get(from, to));
         all.sort(Comparator.comparing(Segment::first));
         return all;
     }
