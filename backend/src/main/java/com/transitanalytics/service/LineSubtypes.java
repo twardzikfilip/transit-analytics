@@ -1,7 +1,6 @@
 package com.transitanalytics.service;
 
 import com.transitanalytics.domain.RouteSubtype;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -26,12 +25,7 @@ public class LineSubtypes {
     private volatile Map<String, RouteSubtype> stored;
     private volatile Instant loadedAt = Instant.MIN;
 
-    @Autowired
-    public LineSubtypes(JdbcTemplate jdbc) {
-        this(jdbc, Clock.systemUTC());
-    }
-
-    LineSubtypes(JdbcTemplate jdbc, Clock clock) {
+    public LineSubtypes(JdbcTemplate jdbc, Clock clock) {
         this.jdbc = jdbc;
         this.clock = clock;
     }

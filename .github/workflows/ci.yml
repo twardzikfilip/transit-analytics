@@ -1,0 +1,90 @@
+# Builds and tests the backend and the frontend on every pull request and on pushes to main.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A newer push to the same branch or pull request cancels the run still going.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (unit + integration tests, coverage)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      # The same database as docker-compose.yml: PostgreSQL 17 with TimescaleDB and its toolkit. Flyway creates the
+      # schema on an empty database, and the integration tests insert their own data (dated 2099) and roll it back.
+      postgres:
+        image: timescale/timescaledb-ha:pg17.11-ts2.31.0
+        env:
+          POSTGRES_DB: transit
+          POSTGRES_USER: transit
+          POSTGRES_PASSWORD: transit
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U transit -d transit"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      INTEGRATION_TESTS: "true"
+      DB_URL: jdbc:postgresql://localhost:5432/transit
+      # The app would poll the live feed and export telemetry; the tests switch both off, this keeps it that way.
+      RECORDING_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      # check = compile, all tests (integration ones too, with INTEGRATION_TESTS), JaCoCo report and coverage rule.
+      - run: ./gradlew check --no-daemon
+      - name: Upload test and coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-reports
+          path: |
+            backend/build/reports/tests/test/
+            backend/build/reports/jacoco/test/
+          retention-days: 14
+
+  frontend:
+    name: Frontend (tests, coverage, production build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      # Fails below the coverage thresholds in angular.json.
+      - run: npm run test:coverage
+      - run: npm run build
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/
+          retention-days: 14

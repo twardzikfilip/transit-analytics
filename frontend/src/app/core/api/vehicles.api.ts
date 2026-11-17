@@ -1,7 +1,13 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { BrigadeSchedule, LivePosition, Vehicle } from '../models/models';
+import {
+  BrigadeSchedule,
+  LivePosition,
+  StatsWindow,
+  Vehicle,
+  VehicleStatsReport,
+} from '../models/models';
 import { CrudApiService } from './crud-api.service';
 
 @Injectable({ providedIn: 'root' })
@@ -29,5 +35,15 @@ export class BrigadeApi {
   /** The brigade's runs on the current service day. */
   schedule(brigade: string): Observable<BrigadeSchedule> {
     return this.http.get<BrigadeSchedule>(`/api/brigades/${encodeURIComponent(brigade)}/schedule`);
+  }
+}
+
+/** Vehicles in detail: usage of each vehicle in a time window. */
+@Injectable({ providedIn: 'root' })
+export class VehicleStatsApi {
+  private readonly http = inject(HttpClient);
+
+  report(window: StatsWindow): Observable<VehicleStatsReport> {
+    return this.http.get<VehicleStatsReport>('/api/vehicle-stats', { params: { window } });
   }
 }

@@ -28,6 +28,7 @@ export class Shell {
   protected readonly navItems: NavItem[] = [
     { path: '/home', label: 'Home', icon: '⌂' },
     { path: '/vehicles', label: 'Vehicles', icon: '🚌' },
+    { path: '/vehicle-stats', label: 'Vehicles in detail', icon: '🚍' },
     { path: '/live-map', label: 'Live map', icon: '🗺' },
     { path: '/positions', label: 'Position history', icon: '📈' },
     { path: '/delays', label: 'Delays', icon: '⏱' },

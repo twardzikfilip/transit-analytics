@@ -98,10 +98,10 @@
               "lcovonly"
             ],
             "coverageThresholds": {
-              "statements": 77,
-              "branches": 70,
-              "functions": 72,
-              "lines": 77
+              "statements": 82,
+              "branches": 74,
+              "functions": 76,
+              "lines": 82
             }
           }
         }

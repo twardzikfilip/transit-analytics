@@ -112,6 +112,11 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   vehicle table (number, type, agency, model). The agency `default` is stored as `BKM`, and GTFS type codes become names
   (`3` → `BUS`). Each position carries its line's `subtype` (the stored one, else from the name, for other operators'
   lines). If zbiorkom.live fails or times out, the endpoint returns 502.
+- `GET /api/vehicle-stats?window=day|week|month` — Vehicles in detail, from recorded positions over the last 24 hours,
+  7 days or 30 days: hours in service and lines served per vehicle (top and bottom 10), vehicles on several lines on
+  one day, and vehicles that left their brigade while the timetable had it running (switched to another line, or
+  disappeared), with the vehicle that took over. Service days that are over are read once and kept; the last month
+  is read at startup in the background. Answers are cached for 2 minutes.
 - `GET /api/brigades/{brigade}/schedule` — a brigade's runs on the current service day (03:00–03:00 Warsaw time) from
   the timetable: line, headsign, first and last stop, scheduled departure and arrival. Brigades are named as on the
   live feed (`103-05`); the timetable's is the trip id's prefix. Used by the live map's popups.
@@ -214,18 +219,19 @@ Adding a new entity: migration `V<n>__*.sql` → entity in `domain/` → reposit
 ```bash
 ./gradlew test                                  # unit + web-slice tests, no DB needed
 INTEGRATION_TESTS=true ./gradlew test           # also boots the full context against the DB
-./gradlew check                                 # tests + coverage floor (50% of lines from unit tests)
+./gradlew check                                 # tests + coverage floor
 ```
 
 Every test run writes a JaCoCo coverage report to `build/reports/jacoco/test/` (`html/index.html`, and
-`jacocoTestReport.xml` for CI). Unit tests alone cover about 53% of lines; with the database tests about 86%.
+`jacocoTestReport.xml` for CI). Unit tests alone cover about 54% of lines; with the database tests about 95%.
+`check` fails below 50% of lines, or below 90% when `INTEGRATION_TESTS=true` (as in CI).
 Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixture` inserts a small timetable.
 
 ## Frontend
 
 - `core/auth` — `AuthService`, `authInterceptor` (Bearer token, logout on 401), `authGuard`, `roleGuard`, `*appHasRole`
 - `core/api` — generic `CrudApiService` + one service per backend resource
-- `layout/shell` — sidebar (Home, Vehicles, Live map) + top-right hamburger menu (Settings, Logout)
+- `layout/shell` — sidebar with every page + top-right hamburger menu (Settings, Logout)
 - `store` — NgRx slices with functional effects: `auth`, `vehicles`, `livePositions`, `routes` (all routes), and
   `stops`, `trips`, `stopTimes`, which hold one server-side page each (shared helpers in `store/paged.ts`);
   `gtfsImport` tracks the import. Only `auth` is registered at startup; every other slice is registered by its
@@ -256,6 +262,10 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
 - Important corridors: two maps of every stretch between stops by its buses in peak hours (one by line width, one
   by colour in equal classes of a sequential blue), then the corridors above in a sortable table (busiest first), with each corridor's stops in an
   expandable list and its lines linking to Routes in detail. Store slice `corridors`, registered by its lazy route.
+- Vehicles in detail: pick the last 24 hours, 7 days or 30 days (kept in the URL as `?window=`). Top 10 most and
+  least used vehicles (hours in service), top 10 on the most and fewest lines, vehicles that served several lines on
+  one day (in the order served), and vehicles that left their brigade outside the schedule. Every table has the
+  vehicle's number, model and operator. Store slice `vehicleStats`, registered by its lazy route.
 - Timetable pages (read-only): Routes → Trips (filter by route, direction, service, headsign) → Stop times of a trip;
   Stops (search, zone) → departure board of a stop. Filters and the page number live in the URL, so every view can be
   linked and the back button works.
@@ -267,6 +277,18 @@ npm run test:coverage   # once, with coverage of all of src/app (report in cover
                         # fails below the thresholds in angular.json (test options)
 npm run build
 ```
+
+## Continuous integration
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on every pull request and on pushes to `main`:
+
+- **Backend:** `./gradlew check` with the database tests, against a TimescaleDB service container (the same image as
+  `docker-compose.yml`; Flyway builds the schema on the empty database). Fails on a failing test or line coverage
+  below 90%.
+- **Frontend:** `npm ci`, `npm run test:coverage` (fails below the thresholds in `angular.json`) and the production
+  build (fails over the bundle budget).
+
+Test and coverage reports are kept as artifacts of each run for 14 days.
 
 ## Observability
 

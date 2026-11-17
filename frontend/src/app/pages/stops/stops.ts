@@ -4,7 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
-import { Pager } from '../../shared/pager/pager';
+import { Pager, rowNumber } from '../../shared/pager/pager';
 import { listQuery } from '../../shared/list-query';
 import { StopsActions } from '../../store/stops/stops.actions';
 import { stopsFeature } from '../../store/stops/stops.reducer';
@@ -42,7 +42,6 @@ export class Stops {
   }
 
   protected index(i: number): number {
-    const p = this.page();
-    return (p ? p.number * p.size : 0) + i + 1;
+    return rowNumber(this.page(), i);
   }
 }

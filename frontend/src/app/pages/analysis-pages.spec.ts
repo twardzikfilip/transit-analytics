@@ -208,6 +208,41 @@ describe('Position history page', () => {
   });
 });
 
+describe('Position history controls', () => {
+  it('put the time range, a custom window and the line in the URL, back on the first page', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 10, 16, 12, 0, 30));
+    const { el, fixture } = renderPage(Positions, stateAfter(positionHistoryFeature), {
+      range: '1h',
+      page: '3',
+    });
+    const navigate = vi
+      .spyOn(fixture.debugElement.injector.get(Router), 'navigate')
+      .mockResolvedValue(true);
+    const merge = (queryParams: Record<string, unknown>) => [
+      [],
+      { queryParams, queryParamsHandling: 'merge' },
+    ];
+
+    const presets = [...el.querySelectorAll('.buttons button')] as HTMLButtonElement[];
+    presets.find((b) => text(b) === '15 min')!.click();
+    expect(navigate).toHaveBeenLastCalledWith(
+      ...merge({ range: '15m', from: null, to: null, page: null }),
+    );
+
+    const [from] = [...el.querySelectorAll('input[type=datetime-local]')] as HTMLInputElement[];
+    from.value = '2026-11-16T08:00';
+    from.dispatchEvent(new Event('change'));
+    expect(navigate).toHaveBeenLastCalledWith(
+      ...merge({ range: null, from: '2026-11-16T08:00', to: '2026-11-16T12:00', page: null }),
+    );
+
+    const line = el.querySelector('select') as HTMLSelectElement;
+    line.dispatchEvent(new Event('change'));
+    expect(navigate).toHaveBeenLastCalledWith(...merge({ route: null, page: null }));
+  });
+});
+
 describe('Delays page', () => {
   it('loads the replay for the window and lines in the URL', () => {
     useSvgMaps();

@@ -14,11 +14,6 @@
     display: flex;
     gap: 0.35rem;
   }
-
-  button.active {
-    background: var(--accent-soft);
-    border-color: var(--accent);
-  }
 }
 
 /* Multi-select for lines: a disclosure with checkboxes. */

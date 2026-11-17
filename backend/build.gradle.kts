@@ -74,14 +74,17 @@ tasks.jacocoTestReport {
 	}
 }
 
+// Line coverage floors, a little under what the tests reach: unit tests alone (~54%), and with the database tests
+// (~95%, as CI runs them). Raise them as coverage grows.
+val integrationTests = System.getenv("INTEGRATION_TESTS") == "true"
+
 tasks.jacocoTestCoverageVerification {
 	dependsOn(tasks.test)
 	violationRules {
 		rule {
 			limit {
 				counter = "LINE"
-				// The unit-test floor; raise it as coverage grows.
-				minimum = "0.50".toBigDecimal()
+				minimum = (if (integrationTests) "0.90" else "0.50").toBigDecimal()
 			}
 		}
 	}

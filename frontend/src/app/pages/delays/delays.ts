@@ -32,6 +32,7 @@ import {
   positionsAt,
   resolveDelayWindow,
 } from './replay';
+import { escapeHtml } from '../../shared/format/html';
 import { createBaseMap } from '../../shared/map/base-map';
 
 /**
@@ -311,8 +312,4 @@ export class Delays {
           : `${formatDelay(p.delaySeconds)} min late`;
     return `<strong>Line ${escapeHtml(p.line ?? '?')}</strong> · bus ${escapeHtml(vehicle)}<br>${delay}`;
   }
-}
-
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }

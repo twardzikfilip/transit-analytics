@@ -1,21 +1,27 @@
 package com.transitanalytics.security;
 
+import com.transitanalytics.dto.BrigadeDto;
+import com.transitanalytics.dto.LineStatsDto;
 import com.transitanalytics.dto.LivePositionDto;
+import com.transitanalytics.dto.PositionHistoryDto;
 import com.transitanalytics.dto.VehicleDto;
+import com.transitanalytics.dto.VehicleStatsDto;
 import com.transitanalytics.gtfs.GtfsBialystokService;
 import com.transitanalytics.gtfs.GtfsFeedException;
 import com.transitanalytics.gtfs.GtfsImportInProgressException;
 import com.transitanalytics.gtfs.GtfsImportResult;
-import com.transitanalytics.service.ExternalServiceException;
-import com.transitanalytics.service.VehicleService;
-import com.transitanalytics.web.GtfsController;
-import com.transitanalytics.web.PositionHistoryController;
-import com.transitanalytics.web.LineStatsController;
-import com.transitanalytics.service.LineStatsService;
-import com.transitanalytics.dto.LineStatsDto;
 import com.transitanalytics.recording.PositionHistoryService;
-import com.transitanalytics.dto.PositionHistoryDto;
+import com.transitanalytics.service.BrigadeScheduleService;
+import com.transitanalytics.service.ExternalServiceException;
+import com.transitanalytics.service.LineStatsService;
+import com.transitanalytics.service.VehicleService;
+import com.transitanalytics.service.VehicleStatsService;
+import com.transitanalytics.web.BrigadeController;
+import com.transitanalytics.web.GtfsController;
+import com.transitanalytics.web.LineStatsController;
+import com.transitanalytics.web.PositionHistoryController;
 import com.transitanalytics.web.VehicleController;
+import com.transitanalytics.web.VehicleStatsController;
 import com.transitanalytics.web.ZbiorkomController;
 import com.transitanalytics.zbiorkom.ZbiorkomBialystokService;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -37,10 +43,12 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -49,7 +57,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = {AuthController.class, VehicleController.class, ZbiorkomController.class,
         GtfsController.class, PositionHistoryController.class,
-        LineStatsController.class})
+        LineStatsController.class, VehicleStatsController.class, BrigadeController.class})
 @Import({SecurityConfig.class, JwtAuthFilter.class, JwtService.class, SecurityWebTest.Metrics.class})
 @TestPropertySource(properties = {
         "app.jwt.secret=test-secret-test-secret-test-secret-123456",
@@ -96,6 +104,12 @@ class SecurityWebTest {
 
     @MockitoBean
     LineStatsService lineStatsService;
+
+    @MockitoBean
+    VehicleStatsService vehicleStatsService;
+
+    @MockitoBean
+    BrigadeScheduleService brigadeScheduleService;
 
     @Test
     void loginReturnsToken() throws Exception {
@@ -263,6 +277,37 @@ class SecurityWebTest {
                 .andExpect(jsonPath("$.lines[0].lengthKm").value(19.8))
                 .andExpect(jsonPath("$.offPeak[0].to").value("20:00"));
         mvc.perform(get("/api/lines/stats")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void guestCanReadVehicleStatsForADayWeekOrMonth() throws Exception {
+        var vehicle = new VehicleStatsDto.Vehicle(7L, "230", "Solaris Urbino 12", "BKM");
+        var usage = new VehicleStatsDto.Usage(vehicle, 12.5, 1, List.of("103"), Instant.parse("2026-11-16T05:00:00Z"),
+                Instant.parse("2026-11-16T19:00:00Z"));
+        given(vehicleStatsService.report(VehicleStatsService.Window.DAY)).willReturn(new VehicleStatsDto.Report("day",
+                Instant.parse("2026-11-15T20:00:00Z"), Instant.parse("2026-11-16T20:00:00Z"), 1, List.of(usage),
+                List.of(usage), List.of(usage), List.of(usage), List.of(), List.of()));
+
+        mvc.perform(get("/api/vehicle-stats").param("window", "day").header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.mostUsed[0].vehicle.model").value("Solaris Urbino 12"))
+                .andExpect(jsonPath("$.mostUsed[0].hours").value(12.5));
+        mvc.perform(get("/api/vehicle-stats").param("window", "year").header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/vehicle-stats")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void guestCanReadABrigadesSchedule() throws Exception {
+        given(brigadeScheduleService.schedule(eq("103-05"), any())).willReturn(new BrigadeDto.Schedule("103-05",
+                LocalDate.of(2026, 11, 16), List.of(new BrigadeDto.Run("103", "Choroszcz", "Piastowska", "Choroszcz",
+                Instant.parse("2026-11-16T05:00:00Z"), Instant.parse("2026-11-16T05:45:00Z")))));
+
+        mvc.perform(get("/api/brigades/103-05/schedule").header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.serviceDay").value("2026-11-16"))
+                .andExpect(jsonPath("$.runs[0].to").value("Choroszcz"));
+        mvc.perform(get("/api/brigades/103-05/schedule")).andExpect(status().isUnauthorized());
     }
 
     private double loginCount(String outcome) {

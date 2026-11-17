@@ -3,6 +3,8 @@ package com.transitanalytics.service;
 import com.transitanalytics.dto.CorridorDto;
 import com.transitanalytics.service.Periods.Window;
 import com.transitanalytics.service.StopPlaces.StopRef;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,17 +43,9 @@ public class CorridorService {
     }
 
     /** Computes the corridors once at startup, in the background, so the first visit doesn't wait for it. */
-    @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
+    @EventListener(ApplicationReadyEvent.class)
     public void warmUp() {
-        Thread thread = new Thread(() -> {
-            try {
-                corridors();
-            } catch (RuntimeException e) {
-                org.slf4j.LoggerFactory.getLogger(CorridorService.class).warn("Corridors not precomputed", e);
-            }
-        }, "corridors-warm-up");
-        thread.setDaemon(true);
-        thread.start();
+        WarmUp.inBackground("corridors", CorridorService.class, this::corridors);
     }
 
     @Transactional(readOnly = true)

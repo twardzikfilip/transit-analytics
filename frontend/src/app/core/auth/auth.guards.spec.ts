@@ -14,6 +14,9 @@ describe('auth guards', () => {
     store = TestBed.inject(MockStore);
   });
 
+  // Overrides are set on the shared memoized selectors; spec files share them (the runner doesn't isolate files).
+  afterEach(() => store.resetSelectors());
+
   const run = (guard: typeof authGuard, r = route()) => TestBed.runInInjectionContext(() => guard(r, state));
   const url = (result: unknown) => TestBed.inject(Router).serializeUrl(result as UrlTree);
 
