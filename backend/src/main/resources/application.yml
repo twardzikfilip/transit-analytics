@@ -52,6 +52,9 @@ app:
     read-timeout: 10s
     bialystok:
       bbox: ${ZBIORKOM_BIALYSTOK_BBOX:22.921150,53.016270,23.382496,53.243687}
+      # Lines left out everywhere (not stored, archived or shown): the cemetery lines C1, C2, … run around
+      # All Saints' Day.
+      excluded-lines: "^C[0-9]+$"
   # transit-recorder (backend/recorder) polls the zbiorkom feed every 10 seconds and stores the positions; the Live
   # map takes its latest snapshot from there, and asks zbiorkom.live itself when the recorder doesn't answer.
   recorder:
@@ -63,6 +66,16 @@ app:
     max-download-size: 200MB
     bialystok:
       url: ${GTFS_BIALYSTOK_URL:https://komunikacja.bialystok.pl/cms/File/download/gtfs/google_transit.zip}
+    # Other operators' lines, each loaded into its own share of the timetable (its ids prefixed), so importing one
+    # feed never touches another's. Import with POST /api/gtfs/<key>/import (admin); imported again every night
+    # (these feeds cover about two weeks at a time).
+    extra:
+      pksnova-500:
+        name: "PKS Nova line 500 (Białystok – Supraśl), unofficial feed generated from Time4Bus"
+        # Listed on Transitland as f-u92~pks~nova~suprasl, licence CC0-1.0.
+        url: ${GTFS_PKSNOVA_500_URL:https://files.girlc.at/gtfs/pks_nova_suprasl.zip}
+        prefix: "pksnova:"
+    extra-refresh-cron: "0 50 4 * * *"
 
 springdoc:
   api-docs:

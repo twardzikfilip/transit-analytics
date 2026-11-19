@@ -118,7 +118,8 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   stretch between stops and averaged along the corridor by length. Busiest first.
   Also every stretch between two consecutive stops (both directions together) with its peak and all-day buses and
   its route shape, for the maps. Computed in the background at startup and cached per timetable.
-- `POST /api/gtfs/bialystok/import` (admin) — downloads Białystok's GTFS timetable and loads it; see below.
+- `POST /api/gtfs/{feed}/import` (admin) — downloads a GTFS timetable and loads it: `bialystok` (the city's) or
+  another operator's feed from `app.gtfs.extra` (`pksnova-500`: PKS Nova line 500); see below.
 - `GET /api/zbiorkom/bialystok/positions` — live Białystok vehicle positions from [zbiorkom.live](https://zbiorkom.live),
   used by the live map: transit-recorder's latest snapshot (at most 10 s old), or straight from zbiorkom.live when the
   recorder doesn't answer. Vehicles seen for the first time are added to the vehicle table (number, type, agency,
@@ -253,7 +254,22 @@ inserting the ~384k stop times.
 - Rows that point at a route, trip or stop that isn't in the feed are skipped and counted in the response. Files the
   app doesn't load (e.g. `feed_info.txt`) are listed as ignored.
 - Code: `gtfs/GtfsImporter` (generic loader: files are streamed from the zip into temporary tables with PostgreSQL
-  `COPY`, then merged with SQL) and `gtfs/GtfsBialystokService` (download + import for Białystok).
+  `COPY`, then merged with SQL) and `gtfs/GtfsBialystokService` (download + import of each feed).
+
+**Other operators' lines** (`app.gtfs.extra` in `application.yml`): each feed is loaded into its own share of the
+timetable, its ids (agency, route, stop, trip, service, shape) prefixed, so they never clash with the city's and an
+import of one feed replaces only that feed's rows (the city's import leaves them alone too). Imported with
+`POST /api/gtfs/<key>/import` and again every night at 04:50 (`extra-refresh-cron`), as these feeds cover about two
+weeks at a time.
+
+- `pksnova-500`: **PKS Nova line 500** (Białystok D.A. ⇄ Supraśl), the unofficial feed generated from Time4Bus
+  (`https://files.girlc.at/gtfs/pks_nova_suprasl.zip`, listed on Transitland as `f-u92~pks~nova~suprasl`, CC0).
+  Agency "PKS NOVA S.A.", route `pksnova:500`, a suburban line (from its number), about 50 trips a weekday.
+- On the Routes page such a line shows like the city's (map, variants, termini, bus lanes, zone 2, travel times),
+  run by its own operator. What the feed doesn't have is said rather than guessed: without brigades there are no
+  brigades or depot runs; trips without a direction get one from where they start; stops without a fare zone are
+  zone 1 inside the city limits and 2 outside. Its timetable is the weekday the line has the most trips (its feed has
+  a service per date). It isn't on the live feed (zbiorkom.live), so nothing is recorded for it.
 
 ### Vehicle position history (time series)
 
@@ -290,6 +306,10 @@ deploying the backend loses nothing.
   upgrade between 01:30 and 03:30, when nothing is recorded.
 - **Monitoring:** the same metrics as before (`transit.recording.samples`, `.failures`, `.vehicles`, `.poll`), plus
   `transit.recording.spooled`; service name `transit-recorder` in Grafana.
+- **Excluded lines:** `app.zbiorkom.bialystok.excluded-lines` (a regular expression on the line name, in both apps'
+  `application.yml`) lists lines left out everywhere: not stored, not archived (removed from the response before it
+  is saved) and not shown on the Live map. Set to `^C[0-9]+$`, the cemetery lines run around All Saints' Day; their
+  recordings, and every recording of 31 October and 1 November 2026, were deleted from the database and the archive.
 - **Settings** (`recorder/src/main/resources/application.yml`): `RECORDING_ENABLED`, `cron`, the window,
   `min-interval` (8 s), `RECORDING_ARCHIVE_DIR`, `RECORDING_SPOOL_DIR`, `DB_URL`/`DB_USER`/`DB_PASSWORD`, port 8081.
 - **Code:** `backend/zbiorkom-feed` holds what both apps use (feed client and payloads, parsing positions and
@@ -415,7 +435,10 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
   shows its capacity class by its border's thickness and its fill (strongest for main lines, dashed for irregular
   ones), with a legend. The selected line is kept in the URL as `?line=`; its title says what its geometry and
   capacity class mean and links to its trips and its timetable on the operator's website. Regional lines of other
-  operators aren't in the timetable: for them only the delay over the day and the buses are shown, from recordings. The map shows the base
+  operators aren't in the timetable: for them the map shows where their buses actually went, from every recorded
+  position (each bus's reports split into runs towards one destination, and runs along the same streets grouped
+  into variants: the most driven first, rare ones thin and dashed, listed with how often and when last driven), with
+  the delay over the day and the buses. The map shows the base
   route thick and other variants thin and dashed in the same colour, with zone-2 stops filled. Below: length,
   scheduled travel time and speed, zone 2, the variants, charts of measured travel time, speed and delay over the
   day (each with a table view), speed between stops in peak hours with the slowest stretches numbered, and a

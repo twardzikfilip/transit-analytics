@@ -342,7 +342,16 @@ details:not(.how) {
 }
 
 .bus-lanes .line-swatch {
-  border-top-width: 6px;
-  opacity: 0.55;
   margin-right: 0.2rem;
+}
+
+/* A recorded variant's ends: hollow where runs start (.key.stop), filled where they end. */
+.map-legend .key.end {
+  background: var(--fg);
+}
+
+/* A line without a timetable: its recorded variants. */
+.recorded .line-swatch {
+  border-top-width: 4px;
+  margin-right: 0.35rem;
 }

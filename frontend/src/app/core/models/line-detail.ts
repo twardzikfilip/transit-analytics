@@ -135,6 +135,38 @@ export interface LineDetail {
   depotLinks: DepotLink[];
   /** How much of each direction's main route runs on bus lanes. */
   busLanes: LineBusLanes[];
+  /** For a line without a timetable: where its buses went, from their recorded positions; null otherwise. */
+  recorded: RecordedRoutes | null;
+  /**
+   * Whether the timetable says which brigade runs each trip. Another operator's may not: then there are no brigades,
+   * depot runs or depot-run stops to show.
+   */
+  brigadesKnown: boolean;
+}
+
+/** Where a line's buses went, from all their recorded positions: its variants, the most driven first. */
+export interface RecordedRoutes {
+  /** Null when nothing usable was recorded. */
+  first: string | null;
+  last: string | null;
+  /** Runs found: a bus's reports in a row towards one destination. */
+  runs: number;
+  variants: RecordedVariant[];
+}
+
+/** A way the line's buses went: towards one destination along the same streets. */
+export interface RecordedVariant {
+  id: number;
+  headsign: string;
+  /** The stop buses were first and last heading to, most often; null when not reported. */
+  from: string | null;
+  to: string | null;
+  /** How many times it was driven. */
+  runs: number;
+  km: number;
+  lastSeen: string;
+  /** [lat, lon] in the direction of travel. */
+  path: [number, number][];
 }
 
 /** Hours of the service day: 3–23, then 24–26 after midnight. */
@@ -222,9 +254,13 @@ export interface LineVehicles {
 }
 
 /** Who runs a line: BKM organises, a company (KPKM, KPK or KZK) operates it from its depot. */
+/**
+ * Who runs a line: for BKM's lines the organiser and one of its companies (code KPKM, KPK or KZK) with its depot; for
+ * another operator's own timetable (e.g. PKS Nova) just that operator, with no code or depot.
+ */
 export interface LineOperator {
   organiser: string;
-  code: string;
+  code: string | null;
   name: string;
   website: string | null;
   depot: string | null;

@@ -162,7 +162,22 @@ public class GtfsImporter {
     public record Loaded(Map<String, Long> rows, Map<String, Long> skipped, List<String> ignoredFiles) {
     }
 
+    /** Loads a feed as the timetable's main one (ids as they are); see {@link #load(ZipFile, String)}. */
     public Loaded load(ZipFile zip) {
+        return load(zip, "");
+    }
+
+    /**
+     * Loads a feed into its own share of the timetable, replacing what that feed loaded before and nothing else.
+     * The main feed (Białystok's) has no {@code prefix}; any other has one (e.g. {@code "pksnova:"}) put in front of
+     * all its ids (agency, route, stop, trip, service, shape), so they can't clash with another feed's and every
+     * row shows which feed it came from. A prefix is lower-case letters, digits or '-', ending in ':' (the main
+     * feed's ids have no ':').
+     */
+    public Loaded load(ZipFile zip, String prefix) {
+        if (!prefix.isEmpty() && !prefix.matches("[a-z0-9-]+:")) {
+            throw new IllegalArgumentException("Not a feed prefix: " + prefix);
+        }
         Set<String> known = new java.util.HashSet<>();
         for (GtfsFile file : GtfsFile.values()) {
             known.add(file.fileName);
@@ -176,7 +191,10 @@ public class GtfsImporter {
         try {
             return transaction.execute(status -> {
                 Map<GtfsFile, Long> staged = stage(zip);
-                Map<String, Long> skipped = merge(staged);
+                if (!prefix.isEmpty()) {
+                    prefixIds(prefix);
+                }
+                Map<String, Long> skipped = merge(staged, prefix);
                 // ON COMMIT DROP would remove them too, but not if this runs inside a longer transaction.
                 for (GtfsFile file : GtfsFile.values()) {
                     jdbc.execute(file.dropStagingTable());
@@ -221,36 +239,59 @@ public class GtfsImporter {
         }
     }
 
-    /** Merges the staging tables into the real ones; returns rows skipped per file because of missing references. */
-    private Map<String, Long> merge(Map<GtfsFile, Long> staged) {
+    /** Puts the feed's prefix in front of every id in the staging tables (null stays null). */
+    private void prefixIds(String prefix) {
+        String p = "'" + prefix + "' || ";
+        jdbc.update("UPDATE gtfs_agency SET agency_id = " + p + "COALESCE(agency_id, agency_name)");
+        jdbc.update("UPDATE gtfs_routes SET route_id = " + p + "route_id, agency_id = " + p + "agency_id");
+        jdbc.update("UPDATE gtfs_stops SET stop_id = " + p + "stop_id, parent_station = " + p + "parent_station");
+        jdbc.update("UPDATE gtfs_trips SET trip_id = " + p + "trip_id, route_id = " + p + "route_id, service_id = "
+                + p + "service_id, block_id = " + p + "block_id, shape_id = " + p + "shape_id");
+        jdbc.update("UPDATE gtfs_stop_times SET trip_id = " + p + "trip_id, stop_id = " + p + "stop_id");
+        jdbc.update("UPDATE gtfs_calendar_dates SET service_id = " + p + "service_id");
+        jdbc.update("UPDATE gtfs_shapes SET shape_id = " + p + "shape_id");
+    }
+
+    /** SQL: whether an id (column) belongs to the feed with this prefix. */
+    static String mine(String column, String prefix) {
+        return prefix.isEmpty() ? "strpos(" + column + ", ':') = 0" : column + " LIKE '" + prefix + "%'";
+    }
+
+    /**
+     * Merges the staging tables into the real ones, replacing the feed's own rows only; returns rows skipped per file
+     * because of missing references.
+     */
+    private Map<String, Long> merge(Map<GtfsFile, Long> staged, String prefix) {
         Map<String, Long> skipped = new LinkedHashMap<>();
 
         jdbc.update(UPSERT_AGENCIES);
         jdbc.update(UPSERT_ROUTES);
-        jdbc.update("DELETE FROM route x WHERE NOT EXISTS (SELECT 1 FROM gtfs_routes g WHERE g.route_id = x.gtfs_id)");
-        jdbc.update("DELETE FROM agency x WHERE NOT EXISTS "
+        jdbc.update("DELETE FROM route x WHERE " + mine("x.gtfs_id", prefix)
+                + " AND NOT EXISTS (SELECT 1 FROM gtfs_routes g WHERE g.route_id = x.gtfs_id)");
+        jdbc.update("DELETE FROM agency x WHERE " + mine("x.gtfs_id", prefix) + " AND NOT EXISTS "
                 + "(SELECT 1 FROM gtfs_agency g WHERE COALESCE(g.agency_id, g.agency_name) = x.gtfs_id)");
 
         jdbc.update(UPSERT_STOPS);
-        jdbc.update("DELETE FROM stop x WHERE NOT EXISTS (SELECT 1 FROM gtfs_stops g WHERE g.stop_id = x.gtfs_id)");
+        jdbc.update("DELETE FROM stop x WHERE " + mine("x.gtfs_id", prefix)
+                + " AND NOT EXISTS (SELECT 1 FROM gtfs_stops g WHERE g.stop_id = x.gtfs_id)");
 
         int trips = jdbc.update(UPSERT_TRIPS);
         // Trips whose route is not in the feed were not upserted above; remove them along with stale ones.
-        jdbc.update("DELETE FROM trip x WHERE NOT EXISTS (SELECT 1 FROM gtfs_trips g JOIN route r "
-                + "ON r.gtfs_id = g.route_id WHERE g.trip_id = x.gtfs_id)");
+        jdbc.update("DELETE FROM trip x WHERE " + mine("x.gtfs_id", prefix) + " AND NOT EXISTS "
+                + "(SELECT 1 FROM gtfs_trips g JOIN route r ON r.gtfs_id = g.route_id WHERE g.trip_id = x.gtfs_id)");
         note(skipped, GtfsFile.TRIPS, distinct("trip_id", "gtfs_trips") - trips);
 
         // Fresh statistics, so the stop time insert joins the just-loaded trips and stops efficiently.
         jdbc.execute("ANALYZE route, stop, trip");
 
-        jdbc.update("DELETE FROM stop_time");
+        jdbc.update("DELETE FROM stop_time st USING trip t WHERE t.id = st.trip_id AND " + mine("t.gtfs_id", prefix));
         note(skipped, GtfsFile.STOP_TIMES, staged.get(GtfsFile.STOP_TIMES) - jdbc.update(INSERT_STOP_TIMES));
 
-        jdbc.update("DELETE FROM calendar_date");
+        jdbc.update("DELETE FROM calendar_date WHERE " + mine("service_id", prefix));
         note(skipped, GtfsFile.CALENDAR_DATES,
                 staged.get(GtfsFile.CALENDAR_DATES) - jdbc.update(INSERT_CALENDAR_DATES));
 
-        jdbc.update("DELETE FROM shape_point");
+        jdbc.update("DELETE FROM shape_point WHERE " + mine("shape_id", prefix));
         note(skipped, GtfsFile.SHAPES, staged.get(GtfsFile.SHAPES) - jdbc.update(INSERT_SHAPE_POINTS));
 
         // Statistics for the replaced tables, so list pages get good query plans right after the import.

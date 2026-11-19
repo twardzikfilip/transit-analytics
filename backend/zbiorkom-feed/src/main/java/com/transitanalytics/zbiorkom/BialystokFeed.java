@@ -59,13 +59,14 @@ public class BialystokFeed {
         return client.positionsRaw(CITY, properties.bialystok().bbox());
     }
 
-    /** Positions from a response, e.g. one saved earlier; new vehicles are registered. */
+    /** Positions from a response, e.g. one saved earlier; new vehicles are registered. Excluded lines are left out. */
     public List<FeedPosition> positions(byte[] response) {
         ZbiorkomFeed.Positions feed = client.parsePositions(response);
         List<ZbiorkomFeed.Position> raw = feed == null || feed.positions() == null ? List.of() : feed.positions()
                 .stream()
                 .filter(p -> p.vehicle() != null && p.vehicle().id() != null)
                 .filter(p -> p.location() != null && p.location().length >= 2)
+                .filter(p -> !properties.bialystok().excluded(p.routeName()))
                 .toList();
         Map<String, Long> ids = vehicles.idsFor(raw.stream().map(p -> toVehicle(p.vehicle())).toList());
         return raw.stream().map(p -> toPosition(p, ids.get(p.vehicle().id()))).toList();
@@ -80,8 +81,45 @@ public class BialystokFeed {
         return feed == null || feed.positions() == null ? List.of() : feed.positions().stream()
                 .filter(p -> p.vehicle() != null && p.vehicle().id() != null)
                 .filter(p -> p.location() != null && p.location().length >= 2)
+                .filter(p -> !properties.bialystok().excluded(p.routeName()))
                 .map(p -> toPosition(p, null))
                 .toList();
+    }
+
+    /**
+     * The response without the excluded lines' positions, for the archive; as received when nothing is excluded or
+     * it can't be read (it is kept whole rather than lost).
+     */
+    public byte[] withoutExcluded(byte[] response) {
+        tools.jackson.databind.json.JsonMapper json = client.json();
+        ZbiorkomProperties.Bialystok city = properties.bialystok();
+        if (city.excludedLines() == null || city.excludedLines().isBlank() || response.length == 0) {
+            return response;
+        }
+        try {
+            tools.jackson.databind.JsonNode root = json.readTree(response);
+            tools.jackson.databind.JsonNode positions = root.path("positions");
+            if (!(root instanceof tools.jackson.databind.node.ObjectNode object)
+                    || !(positions instanceof tools.jackson.databind.node.ArrayNode array)) {
+                return response;
+            }
+            tools.jackson.databind.node.ArrayNode kept = json.createArrayNode();
+            boolean dropped = false;
+            for (tools.jackson.databind.JsonNode p : array) {
+                if (city.excluded(p.path("routeName").asString(null))) {
+                    dropped = true;
+                } else {
+                    kept.add(p);
+                }
+            }
+            if (!dropped) {
+                return response;
+            }
+            object.set("positions", kept);
+            return json.writeValueAsBytes(object);
+        } catch (RuntimeException ex) {
+            return response;
+        }
     }
 
     /** A saved response, {@code .json} or {@code .json.gz}. */

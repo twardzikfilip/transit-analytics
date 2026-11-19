@@ -13,4 +13,6 @@ import { EndStop } from '../../core/models/models';
 export class EndStops {
   readonly endStops = input.required<EndStop[]>();
   readonly depotStops = input.required<EndStop[]>();
+  /** False when the timetable has no brigades, so depot runs can't be told apart. */
+  readonly brigadesKnown = input(true);
 }

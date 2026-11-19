@@ -41,6 +41,10 @@ public final class LineDetailDto {
      * @param depots     every bus depot
      * @param depotLinks where the line's buses enter and leave service, each with the way from or to the depot
      * @param busLanes   how much of each direction's main route runs on bus lanes
+     * @param recorded   for a line without a timetable: where its buses went, from their recorded positions; null
+     *                   for a line in the timetable
+     * @param brigadesKnown whether the timetable says which brigade runs each trip (another operator's may not:
+     *                   then there are no brigades or depot runs to show)
      * @param id         the route's id (for its trips), null for a line not in the timetable
      * @param url        the line's timetable on the operator's website, if any
      */
@@ -49,7 +53,31 @@ public final class LineDetailDto {
                          Base base, List<Variant> variants, List<Zone2> zone2, List<Brigade> brigades,
                          List<EndStop> endStops, List<EndStop> depotStops, List<DepotRun> depotRuns,
                          Operator operator, List<Depot> depots, List<DepotLink> depotLinks,
-                         List<BusLaneDto.LineShare> busLanes) {
+                         List<BusLaneDto.LineShare> busLanes, Recorded recorded, boolean brigadesKnown) {
+    }
+
+    /**
+     * Where a line's buses went, from all their recorded positions: its variants, the most driven first.
+     *
+     * @param first when the first run began; null when nothing usable was recorded
+     * @param runs  runs found (a bus's reports in a row towards one destination)
+     */
+    public record Recorded(Instant first, Instant last, int runs, List<RecordedVariant> variants) {
+    }
+
+    /**
+     * A way the line's buses went: towards one destination along the same streets.
+     *
+     * @param headsign where the buses were going
+     * @param from     the stop they were first heading to, most often; null when not reported
+     * @param to       the stop they were last heading to, most often
+     * @param runs     how many times it was driven
+     * @param km       length of the path
+     * @param lastSeen when it was last driven
+     * @param path     [lat, lon] in the direction of travel
+     */
+    public record RecordedVariant(int id, String headsign, String from, String to, int runs, double km,
+                                  Instant lastSeen, List<double[]> path) {
     }
 
     /**

@@ -4,7 +4,9 @@ import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.transitanalytics.service.NotFoundException;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -16,7 +18,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
-/** Imports Białystok's public transport timetable (GTFS) from komunikacja.bialystok.pl. */
+/**
+ * Imports timetables (GTFS): Białystok's from komunikacja.bialystok.pl (the main one), and other operators' lines
+ * configured under {@code app.gtfs.extra}, each into its own share of the timetable. One import runs at a time.
+ */
 @Service
 public class GtfsBialystokService {
 
@@ -40,38 +45,61 @@ public class GtfsBialystokService {
         this.events = events;
     }
 
+    /** Downloads Białystok's current feed and replaces the main timetable with it. */
+    public GtfsImportResult importFeed() {
+        return importFeed(FEED);
+    }
+
     /**
-     * Downloads the current feed and replaces the timetable with it. Only one import runs at a time.
+     * Downloads a feed ({@value #FEED}, or a key under {@code app.gtfs.extra}) and replaces what it loaded before
+     * with it. Only one import runs at a time.
      *
+     * @throws NotFoundException             if there is no such feed
      * @throws GtfsImportInProgressException if an import is already running
      */
-    public GtfsImportResult importFeed() {
+    public GtfsImportResult importFeed(String key) {
+        GtfsProperties.Feed feed = FEED.equals(key) ? properties.bialystok() : properties.extra().get(key);
+        if (feed == null) {
+            throw new NotFoundException("GTFS feed", key);
+        }
         if (!running.compareAndSet(false, true)) {
-            throw new GtfsImportInProgressException(FEED);
+            throw new GtfsImportInProgressException(key);
         }
         try {
             // Shows up as a "gtfs.import" span in traces and a timer in metrics.
             return Observation.createNotStarted("gtfs.import", observations)
-                    .lowCardinalityKeyValue("feed", FEED)
-                    .observe(this::downloadAndLoad);
+                    .lowCardinalityKeyValue("feed", key)
+                    .observe(() -> downloadAndLoad(key, feed));
         } finally {
             running.set(false);
         }
     }
 
-    private GtfsImportResult downloadAndLoad() {
+    /** The other operators' feeds, imported again on schedule (they cover a couple of weeks at a time). */
+    @Scheduled(cron = "${app.gtfs.extra-refresh-cron:-}", zone = "Europe/Warsaw")
+    void refreshExtra() {
+        for (String key : properties.extra().keySet()) {
+            try {
+                importFeed(key);
+            } catch (RuntimeException ex) {
+                log.warn("GTFS feed {} not refreshed: {}", key, ex.getMessage());
+            }
+        }
+    }
+
+    private GtfsImportResult downloadAndLoad(String key, GtfsProperties.Feed feed) {
         Instant start = Instant.now();
-        String url = properties.bialystok().url();
+        String url = feed.url();
         Path file = downloader.download(url);
         try (ZipFile zip = new ZipFile(file.toFile())) {
             long bytes = Files.size(file);
-            GtfsImporter.Loaded loaded = importer.load(zip);
+            GtfsImporter.Loaded loaded = importer.load(zip, feed.prefix());
             long ms = Duration.between(start, Instant.now()).toMillis();
             log.info("Imported GTFS feed {} ({} bytes) in {} ms: {}; skipped {}; ignored files {}",
-                    FEED, bytes, ms, loaded.rows(), loaded.skipped(), loaded.ignoredFiles());
+                    key, bytes, ms, loaded.rows(), loaded.skipped(), loaded.ignoredFiles());
             // Whatever depends on the timetable (the lines' classes) is worked out again.
-            events.publishEvent(new GtfsImported(FEED, Instant.now()));
-            return new GtfsImportResult(FEED, url, bytes, Instant.now(), ms, loaded.rows(), loaded.skipped(),
+            events.publishEvent(new GtfsImported(key, Instant.now()));
+            return new GtfsImportResult(key, url, bytes, Instant.now(), ms, loaded.rows(), loaded.skipped(),
                     loaded.ignoredFiles());
         } catch (ZipException ex) {
             throw new GtfsFeedException("The download is not a valid zip file", ex);

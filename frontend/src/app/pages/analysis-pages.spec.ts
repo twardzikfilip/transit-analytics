@@ -741,6 +741,7 @@ describe('Routes page', () => {
           routed: true,
         },
       ],
+      brigadesKnown: true,
       busLanes: [
         {
           direction: 0,
@@ -858,6 +859,39 @@ describe('Routes page', () => {
       depots: [],
       depotLinks: [],
       busLanes: [],
+      recorded: {
+        first: '2026-11-01T06:00:00Z',
+        last: '2026-11-16T18:00:00Z',
+        runs: 100,
+        variants: [
+          {
+            id: 1,
+            headsign: 'Turośń Dolna',
+            from: 'Dworzec PKS',
+            to: 'Turośń Dolna W2',
+            runs: 60,
+            km: 26.4,
+            lastSeen: '2026-11-16T18:00:00Z',
+            path: [
+              [53.13, 23.14],
+              [53.05, 23.25],
+            ],
+          },
+          {
+            id: 2,
+            headsign: 'Turośń Dolna',
+            from: 'Turośń Dolna Nr 7',
+            to: 'Piećki',
+            runs: 2,
+            km: 5.3,
+            lastSeen: '2026-11-10T08:00:00Z',
+            path: [
+              [53.05, 23.25],
+              [53.03, 23.27],
+            ],
+          },
+        ],
+      },
     } as unknown as LineDetail;
     const performance = {
       firstDay: '2026-11-06',
@@ -882,7 +916,7 @@ describe('Routes page', () => {
         switches: [],
       },
     } as unknown as LinePerformance;
-    const { el } = renderPage(
+    const { el, fixture } = renderPage(
       RoutesPage,
       stateAfter(
         routeDetailFeature,
@@ -909,5 +943,21 @@ describe('Routes page', () => {
     expect(text(el)).toContain("isn't in the city timetable: it is run by another operator");
     expect(el.querySelector('app-variant-tiles')).toBeNull();
     expect(text(el.querySelector('app-line-vehicles'))).toContain('BIA 1050');
+    // Where its buses went, from the recordings: on the map and listed, the most driven first.
+    expect((el.querySelector('.map-card') as HTMLElement).hidden).toBe(false);
+    const rows = [...el.querySelectorAll('table.recorded-variants tbody tr')];
+    expect(rows.map((r) => text(r.querySelector('td:nth-child(3)')))).toEqual([
+      '60 times (60%)',
+      '2 times (2%)',
+    ]);
+    expect(text(rows[0].querySelector('td:nth-child(2)'))).toBe('Dworzec PKS → Turośń Dolna W2');
+    expect(text(el.querySelector('.map-legend'))).toContain('thin and dashed: driven rarely');
+    const paths = () => [...el.querySelectorAll('.map .leaflet-overlay-pane path')];
+    expect(paths().filter((p) => p.getAttribute('stroke-dasharray') === '6 5')).toHaveLength(1);
+    // Choosing one draws it thick and fades the rest.
+    (rows[1] as HTMLElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('table.recorded-variants tr.selected')).toBe(rows[1]);
+    expect(paths().some((p) => p.getAttribute('stroke-width') === '7')).toBe(true);
   });
 });

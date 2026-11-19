@@ -68,6 +68,7 @@ describe('Routes page parts', () => {
         },
       ],
       brigades: [{}, {}],
+      brigadesKnown: true,
     } as unknown as LineDetail;
 
     const el = render(VariantTiles, { detail });
@@ -78,6 +79,16 @@ describe('Routes page parts', () => {
     expect(text(el.querySelector('.tile:first-child li.depot'))).toContain('Wiejska');
     expect(text(el)).toContain('only on longer variants');
     expect(text(el)).toContain('15 trips a weekday');
+    expect(text(el.querySelector('.tile:last-child strong'))).toBe('2');
+
+    // Another operator's timetable without brigades: says so instead of 0.
+    const other = render(VariantTiles, {
+      detail: { ...detail, brigades: [], brigadesKnown: false },
+    });
+    expect(text(other.querySelector('.tile:last-child strong'))).toBe('Not given');
+    expect(text(other.querySelector('.tile:last-child .small'))).toBe(
+      "15 trips a weekday; this timetable doesn't say which bus runs each trip",
+    );
   });
 
   it('lists depot runs with their brigade and direction, or says there are none', () => {
@@ -116,6 +127,9 @@ describe('Routes page parts', () => {
     expect(text(depot?.querySelector('.tag') ?? null)).toBe('depot');
     expect(text(depot)).toContain('Wiejska/Politechnika also Wiejska/Pogodna');
     expect(text(render(EndStops, { endStops: [], depotStops: [] }))).toContain('None');
+    // Without brigades, depot runs can't be told apart: no depot-run row at all.
+    const noBrigades = render(EndStops, { endStops: [], depotStops: [], brigadesKnown: false });
+    expect(text(noBrigades)).not.toContain('Depot-run stops');
   });
 
   it('lists the vehicles, the most used per brigade and changes during a day', () => {

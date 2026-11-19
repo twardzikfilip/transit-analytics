@@ -45,6 +45,11 @@ public class ZbiorkomClient {
         }
     }
 
+    /** The JSON mapper responses are read with. */
+    JsonMapper json() {
+        return jsonMapper;
+    }
+
     /** Parses a positions response, e.g. one read back from the archive or a saved file. */
     public ZbiorkomFeed.Positions parsePositions(byte[] json) {
         if (json.length == 0) {

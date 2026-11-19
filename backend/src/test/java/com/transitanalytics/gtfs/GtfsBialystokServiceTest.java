@@ -16,6 +16,8 @@ import java.util.zip.ZipOutputStream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 
@@ -23,6 +25,7 @@ import static org.mockito.Mockito.mock;
 class GtfsBialystokServiceTest {
 
     private static final String URL = "https://feeds.example/gtfs.zip";
+    private static final String OTHER_URL = "https://feeds.example/other.zip";
 
     private final GtfsDownloader downloader = mock(GtfsDownloader.class);
     private final GtfsImporter importer = mock(GtfsImporter.class);
@@ -30,7 +33,8 @@ class GtfsBialystokServiceTest {
             mock(org.springframework.context.ApplicationEventPublisher.class);
     private final GtfsBialystokService service = new GtfsBialystokService(downloader, importer,
             new GtfsProperties(Duration.ofSeconds(5), Duration.ofSeconds(30), DataSize.ofMegabytes(50),
-                    new GtfsProperties.Feed(URL)),
+                    new GtfsProperties.Feed(URL, null, null),
+                    Map.of("other", new GtfsProperties.Feed(OTHER_URL, "other:", "Other line")), "-"),
             ObservationRegistry.NOOP, events);
 
     private static Path zipWith(String entry) throws Exception {
@@ -48,7 +52,7 @@ class GtfsBialystokServiceTest {
     void importsTheDownloadAndDeletesIt() throws Exception {
         Path file = zipWith("stops.txt");
         given(downloader.download(URL)).willReturn(file);
-        given(importer.load(any())).willReturn(new GtfsImporter.Loaded(Map.of("stop", 2L), Map.of(), List.of("x.txt")));
+        given(importer.load(any(), anyString())).willReturn(new GtfsImporter.Loaded(Map.of("stop", 2L), Map.of(), List.of("x.txt")));
 
         GtfsImportResult result = service.importFeed();
 
@@ -79,9 +83,31 @@ class GtfsBialystokServiceTest {
             assertThatThrownBy(service::importFeed).isInstanceOf(GtfsImportInProgressException.class);
             return first;
         }).willReturn(second);
-        given(importer.load(any())).willReturn(new GtfsImporter.Loaded(Map.of(), Map.of(), List.of()));
+        given(importer.load(any(), anyString())).willReturn(new GtfsImporter.Loaded(Map.of(), Map.of(), List.of()));
 
         service.importFeed();
         assertThat(service.importFeed().feed()).isEqualTo("bialystok");
+    }
+
+    @Test
+    void importsAnotherOperatorsFeedWithItsPrefixAndRefreshesThemOnSchedule() throws Exception {
+        given(downloader.download(OTHER_URL)).willAnswer(inv -> zipWith("stops.txt"));
+        given(importer.load(any(), eq("other:"))).willReturn(new GtfsImporter.Loaded(Map.of(), Map.of(), List.of()));
+
+        GtfsImportResult result = service.importFeed("other");
+
+        assertThat(result.feed()).isEqualTo("other");
+        assertThat(result.source()).isEqualTo(OTHER_URL);
+        org.mockito.Mockito.verify(importer).load(any(), eq("other:"));
+        org.mockito.Mockito.verify(events).publishEvent(
+                org.mockito.ArgumentMatchers.<Object>argThat(e -> e instanceof GtfsImported g && g.feed().equals("other")));
+
+        assertThatThrownBy(() -> service.importFeed("nowhere"))
+                .isInstanceOf(com.transitanalytics.service.NotFoundException.class);
+
+        // On schedule: every other feed; a failure is only logged.
+        given(downloader.download(OTHER_URL)).willThrow(new GtfsFeedException("gone"));
+        service.refreshExtra();
+        org.mockito.Mockito.verify(downloader, org.mockito.Mockito.times(2)).download(OTHER_URL);
     }
 }

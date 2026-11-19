@@ -258,7 +258,7 @@ class SecurityWebTest {
 
     @Test
     void adminCanImportGtfs() throws Exception {
-        given(gtfsBialystokService.importFeed()).willReturn(new GtfsImportResult("bialystok", "https://x", 10,
+        given(gtfsBialystokService.importFeed("bialystok")).willReturn(new GtfsImportResult("bialystok", "https://x", 10,
                 Instant.parse("2026-11-16T10:00:00Z"), 1234, java.util.Map.of("stop", 1083L), java.util.Map.of(),
                 List.of()));
 
@@ -269,7 +269,7 @@ class SecurityWebTest {
 
     @Test
     void gtfsImportErrorsMapToStatusCodes() throws Exception {
-        given(gtfsBialystokService.importFeed())
+        given(gtfsBialystokService.importFeed("bialystok"))
                 .willThrow(new GtfsImportInProgressException("bialystok"))
                 .willThrow(new GtfsFeedException("The feed has no stops.txt"));
 
