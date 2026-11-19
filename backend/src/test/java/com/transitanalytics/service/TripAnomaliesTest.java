@@ -21,6 +21,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 class TripAnomaliesTest {
 
@@ -142,6 +143,14 @@ class TripAnomaliesTest {
         assertThat(d.detourMeters()).isBetween(320, 340);
         assertThat(d.detourMinutes()).as("07:17:00 to 07:19:40, and the last report's 20 s").isEqualTo(3);
         assertThat(d.detourFrom()).isEqualTo("D");
+        // For the map: the bus's path, its six reports off the route with three either side, and the usual route.
+        assertThat(d.detourPath()).hasSize(12);
+        assertThat(d.detourPath().get(0)[1]).isEqualTo(LON);
+        assertThat(d.detourPath().subList(3, 9)).allSatisfy(p -> assertThat(p[1]).isCloseTo(LON + 0.005, org.assertj.core.api.Assertions.within(1e-9)));
+        assertThat(d.detourPath().get(11)[1]).isEqualTo(LON);
+        assertThat(d.detourRoute()).hasSize(2);
+        assertThat(d.detourRoute().get(0)).containsExactly(53.10, LON);
+        assertThat(outcomes.get(full.tripId()).trip()).isNull();
         assertThat(d.note()).startsWith("Run in full. Off the route for 3 min, up to");
         assertThat(d.vehicles()).containsExactly("V1");
 
@@ -240,8 +249,11 @@ class TripAnomaliesTest {
         assertThat(changed.trip().vehicles()).containsExactly("V1", "V3", "V2");
         assertThat(changed.trip().note()).isEqualTo("Run in full. Bus V1 stopped heading to D (stop 4 of 5) at "
                 + "07:04; 2 min later bus V2 took over at the same place, heading to E (stop 5). Delay +0:00 before, "
-                + "+0:00 after. Bus V2 hadn't run any other brigade that day (from the depot). Bus V1 wasn't seen "
-                + "again that day: possibly broken down.");
+                + "+0:00 after. Bus V2 hadn't run any other brigade that day (from the depot). Bus V1 stood there for 1 "
+                + "min (07:04–07:05), then stopped reporting and wasn't seen again that day (switched off, or towed "
+                + "with its tracker off): possibly broken down.");
+        assertThat(changed.trip().stoodMinutes()).isEqualTo(1);
+        assertThat(changed.trip().stoodThen()).isEqualTo("vanished");
         // It stood heading to D from 07:04:00 (three reports there); bus 2 first reported at 07:06:00.
         assertThat(changed.trip().changeMinutes()).isEqualTo(2);
         assertThat(changed.trip().changeStop()).isEqualTo("D");
@@ -295,18 +307,98 @@ class TripAnomaliesTest {
         Report gaveUp = changeOfBus(trip).get(12);
         TripAnomalyDto.Trip stood = judged.apply(List.of(
                 new Report(1, "V1", at("07:20"), "9", "009-01", "South", 2000, 4, gaveUp.lat(), LON)));
-        assertThat(stood.note()).endsWith("Bus V1 stood there until 07:20 and wasn't used again that day: "
-                + "possibly broken down.");
-        TripAnomalyDto.Trip towed = judged.apply(List.of(elsewhere(1, "07:30", "9", "009-01")));
+        assertThat(stood.note()).endsWith("Bus V1 stood there for 16 min (07:04–07:20), then stopped reporting "
+                + "and wasn't seen again that day (switched off, or towed with its tracker off): possibly broken down.");
+        assertThat(stood.stoodThen()).isEqualTo("vanished");
+        assertThat(stood.stoodLastSeen()).isEqualTo(at("07:20"));
+        // Judged a minute after its latest report there: still standing.
+        List<Report> standing = new ArrayList<>(changeOfBus(trip));
+        standing.add(new Report(1, "V1", at("07:20"), "9", "009-01", "South", 2000, 4, gaveUp.lat(), LON));
+        TripAnomalyDto.Trip still = judge(List.of(trip), standing, at("07:21")).get(trip.tripId()).trip();
+        assertThat(still.stoodThen()).isEqualTo("still-there");
+        assertThat(still.note()).endsWith("Bus V1 has stood there since 07:04 (16 min, last report 07:20) and "
+                + "hasn't been used since: possibly broken down.");
+        // Stood until 07:10, then off to the depot: last seen 07:30, kilometres away.
+        TripAnomalyDto.Trip towed = judged.apply(List.of(
+                new Report(1, "V1", at("07:10"), "9", "009-01", "South", 2000, 4, gaveUp.lat(), LON),
+                elsewhere(1, "07:25", "9", "009-01"), new Report(1, "V1", at("07:30"), "9", null, null, null, null,
+                        53.2, 23.2)));
         assertThat(towed.changeFate()).isEqualTo("broken-down");
-        assertThat(towed.note()).endsWith("Bus V1 was last seen at 07:30 and wasn't used again that day: "
-                + "possibly broken down.");
+        assertThat(towed.note()).endsWith("Bus V1 stood there for 6 min (07:04–07:10), then moved off without "
+                + "running a brigade; last seen at 07:30, 11.0 km away. Not used again that day: possibly broken "
+                + "down.");
+        assertThat(towed.stoodThen()).isEqualTo("drove-off");
+        assertThat(towed.stoodMinutes()).isEqualTo(6);
+        assertThat(towed.stoodLastSeenMeters()).isGreaterThan(5000);
+        // Used again: no stand.
+        assertThat(reassigned.stoodThen()).isNull();
         // Driven off still logged in to its brigade for 20 minutes, its delay over half an hour: not in service.
         List<Report> leaving = new ArrayList<>();
         for (int m = 30; m <= 50; m += 5) {
             leaving.add(new Report(1, "V1", at("07:" + m), "9", "009-01", "South", 2000 + m * 60, 2, 53.2, 23.2));
         }
         assertThat(judged.apply(leaving).changeFate()).isEqualTo("broken-down");
+    }
+
+    /**
+     * Bus 1 breaks down on the 07:00 trip heading to D and stands there until 07:40, its delay growing past half an
+     * hour; bus 2 comes from the depot, takes over heading to E at 07:42 and runs the brigade's next trip.
+     */
+    private static List<Report> breakdown(ScheduledTrip first, ScheduledTrip next) {
+        List<Report> reports = new ArrayList<>(drive(1, first, 0, 1, 2, 3));
+        for (int m = 7; m <= 40; m++) {
+            reports.add(new Report(1, "V1", at("07:%02d".formatted(m)), "9", "009-01", "North", (m - 6) * 60, 3,
+                    lat(first, 3), LON));
+        }
+        for (int m = 38; m <= 41; m++) {
+            reports.add(new Report(2, "V2", at("07:%02d".formatted(m)), "9", null, null, 0, null, 53.09, LON));
+        }
+        for (int k = 0; k < 3; k++) {
+            reports.add(new Report(2, "V2", at("07:42").plusSeconds(k * 20L), "9", "009-01", "North", 1500, 4,
+                    lat(first, 4), LON));
+        }
+        reports.addAll(drive(2, next, 0, 1, 2, 3, 4));
+        return reports;
+    }
+
+    @Test
+    void keepsABrokenDownBusOnItsTripOnceItsDelayPassesHalfAnHour() {
+        ScheduledTrip first = trip("009-01", "North", "07:00");
+        ScheduledTrip next = trip("009-01", "South", "07:45");
+        Map<String, Outcome> outcomes = judge(List.of(first, next), breakdown(first, next), NOON);
+
+        // One change of bus, on the trip it broke down on; the next trip ran normally.
+        TripAnomalyDto.Trip changed = outcomes.get(first.tripId()).trip();
+        assertThat(outcomes.get(first.tripId()).kind()).isEqualTo(Kind.VEHICLE_CHANGED);
+        assertThat(changed.vehicles()).containsExactly("V1", "V2");
+        assertThat(changed.stoodMinutes()).isEqualTo(36);
+        assertThat(changed.stoodThen()).isEqualTo("vanished");
+        assertThat(outcomes.get(next.tripId()).kind()).isEqualTo(Kind.COMPLETED);
+    }
+
+    @Test
+    void tellsABreakdownStepByStepWithEachBusOnATimeLine() {
+        ScheduledTrip first = trip("009-01", "North", "07:00");
+        ScheduledTrip next = trip("009-01", "South", "07:45");
+        TripAnomalyDto.Trip changed = judge(List.of(first, next), breakdown(first, next), NOON)
+                .get(first.tripId()).trip();
+
+        assertThat(changed.story()).extracting(TripAnomalyDto.Step::at).isSorted();
+        assertThat(changed.story()).extracting(TripAnomalyDto.Step::text).containsExactly(
+                "Bus V1 runs line 9 towards North, heading to A (stop 1 of 5), delay +0:00.",
+                "Bus V1 stops heading to D (stop 4 of 5; delay +0:00) and doesn't move on; the feed's delay keeps "
+                        + "growing, to +34:00 by 07:40.",
+                "Bus V2 sets off without a brigade (from the depot), 1.8 km from where bus V1 stopped.",
+                "Last report of bus V1, from the same spot: not seen again that day (switched off, or towed with its "
+                        + "tracker off).",
+                "Bus V2 takes over at the same place, heading to E (stop 5 of 5), 300 m from where bus V1 stopped, "
+                        + "delay +25:00. The trip had no bus for 38 min.",
+                "Bus V2 runs the brigade's next trip, towards South (scheduled 07:45).");
+        assertThat(changed.timeline()).extracting(TripAnomalyDto.Span::vehicle, TripAnomalyDto.Span::kind)
+                .containsExactly(tuple("V1", "running"), tuple("V1", "standing"), tuple("V2", "approach"),
+                        tuple("V2", "service"));
+        assertThat(changed.timeline().get(1).to()).isEqualTo(at("07:40"));
+        assertThat(changed.timeline().get(3).to()).isAfter(at("07:45"));
     }
 
     @Test
@@ -318,14 +410,19 @@ class TripAnomaliesTest {
         Report last = new Report(1, "V1", at("07:05"), "9", "009-01", "North", 150, 2, 53.10, LON);
         // Joined heading to G, 1 km on: stops D–F unserved.
         Report far = new Report(2, "V2", at("07:15"), "9", "009-01", "North", 400, 6, 53.109, LON);
-        var further = new TripAnomalies.Change(last, far, 6, stopped, 30, 400);
+        var further = new TripAnomalies.Change(stopped, last, far, 6, stopped, 30, 400);
         assertThat(further.samePlace(trip)).isFalse();
         assertThat(further.skippedStops(trip)).isEqualTo(3);
         assertThat(further.standMinutes()).isEqualTo(12);
         // Heading to the next stop, or first seen next to the old bus: the same place.
-        assertThat(new TripAnomalies.Change(last, far, 3, stopped, 30, 400).samePlace(trip)).isTrue();
+        assertThat(new TripAnomalies.Change(stopped, last, far, 3, stopped, 30, 400).samePlace(trip)).isTrue();
         Report beside = new Report(2, "V2", at("07:15"), "9", "009-01", "North", 400, 6, 53.1005, LON);
-        assertThat(new TripAnomalies.Change(last, beside, 6, stopped, 30, 400).skippedStops(trip)).isZero();
+        assertThat(new TripAnomalies.Change(stopped, last, beside, 6, stopped, 30, 400).skippedStops(trip)).isZero();
+        // Heading to the first stop, 1 km back: not the same place, however few stops it reads as.
+        var back = new TripAnomalies.Change(stopped, last, far, 0, stopped, 30, 400);
+        assertThat(back.samePlace(trip)).isFalse();
+        assertThat(back.skippedStops(trip)).isZero();
+        assertThat(back.stopsBack(trip)).isEqualTo(2);
     }
 
     @Test

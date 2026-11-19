@@ -15,6 +15,8 @@
   /* More chart series (categorical slots 2 and 3), and line colours by subtype. */
   --chart-series-2: #eb6834;
   --chart-series-3: #1baf7a;
+  /* Bus lanes in charts (the map band is BUS_LANE_STYLE in palette.ts). */
+  --bus-lane: #6f42c1;
   --line-urban: #2a78d6;
   --line-suburban: #1baf7a;
   --line-night: #6250d6;
@@ -22,6 +24,9 @@
   /* Depot runs: always paired with a "Depot run" label. */
   --depot: #eda100;
   --depot-soft: #fdf1d3;
+  /* The strongest fill of a coloured label (main lines on Routes): its colour mixed towards this, with this text. */
+  --strong-mix: #000;
+  --strong-text: #fff;
   color-scheme: light;
 }
 
@@ -41,12 +46,15 @@
     --chart-line: #3d97e8;
     --chart-series-2: #d95926;
     --chart-series-3: #199e70;
+    --bus-lane: #9775fa;
     --line-urban: #3987e5;
     --line-suburban: #199e70;
     --line-night: #9085e9;
     --line-regional: #d95926;
     --depot: #c98500;
     --depot-soft: #3a2f14;
+    --strong-mix: #fff;
+    --strong-text: #111;
     color-scheme: dark;
   }
 }
@@ -385,4 +393,48 @@ app-time-window label {
   flex-direction: row;
   align-items: center;
   gap: 0.4rem;
+}
+
+/* Map popups (Live map, Delays): a brigade and the rest of its day. Leaflet renders them outside components. */
+.leaflet-popup-content {
+  .brigade {
+    margin-top: 0.5rem;
+    padding-top: 0.4rem;
+    border-top: 1px solid var(--border);
+  }
+
+  ol.runs {
+    margin: 0.25rem 0 0;
+    padding: 0;
+    list-style: none;
+    max-height: 12rem;
+    overflow-y: auto;
+  }
+
+  ol.runs li {
+    padding: 0.15rem 0;
+  }
+
+  ol.runs li.now {
+    font-weight: 600;
+  }
+
+  ol.runs .t {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* A boundary line in a map legend: .line-swatch with border-top colour and style set inline. */
+.line-swatch {
+  display: inline-block;
+  width: 1.4rem;
+  height: 0;
+  border-top: 3px solid;
+  vertical-align: middle;
+
+  /* A bus lane: wide and translucent, as on the map. */
+  &.bus-lane {
+    border-top-width: 6px;
+    opacity: 0.55;
+  }
 }

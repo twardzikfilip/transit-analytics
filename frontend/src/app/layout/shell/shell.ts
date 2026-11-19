@@ -32,6 +32,7 @@ export class Shell {
     { path: '/positions', label: 'Position history', icon: '📈' },
     { path: '/delays', label: 'Delays', icon: '⏱' },
     { path: '/hotspots', label: 'Stop hotspots', icon: '🚦' },
+    { path: '/bus-lanes', label: 'Bus lanes', icon: '🛤' },
     { path: '/delay-generation', label: 'Delay generation', icon: '📉' },
     { path: '/trip-anomalies', label: 'Abnormal trips', icon: '⚠' },
     { path: '/routes', label: 'Routes', icon: '〰' },

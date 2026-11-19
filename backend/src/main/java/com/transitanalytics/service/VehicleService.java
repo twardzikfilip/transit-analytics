@@ -1,5 +1,7 @@
 package com.transitanalytics.service;
 
+import com.transitanalytics.classification.VehicleClasses;
+import com.transitanalytics.classification.VehicleClassifier;
 import com.transitanalytics.domain.Vehicle;
 import com.transitanalytics.dto.VehicleDto;
 import com.transitanalytics.repository.VehicleRepository;
@@ -16,10 +18,12 @@ import java.util.Map;
 public class VehicleService extends CrudService<Vehicle, VehicleDto.Request, VehicleDto.Response, NoFilter> {
 
     private final VehicleRepository vehicles;
+    private final VehicleClassifier classifier;
 
-    public VehicleService(VehicleRepository repository) {
+    public VehicleService(VehicleRepository repository, VehicleClassifier classifier) {
         super(repository, "Vehicle");
         this.vehicles = repository;
+        this.classifier = classifier;
     }
 
     /**
@@ -37,18 +41,19 @@ public class VehicleService extends CrudService<Vehicle, VehicleDto.Request, Veh
 
         List<Vehicle> missing = byNumber.values().stream()
                 .filter(d -> !ids.containsKey(d.vehicleNumber()))
-                .map(VehicleService::toEntity)
+                .map(this::toEntity)
                 .toList();
         vehicles.saveAll(missing).forEach(v -> ids.put(v.getVehicleNumber(), v.getId()));
         return ids;
     }
 
-    private static Vehicle toEntity(VehicleDto.Discovered d) {
+    private Vehicle toEntity(VehicleDto.Discovered d) {
         Vehicle v = new Vehicle();
         v.setVehicleNumber(d.vehicleNumber());
         v.setType(d.type());
         v.setAgency(d.agency());
         v.setModel(d.model());
+        VehicleClasses.apply(v, classifier.classify(d.model()));
         return v;
     }
 
@@ -61,14 +66,17 @@ public class VehicleService extends CrudService<Vehicle, VehicleDto.Request, Veh
     protected void apply(VehicleDto.Request r, Vehicle e, boolean creating) {
         e.setVehicleNumber(r.vehicleNumber());
         e.setType(r.type());
-        e.setCapacity(r.capacity());
         e.setAgency(r.agency());
         e.setModel(r.model());
+        // The class follows the model; a capacity given is kept, else the model's (when known).
+        VehicleClassifier.Spec spec = classifier.classify(r.model());
+        e.setVehicleClass(spec.vehicleClass());
+        e.setCapacity(r.capacity() != null ? r.capacity() : spec.capacity());
     }
 
     @Override
     protected VehicleDto.Response toResponse(Vehicle e) {
         return new VehicleDto.Response(e.getId(), e.getVehicleNumber(), e.getType(), e.getCapacity(),
-                e.getAgency(), e.getModel());
+                e.getAgency(), e.getModel(), e.getVehicleClass());
     }
 }

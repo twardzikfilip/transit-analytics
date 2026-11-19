@@ -26,7 +26,11 @@ export function searchVehicles(usage: VehicleUsage[], query: string, limit = 8):
   return usage
     .map((u) => ({ u, r: rank(u) }))
     .filter((x) => x.r >= 0)
-    .sort((a, b) => a.r - b.r || a.u.vehicle.number.localeCompare(b.u.vehicle.number, undefined, { numeric: true }))
+    .sort(
+      (a, b) =>
+        a.r - b.r ||
+        a.u.vehicle.number.localeCompare(b.u.vehicle.number, undefined, { numeric: true }),
+    )
     .slice(0, limit)
     .map((x) => x.u);
 }
@@ -59,7 +63,11 @@ function runText(run: { line: string; brigade: string | null; headsign: string |
   return `line ${run.line}${run.brigade ? `, brigade ${run.brigade}` : ''}${run.headsign ? ` → ${run.headsign}` : ''}`;
 }
 
-const DAY_FORMAT = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+const DAY_FORMAT = new Intl.DateTimeFormat('en-GB', {
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
+});
 
 /** "Mon 16 Nov" for a yyyy-MM-dd day. */
 export function dayLabel(day: string): string {
@@ -116,7 +124,9 @@ export function dailyBars(detail: VehicleDetail): Bar[] {
       label: dayLabel(d.day).replace(/^\w+ /, ''),
       value: d.hours,
       title: `${dayLabel(d.day)}: ${d.hours.toFixed(1)} h`,
-      detail: incidents ? `${incidents} abnormal trip${incidents > 1 ? 's' : ''}` : `${d.runs.length} runs`,
+      detail: incidents
+        ? `${incidents} abnormal trip${incidents > 1 ? 's' : ''}`
+        : `${d.runs.length} runs`,
       marked: incidentDays.has(d.day),
     };
   });
@@ -137,3 +147,16 @@ export function usageBars(usage: VehicleUsage[]): Bar[] {
 
 /** "1.5 h" axis labels. */
 export const hoursAxis = (v: number) => `${v} h`;
+
+/** A size class in words, with its lengths (as configured in the backend's classification/vehicles.yml). */
+export function vehicleClassLabel(vehicleClass: string): string {
+  return (
+    {
+      mini: 'Mini (under 8 m)',
+      midi: 'Midi (8–11 m)',
+      maxi: 'Maxi (11–15 m)',
+      mega: 'Mega (15 m+, articulated)',
+      double_decker: 'Double-decker',
+    }[vehicleClass] ?? 'Unknown size'
+  );
+}

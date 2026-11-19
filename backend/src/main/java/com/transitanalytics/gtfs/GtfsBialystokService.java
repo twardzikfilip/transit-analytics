@@ -4,6 +4,7 @@ import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -27,14 +28,16 @@ public class GtfsBialystokService {
     private final GtfsImporter importer;
     private final GtfsProperties properties;
     private final ObservationRegistry observations;
+    private final ApplicationEventPublisher events;
     private final AtomicBoolean running = new AtomicBoolean();
 
     public GtfsBialystokService(GtfsDownloader downloader, GtfsImporter importer, GtfsProperties properties,
-                                ObservationRegistry observations) {
+                                ObservationRegistry observations, ApplicationEventPublisher events) {
         this.downloader = downloader;
         this.importer = importer;
         this.properties = properties;
         this.observations = observations;
+        this.events = events;
     }
 
     /**
@@ -66,6 +69,8 @@ public class GtfsBialystokService {
             long ms = Duration.between(start, Instant.now()).toMillis();
             log.info("Imported GTFS feed {} ({} bytes) in {} ms: {}; skipped {}; ignored files {}",
                     FEED, bytes, ms, loaded.rows(), loaded.skipped(), loaded.ignoredFiles());
+            // Whatever depends on the timetable (the lines' classes) is worked out again.
+            events.publishEvent(new GtfsImported(FEED, Instant.now()));
             return new GtfsImportResult(FEED, url, bytes, Instant.now(), ms, loaded.rows(), loaded.skipped(),
                     loaded.ignoredFiles());
         } catch (ZipException ex) {

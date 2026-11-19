@@ -4,7 +4,8 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { distinctUntilChanged, map } from 'rxjs';
-import { VehicleUsage } from '../../core/models/models';
+import { VehicleIncident, VehicleUsage } from '../../core/models/models';
+import { IncidentStory } from '../../shared/incident-timeline/incident-story';
 import { BarChart } from '../../shared/bar-chart/bar-chart';
 import { localTime } from '../../shared/format/time';
 import { injectSetQuery } from '../../shared/url-query';
@@ -28,9 +29,11 @@ import {
   searchVehicles,
   timelineRows,
   usageBars,
+  vehicleClassLabel,
   vehicleName,
 } from './fleet-format';
 import { RunTimeline } from './run-timeline';
+import { CountBars } from './count-bars';
 
 export const DEFAULT_PRESET = '1w';
 
@@ -47,7 +50,7 @@ interface FleetQuery {
  */
 @Component({
   selector: 'app-fleet',
-  imports: [DatePipe, TimeWindowPicker, BarChart, RunTimeline],
+  imports: [DatePipe, TimeWindowPicker, BarChart, RunTimeline, IncidentStory, CountBars],
   templateUrl: './fleet.html',
   styleUrl: './fleet.scss',
 })
@@ -64,13 +67,11 @@ export class Fleet {
 
   protected readonly defaultPreset = DEFAULT_PRESET;
   private readonly query$ = inject(ActivatedRoute).queryParamMap.pipe(
-    map(
-      (p): FleetQuery => ({
-        window: readWindow(p, DEFAULT_PRESET),
-        agencies: readAgencies(p),
-        vehicle: Number(p.get('vehicle')) || null,
-      }),
-    ),
+    map((p): FleetQuery => ({
+      window: readWindow(p, DEFAULT_PRESET),
+      agencies: readAgencies(p),
+      vehicle: Number(p.get('vehicle')) || null,
+    })),
     distinctUntilChanged((a, b) => sameQuery(a, b) && a.vehicle === b.vehicle),
   );
   private readonly query = toSignal(this.query$, { requireSync: true });
@@ -78,19 +79,16 @@ export class Fleet {
 
   protected readonly search = signal('');
   protected readonly searchOpen = signal(false);
-  protected readonly matches = computed(() => searchVehicles(this.report()?.usage ?? [], this.search()));
+  protected readonly matches = computed(() =>
+    searchVehicles(this.report()?.usage ?? [], this.search()),
+  );
 
   protected readonly usageBars = computed(() => usageBars(this.report()?.usage ?? []));
   protected readonly inUseShare = computed(() => {
     const r = this.report();
     return r ? percent(r.inUse, r.fleet) : 0;
   });
-  protected readonly modelMax = computed(() => Math.max(1, ...(this.report()?.models ?? []).map((m) => m.fleet)));
-  protected readonly showAllModels = signal(false);
-  protected readonly models = computed(() => {
-    const models = this.report()?.models ?? [];
-    return this.showAllModels() ? models : models.slice(0, 8);
-  });
+  protected readonly classLabel = vehicleClassLabel;
 
   protected readonly perRun = computed(() => {
     const d = this.detail();
@@ -110,15 +108,32 @@ export class Fleet {
   protected readonly dayLabel = dayLabel;
   protected readonly hoursAxis = hoursAxis;
   protected readonly time = localTime;
+  /** Breakdowns whose step-by-step story is folded away (all are open at first). */
+  private readonly folded = signal<ReadonlySet<string>>(new Set());
+
+  protected storyOpen(i: VehicleIncident): boolean {
+    return i.story.length > 0 && !this.folded().has(i.scheduledDeparture + i.kind);
+  }
+
+  protected toggleStory(i: VehicleIncident): void {
+    const folded = new Set(this.folded());
+    const key = i.scheduledDeparture + i.kind;
+    if (!folded.delete(key)) folded.add(key);
+    this.folded.set(folded);
+  }
 
   constructor() {
     let loaded: FleetQuery | null = null;
     this.query$.pipe(takeUntilDestroyed()).subscribe((q) => {
       if (!loaded || !sameQuery(loaded, q)) {
-        this.store.dispatch(FleetActions.load({ window: windowQuery(q.window), agencies: q.agencies }));
+        this.store.dispatch(
+          FleetActions.load({ window: windowQuery(q.window), agencies: q.agencies }),
+        );
       }
       if (q.vehicle && (!loaded || !sameQuery(loaded, q) || loaded.vehicle !== q.vehicle)) {
-        this.store.dispatch(FleetActions.loadVehicle({ id: q.vehicle, window: windowQuery(q.window) }));
+        this.store.dispatch(
+          FleetActions.loadVehicle({ id: q.vehicle, window: windowQuery(q.window) }),
+        );
       } else if (!q.vehicle && loaded?.vehicle) {
         this.store.dispatch(FleetActions.clearVehicle());
       }

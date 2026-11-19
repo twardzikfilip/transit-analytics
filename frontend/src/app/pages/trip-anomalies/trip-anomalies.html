@@ -129,7 +129,24 @@
             }
           </select>
         </label>
-        @if (shownKinds().length || line()) {
+        <label>
+          <span class="sr-only">Bus</span>
+          <input
+            class="bus-filter"
+            type="search"
+            list="trip-anomaly-buses"
+            placeholder="Bus number"
+            inputmode="numeric"
+            [value]="bus() ?? ''"
+            (change)="setBus($any($event.target).value)"
+          />
+          <datalist id="trip-anomaly-buses">
+            @for (b of busOptions(); track b) {
+              <option [value]="b"></option>
+            }
+          </datalist>
+        </label>
+        @if (shownKinds().length || line() || bus()) {
           <button type="button" (click)="clearFilters()">Show all</button>
         }
       </div>
@@ -141,6 +158,9 @@
       }
       @if (line()) {
         · line {{ line() }}
+      }
+      @if (bus()) {
+        · bus {{ bus() }}
       }
       @if (r.tripsTotal > r.trips.length) {
         · the latest {{ r.trips.length }} of {{ r.tripsTotal }} abnormal trips are listed
@@ -223,6 +243,16 @@
                       [title]="'Old bus heading to ' + t.changeStop + '; new bus to ' + t.joinStop"
                       >{{ joinedAt(t) }}</span
                     >
+                    @if (stoodLabel(t); as stood) {
+                      <span
+                        class="chip"
+                        [class.long]="t.stoodThen === 'still-there' || (t.stoodMinutes ?? 0) >= 10"
+                        [title]="
+                          t.stoodLastSeen ? 'Old bus last seen ' + time(t.stoodLastSeen) : ''
+                        "
+                        >{{ stood }}</span
+                      >
+                    }
                   </div>
                 }
                 @if (t.detourMeters !== null) {
@@ -233,6 +263,26 @@
                 }
               </td>
             </tr>
+            @if (t.detourPath.length) {
+              <tr class="detour-row">
+                <td colspan="7">
+                  <app-path-map
+                    [lines]="detourLines(t)"
+                    [label]="
+                      'Line ' +
+                      t.line +
+                      ': detour ' +
+                      t.detourFrom +
+                      ' → ' +
+                      t.detourTo +
+                      ', ' +
+                      t.detourMeters +
+                      ' m off the route'
+                    "
+                  />
+                </td>
+              </tr>
+            }
           } @empty {
             <tr>
               <td colspan="7" class="muted">No abnormal trips here.</td>

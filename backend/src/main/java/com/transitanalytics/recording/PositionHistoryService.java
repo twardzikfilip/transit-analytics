@@ -206,11 +206,12 @@ public class PositionHistoryService {
 
         Map<String, Integer> vehicleIndex = new java.util.LinkedHashMap<>();
         Map<String, Integer> lineIndex = new java.util.LinkedHashMap<>();
+        Map<String, Integer> brigadeIndex = new java.util.LinkedHashMap<>();
         java.util.TreeMap<Instant, List<List<Object>>> frames = new java.util.TreeMap<>();
         jdbc.query("""
                 SELECT DISTINCT ON (bucket, p.vehicle_id)
                        time_bucket(make_interval(secs => ?::integer), coalesce(p.fetched_at, p.observed_at)) AS bucket,
-                       v.vehicle_number, p.route_name, p.latitude, p.longitude, p.delay_seconds
+                       v.vehicle_number, p.route_name, p.brigade, p.latitude, p.longitude, p.delay_seconds
                 FROM position_sample p JOIN vehicle v ON v.id = p.vehicle_id
                 WHERE %s%s
                 ORDER BY bucket, p.vehicle_id, p.observed_at DESC""".formatted(windowCondition("p"), routeFilter),
@@ -218,18 +219,22 @@ public class PositionHistoryService {
                     int vehicle = vehicleIndex.computeIfAbsent(rs.getString("vehicle_number"), k -> vehicleIndex.size());
                     String route = rs.getString("route_name");
                     Integer line = route == null ? null : lineIndex.computeIfAbsent(route, k -> lineIndex.size());
-                    List<Object> row = new ArrayList<>(5);
+                    String brigade = rs.getString("brigade");
+                    Integer duty = brigade == null ? null
+                            : brigadeIndex.computeIfAbsent(brigade, k -> brigadeIndex.size());
+                    List<Object> row = new ArrayList<>(6);
                     row.add(vehicle);
                     row.add(round(rs.getDouble("latitude"), 6));
                     row.add(round(rs.getDouble("longitude"), 6));
                     row.add(nullableInt(rs, "delay_seconds"));
                     row.add(line);
+                    row.add(duty);
                     frames.computeIfAbsent(instant(rs, "bucket"), k -> new ArrayList<>()).add(row);
                 },
                 args.toArray());
 
         return new PositionHistoryDto.Replay(from, to, step.toSeconds(), lineFilter,
-                List.copyOf(vehicleIndex.keySet()), List.copyOf(lineIndex.keySet()),
+                List.copyOf(vehicleIndex.keySet()), List.copyOf(lineIndex.keySet()), List.copyOf(brigadeIndex.keySet()),
                 frames.entrySet().stream().map(e -> new PositionHistoryDto.Frame(e.getKey(), e.getValue())).toList());
     }
 

@@ -72,35 +72,6 @@
   }
 }
 
-/* Popup content is rendered by Leaflet, outside this component's view. */
-:host ::ng-deep .leaflet-popup-content {
-  .brigade {
-    margin-top: 0.5rem;
-    padding-top: 0.4rem;
-    border-top: 1px solid var(--border);
-  }
-
-  ol.runs {
-    margin: 0.25rem 0 0;
-    padding: 0;
-    list-style: none;
-    max-height: 12rem;
-    overflow-y: auto;
-  }
-
-  ol.runs li {
-    padding: 0.15rem 0;
-  }
-
-  ol.runs li.now {
-    font-weight: 600;
-  }
-
-  ol.runs .t {
-    font-variant-numeric: tabular-nums;
-  }
-}
-
 .source {
   margin: 0.5rem 0 0;
   font-size: 0.8rem;

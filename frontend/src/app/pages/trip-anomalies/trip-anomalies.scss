@@ -83,6 +83,10 @@ h2 {
   gap: 0.5rem;
 }
 
+.bus-filter {
+  width: 8rem;
+}
+
 .by-line tbody tr {
   cursor: pointer;
 
@@ -168,7 +172,8 @@ td.bus {
   border-radius: 10px;
   background: rgba(23, 115, 108, 0.12);
   font-size: 0.8rem;
-  white-space: nowrap;
+  /* Short labels stay on one line; a long one wraps rather than spilling out of the narrow column. */
+  overflow-wrap: anywhere;
 }
 
 .chip.long,
@@ -217,4 +222,9 @@ td.bus {
   li + li {
     margin-top: 0.35rem;
   }
+}
+
+/* A detour's map, on a line of its own under the trip. */
+.detour-row > td {
+  background: var(--bg);
 }

@@ -1,6 +1,12 @@
 import { Type } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { Brigade, DepotRun, LineDetail, LineVehicles, SegmentProfile } from '../../core/models/models';
+import {
+  Brigade,
+  DepotRun,
+  LineDetail,
+  LineVehicles,
+  SegmentProfile,
+} from '../../core/models/models';
 import { BrigadeTimeline } from './brigade-timeline';
 import { DepotRuns } from './depot-runs';
 import { EndStops } from './end-stops';
@@ -38,9 +44,29 @@ describe('Routes page parts', () => {
       stops: [],
     });
     const detail = {
-      base: { lengthKm: 9.9, shortestMin: 28, longestMin: 41, minSpeedKmh: 15.6, maxSpeedKmh: 19.7 },
-      variants: [variant('main', 'Kleosin', 8.9), variant('longer', 'Koplany', 14.3), variant('depot', 'Wiejska', 4.5)],
-      zone2: [{ direction: 0, headsign: 'Koplany', kind: 'longer', stops: 8, totalStops: 30, km: 5, totalKm: 14.3 }],
+      base: {
+        lengthKm: 9.9,
+        shortestMin: 28,
+        longestMin: 41,
+        minSpeedKmh: 15.6,
+        maxSpeedKmh: 19.7,
+      },
+      variants: [
+        variant('main', 'Kleosin', 8.9),
+        variant('longer', 'Koplany', 14.3),
+        variant('depot', 'Wiejska', 4.5),
+      ],
+      zone2: [
+        {
+          direction: 0,
+          headsign: 'Koplany',
+          kind: 'longer',
+          stops: 8,
+          totalStops: 30,
+          km: 5,
+          totalKm: 14.3,
+        },
+      ],
       brigades: [{}, {}],
     } as unknown as LineDetail;
 
@@ -79,7 +105,10 @@ describe('Routes page parts', () => {
 
   it('shows end stops with the stops grouped into them, and depot stops labelled', () => {
     const el = render(EndStops, {
-      endStops: [{ name: 'Centrum st. 4', alsoNames: ['Centrum st. 1'] }, { name: 'Kleosin', alsoNames: [] }],
+      endStops: [
+        { name: 'Centrum st. 4', alsoNames: ['Centrum st. 1'] },
+        { name: 'Kleosin', alsoNames: [] },
+      ],
       depotStops: [{ name: 'Wiejska/Politechnika', alsoNames: ['Wiejska/Pogodna'] }],
     });
     expect(text(el.querySelector('.stop-chip'))).toBe('Centrum st. 4 also Centrum st. 1');
@@ -92,7 +121,15 @@ describe('Routes page parts', () => {
   it('lists the vehicles, the most used per brigade and changes during a day', () => {
     const vehicles: LineVehicles = {
       days: 7,
-      vehicles: [{ number: '032', model: 'Yutong U12', days: 3, brigades: ['103-01', '103-02'], lastSeen: '' }],
+      vehicles: [
+        {
+          number: '032',
+          model: 'Yutong U12',
+          days: 3,
+          brigades: ['103-01', '103-02'],
+          lastSeen: '',
+        },
+      ],
       brigades: [{ brigade: '103-01', mostUsed: '032', mostUsedDays: 2, days: 6, vehicles: 9 }],
       switches: [
         {
@@ -106,13 +143,22 @@ describe('Routes page parts', () => {
       ],
     };
     const el = render(LineVehiclesSection, { vehicles });
-    expect(cells(el.querySelector('tbody tr'))).toEqual(['032', 'Yutong U12', '3', '103-01, 103-02']);
-    expect(text(el.querySelector('.switches li'))).toBe('103-01 · Mon 9 Nov: 224 until 17:19 → 221 from 17:26');
-
-    expect(text(render(LineVehiclesSection, { vehicles: { ...vehicles, switches: [] } }))).toContain(
-      'Every brigade kept the same bus all day',
+    expect(cells(el.querySelector('tbody tr'))).toEqual([
+      '032',
+      'Yutong U12',
+      '3',
+      '103-01, 103-02',
+    ]);
+    expect(text(el.querySelector('.switches li'))).toBe(
+      '103-01 · Mon 9 Nov: 224 until 17:19 → 221 from 17:26',
     );
-    expect(text(render(LineVehiclesSection, { vehicles: null, loading: true }))).toContain('Loading vehicles');
+
+    expect(
+      text(render(LineVehiclesSection, { vehicles: { ...vehicles, switches: [] } })),
+    ).toContain('Every brigade kept the same bus all day');
+    expect(text(render(LineVehiclesSection, { vehicles: null, loading: true }))).toContain(
+      'Loading vehicles',
+    );
   });
 
   it('draws one bar per stretch and numbers the three slowest', () => {
@@ -145,9 +191,30 @@ describe('Routes page parts', () => {
       start: at(5, 41),
       end: at(17, 50),
       runs: [
-        { from: at(5, 41), to: at(5, 48), direction: 1, headsign: 'Dziesięciny', kind: 'depot', depot: 'pull_out' },
-        { from: at(6), to: at(6, 30), direction: 0, headsign: 'Sybiraków', kind: 'main', depot: null },
-        { from: at(13, 36), to: at(14, 6), direction: 1, headsign: 'Dziesięciny', kind: 'main', depot: null },
+        {
+          from: at(5, 41),
+          to: at(5, 48),
+          direction: 1,
+          headsign: 'Dziesięciny',
+          kind: 'depot',
+          depot: 'pull_out',
+        },
+        {
+          from: at(6),
+          to: at(6, 30),
+          direction: 0,
+          headsign: 'Sybiraków',
+          kind: 'main',
+          depot: null,
+        },
+        {
+          from: at(13, 36),
+          to: at(14, 6),
+          direction: 1,
+          headsign: 'Dziesięciny',
+          kind: 'main',
+          depot: null,
+        },
       ],
       breaks: [{ from: at(9, 32), to: at(13, 36) }],
     };

@@ -1,7 +1,9 @@
 import { LineRef, Segment } from '../../core/models/models';
 import {
-  groupLines,
+  capacityLabel,
+  geometryLabel,
   hourRange,
+  lineTable,
   slowestSegments,
   spellsText,
   subtypeLabel,
@@ -9,22 +11,55 @@ import {
 } from './format';
 
 describe('route detail formatting', () => {
-  it('groups lines by subtype in display order', () => {
-    const line = (name: string, subtype: LineRef['subtype']): LineRef => ({
+  it('puts the lines in a table of kinds of line by geometry', () => {
+    const line = (
+      name: string,
+      subtype: LineRef['subtype'],
+      geometry: LineRef['geometry'] = 'radial',
+    ): LineRef => ({
       id: 1,
       line: name,
       name,
       subtype,
+      geometry,
+      capacityClass: null,
+      operatingAgency: null,
     });
-    const groups = groupLines([
-      line('1', 'urban'),
+    const table = lineTable([
+      line('1', 'urban', 'diameter'),
       line('N1', 'night_urban'),
-      line('100', 'suburban'),
-      line('2', 'urban'),
+      line('100', 'suburban', 'feeder'),
+      line('2', 'urban', 'diameter'),
+      line('5', 'urban'),
     ]);
-    expect(groups.map((g) => g.label)).toEqual(['Urban', 'Suburban', 'Night']);
-    expect(groups[0].lines.map((l) => l.name)).toEqual(['1', '2']);
+    expect(table.columns.map((c) => c.label)).toEqual([
+      'Radial',
+      'Diameter',
+      'Arcantial',
+      'Tangential',
+      'Feeder',
+    ]);
+    expect(table.columns[3].description).toContain('around the centre');
+    expect(table.rows.map((r) => r.label)).toEqual(['Urban', 'Suburban', 'Night']);
+    expect(table.rows[0].cells.map((c) => c.map((l) => l.name))).toEqual([
+      ['5'],
+      ['1', '2'],
+      [],
+      [],
+      [],
+    ]);
+    expect(table.rows[1].cells[4].map((l) => l.name)).toEqual(['100']);
+
+    const withRegional = lineTable([line('1', 'urban'), line('700', 'regional', null)]);
+    expect(withRegional.columns.at(-1)).toEqual({
+      label: 'Not classified',
+      description: "Other operators' lines: not classified.",
+    });
+    expect(withRegional.rows[1].cells.at(-1)!.map((l) => l.name)).toEqual(['700']);
     expect(subtypeLabel('night_urban')).toBe('Night');
+    expect(geometryLabel('arcantial')).toBe('Arcantial');
+    expect(capacityLabel('tertiary')).toBe('Tertiary');
+    expect(capacityLabel(null)).toBe('Not classified');
   });
 
   it('picks the slowest measured segments', () => {

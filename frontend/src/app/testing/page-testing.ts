@@ -4,8 +4,49 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { Action, ActionReducer } from '@ngrx/store';
 import { MockStore, provideMockStore } from '@ngrx/store/testing';
-import { BehaviorSubject } from 'rxjs';
-import { Session } from '../core/models/models';
+import { BehaviorSubject, of } from 'rxjs';
+import { BoundaryApi, BusLaneApi } from '../core/api/api.services';
+import { BusLanes, CityBoundaries, Session } from '../core/models/models';
+
+/** A small square city around a smaller centre, served to every page by default. */
+export const TEST_BOUNDARIES: CityBoundaries = {
+  city: [
+    [53.0, 23.0],
+    [53.0, 23.3],
+    [53.2, 23.3],
+    [53.2, 23.0],
+    [53.0, 23.0],
+  ],
+  centre: [
+    [53.12, 23.14],
+    [53.12, 23.17],
+    [53.14, 23.17],
+    [53.12, 23.14],
+  ],
+  lineCentre: [
+    [53.125, 23.15],
+    [53.125, 23.16],
+    [53.135, 23.16],
+    [53.125, 23.15],
+  ],
+};
+
+/** Two bus lanes: one section each way on a street, served to every page by default. */
+export const TEST_BUS_LANES: BusLanes = {
+  source: 'OpenStreetMap',
+  fetchedAt: '2026-11-19T09:00:00Z',
+  laneKm: 1.2,
+  sections: 2,
+  official: { km: 1, date: '2025-01-28', source: 'City', url: 'https://example.org/lanes' },
+  lanes: [
+    { id: 1, name: 'Lipowa', forward: 1, backward: 1, bothWays: true, points: [[53.13, 23.15], [53.13, 23.16]] },
+    { id: 2, name: 'Sienkiewicza', forward: 1, backward: 0, bothWays: false, points: [[53.14, 23.16], [53.13, 23.16]] },
+  ],
+  stretches: [
+    { id: 0, name: 'Lipowa', heading: 'eastbound', km: 0.67, paths: [[[53.13, 23.15], [53.13, 23.16]]] },
+    { id: 1, name: 'Sienkiewicza', heading: 'southbound', km: 0.53, paths: [[[53.14, 23.16], [53.13, 23.16]]] },
+  ],
+};
 
 /** A feature's state after these actions, built with its real reducer (so it always has the right shape). */
 export function stateAfter<S>(
@@ -47,6 +88,8 @@ export function renderPage<T>(
     providers: [
       provideRouter([]),
       provideMockStore({ initialState: state }),
+      { provide: BoundaryApi, useValue: { boundaries: () => of(TEST_BOUNDARIES) } },
+      { provide: BusLaneApi, useValue: { lanes: () => of(TEST_BUS_LANES), report: () => of() } },
       {
         provide: ActivatedRoute,
         useValue: {

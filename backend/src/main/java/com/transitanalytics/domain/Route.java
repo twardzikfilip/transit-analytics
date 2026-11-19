@@ -48,6 +48,18 @@ public class Route {
     @Column(nullable = false, length = 16)
     private RouteSubtype subtype = RouteSubtype.URBAN;
 
+    /** How the line runs relative to the city centre; null until classified (BKM lines only). */
+    @Column(length = 16)
+    private RouteGeometry geometry;
+
+    /** How much the line carries; null until classified (BKM lines only). */
+    @Column(name = "capacity_class", length = 16)
+    private RouteCapacity capacityClass;
+
+    /** The company operating the line for the organiser: KPKM, KPK or KZK (classification/operators.yml). */
+    @Column(name = "operating_agency", length = 16)
+    private String operatingAgency;
+
     public Long getId() {
         return id;
     }
@@ -142,6 +154,30 @@ public class Route {
 
     public void setSubtype(RouteSubtype subtype) {
         this.subtype = subtype;
+    }
+
+    public RouteGeometry getGeometry() {
+        return geometry;
+    }
+
+    public void setGeometry(RouteGeometry geometry) {
+        this.geometry = geometry;
+    }
+
+    public RouteCapacity getCapacityClass() {
+        return capacityClass;
+    }
+
+    public void setCapacityClass(RouteCapacity capacityClass) {
+        this.capacityClass = capacityClass;
+    }
+
+    public String getOperatingAgency() {
+        return operatingAgency;
+    }
+
+    public void setOperatingAgency(String operatingAgency) {
+        this.operatingAgency = operatingAgency;
     }
 
     /** What riders see: the short name, or the long name when there is none. */

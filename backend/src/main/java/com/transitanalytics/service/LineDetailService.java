@@ -1,8 +1,12 @@
 package com.transitanalytics.service;
 
+import com.transitanalytics.classification.OperatorProperties;
 import com.transitanalytics.domain.Route;
 import com.transitanalytics.dto.LineDetailDto.Variant;
 import com.transitanalytics.dto.LineDetailDto.Zone2;
+import com.transitanalytics.buslanes.BusLaneMatcher;
+import com.transitanalytics.buslanes.BusLanes;
+import com.transitanalytics.dto.BusLaneDto;
 import com.transitanalytics.dto.LineDetailDto;
 import com.transitanalytics.recording.DelayOutliers;
 import com.transitanalytics.repository.RouteRepository;
@@ -18,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -47,14 +52,23 @@ public class LineDetailService {
     private final RouteRepository routes;
     private final LineTimetable timetables;
     private final LineSubtypes subtypes;
+    private final MapProperties map;
+    private final OperatorProperties operators;
+    private final DepotRouter router;
+    private final BusLanes busLanes;
     private final RecentCache<String, List<String>> feedLines;
 
     public LineDetailService(JdbcTemplate jdbc, RouteRepository routes, LineTimetable timetables,
-                             LineSubtypes subtypes, Clock clock) {
+                             LineSubtypes subtypes, Clock clock, MapProperties map, OperatorProperties operators,
+                             DepotRouter router, BusLanes busLanes) {
         this.jdbc = jdbc;
         this.routes = routes;
         this.timetables = timetables;
         this.subtypes = subtypes;
+        this.map = map;
+        this.operators = operators;
+        this.router = router;
+        this.busLanes = busLanes;
         this.feedLines = new RecentCache<>(clock, FEED_LINES_MAX_AGE, 1);
     }
 
@@ -65,7 +79,8 @@ public class LineDetailService {
     @Transactional(readOnly = true)
     public List<LineDetailDto.LineRef> lines() {
         List<LineDetailDto.LineRef> lines = new ArrayList<>(routes.findAll().stream()
-                .map(r -> new LineDetailDto.LineRef(r.getId(), r.getGtfsId(), r.displayName(), r.getSubtype()))
+                .map(r -> new LineDetailDto.LineRef(r.getId(), r.getGtfsId(), r.displayName(), r.getSubtype(),
+                        r.getGeometry(), r.getCapacityClass(), r.getOperatingAgency()))
                 .toList());
         Set<String> known = new HashSet<>();
         lines.forEach(l -> {
@@ -73,7 +88,7 @@ public class LineDetailService {
             known.add(l.name());
         });
         feedLines().stream().filter(name -> !known.contains(name))
-                .forEach(name -> lines.add(new LineDetailDto.LineRef(null, name, name, subtypes.of(name))));
+                .forEach(name -> lines.add(new LineDetailDto.LineRef(null, name, name, subtypes.of(name), null, null, null)));
         lines.sort(Comparator.comparing(LineDetailDto.LineRef::name, TimetableMath.LINE_ORDER));
         return lines;
     }
@@ -103,8 +118,8 @@ public class LineDetailService {
         if (route == null) {
             requireOnFeed(line);
             // Only on the live feed: no timetable to show.
-            return new LineDetailDto.Detail(null, line, line, subtypes.of(line), null, null, null, List.of(),
-                    List.of(), List.of(), List.of(), List.of(), List.of());
+            return new LineDetailDto.Detail(null, line, line, subtypes.of(line), null, null, null, null, null, List.of(),
+                    List.of(), List.of(), List.of(), List.of(), List.of(), null, depots(), List.of(), List.of());
         }
         Timetable tt = timetables.timetable(route, true);
         List<TripRow> mainTrips = mainTrips(tt);
@@ -150,8 +165,102 @@ public class LineDetailService {
                 depotDepartures.stream().filter(stop -> !atPlace(tt.endStops(), stop)).toList());
 
         return new LineDetailDto.Detail(route.getId(), route.getGtfsId(), route.displayName(), route.getSubtype(),
-                tt.service(), route.getUrl(), base, tt.variants(), zone2, brigades(tt.trips(), kinds, tt.depot()),
-                toDto(tt.endStops()), toDto(depotPlaces), depotRuns);
+                route.getGeometry(), route.getCapacityClass(), tt.service(), route.getUrl(), base, tt.variants(), zone2, brigades(tt.trips(), kinds, tt.depot()),
+                toDto(tt.endStops()), toDto(depotPlaces), depotRuns, operator(route), depots(),
+                depotLinks(route, tt.trips()), busLanes(mains));
+    }
+
+    /** How much of each direction's main route runs on bus lanes. */
+    private List<BusLaneDto.LineShare> busLanes(Map<Integer, Variant> mains) {
+        BusLaneMatcher matcher = busLanes.current().matcher();
+        return mains.values().stream().sorted(Comparator.comparingInt(Variant::direction))
+                .filter(v -> v.points() != null && v.points().size() >= 2)
+                .map(v -> {
+                    BusLaneMatcher.Share share = matcher.share(v.points());
+                    return new BusLaneDto.LineShare(v.direction(), v.firstStop(), v.lastStop(),
+                            TimetableMath.round(share.meters() / 1000, 2),
+                            TimetableMath.round(share.laneMeters() / 1000, 2),
+                            share.meters() == 0 ? 0 : TimetableMath.round(share.laneMeters() / share.meters() * 100, 1),
+                            share.onLanes());
+                }).toList();
+    }
+
+    private List<LineDetailDto.Depot> depots() {
+        return map.depots().stream().map(d -> new LineDetailDto.Depot(d.code(), d.name(), d.address(),
+                d.outlines().stream().map(ring -> ring.stream().map(p -> new double[] {p.get(0), p.get(1)}).toList())
+                        .toList())).toList();
+    }
+
+    /** Who runs a route: the organiser and its operating company with the company's depot; null when not known. */
+    private LineDetailDto.Operator operator(Route route) {
+        OperatorProperties.Company company = route.getOperatingAgency() == null ? null
+                : operators.company(route.getOperatingAgency());
+        if (company == null) {
+            return null;
+        }
+        MapProperties.Depot depot = map.depot(company.depot());
+        return new LineDetailDto.Operator(operators.organiser(), company.code(), company.name(), company.website(),
+                depot == null ? null : depot.name(), depot == null ? null : depot.address());
+    }
+
+    /**
+     * Where the line's buses enter service and leave it (see {@link #entries}), each with the way between there and
+     * the operator's depot (else the nearest depot): along the streets when a router answers, else straight.
+     */
+    private List<LineDetailDto.DepotLink> depotLinks(Route route, List<TripRow> trips) {
+        if (map.depots().isEmpty()) {
+            return List.of();
+        }
+        OperatorProperties.Company company = route.getOperatingAgency() == null ? null
+                : operators.company(route.getOperatingAgency());
+        MapProperties.Depot own = company == null ? null : map.depot(company.depot());
+        return entries(trips).stream().map(e -> {
+            double[] stop = {e.stop().lat(), e.stop().lon()};
+            MapProperties.Depot depot = own != null ? own : nearest(stop, map.depots());
+            boolean out = e.kind().equals("pull_out");
+            DepotRouter.Way way = out ? router.way(depot.centre(), stop) : router.way(stop, depot.centre());
+            return new LineDetailDto.DepotLink(e.kind(), e.stop().name(), stop[0], stop[1], depot.code(),
+                    e.brigades(), way.points(), way.routed());
+        }).toList();
+    }
+
+    /** A place where brigades enter service (pull_out) or leave it (pull_in), and how many. */
+    record Entry(String kind, StopRef stop, int brigades) {
+    }
+
+    /**
+     * Where the line's buses enter service (the first stop of each brigade's first trip of the day) and leave it (the
+     * last stop of its last trip), with how many brigades: pull-outs first, then the busiest places.
+     */
+    static List<Entry> entries(List<TripRow> trips) {
+        Map<String, Entry> entries = new LinkedHashMap<>();
+        LineTimetable.byDuty(trips).values().forEach(day -> {
+            add(entries, "pull_out", day.get(0).first());
+            add(entries, "pull_in", day.get(day.size() - 1).last());
+        });
+        return entries.values().stream()
+                .sorted(Comparator.comparing(Entry::kind).reversed()
+                        .thenComparing(Comparator.comparingInt(Entry::brigades).reversed())
+                        .thenComparing(e -> e.stop().name()))
+                .toList();
+    }
+
+    private static void add(Map<String, Entry> entries, String kind, StopRef stop) {
+        if (stop != null && stop.located()) {
+            entries.merge(kind + "|" + stop.name(), new Entry(kind, stop, 1),
+                    (a, b) -> new Entry(a.kind(), a.stop(), a.brigades() + 1));
+        }
+    }
+
+    /** The depot nearest a point, [lat, lon]. */
+    static MapProperties.Depot nearest(double[] point, List<MapProperties.Depot> depots) {
+        double cos = Math.cos(Math.toRadians(point[0]));
+        return depots.stream().min(Comparator.comparingDouble(d -> {
+            double[] c = d.centre();
+            double dx = (c[1] - point[1]) * cos;
+            double dy = c[0] - point[0];
+            return dx * dx + dy * dy;
+        })).orElseThrow();
     }
 
     @Transactional(readOnly = true)

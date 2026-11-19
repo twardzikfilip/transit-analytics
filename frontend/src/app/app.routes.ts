@@ -37,6 +37,10 @@ export const routes: Routes = [
         loadChildren: () => import('./pages/corridors/corridors.routes').then((m) => m.CORRIDORS_ROUTES),
       },
       { path: 'delays', loadChildren: () => import('./pages/delays/delays.routes').then((m) => m.DELAYS_ROUTES) },
+      {
+        path: 'bus-lanes',
+        loadChildren: () => import('./pages/bus-lanes/bus-lanes.routes').then((m) => m.BUS_LANES_ROUTES),
+      },
       { path: 'routes', loadChildren: () => import('./pages/routes/routes.routes').then((m) => m.ROUTES_ROUTES) },
       { path: 'positions', loadChildren: () => import('./pages/positions/positions.routes').then((m) => m.POSITIONS_ROUTES) },
       { path: '', loadChildren: () => import('./pages/timetable.routes').then((m) => m.TIMETABLE_ROUTES) },

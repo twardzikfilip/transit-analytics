@@ -1,0 +1,28 @@
+# Bus lanes (buspasy), drawn on the maps, measured along each line's route and compared with the rest of the
+# streets on the Bus lanes page. The lanes come from OpenStreetMap (© OpenStreetMap contributors, ODbL): every way in
+# the city tagged with a lane for buses (busway=*, busway:left/right/both, bus:lanes*, psv:lanes*, lanes:bus,
+# highway=busway). The built-in copy is map/bus-lanes.json; a refresh (at `refresh-cron`, or POST
+# /api/bus-lanes/refresh as an admin) fetches them again from Overpass and saves them to `file`, which is used from
+# then on (also after a restart). Edit and restart; a copy in ./config/map/ overrides this one.
+app:
+  bus-lanes:
+    file: "./config/map/bus-lanes.json"
+    # On the 1st of every month at 04:15 (Warsaw time); "-": never (refresh by hand).
+    refresh-cron: "0 15 4 1 * *"
+    # Overpass servers, tried in order; and the area: the OpenStreetMap relation of the city limits.
+    overpass:
+      - "https://overpass-api.de/api/interpreter"
+      - "https://overpass.private.coffee/api/interpreter"
+      - "https://maps.mail.ru/osm/tools/overpass/api/interpreter"
+    timeout: 180s
+    area-relation: 2910925
+    # A bus is on a bus lane when it is within `match-meters` of one and heading its way (within `match-angle`
+    # degrees): GPS positions are a few metres off, and a lane is 3-4 m off the street's centre line.
+    match-meters: 15
+    match-angle: 45
+    # The length the city gives, for comparison with OpenStreetMap's.
+    official:
+      km: 24
+      date: "2025-01-28"
+      source: "Fundusze Europejskie: Transport publiczny w Białymstoku – wszystko, tutaj, teraz"
+      url: "https://www.funduszeunijne.gov.pl/strony/o-funduszach/fundusze-2021-2027/aktualnosci/transport-publiczny-w-bialymstoku-wszystko-tutaj-teraz/"

@@ -1,9 +1,11 @@
 package com.transitanalytics.service;
 
+import com.transitanalytics.domain.VehicleClass;
 import com.transitanalytics.dto.FleetDto;
 import com.transitanalytics.dto.FleetDto.Breakdown;
 import com.transitanalytics.dto.FleetDto.Usage;
 import com.transitanalytics.dto.FleetDto.Vehicle;
+import com.transitanalytics.dto.TripAnomalyDto;
 import com.transitanalytics.service.TripAnomalies.Kind;
 import com.transitanalytics.service.TripAnomalies.Outcome;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -17,6 +19,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -66,7 +69,7 @@ public class FleetService {
     }
 
     /** Reads the last month's days at startup, in the background, so the first visit doesn't wait for them. */
-    @EventListener(ApplicationReadyEvent.class)
+    @EventListener(value = ApplicationReadyEvent.class, condition = WarmUp.ENABLED)
     public void warmUp() {
         Instant now = clock.instant();
         WarmUp.inBackground("fleet", FleetService.class,
@@ -98,6 +101,7 @@ public class FleetService {
                     .sorted(Comparator.comparingDouble(Usage::hours).thenComparing(u -> u.vehicle().number()))
                     .toList();
             return new FleetDto.Report(from, to, used.size(), buses.size(), agencies(fleet), models(buses, used),
+                    classes(buses, used), makes(buses, used),
                     top(all.stream().filter(u -> u.hours() > 0).toList()), top(leastFirst), all,
                     breakdowns.stream().filter(b -> chosen.test(b.vehicle())).toList());
         }
@@ -125,16 +129,47 @@ public class FleetService {
 
     /** Buses per model, in use and in the fleet: the most in use first. */
     static List<FleetDto.ModelCount> models(List<Vehicle> buses, List<Usage> used) {
+        return counts(buses, used, FleetService::model, MOST_IN_USE);
+    }
+
+    /** Buses per size class, in use and in the fleet: smallest to largest, then those of unknown class. */
+    static List<FleetDto.ModelCount> classes(List<Vehicle> buses, List<Usage> used) {
+        return counts(buses, used, v -> v.vehicleClass() == null ? UNKNOWN_MODEL : v.vehicleClass().value(),
+                Comparator.comparingInt(c -> c.model().equals(UNKNOWN_MODEL) ? Integer.MAX_VALUE
+                        : VehicleClass.valueOf(c.model().toUpperCase(java.util.Locale.ROOT)).ordinal()));
+    }
+
+    /** Buses per make, the model name's first word ("Solaris"), in use and in the fleet: the most in use first. */
+    static List<FleetDto.ModelCount> makes(List<Vehicle> buses, List<Usage> used) {
+        return counts(buses, used, v -> make(v.model()), MOST_IN_USE);
+    }
+
+    /** A model's make: its first word; "unknown" without a model. */
+    static String make(String model) {
+        return model == null || model.isBlank() ? UNKNOWN_MODEL : model.strip().split("\\s+")[0];
+    }
+
+    private static final Comparator<FleetDto.ModelCount> MOST_IN_USE =
+            Comparator.comparingInt(FleetDto.ModelCount::inUse).reversed()
+                    .thenComparing(Comparator.comparingInt(FleetDto.ModelCount::fleet).reversed())
+                    .thenComparing(FleetDto.ModelCount::model);
+
+    /** Buses per key, in use and in the fleet (at least those in use), in the given order. */
+    private static List<FleetDto.ModelCount> counts(List<Vehicle> buses, List<Usage> used,
+                                                    java.util.function.Function<Vehicle, String> key,
+                                                    Comparator<FleetDto.ModelCount> order) {
         Map<String, int[]> counts = new HashMap<>();
-        buses.forEach(b -> counts.computeIfAbsent(model(b), m -> new int[2])[1]++);
-        used.forEach(u -> counts.computeIfAbsent(model(u.vehicle()), m -> new int[2])[0]++);
+        buses.forEach(b -> counts.computeIfAbsent(key.apply(b), m -> new int[2])[1]++);
+        used.forEach(u -> counts.computeIfAbsent(key.apply(u.vehicle()), m -> new int[2])[0]++);
         return counts.entrySet().stream()
                 .map(e -> new FleetDto.ModelCount(e.getKey(), e.getValue()[0], Math.max(e.getValue()[0],
                         e.getValue()[1])))
-                .sorted(Comparator.comparingInt(FleetDto.ModelCount::inUse).reversed()
-                        .thenComparing(Comparator.comparingInt(FleetDto.ModelCount::fleet).reversed())
-                        .thenComparing(FleetDto.ModelCount::model))
+                .sorted(order)
                 .toList();
+    }
+
+    private static VehicleClass vehicleClass(String value) {
+        return value == null ? null : VehicleClass.valueOf(value.toUpperCase(java.util.Locale.ROOT));
     }
 
     private static String model(Vehicle v) {
@@ -155,9 +190,9 @@ public class FleetService {
     }
 
     private List<Vehicle> vehicles() {
-        return jdbc.query("SELECT id, vehicle_number, model, agency FROM vehicle",
+        return jdbc.query("SELECT id, vehicle_number, model, agency, vehicle_class FROM vehicle",
                 (rs, i) -> new Vehicle(rs.getLong("id"), rs.getString("vehicle_number"), rs.getString("model"),
-                        rs.getString("agency")));
+                        rs.getString("agency"), vehicleClass(rs.getString("vehicle_class"))));
     }
 
     static List<Usage> usage(List<Segment> segments) {
@@ -186,13 +221,13 @@ public class FleetService {
                            ((poll AT TIME ZONE '%1$s') - interval '%2$d hours')::date AS day
                     FROM r)
                 SELECT s.vehicle_id, s.day, s.route_name, sum(s.seconds) AS seconds,
-                       v.vehicle_number, v.model, v.agency
+                       v.vehicle_number, v.model, v.agency, v.vehicle_class
                 FROM spans s JOIN vehicle v ON v.id = s.vehicle_id
-                GROUP BY s.vehicle_id, s.day, s.route_name, v.vehicle_number, v.model, v.agency"""
+                GROUP BY s.vehicle_id, s.day, s.route_name, v.vehicle_number, v.model, v.agency, v.vehicle_class"""
                         .formatted(ZONE.getId(), DAY_START_HOUR, REPORT_COUNTS_FOR.toSeconds()),
                 (rs, i) -> new Segment(
                         new Vehicle(rs.getLong("vehicle_id"), rs.getString("vehicle_number"), rs.getString("model"),
-                                rs.getString("agency")),
+                                rs.getString("agency"), vehicleClass(rs.getString("vehicle_class"))),
                         rs.getObject("day", LocalDate.class), rs.getString("route_name"), rs.getDouble("seconds")),
                 Timestamp.from(from), Timestamp.from(to));
     }
@@ -251,9 +286,9 @@ public class FleetService {
 
     /** One bus in a window: its runs and breaks per service day, and the abnormal trips it was involved in. */
     public FleetDto.VehicleDetail vehicle(long id, ReportWindow window) {
-        Vehicle vehicle = jdbc.query("SELECT id, vehicle_number, model, agency FROM vehicle WHERE id = ?",
+        Vehicle vehicle = jdbc.query("SELECT id, vehicle_number, model, agency, vehicle_class FROM vehicle WHERE id = ?",
                 (rs, i) -> new Vehicle(rs.getLong("id"), rs.getString("vehicle_number"), rs.getString("model"),
-                        rs.getString("agency")), id).stream().findFirst()
+                        rs.getString("agency"), vehicleClass(rs.getString("vehicle_class"))), id).stream().findFirst()
                 .orElseThrow(() -> new NotFoundException("Vehicle", id));
         List<Report> reports = jdbc.query("""
                 SELECT coalesce(fetched_at, observed_at) AS poll, route_name, nullif(brigade, '') AS brigade,
@@ -274,7 +309,43 @@ public class FleetService {
                 .collect(Collectors.toCollection(() -> new TreeSet<>(LINE_ORDER))).stream().toList();
         return new FleetDto.VehicleDetail(vehicle, window.from(), window.to(), hours, lines,
                 last == null ? null : last.toInstant(), days,
-                incidents(id, trips.outcomes(window.from(), window.to())));
+                incidents(id, trips.outcomes(window.from(), window.to())).stream()
+                        .map(i -> i.withPaths(paths(i.timeline()))).toList());
+    }
+
+    /** Room around a breakdown's time line on its map. */
+    static final Duration PATH_MARGIN = Duration.ofMinutes(2);
+
+    /**
+     * Where the buses of a breakdown's time line went over it (and {@link #PATH_MARGIN} either side), from their
+     * recorded positions; in the time line's order of buses.
+     */
+    List<FleetDto.Path> paths(List<TripAnomalyDto.Span> timeline) {
+        if (timeline.isEmpty()) {
+            return List.of();
+        }
+        List<String> buses = timeline.stream().map(TripAnomalyDto.Span::vehicle).distinct().toList();
+        Instant from = timeline.stream().map(TripAnomalyDto.Span::from).min(Comparator.naturalOrder()).orElseThrow()
+                .minus(PATH_MARGIN);
+        Instant to = timeline.stream().map(TripAnomalyDto.Span::to).max(Comparator.naturalOrder()).orElseThrow()
+                .plus(PATH_MARGIN);
+        Map<String, List<double[]>> points = new LinkedHashMap<>();
+        buses.forEach(b -> points.put(b, new ArrayList<>()));
+        List<Object> args = new ArrayList<>(buses);
+        args.add(Timestamp.from(from));
+        args.add(Timestamp.from(to));
+        jdbc.query("""
+                SELECT v.vehicle_number, p.latitude, p.longitude
+                FROM position_sample p JOIN vehicle v ON v.id = p.vehicle_id
+                WHERE v.vehicle_number IN (%s) AND p.observed_at BETWEEN ? AND ?
+                ORDER BY v.vehicle_number, p.observed_at""".formatted(
+                        String.join(", ", Collections.nCopies(buses.size(), "?"))),
+                rs -> {
+                    points.get(rs.getString("vehicle_number")).add(new double[] {rs.getDouble("latitude"),
+                            rs.getDouble("longitude")});
+                },
+                args.toArray());
+        return points.entrySet().stream().map(e -> new FleetDto.Path(e.getKey(), e.getValue())).toList();
     }
 
     /**
@@ -346,7 +417,8 @@ public class FleetService {
                 .filter(o -> (brokeDown(o) && o.vehicleIds().get(0) == vehicleId)
                         || (o.kind() == Kind.MISSED && o.vehicleIds().contains(vehicleId)))
                 .map(o -> new FleetDto.Incident(o.kind().key, ServiceDay.serviceDay(o.departure()), o.line(),
-                        o.trip().brigade(), o.trip().headsign(), o.departure(), o.trip().note()))
+                        o.trip().brigade(), o.trip().headsign(), o.departure(), o.trip().note(), o.trip().story(),
+                        o.trip().timeline(), List.of()))
                 .sorted(Comparator.comparing(FleetDto.Incident::scheduledDeparture).reversed())
                 .toList();
     }

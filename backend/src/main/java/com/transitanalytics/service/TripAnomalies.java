@@ -15,11 +15,13 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Judges a service day's scheduled trips against the recorded positions. Each report is matched to a trip of its
@@ -68,6 +70,10 @@ final class TripAnomalies {
      * against the route with its delay growing by the minute.
      */
     static final int IN_SERVICE_DELAY_SECONDS = 600;
+    /** A replaced bus last seen standing this recently is still there, rather than gone silent. */
+    static final Duration STILL_THERE = Duration.ofMinutes(GAP_MINUTES);
+    /** A replacement's reports this close together lead up to its takeover: its way to the trip. */
+    static final Duration APPROACH_GAP = Duration.ofMinutes(10);
     /** A replacement whose last brigade before ended at most this long before it took over came straight from it. */
     static final Duration STRAIGHT_FROM = Duration.ofMinutes(30);
     /** Two reports of a detour are consecutive when at most this far apart. */
@@ -256,8 +262,13 @@ final class TripAnomalies {
     }
 
     /** The longest detour of a run: reports off the route, in a row, while between its first and last stops. */
-    record Detour(int meters, int minutes, String from, String to) {
+    record Detour(int meters, int minutes, String from, String to, List<double[]> path, List<double[]> route) {
     }
+
+    /** Reports either side of a detour shown with it, to see where the bus left the route and came back. */
+    static final int DETOUR_CONTEXT_REPORTS = 3;
+    /** The usual route is shown this far around the detour's path (metres). */
+    static final double DETOUR_ROUTE_MARGIN_METERS = 600;
 
     static Detour detour(ScheduledTrip trip, List<Report> reports, Shape shape) {
         if (shape == null) {
@@ -266,26 +277,32 @@ final class TripAnomalies {
         Detour longest = null;
         int longestLength = 0;
         List<Report> run = new ArrayList<>();
+        int runStart = 0;
         double runMax = 0;
         Report previous = null;
         Tracker tracker = new Tracker(shape);
-        for (Report r : reports) {
+        for (int i = 0; i < reports.size(); i++) {
+            Report r = reports.get(i);
             boolean between = r.nextSeq() != null && trip.index(r.nextSeq()) >= 1
                     && trip.index(r.nextSeq()) <= trip.size() - 2;
             double d = between ? tracker.distance(r.lat(), r.lon()) : 0;
             boolean continues = previous != null && previous.vehicleId() == r.vehicleId()
                     && Duration.between(previous.time(), r.time()).compareTo(DETOUR_REPORT_GAP) <= 0;
             if (d > OFF_ROUTE_METERS && (run.isEmpty() || continues)) {
+                if (run.isEmpty()) {
+                    runStart = i;
+                }
                 run.add(r);
                 runMax = Math.max(runMax, d);
             } else {
                 if (run.size() >= DETOUR_REPORTS && run.size() > longestLength) {
-                    longest = detourOf(trip, run, runMax);
+                    longest = detourOf(trip, run, runMax, reports, runStart, shape);
                     longestLength = run.size();
                 }
                 run = new ArrayList<>();
                 runMax = 0;
                 if (d > OFF_ROUTE_METERS) {
+                    runStart = i;
                     run.add(r);
                     runMax = d;
                 }
@@ -293,17 +310,76 @@ final class TripAnomalies {
             previous = r;
         }
         if (run.size() >= DETOUR_REPORTS && run.size() > longestLength) {
-            longest = detourOf(trip, run, runMax);
+            longest = detourOf(trip, run, runMax, reports, runStart, shape);
         }
         return longest;
     }
 
-    private static Detour detourOf(ScheduledTrip trip, List<Report> run, double maxMeters) {
+    /**
+     * A detour from its run of off-route reports (starting at {@code runStart} in {@code reports}): how far and long,
+     * between which stops, the bus's path (with a few reports either side, of the same bus) and the usual route
+     * around it, both {lat, lon}.
+     */
+    private static Detour detourOf(ScheduledTrip trip, List<Report> run, double maxMeters, List<Report> reports,
+                                   int runStart, Shape shape) {
         int start = trip.index(run.get(0).nextSeq());
         int end = trip.index(run.get(run.size() - 1).nextSeq());
         long seconds = Duration.between(run.get(0).time(), run.get(run.size() - 1).time()).toSeconds() + 20;
+        long bus = run.get(0).vehicleId();
+        int from = runStart;
+        while (from > 0 && runStart - from < DETOUR_CONTEXT_REPORTS && reports.get(from - 1).vehicleId() == bus) {
+            from--;
+        }
+        int runEnd = runStart + run.size() - 1;
+        int to = runEnd;
+        while (to + 1 < reports.size() && to - runEnd < DETOUR_CONTEXT_REPORTS
+                && reports.get(to + 1).vehicleId() == bus) {
+            to++;
+        }
+        List<double[]> path = reports.subList(from, to + 1).stream()
+                .map(r -> new double[] {round5(r.lat()), round5(r.lon())}).toList();
         return new Detour((int) Math.round(maxMeters), (int) Math.max(1, Math.round(seconds / 60.0)),
-                trip.stops()[Math.max(0, start - 1)], trip.stops()[end]);
+                trip.stops()[Math.max(0, start - 1)], trip.stops()[end], path, around(shape, path));
+    }
+
+    /**
+     * The stretch of a route shape near a path: from its first to its last point within
+     * {@link #DETOUR_ROUTE_MARGIN_METERS} of the path's bounding box, {lat, lon}.
+     */
+    static List<double[]> around(Shape shape, List<double[]> path) {
+        double margin = DETOUR_ROUTE_MARGIN_METERS;
+        double minX = Double.MAX_VALUE;
+        double maxX = -Double.MAX_VALUE;
+        double minY = Double.MAX_VALUE;
+        double maxY = -Double.MAX_VALUE;
+        for (double[] p : path) {
+            double x = p[1] * M_PER_DEG * COS_LAT;
+            double y = p[0] * M_PER_DEG;
+            minX = Math.min(minX, x - margin);
+            maxX = Math.max(maxX, x + margin);
+            minY = Math.min(minY, y - margin);
+            maxY = Math.max(maxY, y + margin);
+        }
+        int first = -1;
+        int last = -1;
+        for (int i = 0; i < shape.x().length; i++) {
+            if (shape.x()[i] >= minX && shape.x()[i] <= maxX && shape.y()[i] >= minY && shape.y()[i] <= maxY) {
+                if (first < 0) {
+                    first = i;
+                }
+                last = i;
+            }
+        }
+        List<double[]> route = new ArrayList<>();
+        for (int i = Math.max(0, first); first >= 0 && i <= last; i++) {
+            route.add(new double[] {round5(shape.y()[i] / M_PER_DEG), round5(shape.x()[i] / (M_PER_DEG * COS_LAT))});
+        }
+        return route;
+    }
+
+    /** Five decimals of a degree: about a metre. */
+    private static double round5(double degrees) {
+        return Math.round(degrees * 100_000) / 100_000.0;
     }
 
     // ---- Changes of bus -------------------------------------------------------------------------------------
@@ -312,22 +388,31 @@ final class TripAnomalies {
      * A change of bus during a trip: the first bus's last report on it; the second bus's first report, and the stop
      * it was heading to then (index, 0-based); since when the first bus stood there, and the delays either side.
      */
-    record Change(Report fromLast, Report toFirst, int toIndex, Report stopped, Integer delayBefore,
-                  Integer delayAfter) {
+    record Change(Report fromFirst, Report fromLast, Report toFirst, int toIndex, Report stopped,
+                  Integer delayBefore, Integer delayAfter) {
 
         /** Stop index (0-based) the first bus was heading to when it stopped. */
         int stoppedIndex(ScheduledTrip trip) {
             return trip.index(stopped.nextSeq());
         }
 
-        /** Whether the second bus took over where the first stopped: close by, or heading to the same or next stop. */
+        /**
+         * Whether the second bus took over where the first stopped: close by, or heading to the same or next stop. A
+         * bus joining further back, away from the spot, didn't.
+         */
         boolean samePlace(ScheduledTrip trip) {
-            return metres(stopped, toFirst) <= SAME_PLACE_METERS || toIndex <= stoppedIndex(trip) + 1;
+            int stoppedAt = stoppedIndex(trip);
+            return metres(stopped, toFirst) <= SAME_PLACE_METERS || (toIndex >= stoppedAt && toIndex <= stoppedAt + 1);
         }
 
         /** Stops between where the first bus stopped and where the second joined, neither seen heading to. */
         int skippedStops(ScheduledTrip trip) {
-            return samePlace(trip) ? 0 : toIndex - stoppedIndex(trip) - 1;
+            return samePlace(trip) ? 0 : Math.max(0, toIndex - stoppedIndex(trip) - 1);
+        }
+
+        /** Stops back from where the first bus stopped that the second joined; 0 unless it joined behind. */
+        int stopsBack(ScheduledTrip trip) {
+            return samePlace(trip) ? 0 : Math.max(0, stoppedIndex(trip) - toIndex);
         }
 
         /** Minutes the trip stood still: from the first bus stopping for good to the second bus's first report. */
@@ -352,17 +437,49 @@ final class TripAnomalies {
         }
     }
 
+    /** What a replaced bus that wasn't used again did after standing where it stopped. */
+    enum Then {
+        /** Stopped reporting while recording went on: switched off, or towed with its tracker off. */
+        VANISHED("vanished"),
+        /** Moved away without running a brigade (driven or towed to the depot, say). */
+        DROVE_OFF("drove-off"),
+        /** Still standing there at its latest report. */
+        STILL_THERE("still-there");
+
+        final String key;
+
+        Then(String key) {
+            this.key = key;
+        }
+    }
+
     /**
-     * A change of bus explained: the replaced bus's fate, where the replacement came from (its last line and brigade
-     * before; null when it hadn't run another brigade that day), and the whole story in words.
+     * How a replaced bus that wasn't used again spent the rest of the day: standing where it stopped from {@code
+     * stopped} until {@code until}, then {@code then} (moving off at {@code moved}); last seen {@code lastSeen},
+     * {@code metres} from that spot.
      */
-    record Handover(Change change, Fate fate, String fromLine, String fromBrigade, String note) {
+    record Stand(Instant stopped, Instant until, Then then, Report lastSeen, int metres, Instant moved) {
+
+        int minutes() {
+            return (int) Duration.between(stopped, until).toMinutes();
+        }
+    }
+
+    /**
+     * A change of bus explained: the replaced bus's fate (and, when it wasn't used again, how it stood), where the
+     * replacement came from (its last line and brigade before; null when it hadn't run another brigade that day),
+     * and the whole story in words.
+     */
+    record Handover(Change change, Fate fate, Stand stand, String fromLine, String fromBrigade, String note,
+                    List<TripAnomalyDto.Step> story, List<TripAnomalyDto.Span> spans) {
     }
 
     /** Reports within this distance of each other are the same place: a bus standing, or a takeover on the spot. */
     static final double STAND_METERS = 50;
     /** A replacement first seen this close to where the first bus stopped took over on the spot. */
     static final double SAME_PLACE_METERS = 300;
+    /** A bus must get this far along a trip to have run part of it. */
+    static final double RUN_METERS = 200;
 
     /** Metres between two reports (a flat projection, fine across a city). */
     static double metres(Report a, Report b) {
@@ -401,7 +518,9 @@ final class TripAnomalies {
             // Where it left the trip: its last report under its usual headsign (a broken bus may report on).
             Report aLast = a.get(a.size() - 1);
             Report bFirst = b.get(0);
-            if (aMax >= START_STOPS && bMax > aMax
+            // A first bus that never moved on the trip didn't run it (a broken bus reporting on, say).
+            boolean moved = a.stream().anyMatch(r -> metres(a.get(0), r) >= RUN_METERS);
+            if (aMax >= START_STOPS && bMax > aMax && moved
                     && !aLast.time().isAfter(bFirst.time().plus(CHANGE_OVERLAP))) {
                 // Since when the first bus stood where it left the trip, and the delays either side.
                 int s = a.size() - 1;
@@ -414,7 +533,7 @@ final class TripAnomalies {
                     before = a.get(k).usableDelay();
                 }
                 Integer after = b.stream().map(Report::usableDelay).filter(Objects::nonNull).findFirst().orElse(null);
-                return new Change(aLast, bFirst, trip.index(bFirst.nextSeq()), stopped, before, after);
+                return new Change(a.get(0), aLast, bFirst, trip.index(bFirst.nextSeq()), stopped, before, after);
             }
         }
         return null;
@@ -438,19 +557,40 @@ final class TripAnomalies {
         Map<ScheduledTrip, List<Report>> matched = new IdentityHashMap<>();
         Map<Long, List<Report>> byVehicle = new HashMap<>();
         Set<String> linesReported = new HashSet<>();
+        Report previous = null;
+        ScheduledTrip previousTrip = null;
         for (Report r : withBrigades(reports)) {
             byVehicle.computeIfAbsent(r.vehicleId(), k -> new ArrayList<>()).add(r);
             linesReported.add(r.line());
-            ScheduledTrip trip = match(r, byBrigade.get(r.brigade()));
+            ScheduledTrip trip = staysOn(previous, previousTrip, r) ? previousTrip
+                    : match(r, byBrigade.get(r.brigade()));
             if (trip != null) {
                 matched.computeIfAbsent(trip, k -> new ArrayList<>()).add(r);
             }
+            previous = r;
+            previousTrip = trip;
         }
         Set<String> linesMatched = matched.keySet().stream().map(ScheduledTrip::line).collect(Collectors.toSet());
 
         Context context = new Context(byBrigade, matched, byVehicle, recording, shapes, now, linesReported,
                 linesMatched);
         return trips.stream().map(context::judge).toList();
+    }
+
+    /** A report with an outlying delay stays on its bus's trip when this close after the bus's previous report. */
+    static final Duration STAYS_ON_FOR = Duration.ofMinutes(5);
+
+    /**
+     * Whether a report stays on the trip its bus's previous report was matched to: its delay is an outlier, so the
+     * time it was running to is unknown, and it is the same bus, line, brigade and headsign moments later. A bus
+     * broken down mid-trip keeps reporting the trip with its delay growing by the minute; once past half an hour the
+     * delay no longer places it, and by the clock alone it would look like the brigade's next trip.
+     */
+    static boolean staysOn(Report previous, ScheduledTrip previousTrip, Report r) {
+        return previousTrip != null && r.delay() != null && r.usableDelay() == null
+                && previous.vehicleId() == r.vehicleId() && Objects.equals(previous.brigade(), r.brigade())
+                && Objects.equals(previous.line(), r.line()) && Objects.equals(previous.headsign(), r.headsign())
+                && !previous.time().plus(STAYS_ON_FOR).isBefore(r.time());
     }
 
     /** A report without a brigade takes it from the bus's report next to it, on the same line, this close in time. */
@@ -630,7 +770,7 @@ final class TripAnomalies {
             String detourNote = detour == null ? "" : " Off the route for %d min, up to %d m away, after %s."
                     .formatted(detour.minutes(), detour.meters(), detour.from());
             Change change = vehicleChange(trip, sorted);
-            Handover handover = change == null ? null : handover(trip, change);
+            Handover handover = change == null ? null : handover(trip, change, sorted);
             String changeNote = handover == null ? "" : " " + handover.note();
 
             // Judged as soon as what the bus did is clear; until then pending (a change or detour shows already).
@@ -705,24 +845,23 @@ final class TripAnomalies {
             return (seconds < 0 ? "-" : "+") + "%d:%02d".formatted(Math.abs(seconds) / 60, Math.abs(seconds) % 60);
         }
 
-        private Handover handover(ScheduledTrip trip, Change c) {
+        private Handover handover(ScheduledTrip trip, Change c, List<Report> sorted) {
             Report a = c.fromLast();
             Report b = c.toFirst();
             int stoppedAt = c.stoppedIndex(trip);
-            int skipped = c.skippedStops(trip);
             StringBuilder note = new StringBuilder("Bus %s stopped heading to %s (stop %d of %d) at %s; "
                     .formatted(a.vehicle(), trip.stops()[stoppedAt], stoppedAt + 1, trip.size(),
                             ServiceDay.localTime(c.stopped().time()))
                     + "%d min later bus %s took over %s, heading to %s (stop %d)."
-                    .formatted(c.standMinutes(), b.vehicle(), c.samePlace(trip) ? "at the same place"
-                                    : skipped == 1 ? "1 stop further on" : skipped + " stops further on",
-                            trip.stops()[c.toIndex()], c.toIndex() + 1)
+                    .formatted(c.standMinutes(), b.vehicle(), joined(trip, c), trip.stops()[c.toIndex()],
+                            c.toIndex() + 1)
                     + (c.delayBefore() == null || c.delayAfter() == null ? ""
                     : " Delay %s before, %s after.".formatted(signed(c.delayBefore()), signed(c.delayAfter()))));
 
             // Where the replacement came from: its last report on another brigade before.
+            List<Report> bReports = byVehicle.getOrDefault(b.vehicleId(), List.of());
             Report origin = null;
-            for (Report r : byVehicle.getOrDefault(b.vehicleId(), List.of())) {
+            for (Report r : bReports) {
                 if (!r.time().isBefore(b.time())) {
                     break;
                 }
@@ -730,15 +869,15 @@ final class TripAnomalies {
                     origin = r;
                 }
             }
+            String originWhere = origin == null ? null : origin.line().equals(trip.line())
+                    ? "brigade %s of the same line".formatted(origin.brigade())
+                    : "line %s (brigade %s)".formatted(origin.line(), origin.brigade());
+            boolean straight = origin != null && !origin.time().plus(STRAIGHT_FROM).isBefore(b.time());
             if (origin == null) {
                 note.append(" Bus %s hadn't run any other brigade that day (from the depot).".formatted(b.vehicle()));
             } else {
-                String where = origin.line().equals(trip.line())
-                        ? "brigade %s of the same line".formatted(origin.brigade())
-                        : "line %s (brigade %s)".formatted(origin.line(), origin.brigade());
-                boolean straight = !origin.time().plus(STRAIGHT_FROM).isBefore(b.time());
                 note.append((straight ? " Bus %s came straight from %s, until %s."
-                        : " Bus %s had run %s earlier that day, until %s.").formatted(b.vehicle(), where,
+                        : " Bus %s had run %s earlier that day, until %s.").formatted(b.vehicle(), originWhere,
                         ServiceDay.localTime(origin.time())));
             }
 
@@ -750,28 +889,204 @@ final class TripAnomalies {
                             && !q.time().isBefore(r.time().plus(USED_FOR))))
                     .findFirst().orElse(null);
             Fate fate;
+            Stand stand = null;
             if (used == null) {
                 fate = Fate.BROKEN_DOWN;
-                Report lastSeen = later.isEmpty() ? a : later.get(later.size() - 1);
-                boolean stood = later.stream().allMatch(r -> metres(a, r) <= MOVED_METERS);
-                note.append(Duration.between(a.time(), lastSeen.time()).toMinutes() < 1
-                        ? " Bus %s wasn't seen again that day: possibly broken down.".formatted(a.vehicle())
-                        : (stood ? " Bus %s stood there until %s and wasn't used again that day: possibly broken down."
-                        : " Bus %s was last seen at %s and wasn't used again that day: possibly broken down.")
-                        .formatted(a.vehicle(), ServiceDay.localTime(lastSeen.time())));
+                stand = stand(c.stopped(), a, later);
+                note.append(" ").append(standNote(a.vehicle(), stand));
             } else if (used.brigade().equals(trip.brigade()) && used.line().equals(trip.line())) {
                 fate = Fate.RETURNED;
                 note.append(" Bus %s was back on the brigade at %s.".formatted(a.vehicle(),
                         ServiceDay.localTime(used.time())));
             } else {
                 fate = Fate.REASSIGNED;
-                note.append(" Bus %s was used again on %s from %s.".formatted(a.vehicle(),
-                        used.line().equals(trip.line()) ? "brigade " + used.brigade() + " of the same line"
-                                : "line " + used.line() + " (brigade " + used.brigade() + ")",
+                note.append(" Bus %s was used again on %s from %s.".formatted(a.vehicle(), where(trip, used),
                         ServiceDay.localTime(used.time())));
             }
-            return new Handover(c, fate, origin == null ? null : origin.line(),
-                    origin == null ? null : origin.brigade(), note.toString());
+
+            // Step by step, and the buses' time lines.
+            List<TripAnomalyDto.Step> story = new ArrayList<>();
+            List<TripAnomalyDto.Span> spans = new ArrayList<>();
+            Report first = c.fromFirst();
+            int firstAt = trip.index(first.nextSeq());
+            story.add(new TripAnomalyDto.Step(first.time(), "Bus %s runs line %s towards %s, heading to %s (stop %d of %d)%s."
+                    .formatted(a.vehicle(), trip.line(), Objects.toString(trip.headsign(), trip.stops()[trip.size() - 1]),
+                            trip.stops()[firstAt], firstAt + 1, trip.size(), delayPart(first.usableDelay()))));
+            Instant leftAt = stand == null ? a.time() : stand.until();
+            int peak = Stream.concat(Stream.of(a), later.stream())
+                    .filter(r -> !r.time().isBefore(c.stopped().time()) && !r.time().isAfter(leftAt)
+                            && r.delay() != null)
+                    .mapToInt(Report::delay).max().orElse(Integer.MIN_VALUE);
+            boolean growing = stand != null && c.delayBefore() != null && peak >= c.delayBefore() + 120;
+            story.add(new TripAnomalyDto.Step(c.stopped().time(), "Bus %s stops heading to %s (stop %d of %d%s) %s."
+                    .formatted(a.vehicle(), trip.stops()[stoppedAt], stoppedAt + 1, trip.size(),
+                            c.delayBefore() == null ? "" : "; delay " + signed(c.delayBefore()),
+                            stand == null ? "and leaves the trip"
+                                    : "and doesn't move on" + (growing
+                                    ? "; the feed's delay keeps growing, to %s by %s".formatted(signed(peak),
+                                    ServiceDay.localTime(leftAt)) : ""))));
+            spans.add(new TripAnomalyDto.Span(a.vehicle(), "running", first.time(), c.stopped().time()));
+            spans.add(new TripAnomalyDto.Span(a.vehicle(), "standing", c.stopped().time(), leftAt));
+            if (stand != null) {
+                switch (stand.then()) {
+                    case VANISHED -> story.add(new TripAnomalyDto.Step(stand.until(),
+                            "Last report of bus %s, from the same spot: not seen again that day (switched off, or "
+                                    .formatted(a.vehicle()) + "towed with its tracker off)."));
+                    case STILL_THERE -> story.add(new TripAnomalyDto.Step(stand.until(),
+                            "Bus %s is still standing there at its latest report.".formatted(a.vehicle())));
+                    case DROVE_OFF -> {
+                        story.add(new TripAnomalyDto.Step(stand.moved(), "Bus %s moves off without running a brigade."
+                                .formatted(a.vehicle())));
+                        story.add(new TripAnomalyDto.Step(stand.lastSeen().time(),
+                                "Last report of bus %s, %s from where it stopped; not used again that day."
+                                        .formatted(a.vehicle(), distance(stand.metres()))));
+                        spans.add(new TripAnomalyDto.Span(a.vehicle(), "moving", stand.moved(),
+                                stand.lastSeen().time()));
+                    }
+                }
+            } else {
+                story.add(new TripAnomalyDto.Step(used.time(), fate == Fate.RETURNED
+                        ? "Bus %s is back on the brigade.".formatted(a.vehicle())
+                        : "Bus %s is used again on %s.".formatted(a.vehicle(), where(trip, used))));
+                spans.add(new TripAnomalyDto.Span(a.vehicle(), "service", used.time(), used.time()));
+            }
+
+            // The replacement: where from, its way to the trip, and on.
+            Report approach = approachStart(bReports, b, origin);
+            if (origin != null) {
+                story.add(new TripAnomalyDto.Step(origin.time(), (straight ? "Bus %s leaves %s."
+                        : "Bus %s finishes %s.").formatted(b.vehicle(), originWhere)));
+            }
+            if (approach != null) {
+                story.add(new TripAnomalyDto.Step(approach.time(), (origin == null
+                        ? "Bus %s sets off without a brigade (from the depot), %s from where bus %s stopped."
+                        : "Bus %s heads for the trip without a brigade, %s from where bus %s stopped.")
+                        .formatted(b.vehicle(), distance((int) Math.round(metres(approach, c.stopped()))),
+                                a.vehicle())));
+                spans.add(new TripAnomalyDto.Span(b.vehicle(), "approach", approach.time(), b.time()));
+            }
+            story.add(new TripAnomalyDto.Step(b.time(), "Bus %s takes over %s, heading to %s (stop %d of %d), %s from where bus %s stopped%s.%s"
+                    .formatted(b.vehicle(), joined(trip, c), trip.stops()[c.toIndex()], c.toIndex() + 1, trip.size(),
+                            distance((int) Math.round(metres(b, c.stopped()))), a.vehicle(),
+                            delayPart(c.delayAfter()),
+                            c.standMinutes() >= 1 ? " The trip had no bus for %d min.".formatted(c.standMinutes())
+                                    : "")));
+            Instant serviceUntil = sorted.stream().filter(r -> r.vehicleId() == b.vehicleId())
+                    .map(Report::time).max(Comparator.naturalOrder()).orElse(b.time());
+            ScheduledTrip next = byBrigade.getOrDefault(trip.brigade(), List.of()).stream()
+                    .filter(t -> t.departure().isAfter(trip.departure())).findFirst().orElse(null);
+            List<Report> onNext = next == null ? List.of() : matched.getOrDefault(next, List.of()).stream()
+                    .filter(r -> r.vehicleId() == b.vehicleId()).toList();
+            if (!onNext.isEmpty()) {
+                story.add(new TripAnomalyDto.Step(onNext.get(0).time(),
+                        "Bus %s runs the brigade's next trip, towards %s (scheduled %s).".formatted(b.vehicle(),
+                                Objects.toString(next.headsign(), next.stops()[next.size() - 1]),
+                                ServiceDay.localTime(next.departure()))));
+                serviceUntil = onNext.get(onNext.size() - 1).time();
+            }
+            spans.add(new TripAnomalyDto.Span(b.vehicle(), "service", b.time(), serviceUntil));
+            story.sort(Comparator.comparing(TripAnomalyDto.Step::at));
+            return new Handover(c, fate, stand, origin == null ? null : origin.line(),
+                    origin == null ? null : origin.brigade(), note.toString(), List.copyOf(story),
+                    spans.stream().filter(sp -> !sp.to().isBefore(sp.from())).toList());
+        }
+
+        /** "at the same place", "3 stops further on" or "2 stops back": where the second bus joined. */
+        private static String joined(ScheduledTrip trip, Change c) {
+            int skipped = c.skippedStops(trip);
+            int back = c.stopsBack(trip);
+            return c.samePlace(trip) ? "at the same place"
+                    : back > 0 ? (back == 1 ? "1 stop back" : back + " stops back")
+                    : skipped == 1 ? "1 stop further on" : skipped + " stops further on";
+        }
+
+        /** "brigade 010-02 of the same line" or "line 12 (brigade 012-01)". */
+        private static String where(ScheduledTrip trip, Report r) {
+            return r.line().equals(trip.line()) ? "brigade " + r.brigade() + " of the same line"
+                    : "line " + r.line() + " (brigade " + r.brigade() + ")";
+        }
+
+        /** ", delay +2:05", or nothing when unknown. */
+        private static String delayPart(Integer delay) {
+            return delay == null ? "" : ", delay " + signed(delay);
+        }
+
+        /**
+         * Where the replacement's way to the trip began: the first of its reports leading up to the takeover with
+         * no gap longer than {@link #APPROACH_GAP}, after its last other brigade; null when it was first seen on the
+         * trip.
+         */
+        private static Report approachStart(List<Report> reports, Report takeover, Report origin) {
+            Report start = null;
+            Instant after = takeover.time();
+            for (int i = reports.size() - 1; i >= 0; i--) {
+                Report r = reports.get(i);
+                if (!r.time().isBefore(takeover.time())) {
+                    continue;
+                }
+                if (origin != null && !r.time().isAfter(origin.time())
+                        || Duration.between(r.time(), after).compareTo(APPROACH_GAP) > 0) {
+                    break;
+                }
+                start = r;
+                after = r.time();
+            }
+            return start;
+        }
+
+        /**
+         * How a bus that stopped at {@code spot} spent the rest of the day: standing there while its reports stay
+         * within {@link #MOVED_METERS} (it did at least until {@code left}, its last report on the trip); then gone
+         * silent, moved away, or still there.
+         */
+        private Stand stand(Report spot, Report left, List<Report> later) {
+            Report standing = left;
+            Report moved = null;
+            for (Report r : later) {
+                if (r.time().isBefore(spot.time())) {
+                    continue;
+                }
+                if (metres(spot, r) > MOVED_METERS) {
+                    moved = r;
+                    break;
+                }
+                standing = r;
+            }
+            Report lastSeen = later.isEmpty() ? standing : later.get(later.size() - 1);
+            if (lastSeen.time().isBefore(standing.time())) {
+                lastSeen = standing;
+            }
+            Then then = moved != null ? Then.DROVE_OFF
+                    : Duration.between(standing.time(), now).compareTo(STILL_THERE) <= 0 ? Then.STILL_THERE
+                    : Then.VANISHED;
+            return new Stand(spot.time(), standing.time(), then, moved == null ? standing : lastSeen,
+                    (int) Math.round(metres(spot, moved == null ? standing : lastSeen)),
+                    moved == null ? null : moved.time());
+        }
+
+        /** What a replaced bus that wasn't used again did, in words. */
+        private String standNote(String vehicle, Stand s) {
+            String from = ServiceDay.localTime(s.stopped());
+            String until = ServiceDay.localTime(s.until());
+            String stood = "Bus %s stood there for %d min (%s–%s)".formatted(vehicle, s.minutes(), from, until);
+            return switch (s.then()) {
+                case STILL_THERE -> "Bus %s has stood there since %s (%d min, last report %s) and hasn't been used "
+                        .formatted(vehicle, from, s.minutes(), until) + "since: possibly broken down.";
+                case VANISHED -> (s.minutes() < 1
+                        ? "Bus %s stopped reporting right there".formatted(vehicle)
+                        : stood + ", then stopped reporting")
+                        + " and wasn't seen again that day (switched off, or towed with its tracker off): "
+                        + "possibly broken down.";
+                case DROVE_OFF -> (s.minutes() < 1 ? "Bus %s moved off right away".formatted(vehicle)
+                        : stood + ", then moved off") + " without running a brigade; last seen at %s, %s away. "
+                        .formatted(ServiceDay.localTime(s.lastSeen().time()), distance(s.metres()))
+                        + "Not used again that day: possibly broken down.";
+            };
+        }
+
+        /** "800 m" or "4.2 km". */
+        private static String distance(int metres) {
+            return metres < 1000 ? (metres / 50 * 50) + " m" : String.format(Locale.ROOT, "%.1f km", metres / 1000.0);
         }
 
         /** "the brigade's next trip towards X", or "line 10 (brigade 010-02)": what a report was on. */
@@ -810,6 +1125,7 @@ final class TripAnomalies {
                     at.apply(delays.size() - 1),
                     detour == null ? null : detour.meters(), detour == null ? null : detour.minutes(),
                     detour == null ? null : detour.from(), detour == null ? null : detour.to(),
+                    detour == null ? List.of() : detour.path(), detour == null ? List.of() : detour.route(),
                     handover == null ? null : handover.fate().key, handover == null ? null : handover.fromLine(),
                     handover == null ? null : handover.fromBrigade(),
                     handover == null ? null : handover.change().standMinutes(),
@@ -818,9 +1134,17 @@ final class TripAnomalies {
                     handover == null ? null : trip.stops()[handover.change().stoppedIndex(trip)],
                     handover == null ? null : trip.stops()[handover.change().toIndex()],
                     handover == null ? null : handover.change().skippedStops(trip),
-                    handover == null ? null : handover.change().stopped().time());
+                    handover == null ? null : handover.change().stopped().time(),
+                    stand(handover, Stand::minutes), stand(handover, st -> st.then().key),
+                    stand(handover, st -> st.lastSeen().time()), stand(handover, Stand::metres),
+                    handover == null ? List.of() : handover.story(), handover == null ? List.of() : handover.spans());
             return new Outcome(trip.line(), trip.departure(), trip.arrival(), kind, dto,
                     reports.stream().map(Report::vehicleId).distinct().toList());
+        }
+
+        /** A detail of the replaced bus's stand, or null when there is none (no change, or the bus was used again). */
+        private static <T> T stand(Handover handover, Function<Stand, T> detail) {
+            return handover == null || handover.stand() == null ? null : detail.apply(handover.stand());
         }
 
         private static Instant min(Instant a, Instant b) {

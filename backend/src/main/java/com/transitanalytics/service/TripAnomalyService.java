@@ -53,7 +53,7 @@ public class TripAnomalyService {
     }
 
     /** Judges the last month's days at startup, in the background, so the first visit doesn't wait for them. */
-    @EventListener(ApplicationReadyEvent.class)
+    @EventListener(value = ApplicationReadyEvent.class, condition = WarmUp.ENABLED)
     public void warmUp() {
         Instant now = clock.instant();
         WarmUp.inBackground("trip-anomalies", TripAnomalyService.class,

@@ -1,0 +1,120 @@
+# Vehicle size classes and capacities, by model.
+#
+# Every bus gets a class from its model (the name the live feed gives, e.g. "Solaris Urbino 18 mild hybrid"):
+#   1. a model matching `double-decker` is a DOUBLE_DECKER;
+#   2. otherwise the first entry under `models` whose `match` is found in the model name gives its length (and may
+#      name the class outright with `vehicle-class`);
+#   3. a model without an entry takes its length from its name with `length-from-name`, e.g. "Urbino 15", "10.6M";
+#   4. the length falls in the first band it is shorter than (the last band has no limit).
+# The capacity (passengers, seated + standing) comes from the matching entry; without one it is left empty.
+# Classes and capacities are applied at startup and to every newly registered bus. Edit, restart, done.
+#
+# Capacities differ between operators' configurations (seats, doors, standing density): the figures below are
+# manufacturer data or registration figures where found, with the source given. Lengths in metres.
+app:
+  vehicle-classes:
+    # MINI up to 8 m, MIDI 8 to 10.5 m, MAXI 12 to 14.9 m, MEGA 15 m and more. Buses between 10.5 and 12 m
+    # (e.g. 10.6–10.8 m intercity buses, an 11.8 m SOR C 12) fall in the gap of those definitions: lengths under
+    # 11 m count as MIDI, from 11 m as MAXI.
+    bands:
+      - vehicle-class: MINI
+        shorter-than: 8.0
+      - vehicle-class: MIDI
+        shorter-than: 11.0
+      - vehicle-class: MAXI
+        shorter-than: 15.0
+      - vehicle-class: MEGA
+    double-decker: "\\bDD\\b"
+    length-from-name:
+      - "Urbino (\\d+(?:[,.]\\d+)?)"
+      - "(\\d{1,2}(?:[,.]\\d+)?) ?[mM]\\b"
+      - "\\b[CEU](\\d{2}(?:[,.]\\d+)?)\\b"
+    models:
+      # --- Articulated (MEGA) ---
+      - match: "Solaris Urbino 18"
+        length: 18.0
+        capacity: 145
+        source: "Solaris spec sheets: up to 145 (e.g. 52 seats + 93 standing, 2024); used diesel units 50 + 95"
+      - match: "Conecto G"
+        length: 18.12
+        capacity: 150
+        source: "Mercedes-Benz Conecto facts sheet: Conecto G up to 150 passengers"
+      - match: "O530G|Citaro G"
+        length: 18.13
+        capacity: 164
+        source: "Mercedes-Benz: Citaro G (O 530 G), 18.13 m, up to 164 passengers"
+      - match: "Lion.s City G"
+        length: 18.0
+        capacity: 149
+        source: "MAN Lion's City G 18 m in service configuration: 149 passengers (JSP Skopje order)"
+      # --- Double-deckers ---
+      - match: "Lion.s City DD"
+        vehicle-class: DOUBLE_DECKER
+        length: 13.73
+        capacity: 128
+        source: "MAN Lion's City DD brochure: 128 passengers; length 13.73 m"
+      # --- Standard 12 m and long rigid (MAXI) ---
+      - match: "Solaris Urbino 15"
+        length: 14.59
+        source: "Solaris Urbino 15 LE: 14.59 m; capacity not settled (sources give 100 to 118)"
+      - match: "Solaris InterUrbino 12"
+        length: 12.0
+      - match: "Solaris Urbino 12"
+        length: 12.0
+        capacity: 85
+        source: "Registration figure of a used Urbino 12 (diesel); Solaris sheets give 60-100 by version"
+      - match: "Yutong ZK6128BEVG|Yutong E12"
+        length: 12.0
+        capacity: 70
+        source: "ZEMO (UK) certificate for the Yutong E12: 70 passengers, 37 seated"
+      - match: "Yutong U12"
+        length: 12.0
+        capacity: 78
+        source: "Wrocław MPK Yutong U12: 30 seats, 78 passengers; Białystok's tender asked for at least 70"
+      - match: "Conecto"
+        length: 12.0
+        capacity: 101
+        source: "Mercedes-Benz Conecto facts sheet: 12 m Conecto up to 101 passengers"
+      - match: "O530 C2|O530 C2 Hybrid|Citaro"
+        length: 12.14
+        capacity: 100
+        source: "Registration figures of 12 m Citaro C2 (O 530) units: 100-103 passengers"
+      - match: "Volvo 7900"
+        length: 12.1
+        capacity: 102
+        source: "Volvo 7900 range brochure: 12 m hybrid, 102 passengers"
+      - match: "MAN NL323|Lion.s City"
+        length: 12.0
+      - match: "Volvo 8700"
+        length: 12.7
+      - match: "SOR C ?12"
+        length: 11.82
+        source: "SOR C 9,5 / 10,5 / 12 brochure: C 12 is 11 820 mm"
+      # --- Midibuses (MIDI) ---
+      - match: "SOR C ?10,5"
+        length: 10.78
+        source: "SOR C 9,5 / 10,5 / 12 brochure: C 10,5 is 10 780 mm"
+      - match: "Arway 10.6"
+        length: 10.65
+        source: "Irisbus Arway 10.6 m (transbus.org: 10 651 mm)"
+      - match: "Solaris Urbino 8,9"
+        length: 8.9
+        source: "Solaris Urbino 8,9 LE; no reliable capacity found"
+      - match: "Sprinter City 77|Sprinter City 75"
+        length: 8.49
+        source: "Sprinter City 75 fact sheet: 8 486 mm (City 77 assumed the same body)"
+      # --- Minibuses (MINI) ---
+      - match: "Sprinter City 65"
+        length: 7.7
+        source: "Assumed between the Sprinter City 45 (7.4 m) and City 75 (8.5 m); not confirmed"
+      - match: "Sprinter Transfer 45"
+        length: 7.4
+        capacity: 23
+        source: "Mercedes-Benz Sprinter Transfer 45 (2019): 7.4 m, up to 23 passengers"
+      - match: "518 CDI|516 CDI|517 CDI|Sprinter"
+        length: 7.4
+        source: "Sprinter-based minibus, assumed 7.4 m"
+      - match: "Karsan Jest"
+        length: 5.85
+        capacity: 21
+        source: "Karsan Jest: 5 845 mm; diesel Jest delivered with 21 passengers (17 seated)"

@@ -9,34 +9,79 @@
   transition: opacity 0.15s;
 }
 
-.chips {
-  display: flex;
-  flex-direction: column;
+/* Lines to pick: kinds of line (rows) by geometry (columns). */
+.line-table {
+  display: grid;
   gap: 0.5rem;
+}
 
-  .group {
-    display: flex;
-    align-items: baseline;
-    gap: 0.75rem;
-  }
+table.lines {
+  border-collapse: collapse;
+  width: 100%;
 
-  .group-label {
-    flex: none;
-    width: 5.5rem;
+  th {
+    padding: 0.3rem 0.5rem;
     font-size: 0.8rem;
+    font-weight: 600;
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
+    text-align: left;
+    white-space: nowrap;
   }
 
-  .group-lines {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem;
+  thead th {
+    border-bottom: 1px solid var(--border);
+    cursor: help;
+  }
+
+  tbody th {
+    vertical-align: top;
+    padding-top: 0.6rem;
+  }
+
+  td {
+    padding: 0.35rem 0.5rem;
+    vertical-align: top;
+    border-bottom: 1px solid var(--border);
+  }
+
+  td > .chip {
+    margin: 0 0.3rem 0.3rem 0;
   }
 }
 
-/* A line label: outlined in its subtype colour, filled when selected. */
+.capacity-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: help;
+  }
+
+  .sample {
+    --chip-color: var(--muted);
+    min-width: 2rem;
+    padding: 0.1rem 0.35rem;
+    font-size: 0.75rem;
+    cursor: help;
+  }
+}
+
+/*
+ * A line label in its kind's colour. Its capacity class sets the border's thickness and how dark the fill is:
+ * main darkest and thickest, then primary, secondary, tertiary; irregular unfilled with a dashed border. The
+ * selected line gets a ring, so the fill keeps telling its capacity.
+ */
 .chip {
   min-width: 2.6rem;
   padding: 0.3rem 0.5rem;
@@ -49,17 +94,66 @@
   cursor: pointer;
 
   &:hover {
-    background: var(--hover);
+    filter: brightness(0.95);
   }
 
   &[aria-pressed='true'] {
-    background: var(--chip-color);
-    color: #fff;
+    outline: 3px solid var(--fg);
+    outline-offset: 2px;
   }
 
   &:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
+  }
+
+  &.capacity-main {
+    border-width: 4px;
+    background: color-mix(in srgb, var(--chip-color) 75%, var(--strong-mix));
+    color: var(--strong-text);
+  }
+
+  &.capacity-primary {
+    border-width: 3px;
+    background: color-mix(in srgb, var(--chip-color) 45%, var(--surface));
+  }
+
+  &.capacity-secondary {
+    border-width: 2px;
+    background: color-mix(in srgb, var(--chip-color) 22%, var(--surface));
+  }
+
+  &.capacity-tertiary {
+    border-width: 1.5px;
+    background: color-mix(in srgb, var(--chip-color) 8%, var(--surface));
+  }
+
+  &.capacity-irregular {
+    border-width: 1.5px;
+    border-style: dashed;
+  }
+}
+
+/* What the line's geometry and capacity class mean. */
+.line-classes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 1.25rem;
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+
+  div {
+    display: flex;
+    gap: 0.35rem;
+  }
+
+  dt {
+    font-weight: 600;
+  }
+
+  dd {
+    margin: 0;
+    color: var(--muted);
   }
 }
 
@@ -200,11 +294,6 @@ details:not(.how) {
 }
 
 @media (max-width: 600px) {
-  .chips .group {
-    flex-direction: column;
-    gap: 0.3rem;
-  }
-
   .map {
     height: 320px;
   }
@@ -221,4 +310,39 @@ details:not(.how) {
   gap: 0.5rem 1rem;
   margin-left: auto;
   font-size: 0.9rem;
+}
+
+.map-legend .key.depot-link {
+  width: 22px;
+  border-top: 3px dashed var(--depot);
+}
+
+.map-legend .key.depot-site {
+  width: 16px;
+  height: 12px;
+  border: 2px solid #1f2933;
+  background: color-mix(in srgb, var(--depot) 60%, transparent);
+}
+
+/* Depot names on the map (Leaflet renders the tooltips outside the component). */
+:host ::ng-deep .leaflet-tooltip.depot-label {
+  font-weight: 600;
+}
+
+/* Who runs the line, under its title. */
+.operator,
+.bus-lanes {
+  margin: 0.3rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+
+  strong {
+    color: var(--fg);
+  }
+}
+
+.bus-lanes .line-swatch {
+  border-top-width: 6px;
+  opacity: 0.55;
+  margin-right: 0.2rem;
 }

@@ -26,10 +26,12 @@ class GtfsBialystokServiceTest {
 
     private final GtfsDownloader downloader = mock(GtfsDownloader.class);
     private final GtfsImporter importer = mock(GtfsImporter.class);
+    private final org.springframework.context.ApplicationEventPublisher events =
+            mock(org.springframework.context.ApplicationEventPublisher.class);
     private final GtfsBialystokService service = new GtfsBialystokService(downloader, importer,
             new GtfsProperties(Duration.ofSeconds(5), Duration.ofSeconds(30), DataSize.ofMegabytes(50),
                     new GtfsProperties.Feed(URL)),
-            ObservationRegistry.NOOP);
+            ObservationRegistry.NOOP, events);
 
     private static Path zipWith(String entry) throws Exception {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();

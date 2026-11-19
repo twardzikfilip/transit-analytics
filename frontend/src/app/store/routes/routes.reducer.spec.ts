@@ -18,6 +18,9 @@ describe('routes reducer', () => {
     textColor: null,
     sortOrder: null,
     subtype: 'urban',
+    geometry: null,
+    capacityClass: null,
+    operatingAgency: null,
   });
 
   it('keeps routes in natural line order', () => {

@@ -53,7 +53,8 @@ export interface RouteActivity {
 
 /**
  * Recorded positions as animation frames (GET /api/positions/replay). Positions are compact rows
- * [vehicleIndex, latitude, longitude, delaySeconds | null, lineIndex | null] into `vehicles` and `lines`.
+ * [vehicleIndex, latitude, longitude, delaySeconds | null, lineIndex | null, brigadeIndex | null] into `vehicles`,
+ * `lines` and `brigades`.
  */
 export interface ReplayResponse {
   from: string;
@@ -62,7 +63,11 @@ export interface ReplayResponse {
   routes: string[];
   vehicles: string[];
   lines: string[];
-  frames: { time: string; positions: [number, number, number, number | null, number | null][] }[];
+  brigades: string[];
+  frames: {
+    time: string;
+    positions: [number, number, number, number | null, number | null, number | null][];
+  }[];
 }
 
 /** One recorded position report. */

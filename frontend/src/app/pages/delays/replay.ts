@@ -5,6 +5,8 @@ import { DELAY_STOPS, NO_DELAY_COLOR } from '../../shared/palette';
 export interface ReplayPosition {
   vehicle: string;
   line: string | null;
+  /** Vehicle duty, e.g. 024-02. */
+  brigade: string | null;
   latitude: number;
   longitude: number;
   delaySeconds: number | null;
@@ -23,7 +25,7 @@ export interface Replay {
   frames: ReplayFrame[];
 }
 
-/** Turns the compact API rows [vehicleIndex, lat, lon, delay, lineIndex] into lookups by vehicle. */
+/** Turns the compact API rows [vehicleIndex, lat, lon, delay, lineIndex, brigadeIndex] into lookups by vehicle. */
 export function parseReplay(raw: ReplayResponse): Replay {
   return {
     from: Date.parse(raw.from),
@@ -31,11 +33,12 @@ export function parseReplay(raw: ReplayResponse): Replay {
     stepMs: raw.stepSeconds * 1000,
     frames: raw.frames.map((f) => {
       const positions = new Map<string, ReplayPosition>();
-      for (const [v, latitude, longitude, delaySeconds, l] of f.positions) {
+      for (const [v, latitude, longitude, delaySeconds, l, b] of f.positions) {
         const vehicle = raw.vehicles[v];
         positions.set(vehicle, {
           vehicle,
           line: l === null ? null : raw.lines[l],
+          brigade: b === null || b === undefined ? null : raw.brigades[b],
           latitude,
           longitude,
           delaySeconds,
@@ -76,6 +79,7 @@ export function positionsAt(replay: Replay, t: number): ReplayPosition[] {
       // Delay changes in steps; switch at the halfway point rather than blending.
       delaySeconds: k < 0.5 ? p.delaySeconds : n.delaySeconds,
       line: k < 0.5 ? p.line : n.line,
+      brigade: k < 0.5 ? p.brigade : n.brigade,
     };
   });
 }

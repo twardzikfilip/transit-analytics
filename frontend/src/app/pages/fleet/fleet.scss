@@ -42,57 +42,6 @@
   }
 }
 
-.model-bars {
-  margin: 0.5rem 0 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  font-size: 0.85rem;
-
-  /* Name and count on one line, the bar across the tile below them. */
-  li {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 0.15rem 0.5rem;
-  }
-
-  .track {
-    grid-column: 1 / -1;
-    grid-row: 2;
-  }
-
-  .name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .track {
-    position: relative;
-    height: 10px;
-  }
-
-  .fleet,
-  .used {
-    position: absolute;
-    left: 0;
-    top: 0;
-    height: 100%;
-    border-radius: 0 4px 4px 0;
-  }
-
-  .fleet {
-    background: var(--hover);
-  }
-
-  .used {
-    background: var(--chart-line);
-  }
-}
-
 .num {
   font-variant-numeric: tabular-nums;
   text-align: right;
@@ -250,4 +199,16 @@ button.link {
 
 .how ul {
   padding-left: 1.2rem;
+}
+
+/* A breakdown told step by step under its row: a time line of both buses, then the numbered steps. */
+.story-toggle {
+  display: block;
+  margin-top: 6px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+.story-row > td {
+  background: var(--bg);
 }

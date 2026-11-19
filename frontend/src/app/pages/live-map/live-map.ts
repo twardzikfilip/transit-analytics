@@ -16,8 +16,7 @@ import { injectSetQuery } from '../../shared/url-query';
 import { Store } from '@ngrx/store';
 import * as L from 'leaflet';
 import { timer } from 'rxjs';
-import { BrigadeApi } from '../../core/api/api.services';
-import { BrigadeSchedule, LivePosition } from '../../core/models/models';
+import { LivePosition } from '../../core/models/models';
 import { LivePositionsActions } from '../../store/live-positions/live-positions.actions';
 import { livePositionsFeature } from '../../store/live-positions/live-positions.reducer';
 import { agencies, delayedOver, ofAgency, parseMinDelay } from './delay-filter';
@@ -25,21 +24,23 @@ import { escapeHtml } from '../../shared/format/html';
 import { formatDelay, localTime } from '../../shared/format/time';
 import { createBaseMap } from '../../shared/map/base-map';
 import {
+  BOUNDARY_STYLES,
+  BUS_LANE_STYLE,
   DELAY_STOPS,
   NO_DELAY_COLOR,
   SUBTYPE_OUTLINES,
   delayColor,
   subtypeOutline,
 } from '../../shared/palette';
-import { remainingRuns } from './brigade-runs';
+import {
+  BrigadeSchedules,
+  ScheduleState,
+  brigadeSection,
+} from '../../shared/brigade/brigade-schedules';
+import { injectBusLanes } from '../../shared/map/bus-lanes';
+import { injectCityBoundaries } from '../../shared/map/city-boundaries';
 
 const REFRESH_MS = 5000;
-/** A brigade's schedule is fetched again after this long (the popup shows what is left of the day). */
-const SCHEDULE_MAX_AGE_MS = 10 * 60_000;
-
-/** A brigade's schedule as the popup shows it: loading, loaded, or failed. */
-type ScheduleState = { loadedAt: number; schedule: BrigadeSchedule | null; failed: boolean };
-
 @Component({
   selector: 'app-live-map',
   imports: [DatePipe],
@@ -61,7 +62,6 @@ export class LiveMap {
   protected readonly error = this.store.selectSignal(livePositionsFeature.selectError);
 
   private readonly setQuery = injectSetQuery();
-  private readonly brigades = inject(BrigadeApi);
   private readonly params = toSignal(inject(ActivatedRoute).queryParamMap, { requireSync: true });
   /** "Delay over N minutes" filter, kept in the URL (?minDelay=5); null = show all vehicles. */
   protected readonly minDelay = computed(() => parseMinDelay(this.params().get('minDelay')));
@@ -79,13 +79,22 @@ export class LiveMap {
   protected readonly delayStops = DELAY_STOPS;
   protected readonly noDelayColor = NO_DELAY_COLOR;
   protected readonly outlines = SUBTYPE_OUTLINES;
+  protected readonly boundaries = [
+    BOUNDARY_STYLES.city,
+    BOUNDARY_STYLES.centre,
+    { color: BUS_LANE_STYLE.color, dashArray: undefined, label: BUS_LANE_STYLE.label },
+  ];
 
-  /** Brigade schedules fetched for popups, by brigade. */
-  private readonly schedules = new Map<string, ScheduleState>();
+  /** Brigade schedules for popups; an arriving one redraws its vehicles' popups. */
+  private readonly schedules = new BrigadeSchedules((brigade) => this.showSchedule(brigade));
+  private readonly drawBoundaries = injectCityBoundaries();
+  private readonly drawBusLanes = injectBusLanes();
 
   constructor() {
     afterNextRender(() => {
       this.map = createBaseMap(this.mapEl().nativeElement);
+      this.drawBoundaries(this.map);
+      this.drawBusLanes(this.map);
       this.mapReady.set(true);
     });
     this.destroyRef.onDestroy(() => this.map?.remove());
@@ -112,27 +121,10 @@ export class LiveMap {
 
   /** Fetches a brigade's schedule for its popup, unless a recent one is at hand; the popup updates when it arrives. */
   private loadSchedule(brigade: string | null): void {
-    if (!brigade) return;
-    const known = this.schedules.get(brigade);
-    if (known && Date.now() - known.loadedAt < SCHEDULE_MAX_AGE_MS) return;
-    this.schedules.set(brigade, {
-      loadedAt: Date.now(),
-      schedule: known?.schedule ?? null,
-      failed: false,
-    });
-    this.brigades
-      .schedule(brigade)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (schedule) =>
-          this.showSchedule(brigade, { loadedAt: Date.now(), schedule, failed: false }),
-        // Try again the next time the popup opens.
-        error: () => this.showSchedule(brigade, { loadedAt: 0, schedule: null, failed: true }),
-      });
+    if (brigade) this.schedules.get(brigade);
   }
 
-  private showSchedule(brigade: string, state: ScheduleState): void {
-    this.schedules.set(brigade, state);
+  private showSchedule(brigade: string): void {
     for (const p of this.visible()) {
       if (p.brigade === brigade) this.markers.get(p.vehicleNumber)?.setPopupContent(this.popup(p));
     }
@@ -145,7 +137,7 @@ export class LiveMap {
   }
 
   private popup(p: LivePosition): string {
-    return popup(p, p.brigade ? this.schedules.get(p.brigade) : undefined);
+    return popup(p, p.brigade ? this.schedules.peek(p.brigade) : undefined);
   }
 
   private render(positions: LivePosition[]): void {
@@ -197,29 +189,8 @@ function popup(p: LivePosition, schedule: ScheduleState | undefined): string {
   const seen = p.timestamp ? `<br><span class="muted">as of ${localTime(p.timestamp)}</span>` : '';
   return (
     `<strong>${line || escapeHtml(p.vehicleNumber)}</strong><br>${vehicle}<br>${delay(p.delaySeconds)}${nextStop}${seen}` +
-    brigadeSection(p.brigade, schedule)
+    brigadeSection(p.brigade, schedule, new Date(), true)
   );
-}
-
-/** The brigade and what is left of its day: the run under way, then the ones to come. */
-function brigadeSection(brigade: string | null, state: ScheduleState | undefined): string {
-  if (!brigade) return '';
-  const title = `<div class="brigade"><strong>Brigade ${escapeHtml(brigade)}</strong>`;
-  if (!state || (!state.schedule && !state.failed))
-    return `${title}<br><span class="muted">Loading schedule…</span></div>`;
-  if (!state.schedule) return `${title}<br><span class="muted">Schedule unavailable</span></div>`;
-  if (!state.schedule.runs.length)
-    return `${title}<br><span class="muted">Not in today's timetable</span></div>`;
-  const runs = remainingRuns(state.schedule.runs, new Date());
-  if (!runs.length) return `${title}<br><span class="muted">No more runs today</span></div>`;
-  const rows = runs
-    .map(
-      ({ run, now }) =>
-        `<li${now ? ' class="now"' : ''}><span class="t">${localTime(run.departure)}–${localTime(run.arrival)}</span> ` +
-        `<strong>${escapeHtml(run.line)}</strong> ${escapeHtml(run.from)} → ${escapeHtml(run.to)}</li>`,
-    )
-    .join('');
-  return `${title} <span class="muted">· rest of today</span><ol class="runs">${rows}</ol></div>`;
 }
 
 function delay(seconds: number | null): string {

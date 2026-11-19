@@ -15,14 +15,44 @@ function collect(effect$: Observable<unknown>): unknown[] {
 
 describe('route detail effects', () => {
   it('loads the line list, and reports a failure with the backend message', () => {
-    const api = { lines: () => of([{ id: 1, line: '103', name: '103', subtype: 'suburban' }]) } as unknown as LineDetailApi;
+    const api = {
+      lines: () =>
+        of([
+          {
+            id: 1,
+            line: '103',
+            name: '103',
+            subtype: 'suburban',
+            geometry: null,
+            capacityClass: null,
+            operatingAgency: null,
+          },
+        ]),
+    } as unknown as LineDetailApi;
     const actions = new Subject<unknown>();
     const out = collect(loadLines(actions as unknown as Actions, api));
     actions.next(RouteDetailActions.loadLines());
-    expect(out[0]).toEqual(RouteDetailActions.linesLoaded({ lines: [{ id: 1, line: '103', name: '103', subtype: 'suburban' }] }));
+    expect(out[0]).toEqual(
+      RouteDetailActions.linesLoaded({
+        lines: [
+          {
+            id: 1,
+            line: '103',
+            name: '103',
+            subtype: 'suburban',
+            geometry: null,
+            capacityClass: null,
+            operatingAgency: null,
+          },
+        ],
+      }),
+    );
 
     const failing = {
-      lines: () => throwError(() => new HttpErrorResponse({ status: 500, error: { detail: 'Database down' } })),
+      lines: () =>
+        throwError(
+          () => new HttpErrorResponse({ status: 500, error: { detail: 'Database down' } }),
+        ),
     } as unknown as LineDetailApi;
     const actions2 = new Subject<unknown>();
     const out2 = collect(loadLines(actions2 as unknown as Actions, failing));
@@ -31,7 +61,10 @@ describe('route detail effects', () => {
   });
 
   it('cancels the previous line when another is picked', () => {
-    const responses: Record<string, Subject<LineDetail>> = { '103': new Subject(), '5': new Subject() };
+    const responses: Record<string, Subject<LineDetail>> = {
+      '103': new Subject(),
+      '5': new Subject(),
+    };
     const api = { detail: (line: string) => responses[line] } as unknown as LineDetailApi;
     const actions = new Subject<unknown>();
     const out = collect(loadDetail(actions as unknown as Actions, api));

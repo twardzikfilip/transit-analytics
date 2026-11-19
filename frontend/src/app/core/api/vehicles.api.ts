@@ -25,9 +25,11 @@ export class ZbiorkomApi {
 export class BrigadeApi {
   private readonly http = inject(HttpClient);
 
-  /** The brigade's runs on the current service day. */
-  schedule(brigade: string): Observable<BrigadeSchedule> {
-    return this.http.get<BrigadeSchedule>(`/api/brigades/${encodeURIComponent(brigade)}/schedule`);
+  /** The brigade's runs on the service day that `at` falls in (default: today's). */
+  schedule(brigade: string, at?: Date): Observable<BrigadeSchedule> {
+    return this.http.get<BrigadeSchedule>(`/api/brigades/${encodeURIComponent(brigade)}/schedule`, {
+      params: at ? { at: at.toISOString() } : {},
+    });
   }
 }
 

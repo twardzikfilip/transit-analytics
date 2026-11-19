@@ -18,10 +18,25 @@ export interface Route {
   textColor: string | null;
   sortOrder: number | null;
   subtype: RouteSubtype;
+  /** Null until classified (other operators' lines aren't). */
+  geometry: RouteGeometry | null;
+  capacityClass: RouteCapacity | null;
+  /** The company operating it for BKM: KPKM, KPK or KZK. */
+  operatingAgency: string | null;
 }
 
 /** Kind of line: city, suburban (100 and up), night (N1…) or regional. */
 export type RouteSubtype = 'urban' | 'suburban' | 'night_urban' | 'regional';
+
+/**
+ * How a line runs relative to the city centre: radial (centre to periphery), diameter (one side to the opposite one
+ * through the centre), arcantial (two radial legs at an angle, joined in or by the centre), tangential (round the
+ * centre, outer parts to each other) or feeder (from the suburbs, ending short of the centre).
+ */
+export type RouteGeometry = 'radial' | 'diameter' | 'arcantial' | 'tangential' | 'feeder';
+
+/** How much a line carries, strongest first (rules in the backend's classification/routes.yml). */
+export type RouteCapacity = 'main' | 'primary' | 'secondary' | 'tertiary' | 'irregular';
 
 /** A stop or station (GTFS stop). */
 export interface Stop {

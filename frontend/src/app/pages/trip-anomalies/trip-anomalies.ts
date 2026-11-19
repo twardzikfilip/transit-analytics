@@ -4,7 +4,9 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { concat, distinctUntilChanged, interval, map, of, switchMap } from 'rxjs';
-import { TripAnomalyKind } from '../../core/models/models';
+import { AbnormalTrip, TripAnomalyKind } from '../../core/models/models';
+import { PathLine, PathMap } from '../../shared/map/path-map';
+import { cssColor } from '../../shared/palette';
 import { TimeWindowPicker } from '../../shared/time-window/time-window-picker';
 import {
   TimeWindow,
@@ -22,6 +24,7 @@ import {
   changeFateLabel,
   coverage,
   joinedAt,
+  stoodLabel,
   kindLabel,
   replacementFrom,
   percent,
@@ -51,7 +54,7 @@ export function refreshes(w: TimeWindow): boolean {
  */
 @Component({
   selector: 'app-trip-anomalies',
-  imports: [DatePipe, TimeWindowPicker],
+  imports: [DatePipe, TimeWindowPicker, PathMap],
   templateUrl: './trip-anomalies.html',
   styleUrl: './trip-anomalies.scss',
 })
@@ -68,24 +71,36 @@ export class TripAnomalies {
     map((params) => ({ params, window: readWindow(params, DEFAULT_PRESET) })),
     distinctUntilChanged(sameQuery),
   );
-  protected readonly window = toSignal(this.query$.pipe(map((q) => q.window)), { requireSync: true });
-  protected readonly refreshing = computed(
-    () => refreshes(this.window()),
-  );
+  protected readonly window = toSignal(this.query$.pipe(map((q) => q.window)), {
+    requireSync: true,
+  });
+  protected readonly refreshing = computed(() => refreshes(this.window()));
 
   /** The kinds shown in the table (none chosen: all), and one line or all. */
   protected readonly shownKinds = signal<TripAnomalyKind[]>([]);
   protected readonly line = signal<string | null>(null);
+  /** One bus: the trips it ran (or was replaced on) only. */
+  protected readonly bus = signal<string | null>(null);
   protected readonly rowsShown = signal(PAGE_ROWS);
   protected readonly allLines = signal(false);
 
   protected readonly filtered = computed(() => {
     const kinds = this.shownKinds();
     const line = this.line();
+    const bus = this.bus();
     return (this.report()?.trips ?? []).filter(
-      (t) => (!kinds.length || kinds.includes(t.kind)) && (!line || t.line === line),
+      (t) =>
+        (!kinds.length || kinds.includes(t.kind)) &&
+        (!line || t.line === line) &&
+        (!bus || t.vehicles.includes(bus)),
     );
   });
+  /** Buses on the abnormal trips, for the bus filter's suggestions. */
+  protected readonly busOptions = computed(() =>
+    [...new Set((this.report()?.trips ?? []).flatMap((t) => t.vehicles))].sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true }),
+    ),
+  );
   protected readonly rows = computed(() => this.filtered().slice(0, this.rowsShown()));
   /** Lines with abnormal trips, for the table (first few unless all are shown) and the filter. */
   protected readonly abnormalLines = computed(() =>
@@ -108,6 +123,7 @@ export class TripAnomalies {
   protected readonly changeFateLabel = changeFateLabel;
   protected readonly replacementFrom = replacementFrom;
   protected readonly joinedAt = joinedAt;
+  protected readonly stoodLabel = stoodLabel;
   protected readonly abnormalCount = abnormalCount;
   protected readonly firstLines = FIRST_LINES;
 
@@ -143,10 +159,35 @@ export class TripAnomalies {
     this.rowsShown.set(PAGE_ROWS);
   }
 
+  protected setBus(bus: string): void {
+    this.bus.set(bus.trim() || null);
+    this.rowsShown.set(PAGE_ROWS);
+  }
+
   protected clearFilters(): void {
     this.shownKinds.set([]);
     this.line.set(null);
+    this.bus.set(null);
     this.rowsShown.set(PAGE_ROWS);
+  }
+
+  /** A detour on a map: the usual route around it (blue), and the bus's path with its reports (orange). */
+  protected detourLines(t: AbnormalTrip): PathLine[] {
+    return [
+      {
+        points: t.detourRoute,
+        color: cssColor('--chart-line', '#1e88e5'),
+        label: 'Usual route',
+        weight: 6,
+        opacity: 0.75,
+      },
+      {
+        points: t.detourPath,
+        color: cssColor('--chart-series-2', '#eb6834'),
+        label: "The bus's path (dots: its reports)",
+        dots: true,
+      },
+    ];
   }
 
   protected showMore(): void {

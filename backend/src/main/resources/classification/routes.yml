@@ -1,0 +1,106 @@
+# Line classifications: geometry (how a line runs relative to the city centre) and capacity (how much it carries).
+#
+# Only lines of the operators under `agencies` are classified (others stay unclassified). Lines are classified at
+# startup, after every timetable (GTFS) import and every night at `refresh-cron`. Edit, restart, done; `overrides`
+# set a line's class outright when the rules get it wrong.
+app:
+  route-classes:
+    agencies:
+      - "Zarząd Białostockiej Komunikacji Miejskiej"
+    refresh-cron: "0 30 3 * * *"
+
+    # Geometry, from the line's main route shape (its most common one) and the city centre (`centre`):
+    #   - a shape passing within `centre-margin-meters` of the centre goes through the centre; then
+    #       - an end within `terminus-margin-meters` of the centre, or within `central-terminus-margin-meters` of a
+    #         central terminus (`central-termini`: an interchange just outside the centre): RADIAL;
+    #       - else, by the angle between the two ends as seen from the middle of the centre:
+    #         at least `diameter-min-angle`: DIAMETER, at least `arcantial-min-angle`: ARCANTIAL, else RADIAL
+    #         (both ends on the same side: a loop out of the centre);
+    #   - a shape staying away from the centre: TANGENTIAL when it swings at least `tangential-min-angle` round the
+    #     centre (the widest range of directions it covers, seen from the middle of the centre: a line that turns
+    #     back, like 23, swings further than its ends are apart), else FEEDER (it heads for the centre but ends
+    #     short of it);
+    #   - `overrides` last, for lines the measures get wrong.
+    geometry:
+      # The city centre for classifying lines, [latitude, longitude] in order (the first point repeated at the end
+      # is optional): the core around Rynek Kościuszki, Lipowa from Nowy Świat eastwards, Sienkiewicza, Branickiego
+      # and the Palace, Legionowa and Skłodowskiej, up to al. Piłsudskiego. Smaller than Osiedle Centrum (on the
+      # maps): the intersections around Wzgórze św. Rocha, Poleska and Bohaterów Monte Cassino are left out, so a line
+      # passing only there doesn't go through the centre. Left out entirely: Osiedle Centrum is used.
+      centre:
+        - [53.1372, 23.1525]
+        - [53.1372, 23.1600]
+        - [53.1365, 23.1660]
+        - [53.1345, 23.1720]
+        - [53.1290, 23.1730]
+        - [53.1265, 23.1700]
+        - [53.1265, 23.1540]
+        - [53.1290, 23.1525]
+      # 100 m: Lipowa/Św. Rocha is about 230 m west of the centre's edge.
+      centre-margin-meters: 100
+      terminus-margin-meters: 400
+      # A line through the centre from the railway station (1.1 km west of the centre, Centrum Przydworcowe) is
+      # radial: the station is the city's main interchange, so it ends in the centre in effect (lines 33, 100, 107).
+      # 150 m: line 10's terminus by Dworzec PKS, 200 m away, is not the station.
+      central-termini:
+        - name: "Dworzec PKP"
+          latitude: 53.13318
+          longitude: 23.13643
+      central-terminus-margin-meters: 150
+      # 143°: lines 6 (159°), 103 (154°) and 18 (146°) are diameters; 15 (139°), 28 (134°), 5 and 21 (131°), the
+      # widest arcantial lines, stay arcantial.
+      diameter-min-angle: 143
+      arcantial-min-angle: 30
+      # 60°: line 23 swings 101° round the west of the centre (its ends only 43° apart); feeders 113, 123 and 126
+      # swing 9°-34°.
+      tangential-min-angle: 60
+      overrides:
+        # North (Antoniuk) to south-west (Nowe Miasto) straight through the centre, but its ends are only 110°
+        # apart; no measure tells it from arcantial lines 5, 15, 21 and 28.
+        "26": DIAMETER
+
+    # Capacity (except for the kinds of line under `skip-subtypes`), from the weekday timetable (for lines without
+    # weekday service, the service they run most) and the
+    # buses recorded on the line over the last `lookback-days`:
+    #   - MEGA share: the share of a line's position reports made by MEGA (articulated) buses, per day type
+    #     (Monday-Friday, Saturday, Sunday);
+    #       EVERY_DAY: at least `mega-every-day-share` on every day type the line runs;
+    #       SOME: at least `mega-some-share` on weekdays; NONE: less; ANY: no condition;
+    #   - peak headway: minutes between departures in the `peak` windows, per direction, averaged;
+    #   - average headway: minutes between departures from the first to the last of the day, per direction;
+    #   - headway CV: how uneven the gaps between departures are (0 = even);
+    #   - trips per direction: departures a day.
+    # The first rule all of whose conditions hold gives the class; none does: `fallback`.
+    capacity:
+      # Kinds of line given a geometry but no capacity class (night lines run a different kind of service).
+      skip-subtypes:
+        - NIGHT_URBAN
+      lookback-days: 28
+      mega-every-day-share: 0.5
+      mega-some-share: 0.1
+      peak:
+        - "06:30-08:30"
+        - "15:00-17:00"
+      rules:
+        # MEGA buses all week (weekends too), more often than every 15 min at peak.
+        - capacity-class: MAIN
+          mega: EVERY_DAY
+          peak-headway-under: 15
+        # Partly MEGA buses, more often than every 20 min at peak (17 min at first; raised to take in lines 1-4,
+        # at 17.1-19.2 min).
+        - capacity-class: PRIMARY
+          mega: SOME
+          peak-headway-under: 20
+        # More often than once an hour on average. (Asked for without MEGA buses at all; lines with some MEGA buses
+        # but too rare for PRIMARY land here too, so that every line has a class.)
+        - capacity-class: SECONDARY
+          mega: ANY
+          average-headway-under: 60
+        # Once an hour or less, but regular: enough trips, fairly even gaps.
+        - capacity-class: TERTIARY
+          min-trips-per-direction: 8
+          max-headway-cv: 0.6
+      # Few trips a day with large, uneven gaps.
+      fallback: IRREGULAR
+      overrides: {}
+        # "24": MAIN

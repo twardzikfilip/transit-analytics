@@ -3,7 +3,6 @@
  * the timetable by brigade and scheduled time.
  */
 
-
 /** Kinds of abnormal trip. */
 export type TripAnomalyKind =
   'cancelled' | 'missed' | 'lost' | 'short-turned' | 'detour' | 'vehicle-changed' | 'no-signal';
@@ -77,6 +76,10 @@ export interface AbnormalTrip {
   detourMinutes: number | null;
   detourFrom: string | null;
   detourTo: string | null;
+  /** On a detour: the bus's path [lat, lon] (its reports off the route, a few either side), and the usual route
+   * around it; empty otherwise. */
+  detourPath: [number, number][];
+  detourRoute: [number, number][];
   changeFate: ChangeFate | null;
   /** The line and brigade the replacement bus ran before taking over; null when it hadn't run another that day. */
   replacementLine: string | null;
@@ -93,7 +96,41 @@ export interface AbnormalTrip {
   skippedStops: number | null;
   /** On a change of bus, when the replaced bus stopped for good. */
   changeAt: string | null;
+  /** When the replaced bus wasn't used again: how long it stood where it stopped (minutes)… */
+  stoodMinutes: number | null;
+  /** …what it did next… */
+  stoodThen: StoodThen | null;
+  /** …and its last report that day, and how far that was from where it stopped. */
+  stoodLastSeen: string | null;
+  stoodLastSeenMeters: number | null;
+  /** On a change of bus, what happened step by step, in time order; empty otherwise. */
+  story: IncidentStep[];
+  /** On a change of bus, what each bus did when, for a time line; empty otherwise. */
+  timeline: IncidentSpan[];
 }
+
+export interface IncidentStep {
+  at: string;
+  text: string;
+}
+
+/**
+ * A stretch of a bus's time around a change of bus: running (the replaced bus on the trip), standing (where it
+ * stopped), moving (off without a brigade), approach (the replacement on its way, without the brigade) or service
+ * (on a brigade: the replacement on the trip and on; for the replaced bus used again, a moment).
+ */
+export interface IncidentSpan {
+  vehicle: string;
+  kind: 'running' | 'standing' | 'moving' | 'approach' | 'service';
+  from: string;
+  to: string;
+}
+
+/**
+ * A replaced bus not used again, after standing where it stopped: stopped reporting while recording went on
+ * (switched off, or towed with its tracker off), moved away without running a brigade, or still standing there.
+ */
+export type StoodThen = 'vanished' | 'drove-off' | 'still-there';
 
 export interface TripAnomalyReport {
   from: string;

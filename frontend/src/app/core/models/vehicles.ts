@@ -8,7 +8,12 @@ export interface Vehicle {
   capacity: number | null;
   agency: string | null;
   model: string | null;
+  /** Size class from the model; null when the model isn't known. */
+  vehicleClass: VehicleClass | null;
 }
+
+/** Bus size: mini (under 8 m), midi (8–11 m), maxi (11–15 m), mega (15 m+, articulated) or a double-decker. */
+export type VehicleClass = 'mini' | 'midi' | 'maxi' | 'mega' | 'double_decker';
 
 /** Live position from an external feed (zbiorkom.live); not stored in the backend. */
 export interface LivePosition {

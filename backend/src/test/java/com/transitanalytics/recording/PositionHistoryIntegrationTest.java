@@ -152,12 +152,13 @@ class PositionHistoryIntegrationTest {
         assertThat(all.stepSeconds()).isEqualTo(60);
         assertThat(all.vehicles()).containsExactly("IT-P1", "IT-P2");
         assertThat(all.lines()).containsExactly("IT-10", "IT-20");
+        assertThat(all.brigades()).containsExactly("IT-01");
         assertThat(all.frames()).extracting(PositionHistoryDto.Frame::time)
                 .containsExactly(Instant.parse("2099-01-01T10:00:00Z"), Instant.parse("2099-01-01T10:01:00Z"));
         assertThat(all.frames().get(0).positions()).containsExactly(
-                List.of(0, 53.13, 23.16, 60, 0), List.of(1, 53.13, 23.16, 700, 1));
+                List.of(0, 53.13, 23.16, 60, 0, 0), List.of(1, 53.13, 23.16, 700, 1, 0));
         assertThat(all.frames().get(1).positions()).containsExactly(
-                List.of(0, 53.13, 23.16, 120, 0), java.util.Arrays.asList(1, 53.13, 23.16, null, 1));
+                List.of(0, 53.13, 23.16, 120, 0, 0), java.util.Arrays.asList(1, 53.13, 23.16, null, 1, 0));
 
         PositionHistoryDto.Replay one = history.replay(FROM, TO, List.of("IT-20", " ", "IT-99"));
         assertThat(one.routes()).containsExactly("IT-20", "IT-99");

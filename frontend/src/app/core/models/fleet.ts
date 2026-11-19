@@ -1,3 +1,5 @@
+import { IncidentSpan, IncidentStep } from './trip-anomalies';
+import { VehicleClass } from './vehicles';
 /** The fleet: how its buses were used in a time window, and one bus in detail, from recorded positions. */
 
 export interface FleetVehicle {
@@ -5,6 +7,8 @@ export interface FleetVehicle {
   number: string;
   model: string | null;
   agency: string | null;
+  /** Size class from the model; null when not known. */
+  vehicleClass: VehicleClass | null;
 }
 
 /** An operator and how many buses of the fleet are its. */
@@ -13,7 +17,10 @@ export interface FleetAgency {
   vehicles: number;
 }
 
-/** A model ("unknown" when the feed doesn't say): buses in use in the window, of the fleet's. */
+/**
+ * A model ("unknown" when the feed doesn't say): buses in use in the window, of the fleet's. Size classes and makes
+ * are counted the same way, `model` naming the class or the make.
+ */
 export interface ModelCount {
   model: string;
   inUse: number;
@@ -55,6 +62,10 @@ export interface FleetReport {
   fleet: number;
   agencies: FleetAgency[];
   models: ModelCount[];
+  /** Per size class (mini, midi, maxi, mega, double_decker, or unknown), smallest first. */
+  classes: ModelCount[];
+  /** Per make, the model name's first word ("Solaris"), the most in use first. */
+  makes: ModelCount[];
   mostUsed: VehicleUsage[];
   leastUsed: VehicleUsage[];
   /** Every bus, the longest in service first; those not used have 0 hours. */
@@ -93,6 +104,11 @@ export interface VehicleIncident {
   headsign: string | null;
   scheduledDeparture: string;
   note: string;
+  /** On a breakdown: what happened step by step, and what each bus (it and its replacement) did when. */
+  story: IncidentStep[];
+  timeline: IncidentSpan[];
+  /** On a breakdown: where each of those buses went over the time line, [lat, lon] in order. */
+  paths: { vehicle: string; points: [number, number][] }[];
 }
 
 export interface VehicleDetail {

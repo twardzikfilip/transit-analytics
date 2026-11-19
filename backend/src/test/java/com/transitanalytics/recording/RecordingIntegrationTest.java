@@ -64,8 +64,11 @@ class RecordingIntegrationTest {
 
     @AfterEach
     void cleanUp() {
+        // Only the tests' own times (2020 and 2099): a delete reaching the real data's compressed chunks would have
+        // to decompress them, past TimescaleDB's limit.
         jdbc.update("DELETE FROM position_sample WHERE vehicle_id IN "
-                + "(SELECT id FROM vehicle WHERE vehicle_number LIKE 'IT-%')");
+                + "(SELECT id FROM vehicle WHERE vehicle_number LIKE 'IT-%') "
+                + "AND (observed_at < '2021-01-01' OR observed_at >= '2099-01-01')");
         jdbc.update("DELETE FROM vehicle WHERE vehicle_number LIKE 'IT-%'");
         for (String view : List.of("fleet_5min", "route_delay_hourly")) {
             jdbc.execute("CALL refresh_continuous_aggregate('" + view + "', '2019-12-31', '2020-01-02')");

@@ -2,8 +2,9 @@ import { Router } from '@angular/router';
 import { FleetReport, FleetVehicle, VehicleDetail, VehicleUsage } from '../../core/models/models';
 import { FleetActions } from '../../store/fleet/fleet.actions';
 import { fleetFeature } from '../../store/fleet/fleet.reducer';
-import { renderPage, stateAfter, text } from '../../testing/page-testing';
+import { renderPage, stateAfter, text, useSvgMaps } from '../../testing/page-testing';
 import { Fleet } from './fleet';
+import { localTime } from '../../shared/format/time';
 import {
   dailyBars,
   dayLabel,
@@ -16,11 +17,16 @@ import {
   vehicleName,
 } from './fleet-format';
 
-const bus = (id: number, number: string, model: string | null = 'Solaris Urbino 12'): FleetVehicle => ({
+const bus = (
+  id: number,
+  number: string,
+  model: string | null = 'Solaris Urbino 12',
+): FleetVehicle => ({
   id,
   number,
   model,
   agency: 'BKM',
+  vehicleClass: model ? 'maxi' : null,
 });
 const usage = (v: FleetVehicle, hours: number, lines: string[] = ['103']): VehicleUsage => ({
   vehicle: v,
@@ -46,6 +52,15 @@ function report(): FleetReport {
     models: [
       { model: 'Solaris Urbino 12', inUse: 1, fleet: 1 },
       { model: 'MAN Lion’s City', inUse: 1, fleet: 1 },
+      { model: 'unknown', inUse: 0, fleet: 1 },
+    ],
+    classes: [
+      { model: 'maxi', inUse: 2, fleet: 2 },
+      { model: 'unknown', inUse: 0, fleet: 1 },
+    ],
+    makes: [
+      { model: 'Solaris', inUse: 1, fleet: 1 },
+      { model: 'MAN', inUse: 1, fleet: 1 },
       { model: 'unknown', inUse: 0, fleet: 1 },
     ],
     mostUsed: [usage(A, 30.5, ['11', '103']), usage(B, 4)],
@@ -103,6 +118,54 @@ function detail(to = '2026-11-17T11:00:00Z'): VehicleDetail {
         headsign: 'Dworzec',
         scheduledDeparture: '2026-11-16T07:00:00Z',
         note: 'Bus 230 wasn’t seen again that day: possibly broken down.',
+        story: [
+          { at: '2026-11-16T07:01:00Z', text: 'Bus 230 runs line 11.' },
+          { at: '2026-11-16T07:10:00Z', text: "Bus 230 stops and doesn't move on." },
+          { at: '2026-11-16T07:27:00Z', text: 'Bus 412 takes over.' },
+        ],
+        timeline: [
+          {
+            vehicle: '230',
+            kind: 'running',
+            from: '2026-11-16T07:01:00Z',
+            to: '2026-11-16T07:10:00Z',
+          },
+          {
+            vehicle: '230',
+            kind: 'standing',
+            from: '2026-11-16T07:10:00Z',
+            to: '2026-11-16T07:44:00Z',
+          },
+          {
+            vehicle: '412',
+            kind: 'approach',
+            from: '2026-11-16T07:20:00Z',
+            to: '2026-11-16T07:27:00Z',
+          },
+          {
+            vehicle: '412',
+            kind: 'service',
+            from: '2026-11-16T07:27:00Z',
+            to: '2026-11-16T07:50:00Z',
+          },
+        ],
+        paths: [
+          {
+            vehicle: '230',
+            points: [
+              [53.13, 23.15],
+              [53.132, 23.152],
+            ],
+          },
+          {
+            vehicle: '412',
+            points: [
+              [53.12, 23.14],
+              [53.131, 23.151],
+              [53.14, 23.16],
+            ],
+          },
+        ],
       },
     ],
   };
@@ -123,7 +186,9 @@ describe('Fleet helpers', () => {
     expect(vehicleName(C)).toBe('17');
     const b = report().breakdowns[0];
     expect(daysOutText(b)).toBe('not back yet (1.2 days)');
-    expect(daysOutText({ ...b, returned: '2026-11-17T05:00:00Z', daysOut: 1 })).toBe('back after 1 day');
+    expect(daysOutText({ ...b, returned: '2026-11-17T05:00:00Z', daysOut: 1 })).toBe(
+      'back after 1 day',
+    );
     expect(percent(2, 3)).toBe(67);
     expect(percent(1, 0)).toBe(0);
     expect(dayLabel('2026-11-16')).toBe('Mon 16 Nov');
@@ -177,16 +242,26 @@ describe('Fleet page', () => {
       { ...URL, agency: 'BKM' },
     );
 
-    expect(store.dispatch).toHaveBeenCalledWith(FleetActions.load({ window: WINDOW, agencies: ['BKM'] }));
+    expect(store.dispatch).toHaveBeenCalledWith(
+      FleetActions.load({ window: WINDOW, agencies: ['BKM'] }),
+    );
     expect(text(el.querySelector('.in-use .hero'))).toBe('2 of 3');
     expect(text(el.querySelector('.in-use'))).toContain('67% of the fleet');
-    expect([...el.querySelectorAll('.model-bars li')].map(text)).toEqual([
-      'Solaris Urbino 121/1',
-      'MAN Lion’s City1/1',
-      'unknown0/1',
-    ]);
+    const bars = (tile: string) => [...el.querySelectorAll(`.${tile} .model-bars li`)].map(text);
+    expect(bars('models')).toEqual(['Solaris Urbino 121/1', 'MAN Lion’s City1/1', 'unknown0/1']);
+    // By size class, named with their lengths, and by make.
+    expect(bars('classes')).toEqual(['Maxi (11–15 m)2/2', 'Unknown size0/1']);
+    expect(el.querySelector('.classes .model-bars li')!.getAttribute('title')).toBe(
+      'Maxi (11–15 m): 2 of 2 in use',
+    );
+    expect(bars('makes')).toEqual(['Solaris1/1', 'MAN1/1', 'unknown0/1']);
     const lists = [...el.querySelectorAll('.tile .mini-list')];
-    expect([...lists[0].querySelector('li')!.children].map(text)).toEqual(['230', 'Solaris Urbino 12', '30.5 h', '11, 103']);
+    expect([...lists[0].querySelector('li')!.children].map(text)).toEqual([
+      '230',
+      'Solaris Urbino 12',
+      '30.5 h',
+      '11, 103',
+    ]);
     expect(text(lists[1].querySelector('li'))).toContain('1230');
     expect(text(el.querySelector('.breakdowns .hero'))).toBe('1');
     expect(text(el.querySelector('.breakdowns li'))).toContain('not back yet (1.2 days)');
@@ -201,7 +276,9 @@ describe('Fleet page', () => {
       stateAfter(fleetFeature, FleetActions.loaded({ report: report() })),
       URL,
     );
-    const navigate = vi.spyOn(fixture.debugElement.injector.get(Router), 'navigate').mockResolvedValue(true);
+    const navigate = vi
+      .spyOn(fixture.debugElement.injector.get(Router), 'navigate')
+      .mockResolvedValue(true);
     const input = el.querySelector('.search input') as HTMLInputElement;
     input.value = 'lion';
     input.dispatchEvent(new Event('input'));
@@ -209,7 +286,10 @@ describe('Fleet page', () => {
     const options = [...el.querySelectorAll('.matches button')];
     expect(options.map(text)).toEqual(['1230MAN Lion’s City · BKM4.0 h']);
     (options[0] as HTMLButtonElement).click();
-    expect(navigate).toHaveBeenLastCalledWith([], { queryParams: { vehicle: 2 }, queryParamsHandling: 'merge' });
+    expect(navigate).toHaveBeenLastCalledWith([], {
+      queryParams: { vehicle: 2 },
+      queryParamsHandling: 'merge',
+    });
 
     input.value = 'nothing';
     input.dispatchEvent(new Event('input'));
@@ -218,19 +298,98 @@ describe('Fleet page', () => {
     input.value = '230';
     input.dispatchEvent(new Event('input'));
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
-    expect(navigate).toHaveBeenLastCalledWith([], { queryParams: { vehicle: 1 }, queryParamsHandling: 'merge' });
+    expect(navigate).toHaveBeenLastCalledWith([], {
+      queryParams: { vehicle: 1 },
+      queryParamsHandling: 'merge',
+    });
 
     // A click on a bar or a name in the tiles chooses the bus too.
-    (el.querySelectorAll('app-bar-chart rect.hit')[2] as SVGElement).dispatchEvent(new Event('click'));
-    expect(navigate).toHaveBeenLastCalledWith([], { queryParams: { vehicle: 3 }, queryParamsHandling: 'merge' });
+    (el.querySelectorAll('app-bar-chart rect.hit')[2] as SVGElement).dispatchEvent(
+      new Event('click'),
+    );
+    expect(navigate).toHaveBeenLastCalledWith([], {
+      queryParams: { vehicle: 3 },
+      queryParamsHandling: 'merge',
+    });
 
     setQuery({ ...URL, vehicle: '1' });
-    expect(store.dispatch).toHaveBeenLastCalledWith(FleetActions.loadVehicle({ id: 1, window: WINDOW }));
+    expect(store.dispatch).toHaveBeenLastCalledWith(
+      FleetActions.loadVehicle({ id: 1, window: WINDOW }),
+    );
     const loads = vi.mocked(store.dispatch).mock.calls.length;
     setQuery({ ...URL, vehicle: '1' });
     expect(vi.mocked(store.dispatch).mock.calls).toHaveLength(loads);
     setQuery(URL);
     expect(store.dispatch).toHaveBeenLastCalledWith(FleetActions.clearVehicle());
+  });
+
+  it('tells each breakdown of the bus step by step, with both buses on a time line and a map', async () => {
+    useSvgMaps();
+    const { el, fixture } = renderPage(
+      Fleet,
+      stateAfter(
+        fleetFeature,
+        FleetActions.loaded({ report: report() }),
+        FleetActions.vehicleLoaded({ vehicle: detail() }),
+      ),
+      { ...URL, vehicle: '1' },
+    );
+    await fixture.whenStable();
+    fixture.detectChanges();
+    // Open at first; it folds away and back.
+    const story = () => el.querySelector('.detail tr.story-row app-incident-story');
+    const toggle = el.querySelector('.detail button.story-toggle') as HTMLButtonElement;
+    expect(text(toggle)).toBe('▾ Step by step (3 steps)');
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect([...story()!.querySelectorAll('ol.steps li')].map(text)).toEqual([
+      `${localTime('2026-11-16T07:01:00Z')} Bus 230 runs line 11.`,
+      `${localTime('2026-11-16T07:10:00Z')} Bus 230 stops and doesn't move on.`,
+      `${localTime('2026-11-16T07:27:00Z')} Bus 412 takes over.`,
+    ]);
+    // A lane per bus, a bar per stretch, the steps numbered on the axis.
+    expect([...story()!.querySelectorAll('.lane-label')].map(text)).toEqual([
+      'Steps',
+      'Bus 230',
+      'Bus 412',
+      '',
+    ]);
+    const bars = [...story()!.querySelectorAll('.bar')] as HTMLElement[];
+    expect(bars.map((b) => b.className.replace('bar ', ''))).toEqual([
+      'running',
+      'standing',
+      'approach',
+      'service',
+    ]);
+    expect(bars[1].title).toBe(
+      `Bus 230: standing still, ${localTime('2026-11-16T07:10:00Z')}–${localTime('2026-11-16T07:44:00Z')}`,
+    );
+    expect(parseFloat(bars[0].style.left)).toBeLessThan(parseFloat(bars[1].style.left));
+    expect([...story()!.querySelectorAll('.step')].map(text)).toEqual(['1', '2', '3']);
+    expect([...story()!.querySelectorAll('app-incident-timeline .legend li')].map(text)).toEqual([
+      'On the trip',
+      'Standing still',
+      'On its way, no brigade',
+      'On the brigade',
+    ]);
+    expect(story()!.querySelectorAll('.tick').length).toBeGreaterThan(1);
+    // Both buses on a map: the one that broke down in orange, ringed where last seen; the other in blue.
+    const map = story()!.querySelector('app-path-map')!;
+    expect([...map.querySelectorAll('.legend li')].map(text)).toEqual([
+      'Bus 230 (broke down)',
+      'Bus 412 (took over)',
+    ]);
+    const strokes = [...map.querySelectorAll('.leaflet-overlay-pane path')].map((p) =>
+      p.getAttribute('stroke'),
+    );
+    expect(strokes).toEqual(['#eb6834', '#eb6834', '#1e88e5']);
+
+    toggle.click();
+    fixture.detectChanges();
+    expect(story()).toBeNull();
+    expect(text(toggle)).toBe('▸ Step by step (3 steps)');
+    toggle.click();
+    fixture.detectChanges();
+    expect(story()).not.toBeNull();
   });
 
   it("shows a bus's runs per day, hours per day and abnormal trips", () => {
@@ -244,7 +403,9 @@ describe('Fleet page', () => {
       { ...URL, vehicle: '1' },
     );
     expect(text(el.querySelector('.detail-header'))).toContain('Solaris Urbino 12');
-    expect(text(el.querySelector('.detail-header'))).toContain('3.5 h in service on 2 days · lines 11, 103');
+    expect(text(el.querySelector('.detail-header'))).toContain(
+      '3.5 h in service on 2 days · lines 11, 103',
+    );
     expect(text(el.querySelector('.detail'))).toContain('Runs per day');
     expect([...el.querySelectorAll('app-run-timeline text.name')].map(text)).toEqual([
       'Sun 15 Nov',
@@ -259,11 +420,18 @@ describe('Fleet page', () => {
     const run = el.querySelector('app-run-timeline rect.run') as SVGElement;
     run.dispatchEvent(new Event('pointerenter'));
     fixture.detectChanges();
-    expect(text(el.querySelector('app-run-timeline .chart-tooltip'))).toBe('06:00–07:00line 103, brigade 103-05 → Rynek');
+    expect(text(el.querySelector('app-run-timeline .chart-tooltip'))).toBe(
+      '06:00–07:00line 103, brigade 103-05 → Rynek',
+    );
 
-    const navigate = vi.spyOn(fixture.debugElement.injector.get(Router), 'navigate').mockResolvedValue(true);
+    const navigate = vi
+      .spyOn(fixture.debugElement.injector.get(Router), 'navigate')
+      .mockResolvedValue(true);
     (el.querySelector('.detail .close') as HTMLButtonElement).click();
-    expect(navigate).toHaveBeenLastCalledWith([], { queryParams: { vehicle: null }, queryParamsHandling: 'merge' });
+    expect(navigate).toHaveBeenLastCalledWith([], {
+      queryParams: { vehicle: null },
+      queryParamsHandling: 'merge',
+    });
   });
 
   it('shows the runs one per row for a window of a day, and a bus without trouble', () => {
@@ -293,7 +461,9 @@ describe('Fleet page', () => {
       ),
       { ...URL, vehicle: '1' },
     );
-    expect(text(idle.el.querySelector('.detail'))).toContain('This bus served no line in this window.');
+    expect(text(idle.el.querySelector('.detail'))).toContain(
+      'This bus served no line in this window.',
+    );
   });
 
   it('shows errors and loading', () => {

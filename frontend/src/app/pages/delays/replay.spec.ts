@@ -15,25 +15,28 @@ describe('delay replay', () => {
     routes: [],
     vehicles: ['230', '009'],
     lines: ['18', '107'],
+    brigades: ['018-03'],
     frames: [
       {
         time: '2026-11-16T10:00:00Z',
         positions: [
-          [0, 53.0, 23.0, 30, 0],
-          [1, 53.5, 23.5, null, 1],
+          [0, 53.0, 23.0, 30, 0, 0],
+          [1, 53.5, 23.5, null, 1, null],
         ],
       },
-      { time: '2026-11-16T10:01:00Z', positions: [[0, 53.1, 23.2, 400, 0]] },
-      { time: '2026-11-16T10:10:00Z', positions: [[0, 53.9, 23.9, 0, 0]] },
+      { time: '2026-11-16T10:01:00Z', positions: [[0, 53.1, 23.2, 400, 0, 0]] },
+      { time: '2026-11-16T10:10:00Z', positions: [[0, 53.9, 23.9, 0, 0, 0]] },
     ],
   };
   const replay = parseReplay(raw);
   const at = (iso: string) => positionsAt(replay, Date.parse(iso));
 
   it('decodes the compact rows', () => {
+    expect(replay.frames[0].positions.get('230')?.brigade).toBe('018-03');
     expect(replay.frames[0].positions.get('009')).toEqual({
       vehicle: '009',
       line: '107',
+      brigade: null,
       latitude: 53.5,
       longitude: 23.5,
       delaySeconds: null,
@@ -79,6 +82,7 @@ describe('delay replay', () => {
     const p = (delaySeconds: number | null) => ({
       vehicle: 'x',
       line: '1',
+      brigade: null,
       latitude: 0,
       longitude: 0,
       delaySeconds,

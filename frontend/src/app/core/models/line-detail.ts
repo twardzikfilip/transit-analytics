@@ -1,4 +1,5 @@
-import { RouteSubtype } from './timetable';
+import { LineBusLanes } from './bus-lanes';
+import { RouteCapacity, RouteGeometry, RouteSubtype } from './timetable';
 
 /** Routes in detail: one line's timetable and its measured performance. */
 
@@ -9,6 +10,11 @@ export interface LineRef {
   line: string;
   name: string;
   subtype: RouteSubtype;
+  /** Null for lines not classified (other operators'). */
+  geometry: RouteGeometry | null;
+  capacityClass: RouteCapacity | null;
+  /** The company operating the line for BKM: KPKM, KPK or KZK; null when not known (other operators' lines). */
+  operatingAgency: string | null;
 }
 
 /** Variant kind: the base route of its direction, longer / shorter than it, or mostly runs to or from the depot. */
@@ -106,6 +112,8 @@ export interface LineDetail {
   line: string;
   name: string;
   subtype: RouteSubtype;
+  geometry: RouteGeometry | null;
+  capacityClass: RouteCapacity | null;
   /** Null when there is no timetable for the line. */
   serviceId: string | null;
   /** The line's timetable on the operator's website. */
@@ -119,6 +127,14 @@ export interface LineDetail {
   /** Where depot runs start or end, away from the end stops; grouped the same way. */
   depotStops: EndStop[];
   depotRuns: DepotRun[];
+  /** Who runs the line: the organiser and the operating company with its depot; null when not known. */
+  operator: LineOperator | null;
+  /** Every bus depot. */
+  depots: LineDepot[];
+  /** Where the line's buses enter service (pull_out) and leave it (pull_in), with the way from or to the depot. */
+  depotLinks: DepotLink[];
+  /** How much of each direction's main route runs on bus lanes. */
+  busLanes: LineBusLanes[];
 }
 
 /** Hours of the service day: 3–23, then 24–26 after midnight. */
@@ -203,4 +219,38 @@ export interface LineVehicles {
     brigade: string;
     spells: { number: string; from: string; to: string }[];
   }[];
+}
+
+/** Who runs a line: BKM organises, a company (KPKM, KPK or KZK) operates it from its depot. */
+export interface LineOperator {
+  organiser: string;
+  code: string;
+  name: string;
+  website: string | null;
+  depot: string | null;
+  depotAddress: string | null;
+}
+
+/** A bus depot: the company whose it is, and its area (closed rings of [lat, lon]). */
+export interface LineDepot {
+  code: string;
+  name: string;
+  address: string | null;
+  outlines: [number, number][][];
+}
+
+/**
+ * Where brigades start their day (pull_out: the first stop of their first trip) or end it (pull_in), with the way
+ * between there and the depot: along the streets (`routed`) or, when that couldn't be found, straight.
+ */
+export interface DepotLink {
+  kind: 'pull_out' | 'pull_in';
+  stop: string;
+  lat: number;
+  lon: number;
+  /** The depot's code. */
+  depot: string;
+  brigades: number;
+  path: [number, number][];
+  routed: boolean;
 }

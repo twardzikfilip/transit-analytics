@@ -29,6 +29,9 @@ import { LiveMap } from './live-map/live-map';
 import { Positions } from './positions/positions';
 import { RoutesPage } from './routes/routes';
 
+/** A compact replay row: vehicle, latitude, longitude, delay, line and brigade indexes. */
+type ReplayRow = [number, number, number, number | null, number | null, number | null];
+
 afterEach(() => {
   // Destroy the pages (and their maps) first: Leaflet keeps redrawing on animation frames until a map is removed.
   TestBed.resetTestingModule();
@@ -224,7 +227,9 @@ describe('Position history controls', () => {
       { queryParams, queryParamsHandling: 'merge' },
     ];
 
-    const presets = [...el.querySelectorAll('app-time-window .presets button')] as HTMLButtonElement[];
+    const presets = [
+      ...el.querySelectorAll('app-time-window .presets button'),
+    ] as HTMLButtonElement[];
     presets.find((b) => text(b) === '30 min')!.click();
     expect(navigate).toHaveBeenLastCalledWith(
       ...merge({ range: '30m', from: null, to: null, page: null }),
@@ -290,23 +295,18 @@ describe('Delays player', () => {
       routes: ['103'],
       vehicles: ['230', '009'],
       lines: ['103'],
+      brigades: ['103-05'],
       frames: [
         {
           time: '2026-11-16T11:00:00Z',
-          positions: [[0, 53.13, 23.16, 120, 0]] as [
-            number,
-            number,
-            number,
-            number | null,
-            number | null,
-          ][],
+          positions: [[0, 53.13, 23.16, 120, 0, 0]] as ReplayRow[],
         },
         {
           time: '2026-11-16T11:01:00Z',
           positions: [
-            [0, 53.131, 23.161, 180, 0],
-            [1, 53.12, 23.15, -60, null],
-          ] as [number, number, number, number | null, number | null][],
+            [0, 53.131, 23.161, 180, 0, 0],
+            [1, 53.12, 23.15, -60, null, null],
+          ] as ReplayRow[],
         },
       ],
     };
@@ -332,6 +332,64 @@ describe('Delays player', () => {
     timeline.dispatchEvent(new Event('input'));
     render();
     expect(text(el.querySelector('.time .muted'))).toBe('· 2 vehicles');
+  });
+
+  it("shows a bus's brigade and the rest of its day at the replay's moment", async () => {
+    useSvgMaps();
+    const run = (from: string, to: string) => ({
+      line: '103',
+      headsign: 'Choroszcz',
+      from: 'Piastowska',
+      to: 'Choroszcz',
+      departure: `2026-11-16T${from}:00Z`,
+      arrival: `2026-11-16T${to}:00Z`,
+    });
+    const schedule = vi.fn(() =>
+      of({
+        brigade: '103-05',
+        serviceDay: '2026-11-16',
+        runs: [run('09:00', '09:40'), run('10:30', '11:20'), run('11:40', '12:20')],
+      }),
+    );
+    const replay = {
+      from: '2026-11-16T11:00:00Z',
+      to: '2026-11-16T11:02:00Z',
+      stepSeconds: 60,
+      routes: [],
+      vehicles: ['230'],
+      lines: ['103'],
+      brigades: ['103-05'],
+      frames: [
+        { time: '2026-11-16T11:00:00Z', positions: [[0, 53.13, 23.16, 120, 0, 0]] as ReplayRow[] },
+      ],
+    };
+    const { el, render, fixture } = renderPage(
+      Delays,
+      stateAfter(
+        delayReplayFeature,
+        DelayReplayActions.load({ query: { from: replay.from, to: replay.to, routes: [] } }),
+        DelayReplayActions.replayLoaded({ replay }),
+      ),
+      {},
+      [{ provide: BrigadeApi, useValue: { schedule } }],
+    );
+    await fixture.whenStable();
+    render();
+    (el.querySelector('button.play') as HTMLButtonElement).click();
+    render();
+    expect(el.querySelectorAll('.leaflet-city-boundaries-pane path')).toHaveLength(2);
+    expect(text(el.querySelector('.legend'))).toContain('City limits');
+
+    const marker = el.querySelector('.leaflet-overlay-pane path.leaflet-interactive')!;
+    marker.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    // The schedule of the day being replayed, not today's.
+    expect(schedule).toHaveBeenCalledWith('103-05', new Date('2026-11-16T11:00:00Z'));
+    const popup = el.querySelector('.leaflet-popup-content')!;
+    expect(text(popup)).toContain('bus 230');
+    expect(text(popup.querySelector('.brigade'))).toContain('Brigade 103-05 · rest of that day');
+    const runs = [...popup.querySelectorAll('ol.runs li')];
+    expect(runs).toHaveLength(2);
+    expect(runs[0].classList).toContain('now');
   });
 });
 
@@ -453,8 +511,11 @@ describe('Live map page', () => {
     expect(marker.getAttribute('fill')).toBe('#d7301f');
     expect(marker.getAttribute('stroke')).toBe('#111111');
 
+    // The city limits and centre are drawn under the vehicles, and don't take clicks.
+    expect(el.querySelectorAll('.leaflet-city-boundaries-pane path')).toHaveLength(2);
+
     marker.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(schedule).toHaveBeenCalledWith('103-01');
+    expect(schedule).toHaveBeenCalledWith('103-01', undefined);
     const popup = el.querySelector('.leaflet-popup-content')!;
     expect(text(popup.querySelector('.brigade > strong'))).toBe('Brigade 103-01');
     const runs = [...popup.querySelectorAll('ol.runs li')];
@@ -465,8 +526,24 @@ describe('Live map page', () => {
 
 describe('Routes page', () => {
   const lines = [
-    { id: 1, line: '5', name: '5', subtype: 'urban' as const },
-    { id: 2, line: '103', name: '103', subtype: 'suburban' as const },
+    {
+      id: 1,
+      line: '5',
+      name: '5',
+      subtype: 'urban' as const,
+      geometry: 'arcantial' as const,
+      capacityClass: 'main' as const,
+      operatingAgency: 'KPKM',
+    },
+    {
+      id: 2,
+      line: '103',
+      name: '103',
+      subtype: 'suburban' as const,
+      geometry: 'arcantial' as const,
+      capacityClass: 'secondary' as const,
+      operatingAgency: 'KZK',
+    },
   ];
 
   it('loads the lines and the line in the URL, defaulting to the first line', () => {
@@ -480,20 +557,42 @@ describe('Routes page', () => {
     );
     expect(withUrl.store.dispatch).toHaveBeenCalledWith(RouteDetailActions.loadLines());
     expect(withUrl.store.dispatch).toHaveBeenCalledWith(RouteDetailActions.select({ line: '103' }));
-    expect([...withUrl.el.querySelectorAll('.group-label')].map(text)).toEqual([
-      'Urban',
-      'Suburban',
+    // A row per kind of line, a column per geometry; the buttons show the capacity class.
+    const table = withUrl.el.querySelector('table.lines')!;
+    expect([...table.querySelectorAll('tbody th')].map(text)).toEqual(['Urban', 'Suburban']);
+    expect([...table.querySelectorAll('thead th')].map(text)).toEqual([
+      'Kind of line',
+      'Radial',
+      'Diameter',
+      'Arcantial',
+      'Tangential',
+      'Feeder',
+    ]);
+    const five = [...table.querySelectorAll('.chip')].find((b) => text(b) === '5')!;
+    expect(five.classList).toContain('capacity-main');
+    expect(five.closest('td')).toBe(
+      table.querySelectorAll('tbody tr')[0].querySelectorAll('td')[2],
+    );
+    expect(five.getAttribute('title')).toBe('Line 5: arcantial, main capacity');
+    expect([...withUrl.el.querySelectorAll('.capacity-legend li')].map(text).slice(0, 5)).toEqual([
+      '12 Main',
+      '12 Primary',
+      '12 Secondary',
+      '12 Tertiary',
+      '12 Irregular',
     ]);
     expect(text(withUrl.el.querySelector('.chip[aria-pressed=true]'))).toBe('103');
   });
 
-  it('defaults to the first line, and shows the line with its sections once loaded', () => {
+  it('defaults to the first line, and shows the line with its sections once loaded', async () => {
     useSvgMaps();
     const detail = {
       id: 2,
       line: '103',
       name: '103',
       subtype: 'suburban',
+      geometry: 'arcantial',
+      capacityClass: 'secondary',
       serviceId: 'P_1349',
       url: 'https://komunikacja.bialystok.pl/#/route/103',
       base: {
@@ -529,6 +628,62 @@ describe('Routes page', () => {
       endStops: [{ name: 'Piastowska', alsoNames: [] }],
       depotStops: [],
       depotRuns: [],
+      operator: {
+        organiser: 'BKM',
+        code: 'KZK',
+        name: 'Komunalny Zakład Komunikacyjny sp. z o.o.',
+        website: 'https://www.kzk.pl',
+        depot: 'Zajezdnia autobusowa KZK',
+        depotAddress: 'ul. Pomocna 1',
+      },
+      depots: [
+        {
+          code: 'KZK',
+          name: 'Zajezdnia autobusowa KZK',
+          address: 'ul. Pomocna 1',
+          outlines: [
+            [
+              [53.138, 23.196],
+              [53.139, 23.197],
+              [53.138, 23.198],
+              [53.138, 23.196],
+            ],
+          ],
+        },
+        {
+          code: 'KPKM',
+          name: 'Zajezdnia autobusowa KPKM',
+          address: 'ul. Składowa 11',
+          outlines: [
+            [
+              [53.116, 23.129],
+              [53.117, 23.13],
+              [53.116, 23.131],
+              [53.116, 23.129],
+            ],
+          ],
+        },
+      ],
+      depotLinks: [
+        {
+          kind: 'pull_out',
+          stop: 'Piastowska',
+          lat: 53.1,
+          lon: 23.1,
+          depot: 'KZK',
+          brigades: 2,
+          path: [
+            [53.138, 23.197],
+            [53.12, 23.15],
+            [53.1, 23.1],
+          ],
+          routed: true,
+        },
+      ],
+      busLanes: [
+        { direction: 0, from: 'Piastowska', to: 'Choroszcz', km: 12.5, laneKm: 1.9, percent: 15.2, onLanes: [] },
+        { direction: 1, from: 'Choroszcz', to: 'Piastowska', km: 12.4, laneKm: 2.3, percent: 18.5, onLanes: [] },
+      ],
     } as unknown as LineDetail;
     const performance = {
       firstDay: '2026-11-06',
@@ -540,7 +695,7 @@ describe('Routes page', () => {
       segments: [],
       vehicles: { days: 7, vehicles: [], brigades: [], switches: [] },
     } as LinePerformance;
-    const { el, store } = renderPage(
+    const { el, store, fixture } = renderPage(
       RoutesPage,
       stateAfter(
         routeDetailFeature,
@@ -553,7 +708,39 @@ describe('Routes page', () => {
 
     expect(store.dispatch).toHaveBeenCalledWith(RouteDetailActions.select({ line: '5' }));
     expect(text(el.querySelector('.line-title h2'))).toBe('Piastowska ⇄ Choroszcz/Cmentarz');
+    // Every depot's area, the operator's named; a dashed way from it to where brigades start.
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect([...el.querySelectorAll('.leaflet-tooltip.depot-label')].map(text)).toEqual([
+      'Zajezdnia autobusowa KZK, ul. Pomocna 1',
+    ]);
+    const dashed = [...el.querySelectorAll('.map .leaflet-overlay-pane path')].filter(
+      (p) => p.getAttribute('stroke-dasharray') === '8 6',
+    );
+    expect(dashed).toHaveLength(1);
+    expect(text(el.querySelector('.map-legend'))).toContain(
+      'Depot to where buses start or end their day (dashed)',
+    );
+    expect(text(el.querySelector('.map-legend'))).toContain('City centre (for line classes)');
+    // City limits and the line-classification centre, under the line.
+    expect(el.querySelectorAll('.leaflet-city-boundaries-pane path').length).toBeGreaterThan(0);
+    // Who runs it.
+    expect(text(el.querySelector('.line-title .operator'))).toContain(
+      'Organised by BKM; operated by KZK (Komunalny Zakład Komunikacyjny sp. z o.o.), from Zajezdnia autobusowa KZK, ' +
+        'ul. Pomocna 1. KZK website ↗',
+    );
+    // How much of it runs on bus lanes, drawn on the map too.
+    expect(text(el.querySelector('.line-title .bus-lanes'))).toBe(
+      'On bus lanes: to Choroszcz 1.9 of 12.5 km (15%); to Piastowska 2.3 of 12.4 km (19%) Bus lanes ↗',
+    );
+    expect(el.querySelectorAll('.leaflet-bus-lanes-pane path')).toHaveLength(2);
+    expect(text(el.querySelector('.map-legend'))).toContain('Bus lane');
     expect(text(el.querySelector('.line-title .muted'))).toBe('Suburban line');
+    expect([...el.querySelectorAll('.line-classes dt')].map(text)).toEqual([
+      'Arcantial',
+      'Secondary capacity',
+    ]);
+    expect(text(el.querySelector('.line-classes dd'))).toContain('Two radial legs at an angle');
     expect(el.querySelectorAll('app-variant-tiles .tile')).toHaveLength(5);
     expect(text(el.querySelector('app-travel-charts'))).toContain('109 full runs');
     const links = [...el.querySelectorAll('.line-links a')] as HTMLAnchorElement[];
@@ -564,7 +751,18 @@ describe('Routes page', () => {
 
   it("adds a row of regional lines, and shows one that isn't in the timetable from recordings", () => {
     useSvgMaps();
-    const regional = [...lines, { id: null, line: '700', name: '700', subtype: 'regional' as const }];
+    const regional = [
+      ...lines,
+      {
+        id: null,
+        line: '700',
+        name: '700',
+        subtype: 'regional' as const,
+        geometry: null,
+        capacityClass: null,
+        operatingAgency: null,
+      },
+    ];
     const detail = {
       id: null,
       line: '700',
@@ -579,6 +777,10 @@ describe('Routes page', () => {
       endStops: [],
       depotStops: [],
       depotRuns: [],
+      operator: null,
+      depots: [],
+      depotLinks: [],
+      busLanes: [],
     } as unknown as LineDetail;
     const performance = {
       firstDay: '2026-11-06',
@@ -590,7 +792,15 @@ describe('Routes page', () => {
       segments: [],
       vehicles: {
         days: 9,
-        vehicles: [{ number: 'BIA 1050', model: null, days: 9, brigades: ['700-01'], lastSeen: '2026-11-16T10:00:00Z' }],
+        vehicles: [
+          {
+            number: 'BIA 1050',
+            model: null,
+            days: 9,
+            brigades: ['700-01'],
+            lastSeen: '2026-11-16T10:00:00Z',
+          },
+        ],
         brigades: [],
         switches: [],
       },
@@ -607,7 +817,15 @@ describe('Routes page', () => {
       { line: '700' },
     );
 
-    expect([...el.querySelectorAll('.group-label')].map(text)).toEqual(['Urban', 'Suburban', 'Regional']);
+    expect([...el.querySelectorAll('table.lines tbody th')].map(text)).toEqual([
+      'Urban',
+      'Suburban',
+      'Regional',
+    ]);
+    // Other operators' lines aren't classified: a column of their own.
+    expect(text(el.querySelector('table.lines thead th:last-child'))).toBe('Not classified');
+    expect(el.querySelector('.chip[aria-pressed=true]')!.classList).toContain('capacity-none');
+    expect(el.querySelector('.line-classes')).toBeNull();
     expect(text(el.querySelector('.chip[aria-pressed=true]'))).toBe('700');
     expect(text(el.querySelector('.line-title h2'))).toBe('Line 700');
     expect(el.querySelectorAll('.line-links a')).toHaveLength(0);
