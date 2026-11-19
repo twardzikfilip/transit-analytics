@@ -4,7 +4,7 @@ import com.transitanalytics.DbIntegrationTest;
 import com.transitanalytics.buslanes.BusLaneProperties;
 import com.transitanalytics.buslanes.BusLanes;
 import com.transitanalytics.dto.BusLaneDto;
-import com.transitanalytics.dto.LivePositionDto;
+import com.transitanalytics.zbiorkom.FeedPosition;
 import com.transitanalytics.recording.PositionSampleWriter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -110,8 +110,8 @@ class BusLaneReportIntegrationTest {
                        long delay, long dDelay, int reports) {
         Instant t = ServiceDay.gtfsTimeZero(DAY).plusSeconds(LocalTime.parse(start).toSecondOfDay());
         for (int i = 0; i < reports; i++) {
-            writer.write(List.of(new LivePositionDto(vehicle, "x", "BUS", "BKM", null, line, null, line + "-01",
-                    "Test", lat + i * dLat, lon + i * dLon, null, delay + i * dDelay, t, List.of(), null)), t);
+            writer.write(List.of(new FeedPosition(vehicle, "x", "BUS", "BKM", null, line, null, line + "-01",
+                    "Test", lat + i * dLat, lon + i * dLon, null, delay + i * dDelay, t, List.of())), t);
             t = t.plusSeconds(20);
         }
     }

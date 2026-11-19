@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +37,28 @@ public class VehicleClasses {
             }
         }
         log.info("Vehicle classes applied; {} vehicles changed", changed);
+    }
+
+    /**
+     * Classes the buses transit-recorder registered since (it stores a new bus's number, type and model only), every
+     * few minutes.
+     *
+     * @return how many were classed
+     */
+    @Scheduled(fixedDelayString = "${app.vehicle-classes.sweep-every:5m}",
+            initialDelayString = "${app.vehicle-classes.sweep-every:5m}")
+    @Transactional
+    public int applyToNew() {
+        int changed = 0;
+        for (Vehicle v : vehicles.findByVehicleClassIsNullAndModelIsNotNull()) {
+            if (apply(v, classifier.classify(v.getModel()))) {
+                changed++;
+            }
+        }
+        if (changed > 0) {
+            log.info("Vehicle classes applied to {} new vehicles", changed);
+        }
+        return changed;
     }
 
     /**

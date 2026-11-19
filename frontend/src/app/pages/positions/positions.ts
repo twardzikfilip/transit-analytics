@@ -52,7 +52,9 @@ export class Positions {
     if (!q) return '';
     // All time: the series says where the recording starts.
     const from = q.from ?? this.series()?.from ?? null;
-    const window = from ? windowLabel(from, q.to) : `until ${windowLabel(q.to, q.to).split(' – ')[0]}`;
+    const window = from
+      ? windowLabel(from, q.to)
+      : `until ${windowLabel(q.to, q.to).split(' – ')[0]}`;
     return `${window} · ${q.route ? 'line ' + q.route : 'all lines'}`;
   });
 
@@ -78,19 +80,30 @@ export class Positions {
   /** URL state. */
   protected readonly route = computed(() => this.params().get('route') ?? '');
 
-  /** Chart inputs derived from the loaded series: vehicles running, and mean delay in minutes. */
+  /**
+   * Chart inputs: the span is always the selected window (the query), so the axis follows a new window at once;
+   * the points are the loaded series' within it. While another window loads, the previous one's points inside the
+   * new window stay (they are real data there) and the rest are left out, so nothing from outside it is shown.
+   */
   protected readonly charts = computed(() => {
     const s = this.series();
     if (!s) return null;
-    const time = (t: string) => Date.parse(t);
+    const q = this.query();
+    // All time: the series says where the recording starts.
+    const from = q?.from ? Date.parse(q.from) : Date.parse(s.from);
+    const to = q ? Date.parse(q.to) : Date.parse(s.to);
+    const points = s.points
+      .map((p) => ({ ...p, t: Date.parse(p.time) }))
+      .filter((p) => p.t >= from && p.t < to);
     return {
-      from: Date.parse(s.from),
-      to: Date.parse(s.to),
+      from,
+      to,
       stepMs: s.stepSeconds * 1000,
-      vehicles: s.points.map((p) => ({ time: time(p.time), value: p.vehicles })),
-      delay: s.points
+      rows: points,
+      vehicles: points.map((p) => ({ time: p.t, value: p.vehicles })),
+      delay: points
         .filter((p) => p.meanDelaySeconds !== null)
-        .map((p) => ({ time: time(p.time), value: p.meanDelaySeconds! / 60 })),
+        .map((p) => ({ time: p.t, value: p.meanDelaySeconds! / 60 })),
     };
   });
 
@@ -100,7 +113,7 @@ export class Positions {
   protected readonly formatDelay = formatDelay;
   protected readonly formatShare = formatShare;
 
-  /** "every 20 s (each poll)", "every minute", or "per 10 min" for longer windows. */
+  /** "every 10 s (each poll)", "every minute", or "per 10 min" for longer windows. */
   protected readonly stepLabel = computed(() => {
     const seconds = this.series()?.stepSeconds ?? 60;
     if (seconds < 60) return `every ${seconds} s (each poll)`;

@@ -35,6 +35,9 @@ spring:
     placeholders:
       # Password of the read-only grafana_reader role (V8). Must match GRAFANA_DB_PASSWORD in docker-compose.yml.
       grafana_db_password: ${GRAFANA_DB_PASSWORD:grafana_reader}
+      # Password of the transit_recorder role (V16) transit-recorder logs in with. Must match RECORDER_DB_PASSWORD
+      # in docker-compose.yml.
+      recorder_db_password: ${RECORDER_DB_PASSWORD:transit_recorder}
 
 app:
   jwt:
@@ -49,16 +52,11 @@ app:
     read-timeout: 10s
     bialystok:
       bbox: ${ZBIORKOM_BIALYSTOK_BBOX:22.921150,53.016270,23.382496,53.243687}
-  recording:
-    # Poll the zbiorkom Białystok feed and store every vehicle position (position_sample) plus the raw response.
-    enabled: ${RECORDING_ENABLED:true}
-    cron: "*/20 * * * * *"         # every 20 seconds
-    zone: Europe/Warsaw
-    window-start: "03:30"
-    window-end: "01:30"
-    min-interval: 18s              # never poll more than once in 20 seconds
-    archive-dir: ${RECORDING_ARCHIVE_DIR:data/raw}
-    import-dir:                    # set to backfill saved snapshots, then the app exits
+  # transit-recorder (backend/recorder) polls the zbiorkom feed every 10 seconds and stores the positions; the Live
+  # map takes its latest snapshot from there, and asks zbiorkom.live itself when the recorder doesn't answer.
+  recorder:
+    url: ${RECORDER_URL:http://localhost:8081}
+    timeout: 2s
   gtfs:
     connect-timeout: 5s
     read-timeout: 60s

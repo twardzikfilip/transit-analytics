@@ -32,7 +32,7 @@ final class TripAnomalies {
 
     /** A report matches a trip scheduled to leave its next stop at most this far from the report's scheduled time. */
     static final Duration MATCH_TOLERANCE = Duration.ofMinutes(20);
-    /** A run counts as started if first seen heading to one of the trip's first stops (reports come every 20 s). */
+    /** A run counts as started if first seen heading to one of the trip's first stops (reports come every 10 s). */
     static final int START_STOPS = 3;
     /** …and as finished if last seen heading to one of its last two stops. */
     static final int END_STOPS = 2;

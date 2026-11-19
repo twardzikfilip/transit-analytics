@@ -18,6 +18,31 @@ services:
       timeout: 3s
       retries: 10
 
+  # transit-recorder: polls the zbiorkom.live feed every 10 seconds and stores the positions, on its own so backend
+  # restarts lose nothing. Restarts by itself (crash, reboot); upgrade it with backend/recorder/upgrade.sh. Runs as
+  # your user so it can write the archive in backend/data (RECORDER_UID/GID if yours isn't 1000).
+  recorder:
+    build: ./backend/recorder
+    image: transit-recorder
+    container_name: transit-recorder
+    restart: unless-stopped
+    user: "${RECORDER_UID:-1000}:${RECORDER_GID:-1000}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/transit
+      DB_USER: transit_recorder
+      # Must match RECORDER_DB_PASSWORD given to the backend, which sets the role's password (migration V16).
+      DB_PASSWORD: ${RECORDER_DB_PASSWORD:-transit_recorder}
+      OTLP_ENDPOINT: http://otel-lgtm:4318
+    ports:
+      - "127.0.0.1:8081:8081"   # the latest snapshot for the backend's Live map; health at /actuator/health
+    volumes:
+      - ./backend/data/raw:/data/raw
+      - ./backend/data/spool:/data/spool
+    stop_grace_period: 20s
+
   # Local observability: OpenTelemetry collector + Tempo (traces) + Prometheus (metrics) + Loki (logs)
   # + Grafana at http://localhost:3000. Development only; telemetry is kept in the lgtmdata volume.
   otel-lgtm:

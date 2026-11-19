@@ -197,7 +197,7 @@ describe('Position history page', () => {
       }),
     );
     const before = vi.mocked(store.dispatch).mock.calls.length;
-    vi.advanceTimersByTime(20_000);
+    vi.advanceTimersByTime(10_000);
     expect(vi.mocked(store.dispatch).mock.calls.length).toBe(before + 2);
   });
 
@@ -208,6 +208,67 @@ describe('Position history page', () => {
     const before = vi.mocked(preset.store.dispatch).mock.calls.length;
     vi.advanceTimersByTime(60_000);
     expect(vi.mocked(preset.store.dispatch).mock.calls.length).toBe(before + 2);
+  });
+});
+
+describe('Position history charts', () => {
+  const series = (from: string, to: string, times: string[]) => ({
+    from,
+    to,
+    stepSeconds: 60,
+    route: null,
+    points: times.map((time) => ({
+      time,
+      vehicles: 100,
+      peakVehicles: 110,
+      samples: 500,
+      meanDelaySeconds: 60,
+    })),
+    summary: {
+      samples: 500,
+      vehicles: 120,
+      peakVehicles: 110,
+      latestVehicles: 100,
+      latestPoll: to,
+      meanDelaySeconds: 60,
+      first: from,
+      last: to,
+    },
+  });
+
+  it("span the selected window at once, leaving out the previous window's points outside it", () => {
+    const old = series('2026-11-17T08:00:00Z', '2026-11-17T12:00:00Z', [
+      '2026-11-17T09:00:00Z',
+      '2026-11-17T10:00:00Z',
+      '2026-11-17T11:00:00Z',
+    ]);
+    // A new window, 10:00–14:00, chosen; its series hasn't arrived yet.
+    const query = { from: '2026-11-17T10:00:00.000Z', to: '2026-11-17T14:00:00.000Z', route: null };
+    const { fixture } = renderPage(
+      Positions,
+      stateAfter(
+        positionHistoryFeature,
+        PositionHistoryActions.load({
+          query: { from: '2026-11-17T08:00:00.000Z', to: '2026-11-17T12:00:00.000Z', route: null },
+        }),
+        PositionHistoryActions.fleetLoaded({ series: old }),
+        PositionHistoryActions.load({ query }),
+      ),
+      { from: '2026-11-17T10:00:00Z', to: '2026-11-17T14:00:00Z' },
+    );
+    const charts = (
+      fixture.componentInstance as unknown as {
+        charts: () => { from: number; to: number; vehicles: { time: number }[]; rows: unknown[] };
+      }
+    ).charts()!;
+
+    expect(charts.from).toBe(Date.parse(query.from));
+    expect(charts.to).toBe(Date.parse(query.to));
+    expect(charts.vehicles.map((p) => new Date(p.time).toISOString())).toEqual([
+      '2026-11-17T10:00:00.000Z',
+      '2026-11-17T11:00:00.000Z',
+    ]);
+    expect(charts.rows).toHaveLength(2);
   });
 });
 
@@ -681,8 +742,24 @@ describe('Routes page', () => {
         },
       ],
       busLanes: [
-        { direction: 0, from: 'Piastowska', to: 'Choroszcz', km: 12.5, laneKm: 1.9, percent: 15.2, onLanes: [] },
-        { direction: 1, from: 'Choroszcz', to: 'Piastowska', km: 12.4, laneKm: 2.3, percent: 18.5, onLanes: [] },
+        {
+          direction: 0,
+          from: 'Piastowska',
+          to: 'Choroszcz',
+          km: 12.5,
+          laneKm: 1.9,
+          percent: 15.2,
+          onLanes: [],
+        },
+        {
+          direction: 1,
+          from: 'Choroszcz',
+          to: 'Piastowska',
+          km: 12.4,
+          laneKm: 2.3,
+          percent: 18.5,
+          onLanes: [],
+        },
       ],
     } as unknown as LineDetail;
     const performance = {

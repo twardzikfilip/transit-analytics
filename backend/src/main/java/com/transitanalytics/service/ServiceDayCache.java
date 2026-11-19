@@ -17,7 +17,7 @@ import java.util.function.BiFunction;
  *
  * @param <T> a row
  */
-final class ServiceDayCache<T> {
+public final class ServiceDayCache<T> {
 
     /** A service day's rows are kept once it ended this long ago (late reports have arrived by then). */
     static final Duration DAY_SETTLES = Duration.ofMinutes(10);
@@ -29,13 +29,13 @@ final class ServiceDayCache<T> {
     private final BiFunction<Instant, Instant, List<T>> query;
     private final Map<LocalDate, List<T>> days = new ConcurrentHashMap<>();
 
-    ServiceDayCache(Clock clock, BiFunction<Instant, Instant, List<T>> query) {
+    public ServiceDayCache(Clock clock, BiFunction<Instant, Instant, List<T>> query) {
         this.clock = clock;
         this.query = query;
     }
 
     /** The rows in {@code [from, to)}, day by day. */
-    List<T> get(Instant from, Instant to) {
+    public List<T> get(Instant from, Instant to) {
         Instant now = clock.instant();
         List<T> all = new ArrayList<>();
         for (LocalDate day = ServiceDay.serviceDay(from); ServiceDay.start(day).isBefore(to); day = day.plusDays(1)) {

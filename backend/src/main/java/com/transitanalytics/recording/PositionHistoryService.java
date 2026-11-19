@@ -6,12 +6,18 @@ import com.transitanalytics.zbiorkom.ZbiorkomBialystokService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import com.transitanalytics.service.ServiceDayCache;
+import com.transitanalytics.service.WarmUp;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.stereotype.Service;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -34,8 +40,8 @@ public class PositionHistoryService {
             Duration.ofMinutes(15), Duration.ofMinutes(30), Duration.ofHours(1), Duration.ofHours(3),
             Duration.ofHours(6), Duration.ofDays(1));
     static final int MAX_POINTS = 1500;
-    /** One poll per point (positions are recorded every 20 seconds), for short windows. */
-    static final Duration FINE_STEP = Duration.ofSeconds(20);
+    /** One poll per point (positions are recorded every 10 seconds), for short windows. */
+    static final Duration FINE_STEP = Duration.ofSeconds(10);
     /** Longest window shown poll by poll; longer ones would have gaps where older data was recorded every minute. */
     static final Duration FINE_WINDOW = Duration.ofHours(1);
     static final int MAX_PAGE_SIZE = 500;
@@ -71,76 +77,110 @@ public class PositionHistoryService {
     private static final Duration SLACK = Duration.ofMinutes(15);
 
     private final JdbcTemplate jdbc;
+    private final TransactionTemplate transaction;
+    private final Clock clock;
+    private final Map<String, ServiceDayCache<FleetPolls.Part>> fleetDays = new java.util.HashMap<>();
 
-    public PositionHistoryService(JdbcTemplate jdbc) {
+    public PositionHistoryService(JdbcTemplate jdbc, TransactionTemplate transaction, Clock clock) {
         this.jdbc = jdbc;
+        this.transaction = transaction;
+        this.clock = clock;
     }
 
-    /**
-     * Reports from a minute before {@code from}, so vehicles that reported just before the window count as running
-     * at its start, and when each vehicle is running. A vehicle is running at a poll when it reported in the minute up
-     * to it: each report covers the next minute, or the time until the vehicle's next report. This doesn't depend on
-     * how often the feed is polled, nor on vehicles that skip a poll now and then.
-     */
-    private static final String RUNNING = """
-            WITH r AS (
-                SELECT coalesce(fetched_at, observed_at) AS poll, observed_at, vehicle_id, delay_seconds
-                FROM position_sample
-                WHERE %s%s),
-            spans AS (
-                SELECT poll AS start,
-                       least(lead(poll) OVER (PARTITION BY vehicle_id ORDER BY poll), poll + interval '1 minute') AS stop
-                FROM r),
-            running AS (
-                SELECT t, sum(sum(d)) OVER (ORDER BY t) AS vehicles
-                FROM (SELECT start AS t, 1 AS d FROM spans UNION ALL SELECT stop, -1 FROM spans) events
-                GROUP BY t),
-            w AS (SELECT * FROM r WHERE poll >= ?),
-            polls AS (
-                SELECT w.poll, max(n.vehicles) AS vehicles, count(*) AS reports, sum(w.delay_seconds) AS delay_sum,
-                       count(w.delay_seconds) AS delay_count
-                FROM w JOIN running n ON n.t = w.poll
-                GROUP BY w.poll)
-            """;
-    /** How far before the window reports are read, so vehicles running at its start are counted. */
-    private static final Duration RUNNING_LOOKBACK = Duration.ofMinutes(1);
+    /** Reads the last week's polls at startup, in the background, so the first visit doesn't wait for them. */
+    @EventListener(value = ApplicationReadyEvent.class, condition = WarmUp.ENABLED)
+    public void warmUp() {
+        Instant now = clock.instant();
+        WarmUp.inBackground("position history", PositionHistoryService.class,
+                () -> fleet(now.minus(Duration.ofDays(7)), now, null));
+    }
 
-    /** Vehicles running and mean delay per bucket, plus totals, for polls in {@code [from, to)}. */
+    /** How far before the window reports are read, so vehicles running at its start are counted. */
+    private static final Duration RUNNING_LOOKBACK = FleetPolls.REPORT_COVERS;
+    /** Lines whose polls are kept (all lines, and the lines looked at most recently). */
+    private static final int CACHED_ROUTES = 16;
+
+    /**
+     * Vehicles running and mean delay per bucket, plus totals, for polls in {@code [from, to)}. Worked out per service
+     * day; days that are over are kept, so only today is read again (see {@link FleetPolls} for what "running" is).
+     */
     public PositionHistoryDto.FleetSeries fleet(Instant from, Instant to, String route) {
         validate(from, to);
         Duration step = stepFor(from, to);
-        String routeFilter = route == null ? "" : " AND route_name = ?";
-        String running = RUNNING.formatted(WINDOW, routeFilter);
+        List<FleetPolls.Part> parts = days(route).get(from, to);
+        List<FleetPolls.Poll> polls = FleetPolls.between(parts, from, to);
 
-        List<Object> args = runningArgs(from, to, route);
-        args.add(step.toSeconds());
-        // Per poll first, then per bucket: vehicles = average per poll, delay = mean of reports.
-        // Buckets are aligned to the epoch (UTC), so they stay the same when the window moves.
-        List<PositionHistoryDto.FleetPoint> points = jdbc.query(running + """
-                SELECT time_bucket(make_interval(secs => ?::integer), poll) AS bucket,
-                       avg(vehicles)::double precision AS vehicles, max(vehicles) AS peak, sum(reports) AS samples,
-                       sum(delay_sum)::double precision / nullif(sum(delay_count), 0) AS mean_delay
-                FROM polls
-                GROUP BY bucket ORDER BY bucket""",
-                (rs, i) -> new PositionHistoryDto.FleetPoint(instant(rs, "bucket"), rs.getDouble("vehicles"),
-                        rs.getLong("peak"), rs.getLong("samples"), nullableDouble(rs, "mean_delay")),
-                args.toArray());
+        // Per poll first, then per bucket: vehicles = average per poll, delay = mean of reports. Buckets are aligned
+        // to the epoch (UTC), so they stay the same when the window moves.
+        long stepMs = step.toMillis();
+        List<PositionHistoryDto.FleetPoint> points = new ArrayList<>();
+        for (int i = 0; i < polls.size(); ) {
+            long bucket = Math.floorDiv(polls.get(i).time().toEpochMilli(), stepMs) * stepMs;
+            double vehicles = 0;
+            long peak = 0;
+            long reports = 0;
+            long delaySum = 0;
+            long delayCount = 0;
+            int n = 0;
+            for (; i < polls.size() && Math.floorDiv(polls.get(i).time().toEpochMilli(), stepMs) * stepMs == bucket;
+                 i++, n++) {
+                FleetPolls.Poll p = polls.get(i);
+                vehicles += p.vehicles();
+                peak = Math.max(peak, p.vehicles());
+                reports += p.reports();
+                delaySum += p.delaySum();
+                delayCount += p.delayCount();
+            }
+            points.add(new PositionHistoryDto.FleetPoint(Instant.ofEpochMilli(bucket), vehicles / n, peak, reports,
+                    delayCount == 0 ? null : (double) delaySum / delayCount));
+        }
 
-        PositionHistoryDto.Summary summary = jdbc.queryForObject(running + """
-                SELECT (SELECT count(*) FROM w) AS samples,
-                       (SELECT count(DISTINCT vehicle_id) FROM w) AS vehicles,
-                       (SELECT coalesce(max(vehicles), 0) FROM polls) AS peak,
-                       (SELECT vehicles FROM polls ORDER BY poll DESC LIMIT 1) AS latest,
-                       (SELECT max(poll) FROM polls) AS latest_poll,
-                       (SELECT avg(delay_seconds)::double precision FROM w) AS mean_delay,
-                       (SELECT min(observed_at) FROM w) AS first,
-                       (SELECT max(observed_at) FROM w) AS last""",
-                (rs, i) -> new PositionHistoryDto.Summary(rs.getLong("samples"), rs.getLong("vehicles"),
-                        rs.getLong("peak"), rs.getLong("latest"), instant(rs, "latest_poll"),
-                        nullableDouble(rs, "mean_delay"), instant(rs, "first"), instant(rs, "last")),
-                runningArgs(from, to, route).toArray());
-
+        long reports = polls.stream().mapToLong(FleetPolls.Poll::reports).sum();
+        long delaySum = polls.stream().mapToLong(FleetPolls.Poll::delaySum).sum();
+        long delayCount = polls.stream().mapToLong(FleetPolls.Poll::delayCount).sum();
+        java.util.Set<Long> vehicles = new java.util.HashSet<>();
+        parts.forEach(p -> vehicles.addAll(p.vehicles()));
+        FleetPolls.Poll latest = polls.isEmpty() ? null : polls.get(polls.size() - 1);
+        var summary = new PositionHistoryDto.Summary(reports, vehicles.size(),
+                polls.stream().mapToLong(FleetPolls.Poll::vehicles).max().orElse(0),
+                latest == null ? 0 : latest.vehicles(), latest == null ? null : latest.time(),
+                delayCount == 0 ? null : (double) delaySum / delayCount,
+                parts.stream().map(FleetPolls.Part::first).filter(java.util.Objects::nonNull).min(Instant::compareTo)
+                        .orElse(null),
+                parts.stream().map(FleetPolls.Part::last).filter(java.util.Objects::nonNull).max(Instant::compareTo)
+                        .orElse(null));
         return new PositionHistoryDto.FleetSeries(from, to, step.toSeconds(), route, points, summary);
+    }
+
+    /** The polls of a line (or all lines, null), by service day. */
+    private ServiceDayCache<FleetPolls.Part> days(String route) {
+        String key = route == null ? "" : route;
+        synchronized (fleetDays) {
+            if (!fleetDays.containsKey(key) && fleetDays.size() >= CACHED_ROUTES) {
+                fleetDays.keySet().removeIf(k -> !k.isEmpty());
+            }
+            return fleetDays.computeIfAbsent(key,
+                    k -> new ServiceDayCache<>(clock, (from, to) -> List.of(readPolls(from, to, route))));
+        }
+    }
+
+    /** The polls in {@code [from, to)}, from the reports since a minute before (read in one pass, streamed). */
+    FleetPolls.Part readPolls(Instant from, Instant to, String route) {
+        String routeFilter = route == null ? "" : " AND route_name = ?";
+        List<FleetPolls.Report> reports = new ArrayList<>();
+        transaction.executeWithoutResult(status -> {
+            JdbcTemplate streaming = new JdbcTemplate(jdbc.getDataSource());
+            streaming.setFetchSize(10_000);
+            streaming.query("""
+                    SELECT coalesce(fetched_at, observed_at) AS poll, observed_at, vehicle_id, delay_seconds
+                    FROM position_sample
+                    WHERE %s%s""".formatted(WINDOW, routeFilter),
+                    (org.springframework.jdbc.core.RowCallbackHandler) rs -> reports.add(new FleetPolls.Report(
+                            rs.getTimestamp("poll").getTime(), rs.getTimestamp("observed_at").getTime(),
+                            rs.getLong("vehicle_id"), (Integer) rs.getObject("delay_seconds", Integer.class))),
+                    window(from.minus(RUNNING_LOOKBACK), to, route).toArray());
+        });
+        return FleetPolls.polls(reports, from);
     }
 
     /**
@@ -342,13 +382,6 @@ public class PositionHistoryService {
                         nullableInt(rs, "bearing"), nullableInt(rs, "delay_seconds"), rs.getString("next_stop_name")),
                 pageArgs.toArray());
         return new PageImpl<>(content, PageRequest.of(page, size), total == null ? 0 : total);
-    }
-
-    /** Arguments for {@link #RUNNING}: reports from a minute before the window, then the window's start. */
-    private static List<Object> runningArgs(Instant from, Instant to, String route) {
-        List<Object> args = window(from.minus(RUNNING_LOOKBACK), to, route);
-        args.add(ts(from));
-        return args;
     }
 
     /** Arguments for the window condition, followed by the line when filtering by one. */

@@ -22,8 +22,4 @@ public final class VehicleDto {
     public record Response(Long id, String vehicleNumber, String type, Integer capacity, String agency, String model,
                            VehicleClass vehicleClass) {
     }
-
-    /** A vehicle seen in an external feed, registered if it is not stored yet. */
-    public record Discovered(String vehicleNumber, String type, String agency, String model) {
-    }
 }

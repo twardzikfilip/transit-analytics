@@ -1,7 +1,7 @@
 package com.transitanalytics.service;
 
 import com.transitanalytics.DbIntegrationTest;
-import com.transitanalytics.dto.LivePositionDto;
+import com.transitanalytics.zbiorkom.FeedPosition;
 import com.transitanalytics.dto.TripAnomalyDto;
 import com.transitanalytics.recording.PositionSampleWriter;
 import org.junit.jupiter.api.Test;
@@ -117,8 +117,8 @@ class TripAnomalyIntegrationTest {
     }
 
     private void report(long vehicle, String brigade, Instant t, int nextStop, double lat, double lon) {
-        writer.write(List.of(new LivePositionDto(vehicle, "x", "BUS", "BKM", null, "IT-TA", null, brigade, "IT-TA 4",
-                lat, lon, 0.0, 0L, t, List.of(new LivePositionDto.UpcomingStop(nextStop, "IT-TA " + nextStop, null,
-                null)), null)), t);
+        writer.write(List.of(new FeedPosition(vehicle, "x", "BUS", "BKM", null, "IT-TA", null, brigade, "IT-TA 4",
+                lat, lon, 0.0, 0L, t, List.of(new FeedPosition.UpcomingStop(nextStop, "IT-TA " + nextStop, null,
+                null)))), t);
     }
 }

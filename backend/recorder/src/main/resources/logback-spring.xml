@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Spring Boot's default console pattern; it includes [traceId-spanId] when a request is traced.
+         For JSON console output, include structured-console-appender.xml instead and set
+         logging.structured.format.console (ecs, gelf or logstash). -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+
+    <!-- Ships log records over OTLP; attached to the OpenTelemetry SDK by OtelLogbackInstaller. -->
+    <appender name="OTEL" class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender">
+        <captureExperimentalAttributes>false</captureExperimentalAttributes>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="OTEL"/>
+    </root>
+</configuration>

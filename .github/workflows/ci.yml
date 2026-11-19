@@ -42,7 +42,8 @@ jobs:
     env:
       INTEGRATION_TESTS: "true"
       DB_URL: jdbc:postgresql://localhost:5432/transit
-      # The app would poll the live feed and export telemetry; the tests switch both off, this keeps it that way.
+      # The recorder would poll the live feed and the apps export telemetry; the tests switch both off, this keeps it
+      # that way.
       RECORDING_ENABLED: "false"
     steps:
       - uses: actions/checkout@v4
@@ -51,7 +52,8 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
-      # check = compile, all tests (integration ones too, with INTEGRATION_TESTS), JaCoCo report and coverage rule.
+      # check = compile, all tests (integration ones too, with INTEGRATION_TESTS), JaCoCo report and coverage rule, for
+      # the backend and its subprojects: zbiorkom-feed (shared feed code) and recorder (transit-recorder).
       - run: ./gradlew check --no-daemon
       - name: Upload test and coverage reports
         if: always()
@@ -61,6 +63,8 @@ jobs:
           path: |
             backend/build/reports/tests/test/
             backend/build/reports/jacoco/test/
+            backend/*/build/reports/tests/test/
+            backend/*/build/reports/jacoco/test/
           retention-days: 14
 
   frontend:

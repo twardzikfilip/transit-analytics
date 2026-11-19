@@ -33,8 +33,8 @@ export const WINDOW_PRESETS: readonly WindowPreset[] = [
   { key: 'all', label: 'All time', ms: null },
 ];
 
-/** Positions are recorded every 20 seconds; windows up to an hour end at the next poll, longer ones each minute. */
-export const POLL_MS = 20_000;
+/** Positions are recorded every 10 seconds; windows up to an hour end at the next poll, longer ones each minute. */
+export const POLL_MS = 10_000;
 const SHORT_WINDOW_MS = HOUR;
 
 export interface TimeWindow {

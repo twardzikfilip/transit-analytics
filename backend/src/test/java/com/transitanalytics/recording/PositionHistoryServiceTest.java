@@ -15,8 +15,8 @@ class PositionHistoryServiceTest {
 
     @Test
     void picksEachPollUpToAnHourOneMinuteUpToADayAndCoarserStepsBeyond() {
-        assertThat(PositionHistoryService.stepFor(T, T.plus(Duration.ofMinutes(1)))).isEqualTo(Duration.ofSeconds(20));
-        assertThat(PositionHistoryService.stepFor(T, T.plus(Duration.ofHours(1)))).isEqualTo(Duration.ofSeconds(20));
+        assertThat(PositionHistoryService.stepFor(T, T.plus(Duration.ofMinutes(1)))).isEqualTo(Duration.ofSeconds(10));
+        assertThat(PositionHistoryService.stepFor(T, T.plus(Duration.ofHours(1)))).isEqualTo(Duration.ofSeconds(10));
         assertThat(PositionHistoryService.stepFor(T, T.plus(Duration.ofHours(3)))).isEqualTo(Duration.ofMinutes(1));
         assertThat(PositionHistoryService.stepFor(T, T.plus(Duration.ofHours(24)))).isEqualTo(Duration.ofMinutes(1));
         assertThat(PositionHistoryService.stepFor(T, T.plus(Duration.ofDays(7)))).isEqualTo(Duration.ofMinutes(10));
