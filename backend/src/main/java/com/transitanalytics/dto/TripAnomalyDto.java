@@ -66,6 +66,8 @@ public final class TripAnomalyDto {
      * @param detourMeters  how far it went from the route at most
      * @param detourMinutes how long it was off the route
      * @param detourFrom    the stop before the detour, and {@code detourTo} the next stop it reported after
+     * @param detourPath    on a detour, the bus's path {lat, lon}: its reports off the route, with a few either side
+     * @param detourRoute   …and the usual route around it, {lat, lon}
      * @param changeFate    on a change of bus, what became of the replaced bus: broken-down (not used again that
      *                      day), reassigned (used on another line or brigade) or returned (back on the brigade)
      * @param replacementLine the line the replacement bus ran before taking over, and {@code replacementBrigade}
@@ -79,14 +81,38 @@ public final class TripAnomalyDto {
      * @param skippedStops  stops between the two that neither bus was seen heading to; 0 when the replacement took over
      *                      at the same place
      * @param changeAt      on a change of bus, when the replaced bus stopped for good
+     * @param stoodMinutes  when the replaced bus wasn't used again: how long it stood where it stopped
+     * @param stoodThen     …and what it did next: vanished (stopped reporting while recording went on), drove-off
+     *                      (moved away without running a brigade) or still-there (standing at the last report)
+     * @param stoodLastSeen its last report that day, and {@code stoodLastSeenMeters} how far that was from where it
+     *                      stopped
+     * @param story         on a change of bus, what happened step by step, in time order
+     * @param timeline      on a change of bus, what each bus did when, for a time line
      */
     public record Trip(String kind, String note, String tripId, String line, String brigade, String headsign,
                        String firstStop, String lastStop, Instant scheduledDeparture, Instant scheduledArrival,
                        int stops, List<String> vehicles, Integer fromStop, Integer toStop, String coveredFrom,
                        String coveredTo, Instant firstSeen, Instant lastSeen, Integer startDelay, Integer maxDelay,
                        Integer endDelay, Integer detourMeters, Integer detourMinutes, String detourFrom,
-                       String detourTo, String changeFate, String replacementLine, String replacementBrigade,
+                       String detourTo, List<double[]> detourPath, List<double[]> detourRoute, String changeFate,
+                       String replacementLine, String replacementBrigade,
                        Integer changeMinutes, Integer delayBeforeChange, Integer delayAfterChange, String changeStop,
-                       String joinStop, Integer skippedStops, Instant changeAt) {
+                       String joinStop, Integer skippedStops, Instant changeAt, Integer stoodMinutes,
+                       String stoodThen, Instant stoodLastSeen, Integer stoodLastSeenMeters, List<Step> story,
+                       List<Span> timeline) {
+    }
+
+    /** One step of what happened at a change of bus. */
+    public record Step(Instant at, String text) {
+    }
+
+    /**
+     * A stretch of a bus's time around a change of bus.
+     *
+     * @param kind running (the replaced bus on the trip), standing (it stood where it stopped), moving (it moved
+     *             off without a brigade), approach (the replacement on its way, without the brigade) or service (on a
+     *             brigade: the replacement on the trip and on, or the replaced bus used again, as a moment)
+     */
+    public record Span(String vehicle, String kind, Instant from, Instant to) {
     }
 }

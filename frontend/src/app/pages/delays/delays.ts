@@ -35,8 +35,25 @@ import {
 } from './replay';
 import { escapeHtml } from '../../shared/format/html';
 import { createBaseMap } from '../../shared/map/base-map';
+import { injectBusLanes } from '../../shared/map/bus-lanes';
+import { injectCityBoundaries } from '../../shared/map/city-boundaries';
+import { BOUNDARY_STYLES, BUS_LANE_STYLE } from '../../shared/palette';
+import {
+  BrigadeSchedules,
+  brigadeSection,
+  serviceDayOf,
+} from '../../shared/brigade/brigade-schedules';
 
 export const DEFAULT_PRESET = '1h';
+
+/** The replay moment in a popup, e.g. "Mon 16 Nov, 11:05". */
+const POPUP_TIME = new Intl.DateTimeFormat('en-GB', {
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+});
 
 /**
  * Delays: an animated replay of recorded vehicle positions for a time window and lines, each vehicle coloured by how
@@ -59,6 +76,11 @@ export class Delays {
   protected readonly speeds = SPEEDS;
   protected readonly legend = DELAY_STOPS;
   protected readonly noDelayColor = NO_DELAY_COLOR;
+  protected readonly boundaries = [
+    BOUNDARY_STYLES.city,
+    BOUNDARY_STYLES.centre,
+    { color: BUS_LANE_STYLE.color, dashArray: undefined, label: BUS_LANE_STYLE.label },
+  ];
 
   protected readonly routes = this.store.selectSignal(delayReplayFeature.selectRoutes);
   protected readonly loading = this.store.selectSignal(delayReplayFeature.selectLoading);
@@ -102,10 +124,18 @@ export class Delays {
   private readonly markers = new Map<string, L.CircleMarker>();
   /** Latest shown state per vehicle, for tooltips. */
   private readonly shown = new Map<string, ReplayPosition>();
+  /** The vehicle whose popup is open: it follows the replay clock. */
+  private popupVehicle: string | null = null;
+  /** Brigade schedules for popups, for the service day being replayed. */
+  private readonly schedules = new BrigadeSchedules(() => this.refreshPopup());
+  private readonly drawBoundaries = injectCityBoundaries();
+  private readonly drawBusLanes = injectBusLanes();
 
   constructor() {
     afterNextRender(() => {
       this.map = createBaseMap(this.mapEl().nativeElement, { canvas: true });
+      this.drawBoundaries(this.map);
+      this.drawBusLanes(this.map);
       this.mapReady.set(true);
     });
     this.destroyRef.onDestroy(() => {
@@ -234,6 +264,7 @@ export class Delays {
       this.now.set(this.clock);
       this.visibleCount.set(positions.length);
       this.average.set(averageDelay(positions));
+      this.refreshPopup();
     }
   }
 
@@ -257,6 +288,14 @@ export class Delays {
           fillOpacity: 0.95,
         })
           .bindTooltip(() => this.tooltip(p.vehicle), { direction: 'top', offset: [0, -6] })
+          .bindPopup('', { maxWidth: 320 })
+          .on('popupopen', () => {
+            this.popupVehicle = p.vehicle;
+            this.refreshPopup();
+          })
+          .on('popupclose', () => {
+            if (this.popupVehicle === p.vehicle) this.popupVehicle = null;
+          })
           .addTo(this.map);
         this.markers.set(p.vehicle, marker);
       }
@@ -273,12 +312,32 @@ export class Delays {
   private tooltip(vehicle: string): string {
     const p = this.shown.get(vehicle);
     if (!p) return '';
-    const delay =
-      p.delaySeconds === null
-        ? 'delay unknown'
-        : p.delaySeconds < 60
-          ? 'on time'
-          : `${formatDelay(p.delaySeconds)} min late`;
-    return `<strong>Line ${escapeHtml(p.line ?? '?')}</strong> · bus ${escapeHtml(vehicle)}<br>${delay}`;
+    const brigade = p.brigade ? ` · brigade ${escapeHtml(p.brigade)}` : '';
+    return `<strong>Line ${escapeHtml(p.line ?? '?')}</strong> · bus ${escapeHtml(vehicle)}${brigade}<br>${delayText(p)}`;
   }
+
+  /**
+   * The open popup at the replay's moment: the bus, and its brigade with the rest of that day's plan. Fetches the
+   * brigade's schedule for the day being replayed when it isn't at hand.
+   */
+  private refreshPopup(): void {
+    const vehicle = this.popupVehicle;
+    const p = vehicle ? this.shown.get(vehicle) : undefined;
+    const marker = vehicle ? this.markers.get(vehicle) : undefined;
+    if (!p || !marker) return;
+    const at = new Date(this.clock);
+    const schedule = p.brigade ? this.schedules.get(p.brigade, at) : undefined;
+    const today = serviceDayOf(at) === serviceDayOf(new Date());
+    const html =
+      `<strong>Line ${escapeHtml(p.line ?? '?')}</strong> · bus ${escapeHtml(vehicle!)}<br>${delayText(p)}` +
+      `<br><span class="muted">as of ${POPUP_TIME.format(at)}</span>` +
+      brigadeSection(p.brigade, schedule, at, today);
+    // Redrawn about ten times a second while playing: only touch the DOM when something changed.
+    if (marker.getPopup()?.getContent() !== html) marker.setPopupContent(html);
+  }
+}
+
+function delayText(p: ReplayPosition): string {
+  if (p.delaySeconds === null) return 'delay unknown';
+  return p.delaySeconds < 60 ? 'on time' : `${formatDelay(p.delaySeconds)} min late`;
 }

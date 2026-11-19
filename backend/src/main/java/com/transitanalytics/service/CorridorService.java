@@ -43,7 +43,7 @@ public class CorridorService {
     }
 
     /** Computes the corridors once at startup, in the background, so the first visit doesn't wait for it. */
-    @EventListener(ApplicationReadyEvent.class)
+    @EventListener(value = ApplicationReadyEvent.class, condition = WarmUp.ENABLED)
     public void warmUp() {
         WarmUp.inBackground("corridors", CorridorService.class, this::corridors);
     }

@@ -1,0 +1,128 @@
+:host {
+  display: block;
+  font-size: 0.8rem;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+}
+
+/* Stretch colours by what the bus was doing; the legend and tooltips name them. */
+.swatch,
+.bar {
+  &.running {
+    background: var(--chart-line);
+  }
+
+  &.standing {
+    background: var(--danger);
+  }
+
+  &.moving {
+    background: var(--depot);
+  }
+
+  &.approach {
+    background: repeating-linear-gradient(45deg, var(--muted) 0 2px, transparent 2px 5px);
+    box-shadow: inset 0 0 0 1px var(--muted);
+  }
+
+  &.service {
+    background: var(--chart-series-3);
+  }
+}
+
+.swatch {
+  display: inline-block;
+  width: 16px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 1.5rem;
+}
+
+.lane-label {
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.track {
+  position: relative;
+  height: 1.25rem;
+}
+
+.lane {
+  border-bottom: 1px solid var(--border);
+}
+
+/* Thin bars with a rounded end, a 2px surface gap between neighbours. */
+.bar {
+  position: absolute;
+  top: 0.3rem;
+  height: 0.65rem;
+  border-radius: 2px 4px 4px 2px;
+  box-sizing: border-box;
+  border-right: 2px solid var(--surface);
+}
+
+.steps-row .track {
+  height: 2.4rem;
+}
+
+.step {
+  position: absolute;
+  top: 1.2rem;
+  transform: translateX(-50%);
+  min-width: 1.1rem;
+  height: 1.1rem;
+  border: 1px solid var(--fg);
+  border-radius: 50%;
+  background: var(--surface);
+  font-size: 0.7rem;
+  line-height: 1.05rem;
+  text-align: center;
+  cursor: default;
+
+  &.lift {
+    top: 0;
+  }
+}
+
+.axis .track {
+  height: 1rem;
+}
+
+.tick {
+  position: absolute;
+  transform: translateX(-50%);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: -0.3rem;
+    height: 0.25rem;
+    border-left: 1px solid var(--border);
+  }
+}

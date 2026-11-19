@@ -8,6 +8,20 @@ server:
 spring:
   application:
     name: transit-analytics
+  config:
+    # Vehicle and line classifications, in their own files. A copy in ./config/classification/ (next to the jar or
+    # where the app is started) overrides the built-in one without rebuilding.
+    import:
+      - classpath:classification/vehicles.yml
+      - classpath:classification/routes.yml
+      - optional:file:./config/classification/vehicles.yml
+      - optional:file:./config/classification/routes.yml
+      - classpath:classification/operators.yml
+      - optional:file:./config/classification/operators.yml
+      - classpath:map/depots.yml
+      - optional:file:./config/map/depots.yml
+      - classpath:map/bus-lanes.yml
+      - optional:file:./config/map/bus-lanes.yml
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/transit}
     username: ${DB_USER:transit}

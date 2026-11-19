@@ -5,7 +5,7 @@ import {
   TripAnomalyLine,
   TripAnomalySummary,
 } from '../../core/models/models';
-import { formatDelay } from '../../shared/format/time';
+import { duration, formatDelay } from '../../shared/format/time';
 
 /** Kinds of abnormal trip, the most serious first, with where their count is in the summary and per line. */
 export const KINDS: {
@@ -84,6 +84,26 @@ export function replacementFrom(trip: AbnormalTrip): string {
 export function joinedAt(trip: AbnormalTrip): string {
   if (!trip.skippedStops) return 'Took over at the same place';
   return `Joined ${trip.skippedStops} ${trip.skippedStops === 1 ? 'stop' : 'stops'} further on`;
+}
+
+/**
+ * What the replaced bus did when it wasn't used again: "Old bus stood 34 min, then went silent"; null when there's
+ * nothing to tell (no change of bus, or the old bus was used again).
+ */
+export function stoodLabel(trip: AbnormalTrip): string | null {
+  if (trip.stoodThen === null || trip.stoodMinutes === null) return null;
+  const stood = trip.stoodMinutes ? `Old bus stood ${duration(trip.stoodMinutes)}` : 'Old bus';
+  switch (trip.stoodThen) {
+    case 'still-there':
+      return `Old bus still standing there (${duration(trip.stoodMinutes)})`;
+    case 'vanished':
+      return trip.stoodMinutes ? `${stood}, then went silent` : 'Old bus went silent right away';
+    case 'drove-off': {
+      const m = trip.stoodLastSeenMeters ?? 0;
+      const away = m < 1000 ? `${Math.round(m / 50) * 50} m` : `${(m / 1000).toFixed(1)} km`;
+      return `${trip.stoodMinutes ? `${stood}, then` : 'Old bus'} moved off ${away}`;
+    }
+  }
 }
 
 export function kindLabel(kind: TripAnomalyKind): string {

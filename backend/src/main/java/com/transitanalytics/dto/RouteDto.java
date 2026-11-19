@@ -1,5 +1,7 @@
 package com.transitanalytics.dto;
 
+import com.transitanalytics.domain.RouteCapacity;
+import com.transitanalytics.domain.RouteGeometry;
 import com.transitanalytics.domain.RouteSubtype;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -31,7 +33,8 @@ public final class RouteDto {
     /** @param name what riders see: the short name, or the long name when there is none */
     public record Response(Long id, String gtfsId, Long agencyId, String agencyName, String name, String shortName,
                            String longName, String description, Short routeType, String url, String color,
-                           String textColor, Integer sortOrder, RouteSubtype subtype) {
+                           String textColor, Integer sortOrder, RouteSubtype subtype, RouteGeometry geometry,
+                           RouteCapacity capacityClass, String operatingAgency) {
     }
 
     /**

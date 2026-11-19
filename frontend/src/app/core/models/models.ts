@@ -10,3 +10,5 @@ export * from './fleet';
 export * from './hotspots';
 export * from './delay-generation';
 export * from './trip-anomalies';
+export * from './boundaries';
+export * from './bus-lanes';

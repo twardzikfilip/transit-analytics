@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import {
+  BoundaryApi,
   BrigadeApi,
   CorridorApi,
   DelayGenerationApi,
@@ -101,6 +102,12 @@ describe('API clients', () => {
     http.expectOne('/api/brigades/103-05/schedule').flush({});
     TestBed.inject(BrigadeApi).schedule('a/b').subscribe();
     http.expectOne('/api/brigades/a%2Fb/schedule').flush({});
+    TestBed.inject(BrigadeApi).schedule('103-05', new Date('2026-11-16T10:00:00Z')).subscribe();
+    http.expectOne('/api/brigades/103-05/schedule?at=2026-11-16T10:00:00.000Z').flush({});
+    // Boundaries are fetched once and shared.
+    TestBed.inject(BoundaryApi).boundaries().subscribe();
+    TestBed.inject(BoundaryApi).boundaries().subscribe();
+    http.expectOne('/api/boundaries').flush({ city: [], centre: [] });
 
     TestBed.inject(FleetApi).report({ from: null, to: 'B' }).subscribe();
     const req = http.expectOne((r) => r.url === '/api/fleet');

@@ -1,0 +1,95 @@
+# Bus depots (zajezdnie) of the BKM operators, drawn on the Routes map with the way buses probably drive between
+# a depot and where they enter or leave service. Outlines: OpenStreetMap ways (© OpenStreetMap contributors, ODbL),
+# fetched 18 Nov 2026; addresses from the companies' and Wikipedia's pages. Edit and restart; a copy in ./config/map/
+# overrides this one.
+app:
+  map:
+    # Driving routes between depots and stops: an OSRM server (the public demo by default; only coordinates are
+    # sent). Off, or when it fails, the line is drawn straight.
+    routing:
+      enabled: true
+      url: "https://router.project-osrm.org"
+      timeout: 5s
+    depots:
+      - code: KPKM
+        name: "Zajezdnia autobusowa KPKM"
+        address: "ul. Składowa 11"
+        source: "OpenStreetMap way 220402880"
+        outlines:
+          -
+            - [53.117714, 23.128188]
+            - [53.118053, 23.129489]
+            - [53.116783, 23.130547]
+            - [53.116699, 23.130255]
+            - [53.115605, 23.131205]
+            - [53.115184, 23.129898]
+            - [53.116434, 23.128878]
+            - [53.116536, 23.1292]
+            - [53.117714, 23.128188]
+      - code: KPK
+        name: "Zajezdnia autobusowa KPK"
+        address: "ul. Składowa 7"
+        source: "OpenStreetMap ways 495724445 and 220322778 (part of the depot)"
+        outlines:
+          -
+            - [53.119225, 23.125275]
+            - [53.119209, 23.125356]
+            - [53.119113, 23.12544]
+            - [53.118571, 23.12589]
+            - [53.118477, 23.125969]
+            - [53.119265, 23.128479]
+            - [53.119711, 23.128012]
+            - [53.119842, 23.127413]
+            - [53.120123, 23.127157]
+            - [53.120091, 23.12703]
+            - [53.120079, 23.126977]
+            - [53.120069, 23.126934]
+            - [53.119749, 23.125733]
+            - [53.119566, 23.125075]
+            - [53.119549, 23.125013]
+            - [53.119225, 23.125275]
+          -
+            - [53.116321, 23.128016]
+            - [53.116288, 23.128039]
+            - [53.116361, 23.128286]
+            - [53.116326, 23.128318]
+            - [53.116586, 23.129142]
+            - [53.117724, 23.128167]
+            - [53.117663, 23.127903]
+            - [53.117451, 23.127108]
+            - [53.117355, 23.127181]
+            - [53.117322, 23.127209]
+            - [53.117308, 23.12719]
+            - [53.117266, 23.127051]
+            - [53.117247, 23.127027]
+            - [53.117224, 23.127019]
+            - [53.116322, 23.127778]
+            - [53.116316, 23.127816]
+            - [53.116356, 23.127988]
+            - [53.116321, 23.128016]
+      - code: KZK
+        name: "Zajezdnia autobusowa KZK"
+        address: "ul. Pomocna 1"
+        source: "OpenStreetMap way 415109743; KZK's new depot (2023), replacing the one on ul. Jurowiecka 46a"
+        outlines:
+          -
+            - [53.139086, 23.195502]
+            - [53.139169, 23.196465]
+            - [53.139136, 23.196523]
+            - [53.139141, 23.196594]
+            - [53.139143, 23.196696]
+            - [53.139182, 23.19676]
+            - [53.139193, 23.197437]
+            - [53.139166, 23.197699]
+            - [53.139089, 23.197998]
+            - [53.13904, 23.19802]
+            - [53.139022, 23.198109]
+            - [53.138992, 23.198193]
+            - [53.139009, 23.198301]
+            - [53.138895, 23.198743]
+            - [53.138315, 23.198239]
+            - [53.137737, 23.197706]
+            - [53.137938, 23.196248]
+            - [53.137748, 23.196146]
+            - [53.137982, 23.194876]
+            - [53.139086, 23.195502]

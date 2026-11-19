@@ -7,3 +7,5 @@ export * from './corridors.api';
 export * from './hotspots.api';
 export * from './delay-generation.api';
 export * from './trip-anomalies.api';
+export * from './boundaries.api';
+export * from './bus-lanes.api';

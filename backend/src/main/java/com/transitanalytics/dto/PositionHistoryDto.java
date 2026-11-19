@@ -65,17 +65,18 @@ public final class PositionHistoryDto {
      * @param routes      the line filter, or empty for all lines
      * @param vehicles    vehicle numbers; frame positions refer to them by index
      * @param lines       line names; frame positions refer to them by index
+     * @param brigades    brigades (vehicle duties, e.g. 024-02); frame positions refer to them by index
      * @param frames      only frames with data, in time order
      */
     public record Replay(Instant from, Instant to, long stepSeconds, List<String> routes, List<String> vehicles,
-                         List<String> lines, List<Frame> frames) {
+                         List<String> lines, List<String> brigades, List<Frame> frames) {
     }
 
     /**
      * The latest position of every vehicle in one step.
      *
      * @param positions compact rows {@code [vehicleIndex, latitude, longitude, delaySeconds or null,
-     *                  lineIndex or null]} to keep a day of frames small
+     *                  lineIndex or null, brigadeIndex or null]} to keep a day of frames small
      */
     public record Frame(Instant time, List<List<Object>> positions) {
     }

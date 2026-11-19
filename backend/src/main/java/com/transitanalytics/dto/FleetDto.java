@@ -1,5 +1,6 @@
 package com.transitanalytics.dto;
 
+import com.transitanalytics.domain.VehicleClass;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -10,7 +11,7 @@ public final class FleetDto {
     private FleetDto() {
     }
 
-    public record Vehicle(long id, String number, String model, String agency) {
+    public record Vehicle(long id, String number, String model, String agency, VehicleClass vehicleClass) {
     }
 
     /**
@@ -18,6 +19,8 @@ public final class FleetDto {
      * @param fleet      buses of the chosen operators: every bus ever seen on the live feed
      * @param agencies   every operator of the fleet, with its number of buses, to choose from
      * @param models     buses per model, in use and in the fleet, the most in use first
+     * @param classes    buses per size class ("unknown" for models without one), smallest to largest
+     * @param makes      buses per make (the model name's first word), the most in use first
      * @param mostUsed   the 10 in service the longest
      * @param leastUsed  the 10 in service the shortest, of those that served a line at all
      * @param usage      every bus of the chosen operators (and any other vehicle that served a line), the longest in
@@ -25,7 +28,8 @@ public final class FleetDto {
      * @param breakdowns buses that broke down in the window, the latest first
      */
     public record Report(Instant from, Instant to, int inUse, int fleet, List<Agency> agencies,
-                         List<ModelCount> models, List<Usage> mostUsed, List<Usage> leastUsed, List<Usage> usage,
+                         List<ModelCount> models, List<ModelCount> classes, List<ModelCount> makes,
+                         List<Usage> mostUsed, List<Usage> leastUsed, List<Usage> usage,
                          List<Breakdown> breakdowns) {
     }
 
@@ -33,7 +37,10 @@ public final class FleetDto {
     public record Agency(String name, int vehicles) {
     }
 
-    /** A model ("unknown" when the feed doesn't say) and how many of its buses were in use, of how many. */
+    /**
+     * A model ("unknown" when the feed doesn't say) and how many of its buses were in use, of how many; also used for
+     * size classes and makes.
+     */
     public record ModelCount(String model, int inUse, int fleet) {
     }
 
@@ -90,10 +97,22 @@ public final class FleetDto {
     /**
      * An abnormal trip a bus was involved in.
      *
-     * @param kind vehicle-changed (it broke down: replaced and not used again that day) or missed (its brigade's trip
-     *             not run while it ran the brigade's other trips)
+     * @param kind     vehicle-changed (it broke down: replaced and not used again that day) or missed (its brigade's
+     *                 trip not run while it ran the brigade's other trips)
+     * @param story    on a breakdown, what happened step by step, in time order; empty otherwise
+     * @param timeline on a breakdown, what each bus (it and its replacement) did when
+     * @param paths    on a breakdown, where each of those buses went over the time line, for a map
      */
     public record Incident(String kind, LocalDate day, String line, String brigade, String headsign,
-                           Instant scheduledDeparture, String note) {
+                           Instant scheduledDeparture, String note, List<TripAnomalyDto.Step> story,
+                           List<TripAnomalyDto.Span> timeline, List<Path> paths) {
+
+        public Incident withPaths(List<Path> paths) {
+            return new Incident(kind, day, line, brigade, headsign, scheduledDeparture, note, story, timeline, paths);
+        }
+    }
+
+    /** A bus's recorded positions in order, {latitude, longitude}. */
+    public record Path(String vehicle, List<double[]> points) {
     }
 }

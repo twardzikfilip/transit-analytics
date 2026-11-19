@@ -22,12 +22,24 @@ import { EndStops } from './end-stops';
 import { LineVehiclesSection } from './line-vehicles';
 import { clock, duration } from '../../shared/format/time';
 import { cssColor } from '../../shared/palette';
-import { SUBTYPES, groupLines, subtypeLabel, variantKindLabel } from './format';
+import {
+  CAPACITIES,
+  GEOMETRIES,
+  SUBTYPES,
+  capacityLabel,
+  geometryLabel,
+  lineTable,
+  subtypeLabel,
+  variantKindLabel,
+} from './format';
 import { SegmentChart } from './segment-chart';
 import { TravelCharts } from './travel-charts';
 import { VariantTiles } from './variant-tiles';
 import { DepotRuns } from './depot-runs';
 import { createBaseMap } from '../../shared/map/base-map';
+import { injectBusLanes } from '../../shared/map/bus-lanes';
+import { injectCityBoundaries } from '../../shared/map/city-boundaries';
+import { BOUNDARY_STYLES, BUS_LANE_STYLE } from '../../shared/palette';
 
 /**
  * Routes: pick a line (city, suburban, night or regional) to see it on the map with its variants, its timetable
@@ -68,7 +80,21 @@ export class RoutesPage {
   );
   protected readonly error = this.store.selectSignal(routeDetailFeature.selectError);
 
-  protected readonly groups = computed(() => groupLines(this.lines()));
+  /** The lines to pick: a row per kind of line, a column per geometry; the buttons show the capacity. */
+  protected readonly table = computed(() => lineTable(this.lines()));
+  protected readonly capacities = CAPACITIES;
+  protected readonly geometries = GEOMETRIES;
+  protected readonly capacityLabel = capacityLabel;
+  protected readonly geometryLabel = geometryLabel;
+  /** What a line's classes mean, for the line title. */
+  protected readonly classes = computed(() => {
+    const d = this.detail();
+    if (!d) return null;
+    return {
+      geometry: GEOMETRIES.find((g) => g.geometry === d.geometry) ?? null,
+      capacity: CAPACITIES.find((c) => c.capacity === d.capacityClass) ?? null,
+    };
+  });
   /** The line in the URL (?line=103), else the first line. */
   protected readonly selected = computed(
     () => this.params().get('line') ?? this.lines()[0]?.line ?? null,
@@ -91,6 +117,11 @@ export class RoutesPage {
   private map?: L.Map;
   private readonly mapReady = signal(false);
   private layers?: L.LayerGroup;
+  /** City limits, and the centre lines are classified by (geometry). */
+  private readonly drawBoundaries = injectCityBoundaries('lineCentre');
+  private readonly drawBusLanes = injectBusLanes();
+  protected readonly busLaneStyle = BUS_LANE_STYLE;
+  protected readonly boundaryStyles = BOUNDARY_STYLES;
 
   constructor() {
     this.store.dispatch(RouteDetailActions.loadLines());
@@ -107,6 +138,8 @@ export class RoutesPage {
 
     afterNextRender(() => {
       this.map = createBaseMap(this.mapEl().nativeElement, { canvas: true });
+      this.drawBoundaries(this.map);
+      this.drawBusLanes(this.map);
       this.layers = L.layerGroup().addTo(this.map);
       this.mapReady.set(true);
     });
@@ -129,7 +162,8 @@ export class RoutesPage {
 
   /**
    * Base routes thick, other variants thin and dashed in the same colour, depot runs dotted in yellow; stops as small
-   * circles, zone 2 filled.
+   * circles, zone 2 filled; every depot's area, and dashed yellow lines along the streets between the operator's
+   * depot and where the line's brigades start and end their day.
    */
   private drawRoute(detail: LineDetail): void {
     const layers = this.layers!;
@@ -174,10 +208,58 @@ export class RoutesPage {
         bounds.extend([s.lat, s.lon]);
       }
     }
+    // Every depot's area, the one this line's operator runs from named.
+    const own = detail.operator?.code;
+    for (const d of detail.depots) {
+      for (const ring of d.outlines) {
+        const area = L.polygon(ring, {
+          color: '#1f2933',
+          weight: d.code === own ? 2.5 : 1.5,
+          fillColor: depotColor,
+          fillOpacity: d.code === own ? 0.6 : 0.35,
+        })
+          .bindTooltip(`${d.name}${d.address ? ', ' + d.address : ''}`, {
+            permanent: d.code === own && ring === d.outlines[0],
+            direction: 'right',
+            className: 'depot-label',
+          })
+          .addTo(layers);
+        if (d.code === own) ring.forEach((p) => bounds.extend(p));
+        if (d.code !== own) area.bringToBack();
+      }
+    }
+    // The way between the depot and where brigades start or end their day: along the streets, dashed.
+    for (const l of detail.depotLinks) {
+      const out = l.kind === 'pull_out';
+      const depot = detail.depots.find((d) => d.code === l.depot)?.name ?? l.depot;
+      L.polyline(l.path, { color: depotColor, weight: 3, dashArray: '8 6', opacity: 0.95 })
+        .bindTooltip(
+          (out
+            ? `${brigadesText(l.brigades)} from ${depot} start at ${l.stop}`
+            : `${brigadesText(l.brigades)} end at ${l.stop} and go back to ${depot}`) +
+            (l.routed ? '' : ' (straight line: no street route found)'),
+          { sticky: true },
+        )
+        .addTo(layers);
+      L.circleMarker([l.lat, l.lon], {
+        radius: 6,
+        color: depotColor,
+        weight: 3,
+        fillColor: '#ffffff',
+        fillOpacity: 1,
+      })
+        .bindTooltip(`${l.stop}: ${out ? 'buses enter service' : 'buses leave service'}`)
+        .addTo(layers);
+      l.path.forEach((p) => bounds.extend(p));
+    }
     // The map may just have been shown again (it is hidden for lines without a timetable).
     this.map!.invalidateSize();
     if (bounds.isValid()) this.map!.fitBounds(bounds, { padding: [24, 24] });
   }
+}
+
+function brigadesText(n: number): string {
+  return n === 1 ? '1 brigade' : `${n} brigades`;
 }
 
 function variantLabel(v: LineVariant): string {

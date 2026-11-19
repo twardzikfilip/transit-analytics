@@ -139,6 +139,7 @@ describe('position history and delay replay effects', () => {
       routes: [],
       vehicles: [],
       lines: [],
+      brigades: [],
       frames: [],
     };
     const api = {

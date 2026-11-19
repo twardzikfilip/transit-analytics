@@ -12,6 +12,7 @@ describe('delay replay reducer', () => {
     routes: ['103'],
     vehicles: [],
     lines: [],
+    brigades: [],
     frames: [],
   };
 

@@ -21,7 +21,9 @@
   <div class="tiles" [class.loading]="loading()">
     <section class="card tile in-use">
       <h2>In use</h2>
-      <p class="hero">{{ r.inUse }} <span class="muted">of {{ r.fleet }}</span></p>
+      <p class="hero">
+        {{ r.inUse }} <span class="muted">of {{ r.fleet }}</span>
+      </p>
       <p class="muted">buses served a line in this window ({{ inUseShare() }}% of the fleet).</p>
       <div class="meter" aria-hidden="true"><span [style.width.%]="inUseShare()"></span></div>
     </section>
@@ -29,23 +31,19 @@
     <section class="card tile models">
       <h2>By model</h2>
       <p class="muted">Buses in use, of the fleet's.</p>
-      <ul class="model-bars">
-        @for (m of models(); track m.model) {
-          <li [title]="m.model + ': ' + m.inUse + ' of ' + m.fleet + ' in use'">
-            <span class="name">{{ m.model }}</span>
-            <span class="track">
-              <span class="fleet" [style.width.%]="(m.fleet / modelMax()) * 100"></span>
-              <span class="used" [style.width.%]="(m.inUse / modelMax()) * 100"></span>
-            </span>
-            <span class="num">{{ m.inUse }}/{{ m.fleet }}</span>
-          </li>
-        }
-      </ul>
-      @if (r.models.length > 8) {
-        <button type="button" class="more" (click)="showAllModels.set(!showAllModels())">
-          {{ showAllModels() ? 'Show fewer' : 'Show all ' + r.models.length }}
-        </button>
-      }
+      <app-count-bars [counts]="r.models" />
+    </section>
+
+    <section class="card tile classes">
+      <h2>By size</h2>
+      <p class="muted">Buses in use, of the fleet's, smallest first.</p>
+      <app-count-bars [counts]="r.classes" [label]="classLabel" />
+    </section>
+
+    <section class="card tile makes">
+      <h2>By make</h2>
+      <p class="muted">Buses in use, of the fleet's.</p>
+      <app-count-bars [counts]="r.makes" />
     </section>
 
     <section class="card tile">
@@ -53,7 +51,9 @@
       <ol class="mini-list">
         @for (u of r.mostUsed; track u.vehicle.id) {
           <li>
-            <button type="button" class="link" (click)="choose(u.vehicle.id)">{{ u.vehicle.number }}</button>
+            <button type="button" class="link" (click)="choose(u.vehicle.id)">
+              {{ u.vehicle.number }}
+            </button>
             <span class="muted model">{{ u.vehicle.model ?? '—' }}</span>
             <span class="num">{{ u.hours.toFixed(1) }} h</span>
             <span class="muted lines">{{ u.lines.join(', ') }}</span>
@@ -69,7 +69,9 @@
       <ol class="mini-list">
         @for (u of r.leastUsed; track u.vehicle.id) {
           <li>
-            <button type="button" class="link" (click)="choose(u.vehicle.id)">{{ u.vehicle.number }}</button>
+            <button type="button" class="link" (click)="choose(u.vehicle.id)">
+              {{ u.vehicle.number }}
+            </button>
             <span class="muted model">{{ u.vehicle.model ?? '—' }}</span>
             <span class="num">{{ u.hours.toFixed(1) }} h</span>
             <span class="muted lines">{{ u.lines.join(', ') }}</span>
@@ -87,7 +89,9 @@
       <ul class="mini-list">
         @for (b of r.breakdowns; track b.vehicle.id + b.at) {
           <li>
-            <button type="button" class="link" (click)="choose(b.vehicle.id)">{{ b.vehicle.number }}</button>
+            <button type="button" class="link" (click)="choose(b.vehicle.id)">
+              {{ b.vehicle.number }}
+            </button>
             <span class="muted model">{{ b.vehicle.model ?? '—' }}</span>
             <span class="nowrap">{{ b.at | date: 'EEE d MMM, HH:mm' }}</span>
             <span class="tag" [class.danger]="!b.returned" [class.warning]="!!b.returned">{{
@@ -144,7 +148,9 @@
             <li role="option" [attr.aria-selected]="false">
               <button type="button" (click)="choose(u.vehicle.id)">
                 <strong>{{ u.vehicle.number }}</strong>
-                <span class="muted">{{ u.vehicle.model ?? 'model unknown' }} · {{ u.vehicle.agency ?? '—' }}</span>
+                <span class="muted"
+                  >{{ u.vehicle.model ?? 'model unknown' }} · {{ u.vehicle.agency ?? '—' }}</span
+                >
                 <span class="num">{{ u.hours.toFixed(1) }} h</span>
               </button>
             </li>
@@ -175,7 +181,9 @@
               }
             </span>
           </div>
-          <button type="button" class="close" (click)="clearVehicle()" aria-label="Close the bus">✕</button>
+          <button type="button" class="close" (click)="clearVehicle()" aria-label="Close the bus">
+            ✕
+          </button>
         </div>
 
         @if (d.days.length) {
@@ -190,7 +198,9 @@
           <app-run-timeline [rows]="timeline()" />
 
           <h4>Hours per day</h4>
-          <p class="muted">A red dot marks a day with an abnormal trip of this bus (listed below).</p>
+          <p class="muted">
+            A red dot marks a day with an abnormal trip of this bus (listed below).
+          </p>
           <app-bar-chart [bars]="daily()" [format]="hoursAxis" label="Hours in service per day" />
         } @else {
           <p class="muted">This bus served no line in this window.</p>
@@ -213,14 +223,43 @@
                 <tr>
                   <td class="nowrap">{{ dayLabel(i.day) }}</td>
                   <td>{{ time(i.scheduledDeparture) }}</td>
-                  <td class="nowrap">{{ i.line }} <span class="muted">{{ i.brigade }}</span></td>
+                  <td class="nowrap">
+                    {{ i.line }} <span class="muted">{{ i.brigade }}</span>
+                  </td>
                   <td>
-                    <span class="tag" [class.danger]="i.kind === 'vehicle-changed'" [class.warning]="i.kind === 'missed'">
+                    <span
+                      class="tag"
+                      [class.danger]="i.kind === 'vehicle-changed'"
+                      [class.warning]="i.kind === 'missed'"
+                    >
                       {{ i.kind === 'vehicle-changed' ? 'Broke down' : 'Missed' }}
                     </span>
                   </td>
-                  <td>{{ i.note }}</td>
+                  <td>
+                    {{ i.note }}
+                    @if (i.story.length) {
+                      <button
+                        type="button"
+                        class="story-toggle"
+                        [attr.aria-expanded]="storyOpen(i)"
+                        (click)="toggleStory(i)"
+                      >
+                        {{ storyOpen(i) ? '▾' : '▸' }} Step by step ({{ i.story.length }} steps)
+                      </button>
+                    }
+                  </td>
                 </tr>
+                @if (storyOpen(i)) {
+                  <tr class="story-row">
+                    <td colspan="5">
+                      <app-incident-story
+                        [story]="i.story"
+                        [timeline]="i.timeline"
+                        [paths]="i.paths"
+                      />
+                    </td>
+                  </tr>
+                }
               } @empty {
                 <tr>
                   <td colspan="5" class="muted">
@@ -263,8 +302,8 @@
       <li>
         <strong>Abnormal trips of a bus:</strong> trips it broke down on, and trips of its brigade
         it missed (not run while it ran the brigade's other trips that day). A cancelled trip (no
-        bus on the brigade all day) has no bus to show it on. Only the city timetable's (BKM)
-        lines can be judged.
+        bus on the brigade all day) has no bus to show it on. Only the city timetable's (BKM) lines
+        can be judged.
       </li>
     </ul>
   </details>

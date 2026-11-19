@@ -1,6 +1,7 @@
 package com.transitanalytics.service;
 
 import com.transitanalytics.DbIntegrationTest;
+import com.transitanalytics.classification.ClassificationConfigs;
 import com.transitanalytics.domain.RouteSubtype;
 import com.transitanalytics.dto.LineDetailDto;
 import com.transitanalytics.repository.RouteRepository;
@@ -69,6 +70,19 @@ class LineDetailIntegrationTest {
 
         assertThat(d.subtype()).isEqualTo(RouteSubtype.SUBURBAN);
         assertThat(d.serviceId()).isEqualTo(SERVICE);
+        // The depots (map/depots.yml, with their outlines), and where the brigades start and end their day, each
+        // with the way to or from the depot: the nearest, as no company runs this line; straight in tests.
+        assertThat(d.operator()).isNull();
+        assertThat(d.depots()).extracting(LineDetailDto.Depot::code).containsExactly("KPKM", "KPK", "KZK");
+        assertThat(d.depots().get(1).outlines()).hasSize(2);
+        assertThat(d.depotLinks()).extracting(l -> l.kind() + " " + l.stop() + " " + l.brigades())
+                .containsExactly("pull_out Alfa 3", "pull_in Alfa 1", "pull_in Beta 1", "pull_in Epsilon 1");
+        assertThat(d.depotLinks()).allSatisfy(l -> {
+            assertThat(l.depot()).isIn("KPKM", "KPK");
+            assertThat(l.routed()).isFalse();
+            assertThat(l.path()).hasSize(2);
+        });
+        assertThat(d.depotLinks().get(0).path().get(1)).containsExactly(53.10, 23.1);
         assertThat(d.variants()).extracting(LineDetailDto.Variant::headsign, LineDetailDto.Variant::kind,
                         LineDetailDto.Variant::km, LineDetailDto.Variant::tripsPerDay)
                 .containsExactly(
@@ -175,6 +189,9 @@ class LineDetailIntegrationTest {
     @Autowired
     LineSubtypes subtypes;
 
+    @Autowired
+    com.transitanalytics.buslanes.BusLanes busLanes;
+
     @Test
     void showsAnotherOperatorsLineOnlySeenOnTheFeed() {
         long bus = jdbc.queryForObject(
@@ -188,7 +205,10 @@ class LineDetailIntegrationTest {
                     VALUES (?, ?, '700', '700-01', 53.1, 23.1, 120)""", at.toOffsetDateTime(), bus);
         }
         // A service of its own, so the feed's lines are read now, not from another test's cache.
-        var service = new LineDetailService(jdbc, routes, timetables, subtypes, java.time.Clock.systemUTC());
+        var service = new LineDetailService(jdbc, routes, timetables, subtypes, java.time.Clock.systemUTC(),
+                new MapProperties(null, java.util.List.of()), ClassificationConfigs.operators(),
+                new DepotRouter(new MapProperties(null, java.util.List.of()), org.springframework.web.client.RestClient.builder(),
+                        tools.jackson.databind.json.JsonMapper.builder().build()), busLanes);
 
         assertThat(service.lines()).filteredOn(l -> l.line().equals("700")).singleElement().satisfies(l -> {
             assertThat(l.id()).as("not in the timetable").isNull();

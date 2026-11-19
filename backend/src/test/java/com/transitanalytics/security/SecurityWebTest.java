@@ -15,6 +15,8 @@ import com.transitanalytics.gtfs.GtfsImportInProgressException;
 import com.transitanalytics.gtfs.GtfsImportResult;
 import com.transitanalytics.recording.PositionHistoryService;
 import com.transitanalytics.service.BrigadeScheduleService;
+import com.transitanalytics.domain.CityBoundaries;
+import com.transitanalytics.web.BoundaryController;
 import com.transitanalytics.service.DelayGenerationService;
 import com.transitanalytics.service.ExternalServiceException;
 import com.transitanalytics.service.HotspotService;
@@ -71,6 +73,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -79,7 +82,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(controllers = {AuthController.class, VehicleController.class, ZbiorkomController.class,
         GtfsController.class, PositionHistoryController.class,
         LineStatsController.class, FleetController.class, BrigadeController.class, HotspotController.class,
-        DelayGenerationController.class, TripAnomalyController.class})
+        DelayGenerationController.class, TripAnomalyController.class, BoundaryController.class})
 @Import({SecurityConfig.class, JwtAuthFilter.class, JwtService.class, SecurityWebTest.Metrics.class})
 @TestPropertySource(properties = {
         "app.jwt.secret=test-secret-test-secret-test-secret-123456",
@@ -110,6 +113,17 @@ class SecurityWebTest {
         @Bean
         MeterRegistry meterRegistry() {
             return new SimpleMeterRegistry();
+        }
+
+        @Bean
+        Clock clock() {
+            return Clock.fixed(NOW, ZoneOffset.UTC);
+        }
+
+        /** The line-classification settings (the boundaries endpoint serves their centre). */
+        @Bean
+        com.transitanalytics.classification.RouteClassProperties routeClassProperties() {
+            return com.transitanalytics.classification.ClassificationConfigs.routes();
         }
 
         @Bean
@@ -200,7 +214,7 @@ class SecurityWebTest {
 
     @Test
     void adminCanCreateVehicle() throws Exception {
-        given(vehicleService.create(any())).willReturn(new VehicleDto.Response(1L, "BUS-1", "BUS", 50, null, null));
+        given(vehicleService.create(any())).willReturn(new VehicleDto.Response(1L, "BUS-1", "BUS", 50, null, null, null));
 
         mvc.perform(post("/api/vehicles").header("Authorization", bearer("admin", "ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON).content(VEHICLE_JSON))
@@ -323,12 +337,15 @@ class SecurityWebTest {
 
     @Test
     void guestCanReadTheFleetForAWindowAndOperators() throws Exception {
-        var vehicle = new FleetDto.Vehicle(7L, "230", "Solaris Urbino 12", "BKM");
+        var vehicle = new FleetDto.Vehicle(7L, "230", "Solaris Urbino 12", "BKM",
+                com.transitanalytics.domain.VehicleClass.MAXI);
         var usage = new FleetDto.Usage(vehicle, 12.5, 1, List.of("103"));
         var from = Instant.parse("2026-11-15T20:00:00Z");
         var to = Instant.parse("2026-11-16T20:00:00Z");
         var report = new FleetDto.Report(from, to, 1, 2, List.of(new FleetDto.Agency("BKM", 2)),
-                List.of(new FleetDto.ModelCount("Solaris Urbino 12", 1, 2)), List.of(usage), List.of(usage),
+                List.of(new FleetDto.ModelCount("Solaris Urbino 12", 1, 2)),
+                List.of(new FleetDto.ModelCount("maxi", 1, 2)), List.of(new FleetDto.ModelCount("Solaris", 1, 2)),
+                List.of(usage), List.of(usage),
                 List.of(usage), List.of(new FleetDto.Breakdown(vehicle, Instant.parse("2026-11-16T07:00:00Z"), "103",
                 "103-05", "Choroszcz", "Rynek", null, 1.2)));
         given(fleetService.report(new ReportWindow(from, to), Set.of())).willReturn(report);
@@ -355,11 +372,11 @@ class SecurityWebTest {
     @Test
     void guestCanReadOneBusOfTheFleet() throws Exception {
         var from = Instant.parse("2026-11-16T03:00:00Z");
-        var detail = new FleetDto.VehicleDetail(new FleetDto.Vehicle(7L, "230", null, "BKM"), from, NOW, 1.5,
+        var detail = new FleetDto.VehicleDetail(new FleetDto.Vehicle(7L, "230", null, "BKM", null), from, NOW, 1.5,
                 List.of("103"), NOW, List.of(new FleetDto.Day(LocalDate.of(2026, 11, 16), from, 1.5,
                 List.of(new FleetDto.Run(18000, 21000, "103", "103-05", "Choroszcz")), List.of())),
                 List.of(new FleetDto.Incident("missed", LocalDate.of(2026, 11, 16), "103", "103-05", "Choroszcz",
-                        from, "Between the brigade's runs.")));
+                        from, "Between the brigade's runs.", List.of(), List.of(), List.of())));
         given(fleetService.vehicle(7L, new ReportWindow(from, NOW))).willReturn(detail);
 
         mvc.perform(get("/api/fleet/vehicles/7").param("from", from.toString())
@@ -420,7 +437,8 @@ class SecurityWebTest {
                 "Hetmańska", "Starosielce", "Hetmańska", Instant.parse("2026-11-15T08:15:00Z"),
                 Instant.parse("2026-11-15T09:00:00Z"), 25, List.of("319"), 1, 8, "Starosielce", "Gen. Fieldorfa",
                 Instant.parse("2026-11-15T08:16:00Z"), Instant.parse("2026-11-15T09:24:00Z"), 0, 120, 60, null,
-                null, null, null, null, null, null, null, null, null, null, null, null, null);
+                null, null, null, List.of(), List.of(), null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                List.of(), List.of());
         var from = Instant.parse("2026-11-17T11:45:00Z");
         var report = new TripAnomalyDto.Report(from, NOW,
                 new TripAnomalyDto.Summary(40, 30, 29, 0, 0, 0, 0, 1, 0, 0, 0, 10, 0, 0), List.of(), 1, List.of(trip));
@@ -447,6 +465,22 @@ class SecurityWebTest {
                 .andExpect(jsonPath("$.serviceDay").value("2026-11-16"))
                 .andExpect(jsonPath("$.runs[0].to").value("Choroszcz"));
         mvc.perform(get("/api/brigades/103-05/schedule")).andExpect(status().isUnauthorized());
+        then(brigadeScheduleService).should().schedule("103-05", NOW);
+
+        mvc.perform(get("/api/brigades/103-05/schedule").param("at", "2026-11-16T06:00:00Z")
+                        .header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isOk());
+        then(brigadeScheduleService).should().schedule("103-05", Instant.parse("2026-11-16T06:00:00Z"));
+    }
+
+    @Test
+    void guestCanReadTheCityBoundaries() throws Exception {
+        mvc.perform(get("/api/boundaries").header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.city[0].length()").value(2))
+                .andExpect(jsonPath("$.centre.length()").value(CityBoundaries.CENTRE.length))
+                .andExpect(jsonPath("$.lineCentre.length()").value(9));
+        mvc.perform(get("/api/boundaries")).andExpect(status().isUnauthorized());
     }
 
     private double loginCount(String outcome) {

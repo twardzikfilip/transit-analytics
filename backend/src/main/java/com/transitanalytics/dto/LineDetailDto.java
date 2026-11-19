@@ -1,5 +1,7 @@
 package com.transitanalytics.dto;
 
+import com.transitanalytics.domain.RouteCapacity;
+import com.transitanalytics.domain.RouteGeometry;
 import com.transitanalytics.domain.RouteSubtype;
 
 import java.time.Instant;
@@ -16,7 +18,15 @@ public final class LineDetailDto {
      * A line to pick from. {@code line} is the route's GTFS id, used in the detail URLs; for a line only seen on the
      * live feed (another operator's, not in the timetable) it is the line's name, and {@code id} is null.
      */
-    public record LineRef(Long id, String line, String name, RouteSubtype subtype) {
+    /**
+     * A line to pick.
+     *
+     * @param geometry      how it runs relative to the centre; null when not classified (other operators' lines)
+     * @param capacityClass how much it carries; null when not classified
+     * @param operatingAgency the company operating it for BKM (KPKM, KPK, KZK); null when not known
+     */
+    public record LineRef(Long id, String line, String name, RouteSubtype subtype, RouteGeometry geometry,
+                          RouteCapacity capacityClass, String operatingAgency) {
     }
 
     /**
@@ -26,12 +36,20 @@ public final class LineDetailDto {
      * @param endStops   where buses turn round in service (the termini); stops closer than 500 m count as one
      * @param depotStops where depot runs start or end, away from the end stops; grouped the same way
      * @param depotRuns  runs from the depot into service (pull-out) or back (pull-in), by time
+     * @param operator   who runs the line: the organiser and the operating company with its depot; null when not
+     *                   known
+     * @param depots     every bus depot
+     * @param depotLinks where the line's buses enter and leave service, each with the way from or to the depot
+     * @param busLanes   how much of each direction's main route runs on bus lanes
      * @param id         the route's id (for its trips), null for a line not in the timetable
      * @param url        the line's timetable on the operator's website, if any
      */
-    public record Detail(Long id, String line, String name, RouteSubtype subtype, String serviceId, String url,
+    public record Detail(Long id, String line, String name, RouteSubtype subtype, RouteGeometry geometry,
+                         RouteCapacity capacityClass, String serviceId, String url,
                          Base base, List<Variant> variants, List<Zone2> zone2, List<Brigade> brigades,
-                         List<EndStop> endStops, List<EndStop> depotStops, List<DepotRun> depotRuns) {
+                         List<EndStop> endStops, List<EndStop> depotStops, List<DepotRun> depotRuns,
+                         Operator operator, List<Depot> depots, List<DepotLink> depotLinks,
+                         List<BusLaneDto.LineShare> busLanes) {
     }
 
     /**
@@ -41,6 +59,41 @@ public final class LineDetailDto {
      * @param alsoNames the other stops of the place, e.g. the departure platform
      */
     public record EndStop(String name, List<String> alsoNames) {
+    }
+
+    /**
+     * Who runs a line.
+     *
+     * @param organiser    the organiser of public transport (BKM)
+     * @param code         the operating company: KPKM, KPK or KZK
+     * @param depot        its depot's name, and {@code depotAddress} its address
+     */
+    public record Operator(String organiser, String code, String name, String website, String depot,
+                           String depotAddress) {
+    }
+
+    /**
+     * A bus depot.
+     *
+     * @param code     the company whose depot it is
+     * @param outlines its area: closed rings of {@code [lat, lon]}
+     */
+    public record Depot(String code, String name, String address, List<List<double[]>> outlines) {
+    }
+
+    /**
+     * Where the line's buses enter or leave service, with the way between there and the operator's depot (the
+     * timetable doesn't have it).
+     *
+     * @param kind     "pull_out" (the first stop of brigades' first trips of the day) or "pull_in" (the last stop of
+     *                 their last trips)
+     * @param depot    the depot's code
+     * @param brigades how many brigades do so there
+     * @param path     the way from the depot to the stop (pull-out) or back (pull-in), {@code [lat, lon]}
+     * @param routed   whether {@code path} follows the streets (the shortest drive), else a straight line
+     */
+    public record DepotLink(String kind, String stop, double lat, double lon, String depot, int brigades,
+                            List<double[]> path, boolean routed) {
     }
 
     /**

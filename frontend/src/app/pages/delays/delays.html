@@ -126,6 +126,18 @@
     <span class="unknown"
       ><span class="dot" [style.background]="noDelayColor"></span> no delay info</span
     >
+    @for (b of boundaries; track b.label) {
+      <span class="unknown"
+        ><span
+          class="line-swatch"
+          [class.bus-lane]="b.label === 'Bus lane'"
+          [style.border-top-color]="b.color"
+          [style.border-top-style]="b.dashArray ? 'dashed' : 'solid'"
+        ></span>
+        {{ b.label }}</span
+      >
+    }
+    <span class="hint muted">Click a bus for its brigade and the rest of its day.</span>
   </div>
 
   @if (loading()) {

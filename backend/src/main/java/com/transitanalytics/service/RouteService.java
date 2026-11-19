@@ -50,6 +50,6 @@ public class RouteService extends CrudService<Route, RouteDto.Request, RouteDto.
         return new RouteDto.Response(e.getId(), e.getGtfsId(), agency != null ? agency.getId() : null,
                 agency != null ? agency.getName() : null, e.displayName(), e.getShortName(), e.getLongName(),
                 e.getDescription(), e.getRouteType(), e.getUrl(), e.getColor(), e.getTextColor(), e.getSortOrder(),
-                e.getSubtype());
+                e.getSubtype(), e.getGeometry(), e.getCapacityClass(), e.getOperatingAgency());
     }
 }

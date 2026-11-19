@@ -45,7 +45,7 @@ public class HotspotService {
     }
 
     /** Reads the last month's days at startup, in the background, so the first visit doesn't wait for them. */
-    @EventListener(ApplicationReadyEvent.class)
+    @EventListener(value = ApplicationReadyEvent.class, condition = WarmUp.ENABLED)
     public void warmUp() {
         Instant now = clock.instant();
         WarmUp.inBackground("hotspots", HotspotService.class,

@@ -60,8 +60,10 @@ class FleetIntegrationTest {
 
         var trip = new TripAnomalyDto.Trip("vehicle-changed", "Bus IT-FA wasn't seen again that day.", "IT1-01_1",
                 "IT1", "IT1-01", "Dworzec", "Rynek", "Dworzec", local("07:30"), local("08:10"), 10, List.of("IT-FA"),
-                1, 10, null, null, null, null, null, null, null, null, null, null, null, "broken-down", null, null,
-                3, null, null, "Lipowa", null, 0, local("08:00"));
+                1, 10, null, null, null, null, null, null, null, null, null, null, null, List.of(), List.of(), "broken-down", null, null,
+                3, null, null, "Lipowa", null, 0, local("08:00"), 20, "vanished", local("08:20"), 0,
+                List.of(new TripAnomalyDto.Step(local("08:00"), "Bus IT-FA stops.")),
+                List.of(new TripAnomalyDto.Span("IT-FA", "standing", local("08:00"), local("08:20"))));
         TripAnomalyService trips = mock(TripAnomalyService.class);
         when(trips.outcomes(any(), any())).thenReturn(List.of(
                 new Outcome("IT1", local("07:30"), local("08:10"), Kind.VEHICLE_CHANGED, trip, List.of(a, b))));
@@ -95,6 +97,14 @@ class FleetIntegrationTest {
         assertThat(detail.incidents()).singleElement().satisfies(i -> {
             assertThat(i.kind()).isEqualTo("vehicle-changed");
             assertThat(i.day()).isEqualTo(DAY);
+            // Told step by step, with a time line, on the bus's page.
+            assertThat(i.story()).extracting(TripAnomalyDto.Step::text).containsExactly("Bus IT-FA stops.");
+            assertThat(i.timeline()).extracting(TripAnomalyDto.Span::kind).containsExactly("standing");
+            // Where it went over the time line, 2 min either side: its reports at 07:58, 07:59 and 08:00.
+            assertThat(i.paths()).singleElement().satisfies(p -> {
+                assertThat(p.vehicle()).isEqualTo("IT-FA");
+                assertThat(p.points()).hasSize(3).allSatisfy(pt -> assertThat(pt).containsExactly(53.1, 23.1));
+            });
         });
         assertThat(detail.lastSeen()).isNotNull();
         assertThat(fleet.vehicle(b, day).incidents()).as("B only took over").isEmpty();

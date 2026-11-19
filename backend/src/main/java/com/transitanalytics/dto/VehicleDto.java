@@ -1,5 +1,6 @@
 package com.transitanalytics.dto;
 
+import com.transitanalytics.domain.VehicleClass;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
@@ -17,7 +18,9 @@ public final class VehicleDto {
             @Size(max = 128) String model) {
     }
 
-    public record Response(Long id, String vehicleNumber, String type, Integer capacity, String agency, String model) {
+    /** @param vehicleClass size class from the model (see classification/vehicles.yml); null when not known */
+    public record Response(Long id, String vehicleNumber, String type, Integer capacity, String agency, String model,
+                           VehicleClass vehicleClass) {
     }
 
     /** A vehicle seen in an external feed, registered if it is not stored yet. */

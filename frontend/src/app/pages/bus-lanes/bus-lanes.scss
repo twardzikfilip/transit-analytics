@@ -1,0 +1,105 @@
+.summary {
+  margin: 0 0 1rem;
+}
+
+.card {
+  margin-bottom: 1rem;
+}
+
+.map-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.map-title {
+  margin: 0;
+  padding: 0.8rem 1rem 0.6rem;
+}
+
+.note {
+  font-size: 0.8rem;
+  font-weight: normal;
+}
+
+.strong {
+  font-weight: 600;
+}
+
+.compare th[scope='row'] {
+  text-align: left;
+}
+
+.charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: 1rem;
+
+  h2 {
+    font-size: 1rem;
+  }
+
+  details {
+    grid-column: 1 / -1;
+  }
+}
+
+.table-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+
+  label {
+    font-size: 0.9rem;
+  }
+}
+
+.card > p.muted {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+}
+
+.stretches {
+  tbody tr {
+    cursor: pointer;
+
+    &:hover td {
+      background: var(--hover);
+    }
+
+    &.selected td {
+      background: var(--accent-soft);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
+    }
+  }
+
+  .heading {
+    white-space: nowrap;
+  }
+
+  .lines {
+    white-space: nowrap;
+  }
+
+  .faster {
+    font-weight: 600;
+  }
+}
+
+.more {
+  margin-top: 0.6rem;
+}
+
+.how ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.2rem;
+
+  li {
+    margin-bottom: 0.4rem;
+  }
+}

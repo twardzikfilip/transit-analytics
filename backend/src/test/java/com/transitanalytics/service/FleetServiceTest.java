@@ -1,5 +1,6 @@
 package com.transitanalytics.service;
 
+import com.transitanalytics.domain.VehicleClass;
 import com.transitanalytics.dto.FleetDto;
 import com.transitanalytics.dto.FleetDto.Usage;
 import com.transitanalytics.dto.FleetDto.Vehicle;
@@ -22,10 +23,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 class FleetServiceTest {
 
     private static final LocalDate DAY = LocalDate.of(2026, 11, 16);
-    private static final Vehicle A = new Vehicle(1, "230", "Solaris Urbino 12", "BKM");
-    private static final Vehicle B = new Vehicle(2, "9", "Solaris Urbino 12", "BKM");
-    private static final Vehicle C = new Vehicle(3, "1050", null, "TUROSN");
-    private static final Vehicle IDLE = new Vehicle(4, "17", "Yutong U12", "BKM");
+    private static final Vehicle A = new Vehicle(1, "230", "Solaris Urbino 12", "BKM", VehicleClass.MAXI);
+    private static final Vehicle B = new Vehicle(2, "9", "Solaris Urbino 12", "BKM", VehicleClass.MAXI);
+    private static final Vehicle C = new Vehicle(3, "1050", null, "TUROSN", null);
+    private static final Vehicle IDLE = new Vehicle(4, "17", "Yutong U12", "BKM", VehicleClass.MAXI);
 
     private static Instant at(String hhmm) {
         return ServiceDay.gtfsTimeZero(DAY).plusSeconds(
@@ -34,6 +35,18 @@ class FleetServiceTest {
 
     private static int seconds(String hhmm) {
         return (int) (at(hhmm).getEpochSecond() - ServiceDay.gtfsTimeZero(DAY).getEpochSecond());
+    }
+
+    @Test
+    void ordersSizeClassesSmallestFirstAndTakesTheMakeFromTheModelName() {
+        Vehicle big = new Vehicle(10, "500", "Solaris Urbino 18", "BKM", VehicleClass.MEGA);
+        Vehicle mini = new Vehicle(11, "501", "Karsan Jest", "BKM", VehicleClass.MINI);
+        Vehicle dd = new Vehicle(12, "502", "MAN ND313 Lion`s City DD", "X", VehicleClass.DOUBLE_DECKER);
+        assertThat(FleetService.classes(List.of(dd, big, A, mini), List.of())).extracting(FleetDto.ModelCount::model)
+                .containsExactly("mini", "maxi", "mega", "double_decker");
+        assertThat(FleetService.make("  Mercedes-Benz Conecto G")).isEqualTo("Mercedes-Benz");
+        assertThat(FleetService.make(" ")).isEqualTo("unknown");
+        assertThat(FleetService.make(null)).isEqualTo("unknown");
     }
 
     @Test
@@ -66,6 +79,11 @@ class FleetServiceTest {
         assertThat(all.models()).extracting(m -> m.model() + " " + m.inUse() + "/" + m.fleet())
                 .containsExactly("Solaris Urbino 12 2/2", "unknown 1/1", "Yutong U12 0/1");
         assertThat(all.agencies()).extracting(a -> a.name() + " " + a.vehicles()).containsExactly("BKM 3", "TUROSN 1");
+        // By size class, smallest first and unknown last; by make, the model name's first word.
+        assertThat(all.classes()).extracting(m -> m.model() + " " + m.inUse() + "/" + m.fleet())
+                .containsExactly("maxi 2/3", "unknown 1/1");
+        assertThat(all.makes()).extracting(m -> m.model() + " " + m.inUse() + "/" + m.fleet())
+                .containsExactly("Solaris 2/2", "unknown 1/1", "Yutong 0/1");
         assertThat(all.breakdowns()).containsExactly(breakdown);
 
         FleetDto.Report turosn = figures.report(Set.of("TUROSN"));
@@ -111,8 +129,8 @@ class FleetServiceTest {
     private static Outcome outcome(Kind kind, String fate, List<Long> vehicles, String departure) {
         var trip = new TripAnomalyDto.Trip(kind.key, "note " + departure, "t" + departure, "9", "009-01", "North",
                 "A", "E", at(departure), at(departure).plusSeconds(600), 5, List.of(), null, null, null, null, null,
-                null, null, null, null, null, null, null, null, fate, null, null, null, null, null, "D", null, null,
-                at(departure).plusSeconds(240));
+                null, null, null, null, null, null, null, null, List.of(), List.of(), fate, null, null, null, null, null, "D", null, null,
+                at(departure).plusSeconds(240), null, null, null, null, List.of(), List.of());
         return new Outcome("9", at(departure), at(departure).plusSeconds(600), kind, trip, vehicles);
     }
 

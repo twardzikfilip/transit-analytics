@@ -24,6 +24,10 @@ public class Vehicle {
     @Column(length = 128)
     private String model;
 
+    /** Size class, from the model (see classification/vehicles.yml); null when the model isn't known. */
+    @Column(name = "vehicle_class", length = 16)
+    private VehicleClass vehicleClass;
+
     public Long getId() {
         return id;
     }
@@ -70,5 +74,13 @@ public class Vehicle {
 
     public void setModel(String model) {
         this.model = model;
+    }
+
+    public VehicleClass getVehicleClass() {
+        return vehicleClass;
+    }
+
+    public void setVehicleClass(VehicleClass vehicleClass) {
+        this.vehicleClass = vehicleClass;
     }
 }

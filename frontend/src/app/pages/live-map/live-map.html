@@ -68,6 +68,20 @@
       >
     }
   </span>
+  <span class="group">
+    Lines on the map
+    @for (b of boundaries; track b.label) {
+      <span class="item"
+        ><span
+          class="line-swatch"
+          [class.bus-lane]="b.label === 'Bus lane'"
+          [style.border-top-color]="b.color"
+          [style.border-top-style]="b.dashArray ? 'dashed' : 'solid'"
+        ></span
+        >{{ b.label }}</span
+      >
+    }
+  </span>
 </div>
 <p class="muted source">
   Live data: <a href="https://zbiorkom.live" target="_blank" rel="noopener">zbiorkom.live</a>

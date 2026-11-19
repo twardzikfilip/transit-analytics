@@ -1,0 +1,264 @@
+<div class="page-header">
+  <h1>Bus lanes</h1>
+  @if (report(); as r) {
+    <span class="muted">
+      {{ r.from | date: 'd MMM, HH:mm' }} – {{ r.to | date: 'd MMM, HH:mm' }}
+    </span>
+  }
+</div>
+
+<app-time-window [defaultPreset]="defaultPreset">
+  @if (loading()) {
+    <span class="muted" role="status">Loading…</span>
+  }
+</app-time-window>
+
+@if (error(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+}
+
+@if (lanes(); as l) {
+  <p class="summary">
+    <strong>{{ l.laneKm | number: '1.1-1' }} km</strong> of bus lane on {{ l.sections }} street
+    sections, from OpenStreetMap ({{ l.fetchedAt | date: 'd MMM y' }}).
+    @if (l.official; as o) {
+      The city gives <strong>{{ o.km | number: '1.0-1' }} km</strong> (<a
+        [href]="o.url"
+        target="_blank"
+        rel="noopener"
+        >{{ o.source }}, {{ o.date | date: 'd MMM y' }} ↗</a
+      >){{ lengthGap() !== null ? ', ' + (lengthGap()! | number: '1.0-0') + '% apart.' : '.' }}
+    }
+  </p>
+}
+
+@if (lanes(); as l) {
+  <section class="card map-card">
+    <h2 class="map-title">Where the bus lanes are</h2>
+    <app-lane-direction-map [lanes]="l.lanes" />
+  </section>
+}
+
+@if (report(); as r) {
+  <section class="card" [class.loading]="loading()">
+    <h2>On bus lanes and elsewhere</h2>
+    <p class="muted">
+      Over {{ r.days }} {{ r.days === 1 ? 'day' : 'days' }} recorded, the timetable's lines inside
+      the city. Speeds include stops and waits; delay change is how much delay buses gained per km
+      (− : made up). Peak and off-peak are on weekdays.
+    </p>
+    <div class="data-table-wrap">
+      <table class="data-table compare">
+        <thead>
+          <tr>
+            <th>Where</th>
+            <th class="num">Driven</th>
+            <th class="num">Speed</th>
+            <th class="num">Peak</th>
+            <th class="num">Off-peak</th>
+            <th class="num">Peak vs off-peak</th>
+            <th class="num">Delay change</th>
+            <th class="num">At peak</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (g of groups(); track g.label) {
+            <tr>
+              <th scope="row">
+                {{ g.label }}
+                <div class="muted note">{{ g.note }}</div>
+              </th>
+              <td class="num">{{ g.f.km | number: '1.0-0' }} km</td>
+              <td class="num strong">{{ speedText(g.f.speed) }}</td>
+              <td class="num">{{ speedText(g.f.peakSpeed) }}</td>
+              <td class="num">{{ speedText(g.f.offPeakSpeed) }}</td>
+              <td class="num">{{ slowdownText(g.f) }}</td>
+              <td class="num strong">{{ delayText(g.f.delayPerKm) }}</td>
+              <td class="num">{{ delayText(g.f.peakDelayPerKm) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card map-card" [class.loading]="loading()">
+    <h2 class="map-title">Speed on each bus lane</h2>
+    <app-bus-lane-map
+      [stretches]="lanes()?.stretches ?? []"
+      [figures]="figuresById()"
+      [selected]="selected()"
+      (choose)="chooseOnMap($event)"
+    />
+  </section>
+
+  <section class="card charts" [class.loading]="loading()">
+    <div>
+      <h2>Speed by hour, weekdays</h2>
+      <app-hour-chart
+        [series]="speedSeries()"
+        [from]="5"
+        [to]="24"
+        unit="km/h"
+        [format]="kmh"
+        label="Average speed by hour on bus lanes and elsewhere"
+        [loading]="loading()"
+      />
+    </div>
+    <div>
+      <h2>Delay change by hour, weekdays</h2>
+      <app-hour-chart
+        [series]="delaySeries()"
+        [from]="5"
+        [to]="24"
+        unit="s/km"
+        [format]="perKm"
+        label="Delay gained per km by hour on bus lanes and elsewhere"
+        [loading]="loading()"
+      />
+    </div>
+    <details>
+      <summary>Show as a table</summary>
+      <table class="data-table compact">
+        <thead>
+          <tr>
+            <th>Hour</th>
+            <th class="num">Speed on lanes</th>
+            <th class="num">Elsewhere</th>
+            <th class="num">Delay change on lanes</th>
+            <th class="num">Elsewhere</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (h of r.hours; track h.hour) {
+            <tr>
+              <td>{{ h.hour }}:00</td>
+              <td class="num">{{ speedText(h.laneSpeed) }}</td>
+              <td class="num">{{ speedText(h.otherSpeed) }}</td>
+              <td class="num">{{ delayText(h.laneDelayPerKm) }}</td>
+              <td class="num">{{ delayText(h.otherDelayPerKm) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </details>
+  </section>
+
+  <section class="card" [class.loading]="loading()">
+    <div class="table-head">
+      <h2>Each bus lane</h2>
+      <label>
+        Sort by
+        <select [value]="sort()" (change)="setSort($any($event.target).value)">
+          <option value="driven">Most driven</option>
+          <option value="slowest">Slowest</option>
+          <option value="delay">Most delay gained</option>
+          <option value="slowdown">Slowest at peak, against off-peak</option>
+        </select>
+      </label>
+    </div>
+    <p class="muted">
+      A street's bus lanes in one direction. "Other way" is the same street in the opposite
+      direction where it has no bus lane: the closest comparison, same traffic lights and stops.
+      Click a row to show it on the map.
+    </p>
+    <div class="data-table-wrap">
+      <table class="data-table stretches">
+        <thead>
+          <tr>
+            <th>Street</th>
+            <th>Direction</th>
+            <th class="num">Lane</th>
+            <th class="num">Driven</th>
+            <th class="num">Speed</th>
+            <th class="num" title="Weekday peak / off-peak">Peak / off-peak</th>
+            <th class="num">Delay change</th>
+            <th class="num" title="The same street the other way, without a bus lane">
+              Other way, no lane
+            </th>
+            <th>Lines</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of rows(); track s.id) {
+            <tr
+              [attr.data-id]="s.id"
+              [class.selected]="selected() === s.id"
+              [attr.aria-selected]="selected() === s.id"
+              tabindex="0"
+              (click)="choose(s.id)"
+              (keydown.enter)="choose(s.id)"
+            >
+              <td>{{ s.name }}</td>
+              <td class="heading">{{ headingText(s.heading) }}</td>
+              <td class="num">{{ s.km | number: '1.2-2' }} km</td>
+              <td class="num">{{ s.figures.km | number: '1.0-0' }} km</td>
+              <td class="num strong">{{ speedText(s.figures.speed) }}</td>
+              <td class="num">
+                {{ speedText(s.figures.peakSpeed) }}
+                <span class="muted">/ {{ speedText(s.figures.offPeakSpeed) }}</span>
+              </td>
+              <td class="num">{{ delayText(s.figures.delayPerKm) }}</td>
+              <td
+                class="num"
+                [class.faster]="slowerThanOpposite(s)"
+                [attr.title]="slowerThanOpposite(s) ? 'Faster than on the bus lane' : null"
+              >
+                @if (s.opposite; as o) {
+                  {{ speedText(o.speed) }}
+                  <div class="muted note">{{ delayText(o.delayPerKm) }}</div>
+                } @else {
+                  <span class="muted">lane both ways</span>
+                }
+              </td>
+              <td class="lines" [title]="s.lines.join(', ')">{{ linesText(s.lines, 6) }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="9" class="muted">No bus was recorded on a bus lane in this window.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (sorted().length > firstRows) {
+      <button type="button" class="more" (click)="showAll.set(!showAll())">
+        {{ showAll() ? 'Show the first ' + firstRows : 'Show all ' + sorted().length }}
+      </button>
+    }
+  </section>
+
+  <details class="card how">
+    <summary>How this is measured</summary>
+    <ul>
+      <li>
+        <strong>Bus lanes</strong> are every street section OpenStreetMap tags with a lane for buses
+        (busway, bus:lanes, psv:lanes, lanes:bus), fetched again every month. Length counts each
+        direction's lane. Bus bays and terminus loops aren't lanes and are left out.
+      </li>
+      <li>
+        <strong>On a bus lane:</strong> each pair of consecutive position reports of a bus (5–90 s
+        apart) counts where its middle is: on a lane when within 15 m of one and heading its way
+        (within 45°). Within 30 m of a lane running the opposite way, it is on the same street the
+        other way.
+      </li>
+      <li>
+        <strong>Speed</strong> is the distance driven over the time taken, stops and waits included,
+        as passengers ride it. Layovers at termini, gaps over 90 s and GPS jumps are left out; only
+        the timetable's lines inside the city count.
+      </li>
+      <li>
+        <strong>Delay change</strong> is how the delay the feed reports changed between the two
+        reports, within one trip, per km driven: positive means buses fell further behind the
+        timetable there, negative that they made up time (timetables allow for traffic, so buses
+        often make up time on open roads).
+      </li>
+      <li>
+        <strong>Reading it:</strong> bus lanes are built on the most congested streets, through the
+        centre with many stops and lights, so they are slower than the city's average however well
+        they work. The fairer comparisons are the same street the other way without a lane, and how
+        much slower each is at peak than off-peak: a lane that works keeps its peak speed.
+      </li>
+    </ul>
+  </details>
+}

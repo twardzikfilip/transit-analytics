@@ -74,3 +74,19 @@ export function subtypeOutline(subtype: RouteSubtype | null): string {
  * for magnitudes such as buses per stretch.
  */
 export const SEQUENTIAL_BLUE = ['#86b6ef', '#5598e7', '#2a78d6', '#1c5cab', '#104281', '#0d366b'];
+
+/**
+ * City boundaries on maps: the city limits teal and dashed, the centre (Osiedle Centrum) brown and solid. Neither is
+ * the purple the OpenStreetMap tiles use for administrative borders, nor a delay or line-kind colour. Drawn under
+ * the vehicles and named in the map legend.
+ */
+export const BOUNDARY_STYLES = {
+  city: { color: '#0b7285', dashArray: '6 4', label: 'City limits' },
+  centre: { color: '#8a4b08', dashArray: undefined, label: 'City centre' },
+} as const;
+
+/**
+ * Bus lanes on maps: a wide, translucent violet band under the vehicles and the line, so it reads as part of the
+ * street. Not a delay, line-kind, boundary or depot colour.
+ */
+export const BUS_LANE_STYLE = { color: '#6f42c1', weight: 6, opacity: 0.45, label: 'Bus lane' } as const;

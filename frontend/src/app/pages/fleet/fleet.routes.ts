@@ -7,5 +7,9 @@ import { Fleet } from './fleet';
 
 /** Fleet, with its store slice, loaded on first visit. */
 export const FLEET_ROUTES: Routes = [
-  { path: '', providers: [provideState(fleetFeature), provideEffects(fleetEffects)], component: Fleet },
+  {
+    path: '',
+    providers: [provideState(fleetFeature), provideEffects(fleetEffects)],
+    component: Fleet,
+  },
 ];

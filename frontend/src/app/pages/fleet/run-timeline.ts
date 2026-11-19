@@ -39,15 +39,36 @@ interface Hover {
         (pointerleave)="hover.set(null)"
       >
         @for (t of ticks(); track t.x) {
-          <line class="grid" [attr.x1]="t.x" [attr.x2]="t.x" [attr.y1]="top - 4" [attr.y2]="height()" />
-          <text class="axis-label" [attr.x]="t.x" [attr.y]="top - 8" text-anchor="middle">{{ t.text }}</text>
+          <line
+            class="grid"
+            [attr.x1]="t.x"
+            [attr.x2]="t.x"
+            [attr.y1]="top - 4"
+            [attr.y2]="height()"
+          />
+          <text class="axis-label" [attr.x]="t.x" [attr.y]="top - 8" text-anchor="middle">
+            {{ t.text }}
+          </text>
         }
         @for (row of geometry(); track row.key) {
-          <text class="name" x="0" [attr.y]="row.mid" dominant-baseline="middle">{{ row.label }}</text>
+          <text class="name" x="0" [attr.y]="row.mid" dominant-baseline="middle">
+            {{ row.label }}
+          </text>
           @for (k of row.breaks; track k.x1) {
-            <line class="break" [attr.x1]="k.x1" [attr.x2]="k.x2" [attr.y1]="row.mid" [attr.y2]="row.mid" />
+            <line
+              class="break"
+              [attr.x1]="k.x1"
+              [attr.x2]="k.x2"
+              [attr.y1]="row.mid"
+              [attr.y2]="row.mid"
+            />
             @if (k.x2 - k.x1 > 38) {
-              <text class="break-label" [attr.x]="(k.x1 + k.x2) / 2" [attr.y]="row.mid - 4" text-anchor="middle">
+              <text
+                class="break-label"
+                [attr.x]="(k.x1 + k.x2) / 2"
+                [attr.y]="row.mid - 4"
+                text-anchor="middle"
+              >
                 {{ k.text }}
               </text>
             }
@@ -64,7 +85,12 @@ interface Hover {
               (pointerenter)="show(r, row.mid)"
             />
             @if (r.w > r.text.length * 7 + 6) {
-              <text class="run-label" [attr.x]="r.x + 3" [attr.y]="row.mid" dominant-baseline="middle">
+              <text
+                class="run-label"
+                [attr.x]="r.x + 3"
+                [attr.y]="row.mid"
+                dominant-baseline="middle"
+              >
                 {{ r.text }}
               </text>
             }

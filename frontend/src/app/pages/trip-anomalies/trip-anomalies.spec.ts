@@ -4,6 +4,7 @@ import { Subject, of, throwError } from 'rxjs';
 import { TripAnomalyApi } from '../../core/api/api.services';
 import {
   AbnormalTrip,
+  StoodThen,
   TripAnomalyKind,
   TripAnomalyLine,
   TripAnomalyReport,
@@ -11,13 +12,14 @@ import {
 import { TripAnomaliesActions } from '../../store/trip-anomalies/trip-anomalies.actions';
 import { load } from '../../store/trip-anomalies/trip-anomalies.effects';
 import { tripAnomaliesFeature } from '../../store/trip-anomalies/trip-anomalies.reducer';
-import { renderPage, stateAfter, text } from '../../testing/page-testing';
+import { renderPage, stateAfter, text, useSvgMaps } from '../../testing/page-testing';
 import { PAGE_ROWS, REFRESH_MS, TripAnomalies, refreshes } from './trip-anomalies';
 import { resolveWindow } from '../../shared/time-window/time-window';
 import {
   changeFateLabel,
   coverage,
   joinedAt,
+  stoodLabel,
   kindLabel,
   percent,
   replacementFrom,
@@ -52,6 +54,22 @@ const trip = (kind: TripAnomalyKind, line: string, i = 0): AbnormalTrip => {
     detourMinutes: kind === 'detour' ? 6 : null,
     detourFrom: kind === 'detour' ? 'Lipowa' : null,
     detourTo: kind === 'detour' ? 'Rynek' : null,
+    detourPath:
+      kind === 'detour'
+        ? [
+            [53.13, 23.15],
+            [53.131, 23.155],
+            [53.133, 23.156],
+            [53.135, 23.15],
+          ]
+        : [],
+    detourRoute:
+      kind === 'detour'
+        ? [
+            [53.128, 23.15],
+            [53.137, 23.15],
+          ]
+        : [],
     changeFate: kind === 'vehicle-changed' ? 'broken-down' : null,
     replacementLine: kind === 'vehicle-changed' ? '29' : null,
     replacementBrigade: kind === 'vehicle-changed' ? '029-05' : null,
@@ -62,6 +80,47 @@ const trip = (kind: TripAnomalyKind, line: string, i = 0): AbnormalTrip => {
     joinStop: kind === 'vehicle-changed' ? 'E' : null,
     skippedStops: kind === 'vehicle-changed' ? 1 : null,
     changeAt: null,
+    stoodMinutes: kind === 'vehicle-changed' ? 34 : null,
+    stoodThen: kind === 'vehicle-changed' ? 'vanished' : null,
+    stoodLastSeen: kind === 'vehicle-changed' ? '2026-11-17T07:44:00Z' : null,
+    stoodLastSeenMeters: kind === 'vehicle-changed' ? 0 : null,
+    story:
+      kind === 'vehicle-changed'
+        ? [
+            { at: '2026-11-17T07:01:00Z', text: 'Bus 319 runs line 9.' },
+            { at: '2026-11-17T07:10:00Z', text: "Bus 319 stops and doesn't move on." },
+            { at: '2026-11-17T07:27:00Z', text: 'Bus 412 takes over.' },
+          ]
+        : [],
+    timeline:
+      kind === 'vehicle-changed'
+        ? [
+            {
+              vehicle: '319',
+              kind: 'running',
+              from: '2026-11-17T07:01:00Z',
+              to: '2026-11-17T07:10:00Z',
+            },
+            {
+              vehicle: '319',
+              kind: 'standing',
+              from: '2026-11-17T07:10:00Z',
+              to: '2026-11-17T07:44:00Z',
+            },
+            {
+              vehicle: '412',
+              kind: 'approach',
+              from: '2026-11-17T07:20:00Z',
+              to: '2026-11-17T07:27:00Z',
+            },
+            {
+              vehicle: '412',
+              kind: 'service',
+              from: '2026-11-17T07:27:00Z',
+              to: '2026-11-17T07:50:00Z',
+            },
+          ]
+        : [],
   };
 };
 
@@ -161,7 +220,7 @@ describe('Abnormal trips page', () => {
     ]);
 
     expect(text(el.querySelector('.card .muted:not(.small)'))).not.toBe('');
-    const rows = el.querySelectorAll('table.trips tbody tr');
+    const rows = el.querySelectorAll('table.trips tbody tr:not(.detour-row)');
     expect(rows).toHaveLength(4);
     const cells = rows[0].querySelectorAll('td');
     const lost = [...cells].map(text);
@@ -191,6 +250,7 @@ describe('Abnormal trips page', () => {
       'No bus for 17 min',
       'Delay +2:02 → +17:15',
       'Joined 1 stop further on',
+      'Old bus stood 34 min, then went silent',
     ]);
     expect(rows[3].querySelector('.chip.skipped')?.getAttribute('title')).toBe(
       'Old bus heading to C; new bus to E',
@@ -213,7 +273,7 @@ describe('Abnormal trips page', () => {
       TripAnomalies,
       stateAfter(tripAnomaliesFeature, TripAnomaliesActions.loaded({ report: report(trips) })),
     );
-    const rows = () => el.querySelectorAll('table.trips tbody tr');
+    const rows = () => el.querySelectorAll('table.trips tbody tr:not(.detour-row)');
     expect(rows()).toHaveLength(PAGE_ROWS);
     ([...el.querySelectorAll('button.more')].pop() as HTMLButtonElement).click();
     render();
@@ -247,6 +307,69 @@ describe('Abnormal trips page', () => {
     render();
     expect(el.querySelector('.filters button')).toBeNull();
     expect(rows()).toHaveLength(PAGE_ROWS);
+  });
+
+  it('filters the trips by bus and tells what a replaced bus did after it stopped', () => {
+    const changed = {
+      ...trip('vehicle-changed', '16', 1),
+      vehicles: ['461', '486'],
+      stoodMinutes: 34,
+      stoodThen: 'vanished' as const,
+    };
+    const { el, render } = renderPage(
+      TripAnomalies,
+      stateAfter(
+        tripAnomaliesFeature,
+        TripAnomaliesActions.loaded({ report: report([changed, trip('lost', '12', 2)]) }),
+      ),
+    );
+    const rows = () => el.querySelectorAll('table.trips tbody tr:not(.detour-row)');
+    const bus = el.querySelector('input.bus-filter') as HTMLInputElement;
+    expect(
+      [...el.querySelectorAll('#trip-anomaly-buses option')].map((o) => o.getAttribute('value')),
+    ).toEqual(['319', '461', '486']);
+    bus.value = ' 461 ';
+    bus.dispatchEvent(new Event('change'));
+    render();
+    expect(rows()).toHaveLength(1);
+    expect(text(el.querySelector('section.card:last-of-type p.muted'))).toContain('bus 461');
+    expect(text(rows()[0].querySelector('.changeover'))).toContain(
+      'Old bus stood 34 min, then went silent',
+    );
+    (el.querySelector('.filters button') as HTMLButtonElement).click();
+    render();
+    expect(rows()).toHaveLength(2);
+    expect(bus.value).toBe('');
+  });
+
+  it("shows each detour on a map of its own, under its trip: the usual route and the bus's path", async () => {
+    useSvgMaps();
+    const { el, fixture } = renderPage(
+      TripAnomalies,
+      stateAfter(
+        tripAnomaliesFeature,
+        TripAnomaliesActions.loaded({
+          report: report([trip('detour', '9', 1), trip('lost', '12', 2)]),
+        }),
+      ),
+    );
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const rows = [...el.querySelectorAll('table.trips tbody tr')];
+    expect(rows.map((r) => r.className)).toEqual(['', 'detour-row', '']);
+    const map = rows[1].querySelector('app-path-map')!;
+    expect(map.querySelector('[role=img]')!.getAttribute('aria-label')).toBe(
+      'Line 9: detour Lipowa → Rynek, 430 m off the route',
+    );
+    // The route in blue; the path, and a dot per report, in orange.
+    const strokes = [...map.querySelectorAll('.leaflet-overlay-pane path')].map((p) =>
+      p.getAttribute('stroke'),
+    );
+    expect(strokes).toEqual(['#1e88e5', ...Array(5).fill('#eb6834')]);
+    expect([...map.querySelectorAll('.legend li')].map(text)).toEqual([
+      'Usual route',
+      "The bus's path (dots: its reports)",
+    ]);
   });
 
   it('reloads preset windows of up to 12 hours every minute, as they move on', () => {
@@ -285,7 +408,13 @@ describe('Abnormal trips page', () => {
     expect(refreshes(window('24h'))).toBe(false);
     expect(refreshes(window('all'))).toBe(false);
     expect(
-      refreshes(resolveWindow({ range: null, from: '2026-11-17T09:00', to: '2026-11-17T10:00' }, now, '24h')),
+      refreshes(
+        resolveWindow(
+          { range: null, from: '2026-11-17T09:00', to: '2026-11-17T10:00' },
+          now,
+          '24h',
+        ),
+      ),
     ).toBe(false);
     expect(percent(4, 3500)).toBe('0.1%');
     expect(percent(0, 10)).toBe('0%');
@@ -309,6 +438,14 @@ describe('Abnormal trips page', () => {
     expect(joinedAt({ ...trip('vehicle-changed', '9'), skippedStops: 4 })).toBe(
       'Joined 4 stops further on',
     );
+    const stood = (stoodThen: StoodThen, stoodMinutes: number, stoodLastSeenMeters = 0) =>
+      stoodLabel({ ...trip('vehicle-changed', '9'), stoodThen, stoodMinutes, stoodLastSeenMeters });
+    expect(stood('vanished', 34)).toBe('Old bus stood 34 min, then went silent');
+    expect(stood('vanished', 0)).toBe('Old bus went silent right away');
+    expect(stood('still-there', 75)).toBe('Old bus still standing there (1 h 15)');
+    expect(stood('drove-off', 12, 4230)).toBe('Old bus stood 12 min, then moved off 4.2 km');
+    expect(stood('drove-off', 0, 620)).toBe('Old bus moved off 600 m');
+    expect(stoodLabel(trip('lost', '9'))).toBeNull();
   });
 });
 
