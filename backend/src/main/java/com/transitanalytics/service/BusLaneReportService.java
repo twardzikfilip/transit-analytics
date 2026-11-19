@@ -3,9 +3,9 @@ package com.transitanalytics.service;
 import com.transitanalytics.buslanes.BusLaneMatcher;
 import com.transitanalytics.buslanes.BusLaneStretches;
 import com.transitanalytics.buslanes.BusLanes;
-import com.transitanalytics.buslanes.Geo;
 import com.transitanalytics.domain.CityBoundaries;
 import com.transitanalytics.dto.BusLaneDto;
+import com.transitanalytics.geo.Geo;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -197,7 +197,8 @@ public class BusLaneReportService {
 
     /** The hops in {@code [from, to)} (at most a service day), summed per stretch, half-hour and kind of day. */
     List<Bucket> query(Instant from, Instant to, BusLanes.Snapshot snapshot) {
-        Points termini = new Points(termini(), TERMINUS_METERS);
+        StandstillHotspots.Grid<double[]> termini =
+                new StandstillHotspots.Grid<>(termini(), p -> p[0], p -> p[1], TERMINUS_METERS);
         CityCells city = new CityCells();
         BusLaneMatcher matcher = snapshot.matcher();
         BusLaneStretches stretches = snapshot.stretches();
@@ -232,7 +233,7 @@ public class BusLaneReportService {
         return buckets;
     }
 
-    private static void hop(ResultSet rs, Points termini, CityCells city, BusLaneMatcher matcher,
+    private static void hop(ResultSet rs, StandstillHotspots.Grid<double[]> termini, CityCells city, BusLaneMatcher matcher,
                             BusLaneStretches stretches, Map<List<Object>, double[]> sums,
                             Map<List<Object>, Set<String>> lines) throws SQLException {
         double[] a = {rs.getDouble("lat"), rs.getDouble("lon")};
@@ -240,7 +241,7 @@ public class BusLaneReportService {
         double dt = rs.getDouble("dt");
         double meters = Geo.meters(a, b);
         double[] mid = {(a[0] + b[0]) / 2, (a[1] + b[1]) / 2};
-        if (meters > MAX_SPEED * dt || !city.contains(mid) || termini.near(a) && termini.near(b)) {
+        if (meters > MAX_SPEED * dt || !city.contains(mid) || nearAny(termini, a) && nearAny(termini, b)) {
             return;
         }
         Integer bearing = (Integer) rs.getObject("bearing", Integer.class);
@@ -274,50 +275,19 @@ public class BusLaneReportService {
         }
     }
 
-    /** Stops where runs start or end. */
-    private List<double[]> termini() {
-        return jdbc.query("""
-                WITH ends AS (
-                    SELECT trip_id, min(stop_sequence) AS first, max(stop_sequence) AS last
-                    FROM stop_time GROUP BY trip_id)
-                SELECT DISTINCT s.latitude, s.longitude
-                FROM stop_time st JOIN ends e ON e.trip_id = st.trip_id JOIN stop s ON s.id = st.stop_id
-                WHERE st.stop_sequence IN (e.first, e.last) AND s.latitude IS NOT NULL AND s.longitude IS NOT NULL""",
-                (rs, i) -> new double[] {rs.getDouble("latitude"), rs.getDouble("longitude")});
+    private static boolean nearAny(StandstillHotspots.Grid<double[]> termini, double[] p) {
+        return !termini.nearIndexes(p[0], p[1], TERMINUS_METERS).isEmpty();
     }
 
-    /** Points in a grid, to tell whether a place is within {@code radius} of one. */
-    static final class Points {
-        private final double radius;
-        private final Map<Long, List<double[]>> grid = new HashMap<>();
-
-        Points(List<double[]> points, double radius) {
-            this.radius = radius;
-            for (double[] p : points) {
-                double[] xy = Geo.xy(p[0], p[1]);
-                grid.computeIfAbsent(key(xy[0], xy[1]), k -> new ArrayList<>()).add(p);
+    /** Stops where runs start or end. */
+    private List<double[]> termini() {
+        List<double[]> termini = new ArrayList<>();
+        jdbc.query(StopPlaces.STOPS_WITH_TERMINALS, rs -> {
+            if (rs.getBoolean("terminal")) {
+                termini.add(new double[] {rs.getDouble("latitude"), rs.getDouble("longitude")});
             }
-        }
-
-        boolean near(double[] p) {
-            double[] xy = Geo.xy(p[0], p[1]);
-            long cx = (long) Math.floor(xy[0] / radius);
-            long cy = (long) Math.floor(xy[1] / radius);
-            for (long x = cx - 1; x <= cx + 1; x++) {
-                for (long y = cy - 1; y <= cy + 1; y++) {
-                    for (double[] q : grid.getOrDefault((x << 32) ^ (y & 0xffffffffL), List.of())) {
-                        if (Geo.meters(p, q) <= radius) {
-                            return true;
-                        }
-                    }
-                }
-            }
-            return false;
-        }
-
-        private long key(double x, double y) {
-            return ((long) Math.floor(x / radius) << 32) ^ ((long) Math.floor(y / radius) & 0xffffffffL);
-        }
+        });
+        return termini;
     }
 
     /** Whether places are in the city, by 100 m cells (each cell's middle tested once). */
@@ -329,20 +299,8 @@ public class BusLaneReportService {
             double[] xy = Geo.xy(p[0], p[1]);
             long cx = (long) Math.floor(xy[0] / CELL);
             long cy = (long) Math.floor(xy[1] / CELL);
-            return cells.computeIfAbsent((cx << 32) ^ (cy & 0xffffffffL), k -> inside(
-                    (cy + 0.5) * CELL / 111_320, (cx + 0.5) * CELL / (111_320 * Math.cos(Math.toRadians(53.13)))));
-        }
-
-        static boolean inside(double lat, double lon) {
-            double[][] ring = CityBoundaries.CITY;
-            boolean in = false;
-            for (int i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-                if ((ring[i][0] > lat) != (ring[j][0] > lat)
-                        && lon < (ring[j][1] - ring[i][1]) * (lat - ring[i][0]) / (ring[j][0] - ring[i][0]) + ring[i][1]) {
-                    in = !in;
-                }
-            }
-            return in;
+            return cells.computeIfAbsent((cx << 32) ^ (cy & 0xffffffffL), k -> CityBoundaries.inCity(
+                    (cy + 0.5) * CELL / Geo.M_PER_DEG, (cx + 0.5) * CELL / (Geo.M_PER_DEG * Geo.COS_LAT)));
         }
     }
 }

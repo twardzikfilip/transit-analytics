@@ -1,10 +1,10 @@
 package com.transitanalytics.gtfs;
 
+import com.transitanalytics.service.NotFoundException;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.transitanalytics.service.NotFoundException;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -23,11 +23,12 @@ import java.util.zip.ZipFile;
  * configured under {@code app.gtfs.extra}, each into its own share of the timetable. One import runs at a time.
  */
 @Service
-public class GtfsBialystokService {
+public class GtfsFeedService {
 
+    /** The main feed: Białystok's timetable. */
     static final String FEED = "bialystok";
 
-    private static final Logger log = LoggerFactory.getLogger(GtfsBialystokService.class);
+    private static final Logger log = LoggerFactory.getLogger(GtfsFeedService.class);
 
     private final GtfsDownloader downloader;
     private final GtfsImporter importer;
@@ -36,7 +37,7 @@ public class GtfsBialystokService {
     private final ApplicationEventPublisher events;
     private final AtomicBoolean running = new AtomicBoolean();
 
-    public GtfsBialystokService(GtfsDownloader downloader, GtfsImporter importer, GtfsProperties properties,
+    public GtfsFeedService(GtfsDownloader downloader, GtfsImporter importer, GtfsProperties properties,
                                 ObservationRegistry observations, ApplicationEventPublisher events) {
         this.downloader = downloader;
         this.importer = importer;

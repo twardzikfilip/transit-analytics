@@ -43,6 +43,22 @@ final class StopPlaces {
         return sameStop(a.name(), b.name());
     }
 
+    /**
+     * Every located stop of the timetable, with whether runs start or end there ({@code terminal}). Columns: name,
+     * latitude, longitude, terminal.
+     */
+    static final String STOPS_WITH_TERMINALS = """
+            WITH ends AS (
+                SELECT trip_id, min(stop_sequence) AS first, max(stop_sequence) AS last
+                FROM stop_time GROUP BY trip_id),
+            terminals AS (
+                SELECT DISTINCT st.stop_id
+                FROM stop_time st JOIN ends e ON e.trip_id = st.trip_id
+                WHERE st.stop_sequence IN (e.first, e.last))
+            SELECT s.name, s.latitude, s.longitude, t.stop_id IS NOT NULL AS terminal
+            FROM stop s LEFT JOIN terminals t ON t.stop_id = s.id
+            WHERE s.latitude IS NOT NULL AND s.longitude IS NOT NULL""";
+
     /** Great-circle distance in metres. */
     static double meters(double lat1, double lon1, double lat2, double lon2) {
         double dLat = Math.toRadians(lat2 - lat1);

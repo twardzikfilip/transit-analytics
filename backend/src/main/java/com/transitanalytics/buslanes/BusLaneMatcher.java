@@ -1,6 +1,9 @@
 package com.transitanalytics.buslanes;
 
+import com.transitanalytics.geo.Geo;
+
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -125,7 +128,7 @@ public final class BusLaneMatcher {
             }
             List<double[]> path = new ArrayList<>(lane.points());
             if (lane.forward() == 0) {
-                java.util.Collections.reverse(path);
+                Collections.reverse(path);
             }
             double total = 0;
             double paired = 0;
@@ -190,11 +193,7 @@ public final class BusLaneMatcher {
     }
 
     private static double toSegment(double x, double y, Piece s) {
-        double dx = s.bx() - s.ax();
-        double dy = s.by() - s.ay();
-        double len = dx * dx + dy * dy;
-        double t = len == 0 ? 0 : Math.max(0, Math.min(1, ((x - s.ax()) * dx + (y - s.ay()) * dy) / len));
-        return Math.hypot(x - s.ax() - t * dx, y - s.ay() - t * dy);
+        return Geo.toSegment(x, y, s.ax(), s.ay(), s.bx(), s.by());
     }
 
     private static long cell(double metres) {

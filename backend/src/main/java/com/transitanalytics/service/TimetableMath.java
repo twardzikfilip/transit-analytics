@@ -25,7 +25,7 @@ public final class TimetableMath {
         return na != nb ? (na ? -1 : 1) : a.compareTo(b);
     };
 
-    static double round(double value, int decimals) {
+    public static double round(double value, int decimals) {
         double f = Math.pow(10, decimals);
         return Math.round(value * f) / f;
     }

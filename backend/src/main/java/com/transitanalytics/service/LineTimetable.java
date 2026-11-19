@@ -1,5 +1,6 @@
 package com.transitanalytics.service;
 
+import com.transitanalytics.domain.CityBoundaries;
 import com.transitanalytics.domain.Route;
 import com.transitanalytics.dto.LineDetailDto.Brigade;
 import com.transitanalytics.dto.LineDetailDto.StopPoint;
@@ -247,7 +248,7 @@ public class LineTimetable {
         if (zone != null || lat == null || lon == null) {
             return zone;
         }
-        return BusLaneReportService.CityCells.inside(lat, lon) ? "1" : "2";
+        return CityBoundaries.inCity(lat, lon) ? "1" : "2";
     }
 
     private Map<Long, List<StopPoint>> stops(List<Long> tripIds) {
