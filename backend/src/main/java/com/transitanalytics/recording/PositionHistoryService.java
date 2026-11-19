@@ -21,9 +21,17 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.TreeMap;
 
 /** Reads the recorded position time series ({@code position_sample}), for the city operator's (BKM) lines. */
 @Service
@@ -79,7 +87,7 @@ public class PositionHistoryService {
     private final JdbcTemplate jdbc;
     private final TransactionTemplate transaction;
     private final Clock clock;
-    private final Map<String, ServiceDayCache<FleetPolls.Part>> fleetDays = new java.util.HashMap<>();
+    private final Map<String, ServiceDayCache<FleetPolls.Part>> fleetDays = new HashMap<>();
 
     public PositionHistoryService(JdbcTemplate jdbc, TransactionTemplate transaction, Clock clock) {
         this.jdbc = jdbc;
@@ -138,16 +146,16 @@ public class PositionHistoryService {
         long reports = polls.stream().mapToLong(FleetPolls.Poll::reports).sum();
         long delaySum = polls.stream().mapToLong(FleetPolls.Poll::delaySum).sum();
         long delayCount = polls.stream().mapToLong(FleetPolls.Poll::delayCount).sum();
-        java.util.Set<Long> vehicles = new java.util.HashSet<>();
+        Set<Long> vehicles = new HashSet<>();
         parts.forEach(p -> vehicles.addAll(p.vehicles()));
         FleetPolls.Poll latest = polls.isEmpty() ? null : polls.get(polls.size() - 1);
         var summary = new PositionHistoryDto.Summary(reports, vehicles.size(),
                 polls.stream().mapToLong(FleetPolls.Poll::vehicles).max().orElse(0),
                 latest == null ? 0 : latest.vehicles(), latest == null ? null : latest.time(),
                 delayCount == 0 ? null : (double) delaySum / delayCount,
-                parts.stream().map(FleetPolls.Part::first).filter(java.util.Objects::nonNull).min(Instant::compareTo)
+                parts.stream().map(FleetPolls.Part::first).filter(Objects::nonNull).min(Instant::compareTo)
                         .orElse(null),
-                parts.stream().map(FleetPolls.Part::last).filter(java.util.Objects::nonNull).max(Instant::compareTo)
+                parts.stream().map(FleetPolls.Part::last).filter(Objects::nonNull).max(Instant::compareTo)
                         .orElse(null));
         return new PositionHistoryDto.FleetSeries(from, to, step.toSeconds(), route, points, summary);
     }
@@ -240,14 +248,14 @@ public class PositionHistoryService {
         args.addAll(window(from, to, null));
         String routeFilter = "";
         if (!lineFilter.isEmpty()) {
-            routeFilter = " AND p.route_name IN (" + String.join(", ", java.util.Collections.nCopies(lineFilter.size(), "?")) + ")";
+            routeFilter = " AND p.route_name IN (" + String.join(", ", Collections.nCopies(lineFilter.size(), "?")) + ")";
             args.addAll(lineFilter);
         }
 
-        Map<String, Integer> vehicleIndex = new java.util.LinkedHashMap<>();
-        Map<String, Integer> lineIndex = new java.util.LinkedHashMap<>();
-        Map<String, Integer> brigadeIndex = new java.util.LinkedHashMap<>();
-        java.util.TreeMap<Instant, List<List<Object>>> frames = new java.util.TreeMap<>();
+        Map<String, Integer> vehicleIndex = new LinkedHashMap<>();
+        Map<String, Integer> lineIndex = new LinkedHashMap<>();
+        Map<String, Integer> brigadeIndex = new LinkedHashMap<>();
+        TreeMap<Instant, List<List<Object>>> frames = new TreeMap<>();
         jdbc.query("""
                 SELECT DISTINCT ON (bucket, p.vehicle_id)
                        time_bucket(make_interval(secs => ?::integer), coalesce(p.fetched_at, p.observed_at)) AS bucket,
@@ -264,8 +272,8 @@ public class PositionHistoryService {
                             : brigadeIndex.computeIfAbsent(brigade, k -> brigadeIndex.size());
                     List<Object> row = new ArrayList<>(6);
                     row.add(vehicle);
-                    row.add(round(rs.getDouble("latitude"), 6));
-                    row.add(round(rs.getDouble("longitude"), 6));
+                    row.add(TimetableMath.round(rs.getDouble("latitude"), 6));
+                    row.add(TimetableMath.round(rs.getDouble("longitude"), 6));
                     row.add(nullableInt(rs, "delay_seconds"));
                     row.add(line);
                     row.add(duty);
@@ -276,11 +284,6 @@ public class PositionHistoryService {
         return new PositionHistoryDto.Replay(from, to, step.toSeconds(), lineFilter,
                 List.copyOf(vehicleIndex.keySet()), List.copyOf(lineIndex.keySet()), List.copyOf(brigadeIndex.keySet()),
                 frames.entrySet().stream().map(e -> new PositionHistoryDto.Frame(e.getKey(), e.getValue())).toList());
-    }
-
-    private static double round(double value, int decimals) {
-        double f = Math.pow(10, decimals);
-        return Math.round(value * f) / f;
     }
 
     /** Lines recorded in the window, in natural line order (2, 10, 100, N1). */
@@ -320,7 +323,7 @@ public class PositionHistoryService {
             String[] parts = (sort == null || sort.isBlank() ? "time,desc" : sort).split(",");
             SampleSort column;
             try {
-                column = valueOf(parts[0].strip().replaceAll("([a-z])([A-Z])", "$1_$2").toUpperCase(java.util.Locale.ROOT));
+                column = valueOf(parts[0].strip().replaceAll("([a-z])([A-Z])", "$1_$2").toUpperCase(Locale.ROOT));
             } catch (IllegalArgumentException ex) {
                 throw new IllegalArgumentException("sort must be one of time, vehicle, line, duty, towards, delay, "
                         + "nextStop, optionally followed by ,asc or ,desc");

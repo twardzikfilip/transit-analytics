@@ -254,7 +254,7 @@ inserting the ~384k stop times.
 - Rows that point at a route, trip or stop that isn't in the feed are skipped and counted in the response. Files the
   app doesn't load (e.g. `feed_info.txt`) are listed as ignored.
 - Code: `gtfs/GtfsImporter` (generic loader: files are streamed from the zip into temporary tables with PostgreSQL
-  `COPY`, then merged with SQL) and `gtfs/GtfsBialystokService` (download + import of each feed).
+  `COPY`, then merged with SQL) and `gtfs/GtfsFeedService` (download + import of each feed).
 
 **Other operators' lines** (`app.gtfs.extra` in `application.yml`): each feed is loaded into its own share of the
 timetable, its ids (agency, route, stop, trip, service, shape) prefixed, so they never clash with the city's and an

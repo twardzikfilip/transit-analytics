@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
 
+import static com.transitanalytics.service.TimetableMath.round;
+
 @Tag(name = "Bus lanes", description = "Bus lanes from OpenStreetMap, and speeds and delays on them")
 @RestController
 @RequestMapping("/api/bus-lanes")
@@ -65,11 +67,6 @@ public class BusLaneController {
             @Parameter(description = "Start (ISO-8601); the first recording when absent") @RequestParam(required = false) Instant from,
             @Parameter(description = "End, exclusive (ISO-8601); now when absent") @RequestParam(required = false) Instant to) {
         return reports.report(windows.resolve(from, to));
-    }
-
-    private static double round(double value, int decimals) {
-        double f = Math.pow(10, decimals);
-        return Math.round(value * f) / f;
     }
 
     private BusLaneDto.Lanes toDto(BusLanes.Snapshot snapshot) {

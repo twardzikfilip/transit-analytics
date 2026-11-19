@@ -1,6 +1,6 @@
 package com.transitanalytics.web;
 
-import com.transitanalytics.gtfs.GtfsBialystokService;
+import com.transitanalytics.gtfs.GtfsFeedService;
 import com.transitanalytics.gtfs.GtfsImportResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -15,10 +15,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/gtfs")
 public class GtfsController {
 
-    private final GtfsBialystokService bialystok;
+    private final GtfsFeedService feeds;
 
-    public GtfsController(GtfsBialystokService bialystok) {
-        this.bialystok = bialystok;
+    public GtfsController(GtfsFeedService feeds) {
+        this.feeds = feeds;
     }
 
     @Operation(summary = "Import a timetable feed",
@@ -34,6 +34,6 @@ public class GtfsController {
     @ApiResponse(responseCode = "502", description = "The feed could not be downloaded; nothing was changed")
     @PostMapping("/{feed}/import")
     public GtfsImportResult importFeed(@PathVariable("feed") String feed) {
-        return bialystok.importFeed(feed);
+        return feeds.importFeed(feed);
     }
 }

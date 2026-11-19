@@ -22,7 +22,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 
 /** The Białystok import: download, load, report; one at a time; a broken download is a feed error. */
-class GtfsBialystokServiceTest {
+class GtfsFeedServiceTest {
 
     private static final String URL = "https://feeds.example/gtfs.zip";
     private static final String OTHER_URL = "https://feeds.example/other.zip";
@@ -31,7 +31,7 @@ class GtfsBialystokServiceTest {
     private final GtfsImporter importer = mock(GtfsImporter.class);
     private final org.springframework.context.ApplicationEventPublisher events =
             mock(org.springframework.context.ApplicationEventPublisher.class);
-    private final GtfsBialystokService service = new GtfsBialystokService(downloader, importer,
+    private final GtfsFeedService service = new GtfsFeedService(downloader, importer,
             new GtfsProperties(Duration.ofSeconds(5), Duration.ofSeconds(30), DataSize.ofMegabytes(50),
                     new GtfsProperties.Feed(URL, null, null),
                     Map.of("other", new GtfsProperties.Feed(OTHER_URL, "other:", "Other line")), "-"),

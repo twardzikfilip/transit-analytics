@@ -1,5 +1,7 @@
 package com.transitanalytics.domain;
 
+import com.transitanalytics.geo.Geo;
+
 /**
  * Boundaries of Białystok as closed polygon rings of {latitude, longitude} pairs
  * (WGS 84, first point repeated at the end).
@@ -217,5 +219,10 @@ public final class CityBoundaries {
     };
 
     private CityBoundaries() {
+    }
+
+    /** Whether a place is inside the city limits ({@link #CITY}). */
+    public static boolean inCity(double lat, double lon) {
+        return Geo.inside(new double[] {lat, lon}, CITY);
     }
 }

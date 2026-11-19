@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Clock;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * The city's bus lanes: the saved copy ({@code file}) when there is one, else the built-in
@@ -48,7 +49,7 @@ public class BusLanes {
         this.clock = clock;
         this.current = snapshot(load(), 1);
         log.info("Bus lanes: {} sections, {} km of lane ({})", current.data().lanes().size(),
-                String.format(java.util.Locale.ROOT, "%.1f", current.data().laneKm()), current.data().source());
+                String.format(Locale.ROOT, "%.1f", current.data().laneKm()), current.data().source());
     }
 
     public Snapshot current() {
@@ -111,7 +112,7 @@ public class BusLanes {
                 save(data);
                 current = snapshot(data, current.version() + 1);
                 log.info("Bus lanes refreshed from {}: {} sections, {} km of lane", url, lanes.size(),
-                        String.format(java.util.Locale.ROOT, "%.1f", data.laneKm()));
+                        String.format(Locale.ROOT, "%.1f", data.laneKm()));
                 return current;
             } catch (RuntimeException ex) {
                 log.warn("Bus lanes: {} failed: {}", url, ex.toString());

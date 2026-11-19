@@ -1,6 +1,7 @@
 package com.transitanalytics.classification;
 
 import com.transitanalytics.domain.RouteGeometry;
+import com.transitanalytics.geo.Geo;
 
 import java.util.List;
 
@@ -10,7 +11,6 @@ import java.util.List;
  */
 public final class RouteGeometryClassifier {
 
-    private static final double M_PER_DEG = 111_320;
 
     private final RouteClassProperties.Geometry rules;
     private final double cosLat;
@@ -107,7 +107,7 @@ public final class RouteGeometryClassifier {
     }
 
     private double[] xy(double[] latLon) {
-        return new double[] {latLon[1] * M_PER_DEG * cosLat, latLon[0] * M_PER_DEG};
+        return new double[] {latLon[1] * Geo.M_PER_DEG * cosLat, latLon[0] * Geo.M_PER_DEG};
     }
 
     /** Degrees clockwise from north, seen from the middle of the centre. */
@@ -117,33 +117,13 @@ public final class RouteGeometryClassifier {
 
     /** Metres from a point to the centre: 0 inside it, else to its nearest edge. */
     private double toCentre(double[] p) {
-        if (inside(p)) {
+        if (Geo.inside(p, centre)) {
             return 0;
         }
         double best = Double.MAX_VALUE;
         for (int i = 0; i + 1 < centre.length; i++) {
-            best = Math.min(best, toSegment(p, centre[i], centre[i + 1]));
+            best = Math.min(best, Geo.toSegment(p, centre[i], centre[i + 1]));
         }
         return best;
-    }
-
-    private boolean inside(double[] p) {
-        boolean in = false;
-        for (int i = 0, j = centre.length - 1; i < centre.length; j = i++) {
-            double[] u = centre[i];
-            double[] v = centre[j];
-            if ((u[1] > p[1]) != (v[1] > p[1]) && p[0] < (v[0] - u[0]) * (p[1] - u[1]) / (v[1] - u[1]) + u[0]) {
-                in = !in;
-            }
-        }
-        return in;
-    }
-
-    private static double toSegment(double[] p, double[] a, double[] b) {
-        double dx = b[0] - a[0];
-        double dy = b[1] - a[1];
-        double len = dx * dx + dy * dy;
-        double t = len == 0 ? 0 : Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len));
-        return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy);
     }
 }

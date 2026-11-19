@@ -9,7 +9,7 @@ import com.transitanalytics.dto.PositionHistoryDto;
 import com.transitanalytics.dto.TripAnomalyDto;
 import com.transitanalytics.dto.VehicleDto;
 import com.transitanalytics.dto.FleetDto;
-import com.transitanalytics.gtfs.GtfsBialystokService;
+import com.transitanalytics.gtfs.GtfsFeedService;
 import com.transitanalytics.gtfs.GtfsFeedException;
 import com.transitanalytics.gtfs.GtfsImportInProgressException;
 import com.transitanalytics.gtfs.GtfsImportResult;
@@ -144,7 +144,7 @@ class SecurityWebTest {
     ZbiorkomBialystokService zbiorkomBialystokService;
 
     @MockitoBean
-    GtfsBialystokService gtfsBialystokService;
+    GtfsFeedService gtfsFeedService;
 
     @MockitoBean
     PositionHistoryService positionHistoryService;
@@ -258,7 +258,7 @@ class SecurityWebTest {
 
     @Test
     void adminCanImportGtfs() throws Exception {
-        given(gtfsBialystokService.importFeed("bialystok")).willReturn(new GtfsImportResult("bialystok", "https://x", 10,
+        given(gtfsFeedService.importFeed("bialystok")).willReturn(new GtfsImportResult("bialystok", "https://x", 10,
                 Instant.parse("2026-11-16T10:00:00Z"), 1234, java.util.Map.of("stop", 1083L), java.util.Map.of(),
                 List.of()));
 
@@ -269,7 +269,7 @@ class SecurityWebTest {
 
     @Test
     void gtfsImportErrorsMapToStatusCodes() throws Exception {
-        given(gtfsBialystokService.importFeed("bialystok"))
+        given(gtfsFeedService.importFeed("bialystok"))
                 .willThrow(new GtfsImportInProgressException("bialystok"))
                 .willThrow(new GtfsFeedException("The feed has no stops.txt"));
 

@@ -1,6 +1,9 @@
 package com.transitanalytics.buslanes;
 
+import com.transitanalytics.geo.Geo;
+
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,7 +46,7 @@ public final class BusLaneStretches {
                 }
                 List<double[]> path = new ArrayList<>(lane.points());
                 if (d == 1) {
-                    java.util.Collections.reverse(path);
+                    Collections.reverse(path);
                 }
                 String heading = HEADINGS[(int) Math.round(Geo.heading(path.get(0), path.get(path.size() - 1)) / 90) % 4];
                 String name = lane.name() == null ? "unnamed road" : lane.name();

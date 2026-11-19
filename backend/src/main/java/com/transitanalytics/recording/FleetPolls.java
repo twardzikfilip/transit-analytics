@@ -3,6 +3,7 @@ package com.transitanalytics.recording;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -97,6 +98,6 @@ final class FleetPolls {
     static List<Poll> between(List<Part> parts, Instant from, Instant to) {
         return parts.stream().flatMap(p -> p.polls().stream())
                 .filter(p -> !p.time().isBefore(from) && p.time().isBefore(to))
-                .sorted(java.util.Comparator.comparing(Poll::time)).toList();
+                .sorted(Comparator.comparing(Poll::time)).toList();
     }
 }

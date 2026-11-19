@@ -1,15 +1,17 @@
 package com.transitanalytics.service;
 
-import com.transitanalytics.buslanes.Geo;
 import com.transitanalytics.dto.LineDetailDto;
+import com.transitanalytics.geo.Geo;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -154,7 +156,7 @@ final class RecordedRoutes {
         }
         for (int i = 1; i < path.size(); i++) {
             double[] b = Geo.xy(path.get(i)[0], path.get(i)[1]);
-            best = Math.min(best, toSegment(q, a, b));
+            best = Math.min(best, Geo.toSegment(q, a, b));
             a = b;
         }
         return best;
@@ -169,14 +171,14 @@ final class RecordedRoutes {
         keep[0] = true;
         keep[points.size() - 1] = true;
         List<double[]> xy = points.stream().map(p -> Geo.xy(p[0], p[1])).toList();
-        java.util.ArrayDeque<int[]> spans = new java.util.ArrayDeque<>();
+        ArrayDeque<int[]> spans = new ArrayDeque<>();
         spans.push(new int[] {0, points.size() - 1});
         while (!spans.isEmpty()) {
             int[] s = spans.pop();
             double far = 0;
             int at = -1;
             for (int i = s[0] + 1; i < s[1]; i++) {
-                double d = toSegment(xy.get(i), xy.get(s[0]), xy.get(s[1]));
+                double d = Geo.toSegment(xy.get(i), xy.get(s[0]), xy.get(s[1]));
                 if (d > far) {
                     far = d;
                     at = i;
@@ -197,14 +199,6 @@ final class RecordedRoutes {
         return out;
     }
 
-    private static double toSegment(double[] p, double[] a, double[] b) {
-        double dx = b[0] - a[0];
-        double dy = b[1] - a[1];
-        double len = dx * dx + dy * dy;
-        double t = len == 0 ? 0 : Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len));
-        return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy);
-    }
-
     private static double meters(Report a, Report b) {
         return Geo.meters(new double[] {a.lat(), a.lon()}, new double[] {b.lat(), b.lon()});
     }
@@ -216,7 +210,7 @@ final class RecordedRoutes {
 
     private static String mostCommon(List<Run> runs, Function<Run, String> name) {
         Map<String, Integer> counts = new HashMap<>();
-        runs.stream().map(name).filter(java.util.Objects::nonNull).forEach(n -> counts.merge(n, 1, Integer::sum));
+        runs.stream().map(name).filter(Objects::nonNull).forEach(n -> counts.merge(n, 1, Integer::sum));
         return counts.entrySet().stream().max(Map.Entry.<String, Integer>comparingByValue()
                 .thenComparing(Map.Entry.comparingByKey(Comparator.reverseOrder()))).map(Map.Entry::getKey).orElse(null);
     }
