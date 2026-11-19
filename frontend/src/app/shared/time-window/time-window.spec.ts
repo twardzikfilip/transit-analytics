@@ -42,10 +42,10 @@ describe('time window', () => {
     expect(refreshMs(w)).toBe(60_000);
 
     const short = preset('5m');
-    expect(short.to).toEqual(new Date(2026, 10, 16, 14, 3, 0));
-    expect(short.from).toEqual(new Date(2026, 10, 16, 13, 58, 0));
-    expect(preset('1m').to).toEqual(new Date(2026, 10, 16, 14, 3, 0));
-    expect(refreshMs(short)).toBe(20_000);
+    expect(short.to).toEqual(new Date(2026, 10, 16, 14, 2, 50));
+    expect(short.from).toEqual(new Date(2026, 10, 16, 13, 57, 50));
+    expect(preset('1m').to).toEqual(new Date(2026, 10, 16, 14, 2, 50));
+    expect(refreshMs(short)).toBe(10_000);
     expect(windowLength(short)).toBe(5 * 60_000);
   });
 

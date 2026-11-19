@@ -1,8 +1,7 @@
 package com.transitanalytics.recording;
 
-import com.transitanalytics.dto.LivePositionDto;
+import com.transitanalytics.zbiorkom.FeedPosition;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Component;
 
 import java.sql.Timestamp;
 import java.sql.Types;
@@ -11,7 +10,6 @@ import java.util.Arrays;
 import java.util.List;
 
 /** Stores positions in the {@code position_sample} time series. */
-@Component
 public class PositionSampleWriter {
 
     /** A report already stored (same vehicle, same feed timestamp) is skipped. */
@@ -33,8 +31,8 @@ public class PositionSampleWriter {
      *
      * @return number of new rows
      */
-    public int write(List<LivePositionDto> positions, Instant fetchedAt) {
-        List<LivePositionDto> rows = positions.stream()
+    public int write(List<FeedPosition> positions, Instant fetchedAt) {
+        List<FeedPosition> rows = positions.stream()
                 .filter(p -> p.vehicleId() != null && p.timestamp() != null)
                 .toList();
         if (rows.isEmpty()) {

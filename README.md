@@ -18,12 +18,15 @@ frontend/            Angular 22 (standalone, signals, NgRx, Leaflet)
 
 ```bash
 # 1. Database + telemetry stack (Grafana on http://localhost:3000)
-docker compose up -d
+docker compose up -d postgres otel-lgtm
 
 # 2. Backend  → http://localhost:8080 (Flyway migrates on startup)
 cd backend && ./gradlew bootRun
 
-# 3. Frontend → http://localhost:4200 (proxies /api to :8080)
+# 3. Recorder (polls the live feed into the database, see "The recorder"); after the backend's first start
+backend/recorder/upgrade.sh
+
+# 4. Frontend → http://localhost:4200 (proxies /api to :8080)
 cd frontend && npm install && npm start
 ```
 
@@ -46,7 +49,8 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
 | zbiorkom.live API base URL | `ZBIORKOM_BASE_URL` | `https://api.zbiorkom.live/api6-open` |
 | Białystok bounding box (`minLon,minLat,maxLon,maxLat`) | `ZBIORKOM_BIALYSTOK_BBOX` | `22.921150,53.016270,23.382496,53.243687` |
 | Białystok GTFS feed (zip) | `GTFS_BIALYSTOK_URL` | `https://komunikacja.bialystok.pl/cms/File/download/gtfs/google_transit.zip` |
-| Record vehicle positions | `RECORDING_ENABLED` | `true` |
+| transit-recorder address (Live map) | `RECORDER_URL` | `http://localhost:8081` |
+| Password of the recorder's database role | `RECORDER_DB_PASSWORD` | `transit_recorder` |
 | Raw snapshot archive folder | `RECORDING_ARCHIVE_DIR` | `data/raw` (inside `backend/`, git-ignored) |
 | Password of the read-only `grafana_reader` DB user | `GRAFANA_DB_PASSWORD` | `grafana_reader` (set the same value for docker compose) |
 
@@ -116,8 +120,9 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   its route shape, for the maps. Computed in the background at startup and cached per timetable.
 - `POST /api/gtfs/bialystok/import` (admin) — downloads Białystok's GTFS timetable and loads it; see below.
 - `GET /api/zbiorkom/bialystok/positions` — live Białystok vehicle positions from [zbiorkom.live](https://zbiorkom.live),
-  used by the live map. Fetched on every call and not stored. Vehicles seen for the first time are added to the
-  vehicle table (number, type, agency, model, and the class and capacity of its model). The agency `default` is stored as `BKM`, and GTFS type codes become names
+  used by the live map: transit-recorder's latest snapshot (at most 10 s old), or straight from zbiorkom.live when the
+  recorder doesn't answer. Vehicles seen for the first time are added to the vehicle table (number, type, agency,
+  model; the backend adds the class and capacity of its model within 5 minutes). The agency `default` is stored as `BKM`, and GTFS type codes become names
   (`3` → `BUS`). Each position carries its line's `subtype` (the stored one, else from the name, for other operators'
   lines). If zbiorkom.live fails or times out, the endpoint returns 502.
 - `GET /api/fleet?from=&to=[&agency=BKM&agency=…]` — Fleet, from recorded positions: buses in use and in the fleet
@@ -252,9 +257,43 @@ inserting the ~384k stop times.
 
 ### Vehicle position history (time series)
 
-Every minute from 03:30 to 01:30 (Warsaw time), the backend polls the zbiorkom.live Białystok feed and stores every
-vehicle's position in `position_sample`, a TimescaleDB hypertable. It also keeps the raw response, gzipped, in the
-archive (`backend/data/raw/zbiorkom-bialystok/YYYY/MM/DD/<UTC time>.json.gz`).
+Every 10 seconds from 03:30 to 01:30 (Warsaw time), **transit-recorder** polls the zbiorkom.live Białystok feed and
+stores every vehicle's position in `position_sample`, a TimescaleDB hypertable. It also keeps the raw response,
+gzipped, in the archive (`backend/data/raw/zbiorkom-bialystok/YYYY/MM/DD/<UTC time>.json.gz`).
+
+#### The recorder (transit-recorder)
+
+The feed only ever gives current positions, so any moment nothing polls it is lost for good. Polling therefore runs in
+its own small app, `backend/recorder` (Spring Boot, JDBC only, no schema of its own), not in the backend: restarting or
+deploying the backend loses nothing.
+
+- **Each poll:** fetch the response; archive it first, as received; then register vehicles seen for the first time
+  and store the positions. A report seen twice (same vehicle and feed timestamp) is stored once.
+- **Database down:** the archived response is listed in the spool (`backend/data/spool/pending`) and stored once the
+  database is back (every 30 s and at startup), oldest first. Nothing is lost while the recorder itself runs.
+- **Live map:** the backend takes the recorder's latest snapshot (`GET http://localhost:8081/live/bialystok/positions`,
+  `RECORDER_URL`), adds each line's kind and serves it. When the recorder doesn't answer within 2 s, or its snapshot is
+  over a minute old, the backend asks zbiorkom.live itself. Outside recording hours the recorder fetches on demand (at
+  most every 10 s, not stored).
+- **Database access:** it logs in as `transit_recorder` (migration V16: add vehicles and positions, read them back),
+  password `RECORDER_DB_PASSWORD` (the same for the backend, which sets it, and the recorder). The backend owns the
+  schema; the recorder checks the tables exist at startup. New buses get their size class from the backend within
+  5 minutes (`VehicleClasses.applyToNew`).
+- **Running it:** `backend/recorder/upgrade.sh` (also the first time; needs Docker access). It builds the image, creates
+  `backend/data/raw` and `backend/data/spool` (the container runs as you; folders Docker creates itself belong to root
+  and the recorder couldn't write there), and stops a recorder running outside Docker once the container records, so
+  port 8081 is free. Docker restarts it after a crash or reboot (`restart: unless-stopped`). Health with details (last poll, last stored,
+  responses waiting) at `http://localhost:8081/actuator/health`; it turns DOWN after a minute without a stored poll
+  during recording hours. Without Docker: `./gradlew :recorder:bootRun` in `backend/`.
+- **Upgrading without a gap:** the same script builds the new version, starts it next to the running one (port 8082),
+  waits until it records, then replaces the old one. Both poll for a while; the duplicate reports are stored once. Or
+  upgrade between 01:30 and 03:30, when nothing is recorded.
+- **Monitoring:** the same metrics as before (`transit.recording.samples`, `.failures`, `.vehicles`, `.poll`), plus
+  `transit.recording.spooled`; service name `transit-recorder` in Grafana.
+- **Settings** (`recorder/src/main/resources/application.yml`): `RECORDING_ENABLED`, `cron`, the window,
+  `min-interval` (8 s), `RECORDING_ARCHIVE_DIR`, `RECORDING_SPOOL_DIR`, `DB_URL`/`DB_USER`/`DB_PASSWORD`, port 8081.
+- **Code:** `backend/zbiorkom-feed` holds what both apps use (feed client and payloads, parsing positions and
+  registering vehicles, archive, position writer); `backend/recorder` the polling, spool, live endpoint and backfill.
 
 - **Why PostgreSQL + TimescaleDB.** Half a year is about 25 million rows (≈ 940k vehicle-minutes per week from the
   timetable; weekday peak 181 buses). That's small for PostgreSQL, and it keeps positions next to the GTFS and vehicle
@@ -262,10 +301,10 @@ archive (`backend/data/raw/zbiorkom-bialystok/YYYY/MM/DD/<UTC time>.json.gz`).
   and statistics functions (`timescaledb_toolkit`).
 - **Expected size for half a year at one poll per minute:** ~2 GB of gzipped archive (13 KiB per snapshot), ~6 GB in
   PostgreSQL uncompressed (measured ~230 bytes per row with indexes), ~0.7 GB once compressed (measured 8.6× on a real
-  week of data). Polling every 20 seconds (the default) is about three times that: most vehicles send a new report
-  every few seconds, so nearly every poll stores a new row per vehicle.
-- **Polling:** every 20 seconds (`cron`), never closer than 18 s (`min-interval` guard). A report seen twice (same
-  vehicle and feed timestamp) is stored once.
+  week of data). Polling every 10 seconds is about six times that (~1 million rows and ~100 MB of archive a day):
+  most vehicles send a new report every few seconds, so nearly every poll stores a new row per vehicle.
+- **Polling:** every 10 seconds (`cron`), never closer than 8 s (`min-interval` guard). Recorded every minute until
+  November 2026, then every 20 seconds, then every 10.
 - **Vehicles running** at a poll are the vehicles that reported in the minute up to it, so a vehicle that skips a poll
   still counts, and the figure doesn't depend on the polling interval.
 - **Aggregates (refresh in the background, include the newest rows):**
@@ -275,16 +314,17 @@ archive (`backend/data/raw/zbiorkom-bialystok/YYYY/MM/DD/<UTC time>.json.gz`).
 - **Grafana:** the **Transit Fleet** dashboard shows vehicles in service, delay over time, a route × hour delay
   matrix, the most delayed routes, outliers (> 3σ from the route's mean for that hour), and a map of the vehicles at
   the end of the selected time range. It reads the database as `grafana_reader`, which can't see users or passwords.
-- Positions are only recorded while the backend runs. Turn recording off with `RECORDING_ENABLED=false`.
+- Positions are only recorded while the recorder runs. Turn recording off with `RECORDING_ENABLED=false` (recorder).
 - Vehicles with recorded positions can't be deleted (the history references them).
 
 **Backfill saved snapshots** (one API response per file, `.json` or `.json.gz`, any folder depth). The command
 imports them into `position_sample` and the archive, refreshes the aggregates for that period, and exits. Running it
-twice adds nothing.
+twice adds nothing. It runs as the database owner, since refreshing the aggregates needs more than the recorder's role.
 
 ```bash
 cd backend
-./gradlew bootRun --args='--app.recording.import-dir=/path/to/snapshots --server.port=0'
+DB_USER=transit DB_PASSWORD=transit ./gradlew :recorder:bootRun \
+  --args='--app.recording.import-dir=/path/to/snapshots --server.port=0'
 ```
 
 **Analysis examples** (psql: `psql -h localhost -U transit transit`):
@@ -361,7 +401,7 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
   kind of line: urban blue, suburban black, regional magenta; filters by operator and delay in the URL, with a reset;
   the popup shows the brigade and its remaining runs today; the city limits and centre are drawn under the buses),
   settings (GTFS import for admins)
-- Position history: vehicles running and mean delay every 20 s (each poll) for windows up to an hour, else every
+- Position history: vehicles running and mean delay every 10 s (each poll) for windows up to an hour, else every
   minute or coarser (SVG line charts with a hover/keyboard tooltip and
   a table view), running now / most at once / different vehicles seen, the delay distribution, and the raw reports, filtered by time window and line, all kept in the URL.
   Preset ranges refresh with each poll (up to 1 h) or every minute. Store slice `positionHistory`, registered by its lazy route.

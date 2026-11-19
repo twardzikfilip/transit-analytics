@@ -1,126 +1,79 @@
 package com.transitanalytics.zbiorkom;
 
 import com.transitanalytics.dto.LivePositionDto;
-import com.transitanalytics.dto.VehicleDto;
 import com.transitanalytics.service.LineSubtypes;
-import com.transitanalytics.service.VehicleService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 
 /**
- * Live data for Białystok from zbiorkom.live. Fetched on demand and not stored, except that vehicles seen for the
- * first time are registered in the vehicle table.
+ * Live positions for Białystok: transit-recorder's latest snapshot (it polls zbiorkom.live every 10 seconds); when
+ * the recorder can't be reached or its snapshot is too old, straight from zbiorkom.live. Vehicles seen for the first
+ * time are registered in the vehicle table either way.
  */
 @Service
 public class ZbiorkomBialystokService {
 
-    static final String CITY = "bialystok";
+    /** The city operator (Białostocka Komunikacja Miejska); zbiorkom reports it as "default". */
+    public static final String CITY_AGENCY = BialystokFeed.CITY_AGENCY;
+    /** A recorder snapshot older than this isn't live any more. */
+    static final Duration MAX_AGE = Duration.ofSeconds(60);
+    /** The fallback is logged at most this often. */
+    static final Duration WARN_EVERY = Duration.ofMinutes(1);
 
     private static final Logger log = LoggerFactory.getLogger(ZbiorkomBialystokService.class);
 
-    /** The city operator (Białostocka Komunikacja Miejska); zbiorkom reports it as "default". */
-    public static final String CITY_AGENCY = "BKM";
-    private static final String DEFAULT_AGENCY = CITY_AGENCY;
-
-    /** GTFS route types, named like the vehicle types used elsewhere in the app. */
-    private static final Map<String, String> VEHICLE_TYPES = Map.of(
-            "0", "TRAM", "1", "METRO", "2", "TRAIN", "3", "BUS", "11", "TROLLEYBUS");
-
-    private final ZbiorkomClient client;
-    private final ZbiorkomProperties properties;
-    private final VehicleService vehicleService;
+    private final RecorderClient recorder;
+    private final BialystokFeed feed;
     private final LineSubtypes lineSubtypes;
+    private final Clock clock;
+    private volatile Instant warnedAt = Instant.MIN;
 
-    public ZbiorkomBialystokService(ZbiorkomClient client, ZbiorkomProperties properties,
-                                    VehicleService vehicleService, LineSubtypes lineSubtypes) {
-        this.client = client;
-        this.properties = properties;
-        this.vehicleService = vehicleService;
+    public ZbiorkomBialystokService(RecorderClient recorder, BialystokFeed feed, LineSubtypes lineSubtypes,
+                                    Clock clock) {
+        this.recorder = recorder;
+        this.feed = feed;
         this.lineSubtypes = lineSubtypes;
-    }
-
-    /**
-     * One poll of the feed: the response as received, when it was fetched, and the parsed positions.
-     *
-     * @param raw       response body, for archiving
-     * @param fetchedAt when the request was made
-     */
-    public record Snapshot(byte[] raw, Instant fetchedAt, List<LivePositionDto> positions) {
+        this.clock = clock;
     }
 
     /** Current position of every vehicle in the Białystok area. */
     public List<LivePositionDto> positions() {
-        return snapshot().positions();
+        return snapshot().positions().stream().map(this::toDto).toList();
     }
 
-    /** Polls the feed once; vehicles seen for the first time are registered. */
-    public Snapshot snapshot() {
-        Instant fetchedAt = Instant.now();
-        byte[] raw = client.positionsRaw(CITY, properties.bialystok().bbox());
-        return new Snapshot(raw, fetchedAt, toPositions(client.parsePositions(raw)));
-    }
-
-    /** Positions from a response saved earlier (e.g. a file being imported); new vehicles are registered. */
-    public List<LivePositionDto> positionsFrom(byte[] savedResponse) {
-        return toPositions(client.parsePositions(savedResponse));
-    }
-
-    private List<LivePositionDto> toPositions(ZbiorkomFeed.Positions feed) {
-        List<ZbiorkomFeed.Position> raw = feed == null || feed.positions() == null ? List.of() : feed.positions()
-                .stream()
-                .filter(p -> p.vehicle() != null && p.vehicle().id() != null)
-                .filter(p -> p.location() != null && p.location().length >= 2)
-                .toList();
-
-        Map<String, Long> vehicleIds = registerVehicles(raw.stream().map(p -> toVehicle(p.vehicle())).toList());
-        return raw.stream().map(p -> toDto(p, vehicleIds.get(p.vehicle().id()))).toList();
-    }
-
-    private Map<String, Long> registerVehicles(List<VehicleDto.Discovered> vehicles) {
+    private LiveSnapshot snapshot() {
+        Instant now = clock.instant();
+        String why;
         try {
-            return vehicleService.registerMissing(vehicles);
-        } catch (DataIntegrityViolationException ex) {
-            // Another request registered the same vehicle at the same moment; the next poll picks up its id.
-            log.warn("Concurrent vehicle registration, returning positions without vehicle ids: {}",
-                    ex.getMostSpecificCause().getMessage());
-            return Map.of();
+            LiveSnapshot latest = recorder.latest();
+            if (latest.fetchedAt() != null && latest.fetchedAt().isAfter(now.minus(MAX_AGE))) {
+                return latest;
+            }
+            why = "its latest snapshot is from " + latest.fetchedAt();
+        } catch (RuntimeException ex) {
+            why = ex.toString();
         }
+        if (warnedAt.plus(WARN_EVERY).isBefore(now)) {
+            warnedAt = now;
+            log.warn("Live positions straight from zbiorkom.live, not from transit-recorder: {}", why);
+        }
+        BialystokFeed.Snapshot direct = feed.poll();
+        return new LiveSnapshot(direct.fetchedAt(), direct.positions());
     }
 
-    static VehicleDto.Discovered toVehicle(ZbiorkomFeed.Vehicle v) {
-        return new VehicleDto.Discovered(v.id(), vehicleType(v.type()), agency(v.agency()), v.model());
-    }
-
-    static String vehicleType(String gtfsType) {
-        return gtfsType == null ? "UNKNOWN" : VEHICLE_TYPES.getOrDefault(gtfsType, gtfsType);
-    }
-
-    static String agency(String agency) {
-        return agency == null || agency.equalsIgnoreCase("default") ? DEFAULT_AGENCY : agency;
-    }
-
-    private LivePositionDto toDto(ZbiorkomFeed.Position p, Long vehicleId) {
-        VehicleDto.Discovered v = toVehicle(p.vehicle());
+    private LivePositionDto toDto(FeedPosition p) {
         List<LivePositionDto.UpcomingStop> stops = p.upcomingStops() == null ? List.of() : p.upcomingStops().stream()
-                .filter(Objects::nonNull)
-                .map(s -> new LivePositionDto.UpcomingStop(s.sequence(), s.name(),
-                        instant(s.scheduledArrival()), instant(s.scheduledDeparture())))
+                .map(s -> new LivePositionDto.UpcomingStop(s.sequence(), s.name(), s.scheduledArrival(),
+                        s.scheduledDeparture()))
                 .toList();
-        return new LivePositionDto(vehicleId, v.vehicleNumber(), v.type(), v.agency(), v.model(),
-                p.routeName(), p.routeColor(), p.brigade(), p.headsign(),
-                p.location()[1], p.location()[0], p.bearing(),
-                p.delay() == null ? null : Math.round(p.delay() / 1000.0),
-                instant(p.timestamp()), stops, lineSubtypes.of(p.routeName()));
-    }
-
-    private static Instant instant(Long epochMillis) {
-        return epochMillis == null ? null : Instant.ofEpochMilli(epochMillis);
+        return new LivePositionDto(p.vehicleId(), p.vehicleNumber(), p.type(), p.agency(), p.model(), p.routeName(),
+                p.routeColor(), p.brigade(), p.headsign(), p.latitude(), p.longitude(), p.bearing(),
+                p.delaySeconds(), p.timestamp(), stops, lineSubtypes.of(p.routeName()));
     }
 }

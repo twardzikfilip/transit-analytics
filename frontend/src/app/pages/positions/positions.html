@@ -89,7 +89,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (p of series()!.points; track p.time) {
+            @for (p of c.rows; track p.time) {
               <tr>
                 <td class="time">{{ p.time | date: 'EEE d MMM, HH:mm' }}</td>
                 <td class="num">{{ p.vehicles | number: '1.0-1' }}</td>

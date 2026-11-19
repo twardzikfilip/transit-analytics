@@ -1,7 +1,7 @@
-package com.transitanalytics.recording;
+package com.transitanalytics.recorder;
 
-import com.transitanalytics.DbIntegrationTest;
-import com.transitanalytics.dto.LivePositionDto;
+import com.transitanalytics.recording.PositionSampleWriter;
+import com.transitanalytics.zbiorkom.FeedPosition;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -26,7 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Position recording against the real TimescaleDB database. Uses vehicle numbers starting with "IT-" and removes
  * them (and their positions) afterwards. Run with INTEGRATION_TESTS=true and the DB up.
  */
-@DbIntegrationTest
+@RecorderDbTest
 class RecordingIntegrationTest {
 
     @TempDir
@@ -81,7 +81,7 @@ class RecordingIntegrationTest {
         transaction.executeWithoutResult(status -> {
             Long vehicle = jdbc.queryForObject(
                     "INSERT INTO vehicle (vehicle_number, type) VALUES ('IT-W1', 'BUS') RETURNING id", Long.class);
-            List<LivePositionDto> snapshot = List.of(
+            List<FeedPosition> snapshot = List.of(
                     position(vehicle, F1, 30L, "IT-ROUTE"), position(vehicle, F2, 90L, "IT-ROUTE"));
 
             assertThat(writer.write(snapshot, F2)).isEqualTo(2);
@@ -128,9 +128,9 @@ class RecordingIntegrationTest {
         assertThat(mean).isEqualTo(60.0);
     }
 
-    private static LivePositionDto position(Long vehicleId, Instant at, Long delay, String route) {
-        return new LivePositionDto(vehicleId, "IT-W1", "BUS", "BKM", null, route, null, "IT-01", "Test", 53.13, 23.16,
-                90.0, delay, at, List.of(new LivePositionDto.UpcomingStop(3, "Next stop", at, at)), null);
+    private static FeedPosition position(Long vehicleId, Instant at, Long delay, String route) {
+        return new FeedPosition(vehicleId, "IT-W1", "BUS", "BKM", null, route, null, "IT-01", "Test", 53.13, 23.16,
+                90.0, delay, at, List.of(new FeedPosition.UpcomingStop(3, "Next stop", at, at)));
     }
 
     /** One zbiorkom response with a single vehicle. */

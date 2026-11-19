@@ -1,7 +1,7 @@
 package com.transitanalytics.recording;
 
 import com.transitanalytics.DbIntegrationTest;
-import com.transitanalytics.dto.LivePositionDto;
+import com.transitanalytics.zbiorkom.FeedPosition;
 import com.transitanalytics.dto.PositionHistoryDto;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,7 +42,7 @@ class PositionHistoryIntegrationTest {
         poll("10:05:00", position(c, "10:05:05", "IT-10", -30L));
 
         PositionHistoryDto.FleetSeries all = history.fleet(FROM, TO, null);
-        assertThat(all.stepSeconds()).as("one poll per point in an hour's window").isEqualTo(20);
+        assertThat(all.stepSeconds()).as("one poll per point in an hour's window").isEqualTo(10);
         assertThat(all.points()).extracting(PositionHistoryDto.FleetPoint::vehicles).containsExactly(2.0, 3.0, 1.0);
         assertThat(all.points().get(2).time()).as("polls 10:02–10:04 are missing, not zero")
                 .isEqualTo(Instant.parse("2099-01-01T10:05:00Z"));
@@ -170,7 +170,7 @@ class PositionHistoryIntegrationTest {
                 .hasMessageContaining("at most 92 days");
     }
 
-    private void poll(String time, LivePositionDto... positions) {
+    private void poll(String time, FeedPosition... positions) {
         writer.write(List.of(positions), Instant.parse("2099-01-01T" + time + "Z"));
     }
 
@@ -184,8 +184,8 @@ class PositionHistoryIntegrationTest {
                 Long.class, number, agency);
     }
 
-    private static LivePositionDto position(long vehicleId, String time, String route, Long delay) {
-        return new LivePositionDto(vehicleId, "x", "BUS", "BKM", null, route, null, "IT-01", "Test", 53.13, 23.16,
-                90.0, delay, Instant.parse("2099-01-01T" + time + "Z"), List.of(), null);
+    private static FeedPosition position(long vehicleId, String time, String route, Long delay) {
+        return new FeedPosition(vehicleId, "x", "BUS", "BKM", null, route, null, "IT-01", "Test", 53.13, 23.16,
+                90.0, delay, Instant.parse("2099-01-01T" + time + "Z"), List.of());
     }
 }

@@ -2,7 +2,7 @@ package com.transitanalytics.service;
 
 import com.transitanalytics.DbIntegrationTest;
 import com.transitanalytics.dto.HotspotDto;
-import com.transitanalytics.dto.LivePositionDto;
+import com.transitanalytics.zbiorkom.FeedPosition;
 import com.transitanalytics.recording.PositionSampleWriter;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -98,8 +98,8 @@ class HotspotIntegrationTest {
         Instant t = ServiceDay.gtfsTimeZero(java.time.LocalDate.of(2099, 1, 5))
                 .plusSeconds(java.time.LocalTime.parse(start).toSecondOfDay());
         for (double lat : latitudes) {
-            writer.write(List.of(new LivePositionDto(vehicle, "x", "BUS", "BKM", null, line, null, line + "-01",
-                    "Test", lat, LON, 0.0, 0L, t, List.of(), null)), t);
+            writer.write(List.of(new FeedPosition(vehicle, "x", "BUS", "BKM", null, line, null, line + "-01",
+                    "Test", lat, LON, 0.0, 0L, t, List.of())), t);
             t = t.plusSeconds(20);
         }
     }

@@ -2,7 +2,7 @@ package com.transitanalytics.service;
 
 import com.transitanalytics.DbIntegrationTest;
 import com.transitanalytics.dto.DelayGenerationDto;
-import com.transitanalytics.dto.LivePositionDto;
+import com.transitanalytics.zbiorkom.FeedPosition;
 import com.transitanalytics.recording.PositionSampleWriter;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -109,8 +109,8 @@ class DelayGenerationIntegrationTest {
 
     private void report(long vehicle, String line, Instant t, int nextStop, int delay) {
         String name = "IT-DG " + (char) ('A' + nextStop - 1);
-        writer.write(List.of(new LivePositionDto(vehicle, "x", "BUS", "BKM", null, line, null, line + "-01",
+        writer.write(List.of(new FeedPosition(vehicle, "x", "BUS", "BKM", null, line, null, line + "-01",
                 "IT-DG D", 53.60 + (nextStop - 1) * 0.003 - 0.001, LON, 0.0, (long) delay, t,
-                List.of(new LivePositionDto.UpcomingStop(nextStop, name, null, null)), null)), t);
+                List.of(new FeedPosition.UpcomingStop(nextStop, name, null, null)))), t);
     }
 }

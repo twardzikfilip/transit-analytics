@@ -63,7 +63,7 @@ export function timeTicks(
 
 /**
  * Shortest pause in recording that breaks the line, whatever the bucket size: one missed poll (positions are recorded
- * every 20 seconds, earlier every minute) is not a break, as vehicles count as running for a minute after a report.
+ * every 10 seconds, earlier every 20 seconds or a minute) is not a break, as vehicles count as running for a minute after a report.
  */
 export const MIN_GAP_MS = 90_000;
 

@@ -11,8 +11,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-/** Live data from zbiorkom.live, passed through without storing it. */
-@Tag(name = "Live data: Białystok", description = "Live data from zbiorkom.live, not stored")
+/** Live data from zbiorkom.live: transit-recorder's latest snapshot, or the feed itself when the recorder is down. */
+@Tag(name = "Live data: Białystok", description = "Live data from zbiorkom.live")
 @RestController
 @RequestMapping("/api/zbiorkom/bialystok")
 public class ZbiorkomController {
@@ -24,9 +24,11 @@ public class ZbiorkomController {
     }
 
     @Operation(summary = "Live vehicle positions",
-            description = "Fetched from zbiorkom.live on every call. Vehicles seen for the first time are added to the vehicle table.")
+            description = "transit-recorder's latest snapshot (it polls every 10 seconds); straight from zbiorkom.live "
+                    + "when the recorder doesn't answer or is behind. Vehicles seen for the first time are added to the "
+                    + "vehicle table.")
     @ApiResponse(responseCode = "200", description = "Current positions")
-    @ApiResponse(responseCode = "502", description = "zbiorkom.live failed or timed out")
+    @ApiResponse(responseCode = "502", description = "The recorder is down and zbiorkom.live failed or timed out")
     @GetMapping("/positions")
     public List<LivePositionDto> positions() {
         return bialystok.positions();
