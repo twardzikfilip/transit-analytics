@@ -1,0 +1,222 @@
+<div class="page-header">
+  <h1>Brigades</h1>
+  @if (shown(); as d) {
+    <span class="muted">Brigade {{ d.brigade }} · service day {{ d.serviceDay }}</span>
+  }
+</div>
+
+<div class="controls">
+  <label>
+    Day
+    <input type="date" [value]="date()" (change)="setDate($any($event.target).value)" />
+  </label>
+  <div class="search">
+    <label for="brigade-search">Brigade</label>
+    <input
+      id="brigade-search"
+      type="search"
+      list="brigade-list"
+      autocomplete="off"
+      [placeholder]="brigade() ?? 'Search: brigade or line, e.g. 103-05 or 103'"
+      [value]="search()"
+      (input)="typed($any($event.target).value)"
+      (change)="typed($any($event.target).value)"
+    />
+    <datalist id="brigade-list">
+      @for (b of matches(); track b.brigade) {
+        <option [value]="b.brigade">{{ describe(b) }}</option>
+      }
+    </datalist>
+    <button type="button" (click)="step(-1)" [disabled]="!brigade()" aria-label="Previous brigade">
+      ‹
+    </button>
+    <button type="button" (click)="step(1)" [disabled]="!brigade()" aria-label="Next brigade">
+      ›
+    </button>
+  </div>
+  <label>
+    Agency
+    <select [value]="agency()" (change)="setAgency($any($event.target).value)">
+      @for (a of list()?.agencies ?? []; track a.id) {
+        <option [value]="a.id" [selected]="a.id === agency()">{{ a.name }}</option>
+      }
+    </select>
+  </label>
+  @if (loadingList() || loadingDay()) {
+    <span class="muted" role="status">Loading…</span>
+  }
+</div>
+
+@if (error(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+}
+
+@if (!brigade()) {
+  <section class="card pick">
+    <p>
+      Pick a brigade:
+      {{
+        list()?.brigades?.length
+          ? list()!.brigades.length + ' run on ' + date() + '.'
+          : 'none runs on this day.'
+      }}
+      Type its name or line in the search box.
+    </p>
+    <ul class="brigade-chips">
+      @for (b of matches().slice(0, 60); track b.brigade) {
+        <li>
+          <button type="button" class="chip" (click)="choose(b.brigade)" [title]="describe(b)">
+            {{ b.brigade }}
+          </button>
+        </li>
+      }
+    </ul>
+  </section>
+} @else if (shown(); as d) {
+  @if (!d.trips.length) {
+    <p class="muted">Brigade {{ d.brigade }} doesn't run on {{ d.serviceDay }}.</p>
+  } @else {
+    <div class="tiles">
+      <div class="card tile">
+        <span class="muted">Trips</span>
+        <strong>{{ d.summary.trips }}</strong>
+        <span class="muted small">{{ d.summary.judged }} over and recorded</span>
+      </div>
+      <div class="card tile">
+        <span class="muted">Run in full</span>
+        <strong>{{ d.summary.completed }}</strong>
+        <span class="muted small">{{ share(d.summary.completed, d.summary.judged) }} of those</span>
+      </div>
+      <div class="card tile" [class.alert]="d.summary.abnormal > 0">
+        <span class="muted">Not as scheduled</span>
+        <strong>{{ d.summary.abnormal }}</strong>
+        <span class="muted small">lost, missed, turned short, bus changed or off route</span>
+      </div>
+      <div class="card tile">
+        <span class="muted">Left on time</span>
+        <strong>{{ share(d.summary.onTime, d.summary.withStartDelay) }}</strong>
+        <span class="muted small"
+          >{{ d.summary.onTime }} of {{ d.summary.withStartDelay }}, 1 min early to 3 min late</span
+        >
+      </div>
+      <div class="card tile">
+        <span class="muted">Typical delay setting off</span>
+        <strong>{{ delayText(d.summary.medianStartDelay) }}</strong>
+        <span class="muted small">most {{ delayText(d.summary.maxDelay) }}</span>
+      </div>
+      <div class="card tile">
+        <span class="muted">Buses</span>
+        <strong>{{ d.summary.buses.length ? d.summary.buses.join(', ') : '–' }}</strong>
+        <span class="muted small">{{
+          d.summary.buses.length > 1 ? 'the bus changed during the day' : 'one bus all day'
+        }}</span>
+      </div>
+    </div>
+
+    <section class="card chart-card" [class.loading]="loadingDay()">
+      <h2>Scheduled and actual</h2>
+      <p class="muted">
+        Each trip as scheduled (alternating colours) and, under it, what ran: a bar per bus,
+        labelled with the bus and how late it set off. Hover a trip for its details; click it to
+        find it in the table.
+      </p>
+      <app-brigade-day-chart
+        [trips]="d.trips"
+        [selected]="selected()"
+        (choose)="chooseTrip($event)"
+      />
+      <ul class="legend">
+        <li>
+          <span class="swatch a"></span><span class="swatch b"></span>Scheduled trips, alternating
+        </li>
+        <li><span class="swatch actual"></span>Actual run, a bar per bus</li>
+        <li><span class="swatch not-run"></span>Not run</li>
+        <li><span class="swatch not-seen"></span>Bus not seen (probably ran)</li>
+        <li><span class="swatch no-data"></span>No data or upcoming</li>
+        <li><span class="mark change">⇄</span>Bus changed</li>
+        <li><span class="mark lost">✕</span>Lost</li>
+        <li><span class="mark change">↷</span>Detour</li>
+        <li><span class="slant"></span>Scheduled to actual start</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Every trip</h2>
+      <div class="data-table-wrap">
+        <table class="data-table clickable trips">
+          <thead>
+            <tr>
+              <th class="num">#</th>
+              <th>Scheduled</th>
+              <th>Line → towards</th>
+              <th>Ran</th>
+              <th class="num">Set off</th>
+              <th class="num">Last seen</th>
+              <th>Bus</th>
+              <th>Outcome</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (t of d.trips; track t.tripId; let i = $index) {
+              <tr
+                [attr.data-index]="i"
+                [class.selected]="selected() === i"
+                [attr.aria-selected]="selected() === i"
+                tabindex="0"
+                (click)="selected.set(selected() === i ? null : i)"
+                (keydown.enter)="selected.set(selected() === i ? null : i)"
+              >
+                <td class="num">{{ i + 1 }}</td>
+                <td class="time">{{ span(t.departure, t.arrival) }}</td>
+                <td>{{ tripLabel(t) }}</td>
+                <td class="time">{{ actualSpan(t) }}</td>
+                <td class="num">{{ delayText(t.runs[0]?.startDelay) }}</td>
+                <td class="num">{{ delayText(t.runs[t.runs.length - 1]?.endDelay) }}</td>
+                <td>{{ busesText(t) }}</td>
+                <td>
+                  <span class="outcome" [class.problem]="problems.includes(t.kind)">{{
+                    kindLabels[t.kind]
+                  }}</span>
+                  @if (t.note) {
+                    <div class="muted note">{{ t.note }}</div>
+                  }
+                  @for (m of t.missing; track $index) {
+                    <div class="muted note">
+                      {{ m.why === 'not-run' ? 'Not run' : 'Not seen' }}: stops {{ m.fromStop }}–{{
+                        m.toStop
+                      }}
+                      ({{ span(m.from, m.to) }})
+                    </div>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <details class="card how">
+      <summary>How this is worked out</summary>
+      <ul>
+        <li>
+          <strong>Scheduled:</strong> the brigade's trips in the timetable for the service day
+          (03:00 to 03:00).
+        </li>
+        <li>
+          <strong>Actual:</strong> the recorded positions (every 10 s) of the buses that ran the
+          brigade, matched to its trips as on Abnormal trips. A bus's part of a trip runs from the
+          first stop it was seen heading to, to the last; its times are the scheduled ones there
+          plus the delay the feed reported.
+        </li>
+        <li>
+          <strong>Outcome</strong> is the one Abnormal trips gives. <em>Not run</em> parts are those
+          of trips lost, missed, cancelled or turned short; <em>not seen</em> parts are where the
+          bus stopped reporting but probably carried on. <em>Not recorded</em>: a gap in recording
+          then.
+        </li>
+        <li><strong>On time</strong> setting off: between 1 minute early and 3 minutes late.</li>
+      </ul>
+    </details>
+  }
+}

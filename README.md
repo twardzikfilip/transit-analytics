@@ -196,6 +196,13 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   aren't judged; trips are judged as soon as it's clear what the bus did. Counts overall and per line, and the
   abnormal trips (the latest 2000) with brigade, buses, stops seen, delays and a note. Each finished service day is
   judged once; the running day again after a minute. The last month is judged at startup in the background.
+- `GET /api/brigades?date=&agency=` — the brigades of an agency (default: the city's, BKM) on a service day (default:
+  today's): each with its lines, trip count and first and last times, plus the agencies whose timetables name brigades.
+- `GET /api/brigades/{brigade}/day?date=` — a brigade's day: each trip as scheduled with what actually ran (a part per
+  bus, from the first to the last stop it was seen heading to, timed by the reported delays), the parts not run (lost,
+  missed, cancelled, turned short, skipped at a bus change) or not seen (the bus stopped reporting), its outcome as on
+  Abnormal trips, and a summary (trips run in full, left on time between 1 min early and 3 min late, median start
+  delay, buses).
 - `GET /api/brigades/{brigade}/schedule` — a brigade's runs on the service day (03:00–03:00 Warsaw time) that `at`
   falls in (ISO instant, default now) from the timetable: line, headsign, first and last stop, scheduled departure
   and arrival. Brigades are named as on the live feed (`103-05`); the timetable's is the trip id's prefix. Used by
@@ -486,6 +493,12 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
   the most (overall or on a chosen stretch) with a chart and table of how their delay built up stop by stop, and
   its brigades. Window, part of the day and line are kept in the URL (`?part=`, `?line=`). Store slice
   `delayGeneration`, registered by its lazy route.
+- Brigades: pick a day, an agency (BKM by default) and a brigade (search by name or line; all in the URL). Tiles sum the
+  day up; a timeline shows every scheduled trip in turn (consecutive trips alternate blue and magenta, labelled with
+  time, line and destination) and, under each, what actually ran: a bar per bus labelled with the bus and how late it
+  set off, a dashed line from the scheduled to the actual start, parts not run hatched red, parts the bus wasn't seen on
+  hatched grey, markers for a bus change, a lost trip and a detour, and outlines for trips without data or still to
+  come. Hover a trip for details; a table lists every trip with the same.
 - Abnormal trips: the trips of any time window (preset windows up to 12 hours refresh every minute). Cards count the trips by outcome (click a kind to list only those), a table shows the
   lines with abnormal trips, and the trips table lists each abnormal trip with its kind, scheduled times, line and
   brigade, buses, the stops it was seen on, its delays and what happened (filter by line, or by bus). Bus changes show

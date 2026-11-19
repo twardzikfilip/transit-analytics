@@ -21,6 +21,10 @@ export const routes: Routes = [
         loadChildren: () => import('./pages/hotspots/hotspots.routes').then((m) => m.HOTSPOTS_ROUTES),
       },
       {
+        path: 'brigades',
+        loadChildren: () => import('./pages/brigades/brigades.routes').then((m) => m.BRIGADES_ROUTES),
+      },
+      {
         path: 'trip-anomalies',
         loadChildren: () =>
           import('./pages/trip-anomalies/trip-anomalies.routes').then((m) => m.TRIP_ANOMALIES_ROUTES),

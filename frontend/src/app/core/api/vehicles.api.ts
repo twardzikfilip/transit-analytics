@@ -1,13 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import {
-  BrigadeSchedule,
-  FleetReport,
-  LivePosition,
-  VehicleDetail,
-  WindowQuery,
-} from '../models/models';
+import { FleetReport, LivePosition, VehicleDetail, WindowQuery } from '../models/models';
 import { windowParams } from './window-params';
 
 /** Live data from zbiorkom.live, passed through by the backend. */
@@ -17,19 +11,6 @@ export class ZbiorkomApi {
 
   bialystokPositions(): Observable<LivePosition[]> {
     return this.http.get<LivePosition[]>('/api/zbiorkom/bialystok/positions');
-  }
-}
-
-/** Brigades (vehicle duties) from the timetable. */
-@Injectable({ providedIn: 'root' })
-export class BrigadeApi {
-  private readonly http = inject(HttpClient);
-
-  /** The brigade's runs on the service day that `at` falls in (default: today's). */
-  schedule(brigade: string, at?: Date): Observable<BrigadeSchedule> {
-    return this.http.get<BrigadeSchedule>(`/api/brigades/${encodeURIComponent(brigade)}/schedule`, {
-      params: at ? { at: at.toISOString() } : {},
-    });
   }
 }
 
@@ -47,6 +28,8 @@ export class FleetApi {
 
   /** One bus in a window: its runs per day and the abnormal trips it was involved in. */
   vehicle(id: number, window: WindowQuery): Observable<VehicleDetail> {
-    return this.http.get<VehicleDetail>(`/api/fleet/vehicles/${id}`, { params: windowParams(window) });
+    return this.http.get<VehicleDetail>(`/api/fleet/vehicles/${id}`, {
+      params: windowParams(window),
+    });
   }
 }

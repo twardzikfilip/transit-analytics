@@ -1,0 +1,178 @@
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.6rem 1rem;
+  margin-bottom: 1rem;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    font-size: 0.85rem;
+  }
+}
+
+.search {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  grid-template-rows: auto auto;
+  column-gap: 0.25rem;
+  row-gap: 0.2rem;
+  font-size: 0.85rem;
+
+  label {
+    grid-column: 1 / -1;
+  }
+
+  input {
+    min-width: 16rem;
+  }
+
+  button {
+    padding: 0.3rem 0.6rem;
+  }
+}
+
+.card {
+  margin-bottom: 1rem;
+}
+
+.card > p.muted {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+}
+
+.brigade-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0;
+
+  strong {
+    font-size: 1.35rem;
+  }
+
+  &.alert strong {
+    color: var(--danger);
+  }
+}
+
+.small {
+  font-size: 0.8rem;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.82rem;
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+}
+
+.swatch {
+  display: inline-block;
+  width: 1.2rem;
+  height: 0.75rem;
+  border-radius: 2px;
+
+  &.a {
+    background: #2a78d6;
+  }
+
+  &.b {
+    background: #c2189b;
+  }
+
+  &.actual {
+    background: rgba(42, 120, 214, 0.4);
+    border: 1.5px solid #2a78d6;
+  }
+
+  &.not-run {
+    background: repeating-linear-gradient(45deg, #d7301f 0 2px, rgba(215, 48, 31, 0.15) 2px 5px);
+  }
+
+  &.not-seen {
+    background: repeating-linear-gradient(45deg, #8a8f98 0 2px, transparent 2px 5px);
+  }
+
+  &.no-data {
+    border: 1.5px dashed var(--muted);
+  }
+}
+
+.mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+
+  &.change {
+    background: #d48806;
+  }
+
+  &.lost {
+    background: #d7301f;
+  }
+}
+
+.slant {
+  display: inline-block;
+  width: 1rem;
+  border-top: 1px dashed var(--muted);
+  transform: rotate(35deg);
+}
+
+.trips {
+  .time {
+    white-space: nowrap;
+  }
+
+  .note {
+    font-size: 0.8rem;
+  }
+
+  .outcome.problem {
+    color: var(--danger);
+    font-weight: 600;
+  }
+}
+
+.how ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.2rem;
+
+  li {
+    margin-bottom: 0.4rem;
+  }
+}

@@ -550,18 +550,42 @@ final class TripAnomalies {
      */
     static List<Outcome> judge(List<ScheduledTrip> trips, List<Report> reports, Recording recording,
                                Map<String, Shape> shapes, Instant now) {
+        Map<String, List<ScheduledTrip>> byBrigade = byBrigade(trips);
+        List<Report> filled = withBrigades(reports);
+        Map<ScheduledTrip, List<Report>> matched = matchReports(byBrigade, filled);
+        Map<Long, List<Report>> byVehicle = new HashMap<>();
+        Set<String> linesReported = new HashSet<>();
+        for (Report r : filled) {
+            byVehicle.computeIfAbsent(r.vehicleId(), k -> new ArrayList<>()).add(r);
+            linesReported.add(r.line());
+        }
+        Set<String> linesMatched = matched.keySet().stream().map(ScheduledTrip::line).collect(Collectors.toSet());
+
+        Context context = new Context(byBrigade, matched, byVehicle, recording, shapes, now, linesReported,
+                linesMatched);
+        return trips.stream().map(context::judge).toList();
+    }
+
+    /** The trips by brigade, each brigade's in departure order. */
+    static Map<String, List<ScheduledTrip>> byBrigade(List<ScheduledTrip> trips) {
         Map<String, List<ScheduledTrip>> byBrigade = trips.stream().filter(t -> t.brigade() != null)
                 .collect(Collectors.groupingBy(ScheduledTrip::brigade));
         byBrigade.values().forEach(list -> list.sort(Comparator.comparing(ScheduledTrip::departure)));
+        return byBrigade;
+    }
 
+    /**
+     * Each trip's reports: every report goes to the trip of its brigade it matches, or stays on its bus's previous
+     * trip (see {@link #staysOn}).
+     *
+     * @param reports ordered by vehicle and time, blank brigades filled in ({@link #withBrigades})
+     */
+    static Map<ScheduledTrip, List<Report>> matchReports(Map<String, List<ScheduledTrip>> byBrigade,
+                                                         List<Report> reports) {
         Map<ScheduledTrip, List<Report>> matched = new IdentityHashMap<>();
-        Map<Long, List<Report>> byVehicle = new HashMap<>();
-        Set<String> linesReported = new HashSet<>();
         Report previous = null;
         ScheduledTrip previousTrip = null;
-        for (Report r : withBrigades(reports)) {
-            byVehicle.computeIfAbsent(r.vehicleId(), k -> new ArrayList<>()).add(r);
-            linesReported.add(r.line());
+        for (Report r : reports) {
             ScheduledTrip trip = staysOn(previous, previousTrip, r) ? previousTrip
                     : match(r, byBrigade.get(r.brigade()));
             if (trip != null) {
@@ -570,11 +594,7 @@ final class TripAnomalies {
             previous = r;
             previousTrip = trip;
         }
-        Set<String> linesMatched = matched.keySet().stream().map(ScheduledTrip::line).collect(Collectors.toSet());
-
-        Context context = new Context(byBrigade, matched, byVehicle, recording, shapes, now, linesReported,
-                linesMatched);
-        return trips.stream().map(context::judge).toList();
+        return matched;
     }
 
     /** A report with an outlying delay stays on its bus's trip when this close after the bus's previous report. */

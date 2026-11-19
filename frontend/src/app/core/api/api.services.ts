@@ -9,3 +9,4 @@ export * from './delay-generation.api';
 export * from './trip-anomalies.api';
 export * from './boundaries.api';
 export * from './bus-lanes.api';
+export * from './brigades.api';
