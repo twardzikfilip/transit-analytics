@@ -82,33 +82,47 @@
       <span class="muted">{{ subtypeLabel(d.subtype) }} line</span>
       @if (d.operator; as o) {
         <p class="operator">
-          Organised by {{ o.organiser }}; operated by <strong>{{ o.code }}</strong>
-          {{
-            '(' +
-              o.name +
-              ')' +
-              (o.depot ? ', from ' + o.depot : '') +
-              (o.depotAddress ? ', ' + o.depotAddress : '') +
-              '.'
-          }}
+          @if (o.code) {
+            Organised by {{ o.organiser }}; operated by <strong>{{ o.code }}</strong>
+            {{
+              '(' +
+                o.name +
+                ')' +
+                (o.depot ? ', from ' + o.depot : '') +
+                (o.depotAddress ? ', ' + o.depotAddress : '') +
+                '.'
+            }}
+          } @else {
+            Run by <strong>{{ o.name }}</strong>, from its own timetable.
+          }
           @if (o.website) {
-            <a [href]="o.website" target="_blank" rel="noopener">{{ o.code }} website ↗</a>
+            <a [href]="o.website" target="_blank" rel="noopener"
+              >{{ o.code ?? o.name }} website ↗</a
+            >
           }
         </p>
       }
       @if (d.busLanes.length) {
         <p class="bus-lanes">
           <span
-            class="line-swatch"
+            class="line-swatch bus-lane"
             [style.border-top-color]="busLaneStyle.color"
             aria-hidden="true"
           ></span>
           On bus lanes:
           @for (b of d.busLanes; track b.direction; let last = $last) {
-            <span class="share"
-              >{{ 'to ' + b.to + ' ' + b.laneKm.toFixed(1) + ' of ' + b.km.toFixed(1) + ' km (' +
-                b.percent.toFixed(0) + '%)' + (last ? '' : ';') }}</span
-            >{{ ' ' }}
+            <span class="share">{{
+              'to ' +
+                b.to +
+                ' ' +
+                b.laneKm.toFixed(1) +
+                ' of ' +
+                b.km.toFixed(1) +
+                ' km (' +
+                b.percent.toFixed(0) +
+                '%)' +
+                (last ? '' : ';')
+            }}</span>{{ ' ' }}
           }
           <a routerLink="/bus-lanes">Bus lanes ↗</a>
         </p>
@@ -145,44 +159,62 @@
     <app-end-stops
       [endStops]="d.endStops"
       [depotStops]="d.depotStops"
+      [brigadesKnown]="d.brigadesKnown"
       [class.loading]="loadingDetail()"
     />
   }
 }
 
-<!-- Kept in the page (Leaflet needs its element); hidden for a line without a timetable, which has no route. -->
-<section class="card map-card" [hidden]="detail()?.id === null">
+<!-- Kept in the page (Leaflet needs its element); hidden for a line with neither a timetable nor recordings. -->
+<section class="card map-card" [hidden]="!hasMap()">
   <div #map class="map" role="region" aria-label="Map of the line"></div>
-  <ul class="map-legend">
-    <li><span class="key thick"></span>Base route</li>
-    <li><span class="key thin"></span>Other variants (thinner, dashed)</li>
-    <li><span class="key depot"></span>Depot runs (yellow, dotted)</li>
-    <li><span class="key depot-site"></span>Depot (the line operator's darker and named)</li>
-    <li>
-      <span class="key depot-link"></span>Depot to where buses start or end their day (dashed)
-    </li>
-    <li>
-      <span
-        class="line-swatch"
-        [style.border-top-color]="boundaryStyles.city.color"
-        style="border-top-style: dashed"
-      ></span>
-      City limits
-    </li>
-    <li>
-      <span class="line-swatch" [style.border-top-color]="boundaryStyles.centre.color"></span>
-      City centre (for line classes)
-    </li>
-    <li>
-      <span
-        class="line-swatch bus-lane"
-        [style.border-top-color]="busLaneStyle.color"
-      ></span>
-      Bus lane
-    </li>
-    <li><span class="key stop"></span>Stop</li>
-    <li><span class="key stop zone2"></span>Stop in zone 2</li>
-  </ul>
+  @if (recorded(); as r) {
+    <ul class="map-legend">
+      <li>Each colour a variant, as listed below; thin and dashed: driven rarely</li>
+      <li><span class="key stop"></span>Where runs start</li>
+      <li><span class="key stop end"></span>Where runs end</li>
+      <li>
+        <span
+          class="line-swatch"
+          [style.border-top-color]="boundaryStyles.city.color"
+          style="border-top-style: dashed"
+        ></span>
+        City limits
+      </li>
+      <li>
+        <span class="line-swatch bus-lane" [style.border-top-color]="busLaneStyle.color"></span>
+        Bus lane
+      </li>
+    </ul>
+  } @else {
+    <ul class="map-legend">
+      <li><span class="key thick"></span>Base route</li>
+      <li><span class="key thin"></span>Other variants (thinner, dashed)</li>
+      <li><span class="key depot"></span>Depot runs (yellow, dotted)</li>
+      <li><span class="key depot-site"></span>Depot (the line operator's darker and named)</li>
+      <li>
+        <span class="key depot-link"></span>Depot to where buses start or end their day (dashed)
+      </li>
+      <li>
+        <span
+          class="line-swatch"
+          [style.border-top-color]="boundaryStyles.city.color"
+          style="border-top-style: dashed"
+        ></span>
+        City limits
+      </li>
+      <li>
+        <span class="line-swatch" [style.border-top-color]="boundaryStyles.centre.color"></span>
+        City centre (for line classes)
+      </li>
+      <li>
+        <span class="line-swatch bus-lane" [style.border-top-color]="busLaneStyle.color"></span>
+        Bus lane
+      </li>
+      <li><span class="key stop"></span>Stop</li>
+      <li><span class="key stop zone2"></span>Stop in zone 2</li>
+    </ul>
+  }
 </section>
 
 @if (detail(); as d) {
@@ -191,6 +223,56 @@
       Line {{ d.name }} isn't in the city timetable: it is run by another operator. Below is only
       what was recorded on the live feed, on all days.
     </p>
+    @if (recorded(); as r) {
+      <section class="card section recorded">
+        <h2>Where the buses went</h2>
+        <p class="muted">
+          From every recorded position: {{ r.runs }} runs (a bus's reports in a row towards one
+          destination) between {{ r.first | date: 'd MMM' }} and {{ r.last | date: 'd MMM y' }},
+          grouped by destination and the streets they took. Click a variant to show it on the map.
+        </p>
+        <div class="data-table-wrap">
+          <table class="data-table clickable recorded-variants">
+            <thead>
+              <tr>
+                <th>Towards</th>
+                <th>From → to (stops reported)</th>
+                <th class="num">Driven</th>
+                <th class="num">Length</th>
+                <th>Last driven</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (v of r.variants; track v.id) {
+                <tr
+                  [class.selected]="chosenVariant() === v.id"
+                  [attr.aria-selected]="chosenVariant() === v.id"
+                  tabindex="0"
+                  (click)="chooseVariant(v.id)"
+                  (keydown.enter)="chooseVariant(v.id)"
+                >
+                  <td>
+                    <span
+                      class="line-swatch"
+                      [style.border-top-color]="v.color"
+                      [style.border-top-style]="v.rare ? 'dashed' : 'solid'"
+                    ></span>
+                    {{ v.headsign }}
+                  </td>
+                  <td>{{ v.from ?? '?' }} → {{ v.to ?? '?' }}</td>
+                  <td class="num">
+                    {{ v.runs }} {{ v.runs === 1 ? 'time' : 'times' }}
+                    <span class="muted">({{ (v.runs / r.runs) * 100 | number: '1.0-0' }}%)</span>
+                  </td>
+                  <td class="num">{{ v.km | number: '1.1-1' }} km</td>
+                  <td>{{ v.lastSeen | date: 'd MMM, HH:mm' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
     <section class="card section">
       <app-travel-charts [performance]="performance()" [loading]="loadingPerformance()" />
     </section>
@@ -256,9 +338,11 @@
       </div>
     </section>
 
-    <section class="card section">
-      <app-depot-runs [depotRuns]="d.depotRuns" />
-    </section>
+    @if (d.brigadesKnown) {
+      <section class="card section">
+        <app-depot-runs [depotRuns]="d.depotRuns" />
+      </section>
+    }
 
     <section class="card section">
       <app-travel-charts [performance]="performance()" [loading]="loadingPerformance()" />
@@ -311,50 +395,52 @@
       }
     </section>
 
-    <section class="card section">
-      <h2>Brigades</h2>
-      <p class="muted">
-        Each bus's duty on a weekday, from the timetable: it leaves the depot for its first run and
-        returns after its last. Short gaps are layovers at the terminus; gaps of 30 minutes or more
-        are marked as breaks.
-      </p>
-      <app-brigade-timeline [brigades]="d.brigades" [mains]="mains()" />
-      <details>
-        <summary>Show as a table</summary>
-        <table class="data-table compact">
-          <thead>
-            <tr>
-              <th>Brigade</th>
-              <th class="num">Leaves depot</th>
-              <th class="num">Returns</th>
-              <th class="num">Runs</th>
-              <th class="num">In service</th>
-              <th>Breaks</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (b of d.brigades; track b.name) {
+    @if (d.brigadesKnown) {
+      <section class="card section">
+        <h2>Brigades</h2>
+        <p class="muted">
+          Each bus's duty on a weekday, from the timetable: it leaves the depot for its first run
+          and returns after its last. Short gaps are layovers at the terminus; gaps of 30 minutes or
+          more are marked as breaks.
+        </p>
+        <app-brigade-timeline [brigades]="d.brigades" [mains]="mains()" />
+        <details>
+          <summary>Show as a table</summary>
+          <table class="data-table compact">
+            <thead>
               <tr>
-                <td>{{ b.name }}</td>
-                <td class="num">{{ clock(b.start) }}</td>
-                <td class="num">{{ clock(b.end) }}</td>
-                <td class="num">{{ b.runs.length }}</td>
-                <td class="num">{{ duration((b.end - b.start) / 60) }}</td>
-                <td>
-                  @for (k of b.breaks; track k.from) {
-                    {{ clock(k.from) }}–{{ clock(k.to) }} ({{
-                      duration((k.to - k.from) / 60)
-                    }})<br />
-                  } @empty {
-                    —
-                  }
-                </td>
+                <th>Brigade</th>
+                <th class="num">Leaves depot</th>
+                <th class="num">Returns</th>
+                <th class="num">Runs</th>
+                <th class="num">In service</th>
+                <th>Breaks</th>
               </tr>
-            }
-          </tbody>
-        </table>
-      </details>
-    </section>
+            </thead>
+            <tbody>
+              @for (b of d.brigades; track b.name) {
+                <tr>
+                  <td>{{ b.name }}</td>
+                  <td class="num">{{ clock(b.start) }}</td>
+                  <td class="num">{{ clock(b.end) }}</td>
+                  <td class="num">{{ b.runs.length }}</td>
+                  <td class="num">{{ duration((b.end - b.start) / 60) }}</td>
+                  <td>
+                    @for (k of b.breaks; track k.from) {
+                      {{ clock(k.from) }}–{{ clock(k.to) }} ({{
+                        duration((k.to - k.from) / 60)
+                      }})<br />
+                    } @empty {
+                      —
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </details>
+      </section>
+    }
 
     <section class="card section">
       <h2>Vehicles</h2>

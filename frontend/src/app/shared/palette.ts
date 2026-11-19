@@ -86,7 +86,27 @@ export const BOUNDARY_STYLES = {
 } as const;
 
 /**
+ * Categorical colours for a line's recorded variants (Routes, lines without a timetable), in order: the most driven
+ * first; further ones repeat them. Checked with the dataviz palette validator (light surface); every variant is also
+ * named in a list beside the map.
+ */
+export const VARIANT_COLORS = [
+  '#2a78d6',
+  '#eb6834',
+  '#1baf7a',
+  '#c2189b',
+  '#8a5a00',
+  '#6250d6',
+  '#d7301f',
+];
+
+/**
  * Bus lanes on maps: a wide, translucent violet band under the vehicles and the line, so it reads as part of the
  * street. Not a delay, line-kind, boundary or depot colour.
  */
-export const BUS_LANE_STYLE = { color: '#6f42c1', weight: 6, opacity: 0.45, label: 'Bus lane' } as const;
+export const BUS_LANE_STYLE = {
+  color: '#6f42c1',
+  weight: 6,
+  opacity: 0.45,
+  label: 'Bus lane',
+} as const;

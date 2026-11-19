@@ -67,6 +67,7 @@ class LineDetailIntegrationTest {
     @Test
     void describesVariantsZoneTwoAndBrigadesFromTheTimetable() {
         LineDetailDto.Detail d = lines.detail("IT-177");
+        assertThat(d.recorded()).as("a line in the timetable has its timetable routes").isNull();
 
         assertThat(d.subtype()).isEqualTo(RouteSubtype.SUBURBAN);
         assertThat(d.serviceId()).isEqualTo(SERVICE);
@@ -220,6 +221,9 @@ class LineDetailIntegrationTest {
         assertThat(detail.serviceId()).isNull();
         assertThat(detail.url()).isNull();
         assertThat(detail.variants()).isEmpty();
+        // Where its buses went, from the recordings (the test's bus stood still: a run needs to move).
+        assertThat(detail.recorded()).isNotNull();
+        assertThat(detail.recorded().variants()).allSatisfy(v -> assertThat(v.path()).isNotEmpty());
 
         LineDetailDto.Performance p = service.performance("700");
         assertThat(p.fullRuns()).isZero();

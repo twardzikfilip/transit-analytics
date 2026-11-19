@@ -50,7 +50,7 @@ class BialystokFeedTest {
         server = MockRestServiceServer.bindTo(builder).build();
         vehicles = mock(VehicleRegistry.class);
         var properties = new ZbiorkomProperties("https://zbiorkom.test/api", Duration.ofSeconds(1),
-                Duration.ofSeconds(1), new ZbiorkomProperties.Bialystok(BBOX));
+                Duration.ofSeconds(1), new ZbiorkomProperties.Bialystok(BBOX, null));
         feed = new BialystokFeed(ZbiorkomClients.withoutTimeouts(builder, properties, JsonMapper.builder().build()),
                 properties, vehicles, Clock.fixed(NOW, ZoneOffset.UTC));
     }
@@ -123,5 +123,35 @@ class BialystokFeedTest {
         assertThat(BialystokFeed.agency("default")).isEqualTo("BKM");
         assertThat(BialystokFeed.agency(null)).isEqualTo("BKM");
         assertThat(BialystokFeed.agency("WSCHODEXPRESS")).isEqualTo("WSCHODEXPRESS");
+    }
+
+    @Test
+    void leavesExcludedLinesOutOfPositionsAndTheArchivedResponse() {
+        RestClient.Builder builder = RestClient.builder();
+        var properties = new ZbiorkomProperties("https://zbiorkom.test/api", Duration.ofSeconds(1),
+                Duration.ofSeconds(1), new ZbiorkomProperties.Bialystok(BBOX, "^C[0-9]+$"));
+        BialystokFeed excluding = new BialystokFeed(
+                ZbiorkomClients.withoutTimeouts(builder, properties, JsonMapper.builder().build()), properties,
+                vehicles, Clock.fixed(NOW, ZoneOffset.UTC));
+        given(vehicles.idsFor(anyCollection())).willReturn(Map.of("230", 7L, "231", 8L));
+        byte[] raw = """
+                {"positions":[
+                 {"vehicle":{"id":"230","type":"3"},"routeName":"18","location":[23.1,53.1]},
+                 {"vehicle":{"id":"231","type":"3"},"routeName":"C2","location":[23.2,53.2]}]}""".getBytes();
+
+        assertThat(excluding.positions(raw)).extracting(FeedPosition::routeName).containsExactly("18");
+        assertThat(excluding.positionsWithoutIds(raw)).extracting(FeedPosition::routeName).containsExactly("18");
+        String archived = new String(excluding.withoutExcluded(raw));
+        assertThat(archived).contains("\"18\"").doesNotContain("C2");
+        // Nothing to leave out, or not readable: as received.
+        byte[] plain = "{\"positions\":[]}".getBytes();
+        assertThat(excluding.withoutExcluded(plain)).isSameAs(plain);
+        byte[] broken = "not json".getBytes();
+        assertThat(excluding.withoutExcluded(broken)).isSameAs(broken);
+        assertThat(excluding.withoutExcluded(new byte[0])).isEmpty();
+        assertThat(feed.withoutExcluded(raw)).as("nothing excluded").isSameAs(raw);
+        assertThat(properties.bialystok().excluded("C10")).isTrue();
+        assertThat(properties.bialystok().excluded("103")).isFalse();
+        assertThat(properties.bialystok().excluded(null)).isFalse();
     }
 }

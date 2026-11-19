@@ -49,6 +49,11 @@ class PositionRecorderTest {
                 Duration.ofSeconds(8), "unused", "unused", importDir);
     }
 
+    @org.junit.jupiter.api.BeforeEach
+    void passResponsesThrough() {
+        given(feed.withoutExcluded(any())).willAnswer(inv -> inv.getArgument(0));
+    }
+
     private PositionRecorder recorder(boolean enabled, String importDir) {
         var properties = properties(enabled, importDir);
         return new PositionRecorder(feed, writer, archive, spool,

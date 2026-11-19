@@ -101,7 +101,8 @@ public class PositionRecorder {
     private void poll(Instant fetchedAt) {
         byte[] raw;
         try {
-            raw = feed.fetchRaw();
+            // Excluded lines (e.g. the cemetery lines) are left out of the archive too.
+            raw = feed.withoutExcluded(feed.fetchRaw());
         } catch (RuntimeException ex) {
             // Nothing to keep; the next poll, 10 seconds on, tries again.
             failures.increment();

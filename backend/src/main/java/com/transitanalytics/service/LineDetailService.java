@@ -119,7 +119,8 @@ public class LineDetailService {
             requireOnFeed(line);
             // Only on the live feed: no timetable to show.
             return new LineDetailDto.Detail(null, line, line, subtypes.of(line), null, null, null, null, null, List.of(),
-                    List.of(), List.of(), List.of(), List.of(), List.of(), null, depots(), List.of(), List.of());
+                    List.of(), List.of(), List.of(), List.of(), List.of(), null, depots(), List.of(), List.of(),
+                    recorded(line), false);
         }
         Timetable tt = timetables.timetable(route, true);
         List<TripRow> mainTrips = mainTrips(tt);
@@ -165,9 +166,22 @@ public class LineDetailService {
                 depotDepartures.stream().filter(stop -> !atPlace(tt.endStops(), stop)).toList());
 
         return new LineDetailDto.Detail(route.getId(), route.getGtfsId(), route.displayName(), route.getSubtype(),
-                route.getGeometry(), route.getCapacityClass(), tt.service(), route.getUrl(), base, tt.variants(), zone2, brigades(tt.trips(), kinds, tt.depot()),
-                toDto(tt.endStops()), toDto(depotPlaces), depotRuns, operator(route), depots(),
-                depotLinks(route, tt.trips()), busLanes(mains));
+                route.getGeometry(), route.getCapacityClass(), tt.service(), route.getUrl(), base, tt.variants(), zone2,
+                tt.brigades() ? brigades(tt.trips(), kinds, tt.depot()) : List.of(),
+                toDto(tt.endStops()), toDto(depotPlaces), depotRuns, operator(route),
+                otherFeed(route) ? List.of() : depots(),
+                depotLinks(route, tt.trips()), busLanes(mains), null, tt.brigades());
+    }
+
+    /** Where a line's buses went, from every recorded position of it (lines without a timetable). */
+    LineDetailDto.Recorded recorded(String line) {
+        return RecordedRoutes.recorded(jdbc.query("""
+                SELECT vehicle_id, observed_at, latitude, longitude, headsign, next_stop_name
+                FROM position_sample WHERE route_name = ?""",
+                (rs, i) -> new RecordedRoutes.Report(rs.getLong("vehicle_id"),
+                        rs.getTimestamp("observed_at").toInstant(), rs.getDouble("latitude"),
+                        rs.getDouble("longitude"), rs.getString("headsign"), rs.getString("next_stop_name")),
+                line));
     }
 
     /** How much of each direction's main route runs on bus lanes. */
@@ -193,6 +207,12 @@ public class LineDetailService {
 
     /** Who runs a route: the organiser and its operating company with the company's depot; null when not known. */
     private LineDetailDto.Operator operator(Route route) {
+        if (otherFeed(route)) {
+            // Another operator's own timetable: it runs the line itself, from its own depots (not known here).
+            var agency = route.getAgency();
+            return agency == null ? null
+                    : new LineDetailDto.Operator(agency.getName(), null, agency.getName(), agency.getUrl(), null, null);
+        }
         OperatorProperties.Company company = route.getOperatingAgency() == null ? null
                 : operators.company(route.getOperatingAgency());
         if (company == null) {
@@ -208,7 +228,7 @@ public class LineDetailService {
      * the operator's depot (else the nearest depot): along the streets when a router answers, else straight.
      */
     private List<LineDetailDto.DepotLink> depotLinks(Route route, List<TripRow> trips) {
-        if (map.depots().isEmpty()) {
+        if (map.depots().isEmpty() || otherFeed(route)) {
             return List.of();
         }
         OperatorProperties.Company company = route.getOperatingAgency() == null ? null
@@ -222,6 +242,14 @@ public class LineDetailService {
             return new LineDetailDto.DepotLink(e.kind(), e.stop().name(), stop[0], stop[1], depot.code(),
                     e.brigades(), way.points(), way.routed());
         }).toList();
+    }
+
+    /**
+     * A line from another operator's feed (e.g. PKS Nova's, imported with its ids prefixed "pksnova:"): the BKM
+     * depots and companies have nothing to do with it.
+     */
+    static boolean otherFeed(Route route) {
+        return route.getGtfsId() != null && route.getGtfsId().contains(":");
     }
 
     /** A place where brigades enter service (pull_out) or leave it (pull_in), and how many. */

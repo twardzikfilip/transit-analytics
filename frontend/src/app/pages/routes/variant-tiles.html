@@ -81,6 +81,14 @@
 </div>
 <div class="card tile">
   <span class="muted">Brigades</span>
-  <strong>{{ d.brigades.length }}</strong>
-  <span class="muted small">{{ trips() }} trips a weekday</span>
+  @if (d.brigadesKnown) {
+    <strong>{{ d.brigades.length }}</strong>
+  } @else {
+    <strong>Not given</strong>
+  }
+  <span class="muted small"
+    >{{ trips() }} trips a weekday{{
+      d.brigadesKnown ? '' : "; this timetable doesn't say which bus runs each trip"
+    }}</span
+  >
 </div>

@@ -117,4 +117,30 @@ class LineTimetableTest {
         assertThat(ends).extracting(StopPlaces.Place::name).containsExactly("A", "Z");
         assertThat(LineTimetable.depotRuns(trips, ends)).containsOnly(Map.entry(5L, "pull_in"));
     }
+
+    private static LineTimetable.TripRow located(long id, String headsign, double fromLat, double toLat) {
+        return new LineTimetable.TripRow(id, "x", 0, "S", headsign, 0, 1800, 19.0, 18, "A", "B",
+                new StopPlaces.StopRef("A", fromLat, 23.13), new StopPlaces.StopRef("B", toLat, 23.13));
+    }
+
+    @Test
+    void givesTripsWithoutADirectionOneFromWhereTheyStart() {
+        // Most go north (Supraśl), from 53.13 to 53.21; the others start up there and come back, or turn short.
+        var trips = java.util.List.of(located(1, "Supraśl", 53.13, 53.21), located(2, "Supraśl", 53.13, 53.21),
+                located(3, "Białystok", 53.21, 53.13), located(4, "Białystok", 53.20, 53.15),
+                located(5, "Supraśl", 53.14, 53.20));
+        assertThat(LineTimetable.withDirections(trips)).extracting(LineTimetable.TripRow::direction)
+                .containsExactly(0, 0, 1, 1, 0);
+        // Without stop positions nothing can be told: left as they are.
+        var unknown = java.util.List.of(new LineTimetable.TripRow(1, "x", 0, "S", "H", 0, 60, 1.0, 2, "A", "B"));
+        assertThat(LineTimetable.withDirections(unknown)).isEqualTo(unknown);
+    }
+
+    @Test
+    void takesAStopsZoneFromTheFeedElseFromTheCityLimits() {
+        assertThat(LineTimetable.zone("1", 53.21, 23.33)).isEqualTo("1");
+        assertThat(LineTimetable.zone(null, 53.13, 23.16)).as("Rynek Kościuszki").isEqualTo("1");
+        assertThat(LineTimetable.zone(null, 53.21, 23.33)).as("Supraśl").isEqualTo("2");
+        assertThat(LineTimetable.zone(null, null, null)).isNull();
+    }
 }

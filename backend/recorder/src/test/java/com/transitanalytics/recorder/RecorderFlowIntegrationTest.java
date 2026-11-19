@@ -84,7 +84,7 @@ class RecorderFlowIntegrationTest {
         server.expect(manyTimes(), requestTo("https://zbiorkom.test/bialystok/positions/" + BBOX))
                 .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
         var properties = new ZbiorkomProperties("https://zbiorkom.test", Duration.ofSeconds(1), Duration.ofSeconds(1),
-                new ZbiorkomProperties.Bialystok(BBOX));
+                new ZbiorkomProperties.Bialystok(BBOX, null));
         return new Parts(new BialystokFeed(ZbiorkomClients.withoutTimeouts(builder, properties, JsonMapper.builder().build()),
                 properties, new VehicleRegistry(jdbc), clock), new PositionSampleWriter(jdbc));
     }

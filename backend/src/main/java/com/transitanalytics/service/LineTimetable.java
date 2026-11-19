@@ -61,9 +61,10 @@ public class LineTimetable {
     /**
      * @param endStops standard end stops (termini), as places of nearby stops
      * @param depot    "pull_out" or "pull_in" by trip id, for depot runs
+     * @param brigades whether the trips say which brigade runs them (another operator's feed may not)
      */
     record Timetable(String service, List<TripRow> trips, List<Variant> variants, List<Place> endStops,
-                             Map<Long, String> depot) {
+                             Map<Long, String> depot, boolean brigades) {
         Map<Integer, Variant> mains() {
             Map<Integer, Variant> mains = new TreeMap<>();
             variants.stream().filter(v -> v.kind().equals("main")).forEach(v -> mains.put(v.direction(), v));
@@ -72,10 +73,15 @@ public class LineTimetable {
     }
 
     Timetable timetable(Route route, boolean withShapes) {
-        String service = weekdayTimetable.serviceId();
-        if (service == null) {
-            return new Timetable(null, List.of(), List.of(), List.of(), Map.of());
+        List<String> services = services(route);
+        if (services.isEmpty()) {
+            return new Timetable(null, List.of(), List.of(), List.of(), Map.of(), true);
         }
+        String service = String.join(",", services);
+        boolean[] noDirection = {true};
+        boolean[] noBrigades = {true};
+        List<Object> args = new ArrayList<>(List.of(route.getId()));
+        args.addAll(services);
         List<TripRow> trips = jdbc.query("""
                 SELECT t.id, %s AS duty,
                        coalesce(t.direction, 0) AS direction, t.shape_id, t.headsign,
@@ -87,20 +93,28 @@ public class LineTimetable {
                        (array_agg(s.latitude ORDER BY st.stop_sequence))[1] AS first_lat,
                        (array_agg(s.longitude ORDER BY st.stop_sequence))[1] AS first_lon,
                        (array_agg(s.latitude ORDER BY st.stop_sequence DESC))[1] AS last_lat,
-                       (array_agg(s.longitude ORDER BY st.stop_sequence DESC))[1] AS last_lon
+                       (array_agg(s.longitude ORDER BY st.stop_sequence DESC))[1] AS last_lon,
+                       t.direction IS NULL AS no_direction, t.block_id IS NULL AS no_block
                 FROM trip t JOIN stop_time st ON st.trip_id = t.id JOIN stop s ON s.id = st.stop_id
-                WHERE t.route_id = ? AND t.service_id = ?
+                WHERE t.route_id = ? AND t.service_id IN (%s)
                 GROUP BY t.id
-                ORDER BY t.id""".formatted(ServiceDay.BRIGADE_SQL),
-                (rs, i) -> new TripRow(rs.getLong("id"), rs.getString("duty"), rs.getInt("direction"),
+                ORDER BY t.id""".formatted(ServiceDay.BRIGADE_SQL, placeholders(services.size())),
+                (rs, i) -> {
+                    noDirection[0] &= rs.getBoolean("no_direction");
+                    noBrigades[0] &= rs.getBoolean("no_block") && route.getGtfsId().contains(":");
+                    return new TripRow(rs.getLong("id"), rs.getString("duty"), rs.getInt("direction"),
                         rs.getString("shape_id"), rs.getString("headsign"), rs.getInt("start_s"), rs.getInt("end_s"),
                         rs.getObject("km") == null ? null : rs.getDouble("km"), rs.getInt("stops"),
                         stopName(rs.getString("first_stop")), stopName(rs.getString("last_stop")),
                         new StopRef(stopName(rs.getString("first_stop")), (Double) rs.getObject("first_lat"),
                                 (Double) rs.getObject("first_lon")),
                         new StopRef(stopName(rs.getString("last_stop")), (Double) rs.getObject("last_lat"),
-                                (Double) rs.getObject("last_lon"))),
-                route.getId(), service);
+                                (Double) rs.getObject("last_lon")));
+                },
+                args.toArray());
+        if (!trips.isEmpty() && noDirection[0]) {
+            trips = withDirections(trips);
+        }
 
         // Variants: one per direction and shape. The base route of a direction is its most frequent shape.
         Map<String, List<TripRow>> byVariant = trips.stream().collect(Collectors.groupingBy(
@@ -120,9 +134,11 @@ public class LineTimetable {
                 : Map.of();
 
         // Termini: where buses turn round in service, plus the base routes' ends. Depot runs start or end elsewhere.
-        List<Place> endStops = endStops(trips, trips.stream()
+        // A feed without brigades (another operator's): termini from the base routes only, and no depot runs (each
+        // trip would look like a brigade of its own).
+        List<Place> endStops = endStops(noBrigades[0] ? List.of() : trips, trips.stream()
                 .filter(t -> Objects.equals(t.shapeId(), mainShape.get(t.direction()))).toList());
-        Map<Long, String> depot = depotRuns(trips, endStops);
+        Map<Long, String> depot = noBrigades[0] ? Map.of() : depotRuns(trips, endStops);
 
         Map<Integer, Double> mainKm = new HashMap<>();
         byVariant.forEach((key, list) -> {
@@ -161,7 +177,58 @@ public class LineTimetable {
         variants.sort(Comparator.comparingInt(Variant::direction)
                 .thenComparingInt(v -> kindOrder.indexOf(v.kind()))
                 .thenComparing(Variant::km, Comparator.reverseOrder()));
-        return new Timetable(service, trips, variants, endStops, depot);
+        return new Timetable(service, trips, variants, endStops, depot, !noBrigades[0]);
+    }
+
+    /**
+     * The services of the line's regular weekday: the city's weekday service ({@link WeekdayTimetable}) when the line
+     * runs in it; else (another operator's feed, often a service per date) the services running on the weekday the
+     * line has the most trips, upcoming days first.
+     */
+    List<String> services(Route route) {
+        String weekday = weekdayTimetable.serviceId();
+        if (weekday != null && Boolean.TRUE.equals(jdbc.queryForObject(
+                "SELECT EXISTS (SELECT 1 FROM trip WHERE route_id = ? AND service_id = ?)", Boolean.class,
+                route.getId(), weekday))) {
+            return List.of(weekday);
+        }
+        List<String> day = jdbc.query("""
+                WITH days AS (
+                    SELECT cd.date, count(*) AS trips
+                    FROM trip t JOIN calendar_date cd ON cd.service_id = t.service_id AND cd.exception_type = 1
+                    WHERE t.route_id = ? AND extract(isodow FROM cd.date) <= 5
+                    GROUP BY cd.date
+                    ORDER BY (cd.date >= current_date) DESC, count(*) DESC, cd.date
+                    LIMIT 1)
+                SELECT DISTINCT t.service_id
+                FROM days d JOIN calendar_date cd ON cd.date = d.date AND cd.exception_type = 1
+                JOIN trip t ON t.service_id = cd.service_id AND t.route_id = ?
+                ORDER BY t.service_id""", (rs, i) -> rs.getString(1), route.getId(), route.getId());
+        return day;
+    }
+
+    /**
+     * Directions for trips that have none (some feeds leave direction_id out): the trips towards the most common
+     * destination are direction 0, and those starting nearer its far end than its start are direction 1.
+     */
+    static List<TripRow> withDirections(List<TripRow> trips) {
+        String headsign = TimetableMath.mostFrequent(trips.stream().map(TripRow::headsign).toList());
+        TripRow ref = trips.stream().filter(t -> Objects.equals(t.headsign(), headsign))
+                .filter(t -> t.first().located() && t.last().located())
+                .max(Comparator.comparingInt(TripRow::stops)).orElse(null);
+        if (ref == null) {
+            return trips;
+        }
+        return trips.stream().map(t -> {
+            int direction = 0;
+            if (t.first().located()) {
+                double toStart = meters(t.first().lat(), t.first().lon(), ref.first().lat(), ref.first().lon());
+                double toEnd = meters(t.first().lat(), t.first().lon(), ref.last().lat(), ref.last().lon());
+                direction = toEnd < toStart ? 1 : 0;
+            }
+            return new TripRow(t.id(), t.duty(), direction, t.shapeId(), t.headsign(), t.start(), t.end(), t.km(),
+                    t.stops(), t.firstStop(), t.lastStop(), t.first(), t.last());
+        }).toList();
     }
 
     static List<TripRow> mainTrips(Timetable tt) {
@@ -170,6 +237,17 @@ public class LineTimetable {
                 .filter(t -> mains.containsKey(t.direction())
                         && Objects.equals(mains.get(t.direction()).shapeId(), t.shapeId()))
                 .toList();
+    }
+
+    /**
+     * A stop's fare zone: the feed's; for a feed without zones (another operator's), from the city limits: zone 1
+     * inside the city, 2 outside, as for the city's own lines.
+     */
+    static String zone(String zone, Double lat, Double lon) {
+        if (zone != null || lat == null || lon == null) {
+            return zone;
+        }
+        return BusLaneReportService.CityCells.inside(lat, lon) ? "1" : "2";
     }
 
     private Map<Long, List<StopPoint>> stops(List<Long> tripIds) {
@@ -183,11 +261,12 @@ public class LineTimetable {
                 WHERE st.trip_id IN (%s)
                 ORDER BY st.trip_id, st.stop_sequence""".formatted(placeholders(tripIds.size())),
                 rs -> {
+                    Double lat = rs.getObject("latitude") == null ? null : rs.getDouble("latitude");
+                    Double lon = rs.getObject("longitude") == null ? null : rs.getDouble("longitude");
                     result.computeIfAbsent(rs.getLong("trip_id"), k -> new ArrayList<>()).add(new StopPoint(
-                            stopName(rs.getString("name")),
-                            rs.getObject("latitude") == null ? null : rs.getDouble("latitude"),
-                            rs.getObject("longitude") == null ? null : rs.getDouble("longitude"),
-                            TimetableMath.round(rs.getDouble("shape_dist_traveled"), 3), rs.getString("zone_id")));
+                            stopName(rs.getString("name")), lat, lon,
+                            TimetableMath.round(rs.getDouble("shape_dist_traveled"), 3),
+                            zone(rs.getString("zone_id"), lat, lon)));
                 },
                 tripIds.toArray());
         return result;

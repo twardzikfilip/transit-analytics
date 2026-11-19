@@ -29,6 +29,9 @@ app:
     read-timeout: 8s
     bialystok:
       bbox: ${ZBIORKOM_BIALYSTOK_BBOX:22.921150,53.016270,23.382496,53.243687}
+      # Lines left out everywhere (not stored, archived or shown): the cemetery lines C1, C2, … run around
+      # All Saints' Day.
+      excluded-lines: "^C[0-9]+$"
   recording:
     enabled: ${RECORDING_ENABLED:true}
     cron: "*/10 * * * * *"         # every 10 seconds
