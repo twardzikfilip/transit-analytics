@@ -14,6 +14,7 @@ import com.transitanalytics.gtfs.GtfsFeedException;
 import com.transitanalytics.gtfs.GtfsImportInProgressException;
 import com.transitanalytics.gtfs.GtfsImportResult;
 import com.transitanalytics.recording.PositionHistoryService;
+import com.transitanalytics.service.BrigadeDayService;
 import com.transitanalytics.service.BrigadeScheduleService;
 import com.transitanalytics.domain.CityBoundaries;
 import com.transitanalytics.web.BoundaryController;
@@ -157,6 +158,9 @@ class SecurityWebTest {
 
     @MockitoBean
     BrigadeScheduleService brigadeScheduleService;
+
+    @MockitoBean
+    BrigadeDayService brigadeDayService;
 
     @MockitoBean
     HotspotService hotspotService;
@@ -471,6 +475,27 @@ class SecurityWebTest {
                         .header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isOk());
         then(brigadeScheduleService).should().schedule("103-05", Instant.parse("2026-11-16T06:00:00Z"));
+    }
+
+    @Test
+    void guestCanReadTheBrigadesOfADayAndOnesDay() throws Exception {
+        LocalDate day = LocalDate.of(2026, 11, 18);
+        given(brigadeDayService.today()).willReturn(day);
+        given(brigadeDayService.brigades(day, null)).willReturn(new BrigadeDto.DayList(day, "BKM",
+                List.of(new BrigadeDto.Agency("BKM", "BKM")), List.of(new BrigadeDto.BrigadeRef("103-05",
+                List.of("103"), 10, Instant.parse("2026-11-18T04:00:00Z"), Instant.parse("2026-11-18T20:00:00Z")))));
+        given(brigadeDayService.day("103-05", day)).willReturn(new BrigadeDto.Day("103-05", day,
+                new BrigadeDto.Summary(0, 0, 0, 0, 0, 0, null, null, List.of()), List.of()));
+
+        mvc.perform(get("/api/brigades").header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.agency").value("BKM"))
+                .andExpect(jsonPath("$.brigades[0].brigade").value("103-05"));
+        mvc.perform(get("/api/brigades/103-05/day").param("date", "2026-11-18")
+                        .header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.brigade").value("103-05"));
+        mvc.perform(get("/api/brigades/103-05/day")).andExpect(status().isUnauthorized());
     }
 
     @Test
