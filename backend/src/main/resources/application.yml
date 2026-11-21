@@ -42,6 +42,10 @@ spring:
       recorder_db_password: ${RECORDER_DB_PASSWORD:transit_recorder}
 
 app:
+  # Precompute the slow reports (Abnormal trips, delay generation, ...) in the background at startup, so the first
+  # visit doesn't wait. Integration tests turn it off.
+  warm-up:
+    enabled: ${WARM_UP_ENABLED:true}
   jwt:
     # Dev default only — override with JWT_SECRET (min 32 bytes) in any real environment.
     secret: ${JWT_SECRET:dev-only-secret-change-me-please-0123456789abcdef}

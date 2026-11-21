@@ -83,7 +83,7 @@ class BrigadeDayServiceTest {
                 // Another bus on the same trip keeps its own reports.
                 at(2, 100, 0, 2, 53.15));
 
-        List<Report> kept = TripAnomalies.withoutLayover(trip, reports);
+        List<Report> kept = TripMatching.withoutLayover(trip, reports);
         assertThat(kept).extracting(Report::time).containsExactly(T.plusSeconds(300), T.plusSeconds(540),
                 T.plusSeconds(570), T.plusSeconds(100));
         BrigadeDto.ActualRun run = BrigadeDayService.runs(trip, kept).stream()
@@ -92,7 +92,7 @@ class BrigadeDayServiceTest {
         assertThat(run.arrival()).isEqualTo(T.plusSeconds(540));
 
         // Without the last stop's position, nothing is left out.
-        assertThat(TripAnomalies.withoutLayover(TRIP, reports)).isSameAs(reports);
+        assertThat(TripMatching.withoutLayover(TRIP, reports)).isSameAs(reports);
     }
 
     private static Report at(long bus, int secondsAfter, int delay, int nextSeq, double lat) {

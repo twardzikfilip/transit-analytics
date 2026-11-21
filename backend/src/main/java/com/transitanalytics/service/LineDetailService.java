@@ -1,16 +1,16 @@
 package com.transitanalytics.service;
 
-import com.transitanalytics.classification.OperatorProperties;
-import com.transitanalytics.domain.Route;
-import com.transitanalytics.dto.LineDetailDto.Variant;
-import com.transitanalytics.dto.LineDetailDto.Zone2;
 import com.transitanalytics.buslanes.BusLaneMatcher;
 import com.transitanalytics.buslanes.BusLanes;
+import com.transitanalytics.classification.OperatorProperties;
+import com.transitanalytics.domain.Route;
 import com.transitanalytics.dto.BusLaneDto;
+import com.transitanalytics.dto.LineDetailDto.Variant;
+import com.transitanalytics.dto.LineDetailDto.Zone2;
 import com.transitanalytics.dto.LineDetailDto;
 import com.transitanalytics.recording.DelayOutliers;
 import com.transitanalytics.repository.RouteRepository;
-import com.transitanalytics.zbiorkom.ZbiorkomBialystokService;
+import com.transitanalytics.zbiorkom.BialystokFeed;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -302,8 +302,7 @@ public class LineDetailService {
         Map<Integer, Variant> mains = tt.mains();
 
         // Weekday service days: a report at 00:30 on Saturday still belongs to Friday's service.
-        String weekday = "extract(isodow FROM (p.observed_at AT TIME ZONE '%s') - make_interval(hours => %d)) <= 5"
-                .formatted(ZONE.getId(), DAY_START_HOUR);
+        String weekday = ServiceDay.weekdayServiceDaySql("p.observed_at");
         String ofLine = "p.route_name = ? AND p.vehicle_id IN (SELECT id FROM vehicle WHERE agency = ?) AND " + weekday;
 
         List<Sample> samples = jdbc.query("""
@@ -314,7 +313,7 @@ public class LineDetailService {
                 ORDER BY p.vehicle_id, p.observed_at""".formatted(ofLine),
                 (rs, i) -> new Sample(rs.getLong("vehicle_id"), rs.getDouble("t"), rs.getString("brigade"),
                         rs.getString("headsign"), rs.getInt("seq"), rs.getString("next_stop_name")),
-                route.getGtfsId(), ZbiorkomBialystokService.CITY_AGENCY);
+                route.getGtfsId(), BialystokFeed.CITY_AGENCY);
 
         // Runs are measured per route pattern: the base route and longer variants, each in both directions (the
         // reverse may be classed differently, e.g. when the most frequent variant differs by direction).
@@ -339,18 +338,10 @@ public class LineDetailService {
             travelTimes.add(travelTimes(base ? "main" : "longer", first.firstStop() + " ⇄ " + first.lastStop(),
                     variants, trips, groupRuns));
         }
-        List<LineDetailDto.DelaySlot> delays = jdbc.query("""
-                SELECT (extract(epoch FROM ((p.observed_at AT TIME ZONE '%1$s') - make_interval(hours => %2$d))::time)
-                        ::int / 900) * 15 + %2$d * 60 AS minute,
-                       avg(p.delay_seconds) AS delay, count(*) AS samples
-                FROM position_sample p
-                WHERE p.delay_seconds IS NOT NULL AND p.delay_seconds <= %3$d
-                  AND coalesce(p.next_stop_sequence, 1) > 0 AND %4$s
-                GROUP BY 1 ORDER BY 1""".formatted(ZONE.getId(), DAY_START_HOUR, DelayOutliers.THRESHOLD_SECONDS,
-                        ofLine),
-                (rs, i) -> new LineDetailDto.DelaySlot(rs.getInt("minute"),
-                        TimetableMath.round(rs.getDouble("delay"), 0), rs.getLong("samples")),
-                route.getGtfsId(), ZbiorkomBialystokService.CITY_AGENCY);
+        List<LineDetailDto.DelaySlot> delays = delaySlots("""
+                p.delay_seconds <= %d AND coalesce(p.next_stop_sequence, 1) > 0 AND %s"""
+                .formatted(DelayOutliers.THRESHOLD_SECONDS, ofLine),
+                route.getGtfsId(), BialystokFeed.CITY_AGENCY);
 
         TreeSet<LocalDate> days = new TreeSet<>();
         samples.forEach(s -> days.add(serviceDay(s.t())));
@@ -362,7 +353,20 @@ public class LineDetailService {
 
         return new LineDetailDto.Performance(days.isEmpty() ? null : days.first(),
                 days.isEmpty() ? null : days.last(), days.size(), runs.size(), travelTimes, delays, segments,
-                vehicles(route.getGtfsId(), ZbiorkomBialystokService.CITY_AGENCY));
+                vehicles(route.getGtfsId(), BialystokFeed.CITY_AGENCY));
+    }
+
+    /** The average delay in each quarter of an hour of the service day, of the reports matching {@code where}. */
+    private List<LineDetailDto.DelaySlot> delaySlots(String where, Object... args) {
+        return jdbc.query("""
+                SELECT (extract(epoch FROM %s::time)::int / 900) * 15 + %d * 60 AS minute,
+                       avg(p.delay_seconds) AS delay, count(*) AS samples
+                FROM position_sample p
+                WHERE p.delay_seconds IS NOT NULL AND %s
+                GROUP BY 1 ORDER BY 1""".formatted(ServiceDay.serviceTimeSql("p.observed_at"), DAY_START_HOUR, where),
+                (rs, i) -> new LineDetailDto.DelaySlot(rs.getInt("minute"),
+                        TimetableMath.round(rs.getDouble("delay"), 0), rs.getLong("samples")),
+                args);
     }
 
     /**
@@ -371,19 +375,12 @@ public class LineDetailService {
      */
     private LineDetailDto.Performance feedOnlyPerformance(String line) {
         List<LocalDate> days = jdbc.queryForList("""
-                SELECT DISTINCT ((observed_at AT TIME ZONE '%s') - make_interval(hours => %d))::date AS day
-                FROM position_sample WHERE route_name = ? ORDER BY day""".formatted(ZONE.getId(), DAY_START_HOUR),
+                SELECT DISTINCT %s::date AS day
+                FROM position_sample p WHERE route_name = ? ORDER BY day""".formatted(
+                        ServiceDay.serviceTimeSql("p.observed_at")),
                 LocalDate.class, line);
-        List<LineDetailDto.DelaySlot> delays = jdbc.query("""
-                SELECT (extract(epoch FROM ((p.observed_at AT TIME ZONE '%1$s') - make_interval(hours => %2$d))::time)
-                        ::int / 900) * 15 + %2$d * 60 AS minute,
-                       avg(p.delay_seconds) AS delay, count(*) AS samples
-                FROM position_sample p
-                WHERE p.delay_seconds IS NOT NULL AND abs(p.delay_seconds) <= %3$d AND p.route_name = ?
-                GROUP BY 1 ORDER BY 1""".formatted(ZONE.getId(), DAY_START_HOUR, DelayOutliers.THRESHOLD_SECONDS),
-                (rs, i) -> new LineDetailDto.DelaySlot(rs.getInt("minute"),
-                        TimetableMath.round(rs.getDouble("delay"), 0), rs.getLong("samples")),
-                line);
+        List<LineDetailDto.DelaySlot> delays = delaySlots("abs(p.delay_seconds) <= %d AND p.route_name = ?"
+                .formatted(DelayOutliers.THRESHOLD_SECONDS), line);
         return new LineDetailDto.Performance(days.isEmpty() ? null : days.get(0),
                 days.isEmpty() ? null : days.get(days.size() - 1), days.size(), 0, List.of(), delays, List.of(),
                 vehicles(line, null));
@@ -392,12 +389,12 @@ public class LineDetailService {
     /** Which buses (of the operator, or any when null) served the line, from every recorded day of it. */
     private LineDetailDto.Vehicles vehicles(String line, String agency) {
         List<VehicleDay> rows = jdbc.query("""
-                SELECT ((p.observed_at AT TIME ZONE '%s') - make_interval(hours => %d))::date AS day,
+                SELECT %s::date AS day,
                        coalesce(p.brigade, '') AS brigade, v.vehicle_number, v.model,
                        min(p.observed_at) AS first_seen, max(p.observed_at) AS last_seen, count(*) AS reports
                 FROM position_sample p JOIN vehicle v ON v.id = p.vehicle_id
                 WHERE p.route_name = ? AND (CAST(? AS text) IS NULL OR v.agency = ?)
-                GROUP BY 1, 2, 3, 4""".formatted(ZONE.getId(), DAY_START_HOUR),
+                GROUP BY 1, 2, 3, 4""".formatted(ServiceDay.serviceTimeSql("p.observed_at")),
                 (rs, i) -> new VehicleDay(rs.getObject("day", LocalDate.class), rs.getString("brigade"),
                         rs.getString("vehicle_number"), rs.getString("model"),
                         rs.getTimestamp("first_seen").toInstant(), rs.getTimestamp("last_seen").toInstant(),

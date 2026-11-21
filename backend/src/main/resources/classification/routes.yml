@@ -78,9 +78,8 @@ app:
       lookback-days: 28
       mega-every-day-share: 0.5
       mega-some-share: 0.1
-      peak:
-        - "06:30-08:30"
-        - "15:00-17:00"
+      # Peak windows ("HH:MM-HH:MM"): by default the app's peak hours, 06:30-08:30 and 15:00-17:00 (CityTime.PEAK),
+      # the same as everywhere else. Set `peak:` here only to classify by other hours.
       rules:
         # MEGA buses all week (weekends too), more often than every 15 min at peak.
         - capacity-class: MAIN

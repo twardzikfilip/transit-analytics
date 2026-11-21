@@ -1,18 +1,18 @@
 package com.transitanalytics.recording;
 
 import com.transitanalytics.dto.PositionHistoryDto;
+import com.transitanalytics.service.ServiceDayCache;
 import com.transitanalytics.service.TimetableMath;
-import com.transitanalytics.zbiorkom.ZbiorkomBialystokService;
+import com.transitanalytics.service.WarmUp;
+import com.transitanalytics.zbiorkom.BialystokFeed;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import com.transitanalytics.service.ServiceDayCache;
-import com.transitanalytics.service.WarmUp;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -72,14 +72,13 @@ public class PositionHistoryService {
                 + " AND coalesce(%1$sfetched_at, %1$sobserved_at) >= ? AND coalesce(%1$sfetched_at, %1$sobserved_at) < ?"
                 .formatted(p)
                 // City lines only: regional operators (e.g. WSCHODEXPRESS, TUROSN) run their own lines on the feed.
-                + " AND %svehicle_id IN (SELECT id FROM vehicle WHERE agency = '%s')".formatted(p, AGENCY);
+                + " AND %svehicle_id IN (SELECT id FROM vehicle WHERE agency = '%s')".formatted(p, BialystokFeed.CITY_AGENCY);
     }
 
     /**
      * Position history covers the city operator's lines only. Every line in the feed is run by a single operator,
      * so filtering by the vehicle's operator removes exactly the regional lines.
      */
-    static final String AGENCY = ZbiorkomBialystokService.CITY_AGENCY;
 
     private static final String WINDOW = windowCondition("");
     private static final Duration SLACK = Duration.ofMinutes(15);
@@ -426,11 +425,6 @@ public class PositionHistoryService {
     private static Instant instant(ResultSet rs, String column) throws SQLException {
         Timestamp t = rs.getTimestamp(column);
         return t == null ? null : t.toInstant();
-    }
-
-    private static Double nullableDouble(ResultSet rs, String column) throws SQLException {
-        double v = rs.getDouble(column);
-        return rs.wasNull() ? null : v;
     }
 
     private static Integer nullableInt(ResultSet rs, String column) throws SQLException {

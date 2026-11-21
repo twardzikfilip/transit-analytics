@@ -1,5 +1,6 @@
 package com.transitanalytics.classification;
 
+import com.transitanalytics.domain.CityTime;
 import com.transitanalytics.domain.RouteCapacity;
 import com.transitanalytics.domain.RouteGeometry;
 import com.transitanalytics.domain.RouteSubtype;
@@ -57,7 +58,7 @@ public record RouteClassProperties(List<String> agencies, String refreshCron, Ge
 
     /**
      * @param skipSubtypes kinds of line given no capacity class (night lines)
-     * @param peak         peak windows, "HH:MM-HH:MM"
+     * @param peak         peak windows, "HH:MM-HH:MM"; by default the app's ({@link CityTime#PEAK})
      * @param rules        tried in order; the first whose conditions all hold gives the class
      */
     public record Capacity(List<RouteSubtype> skipSubtypes, int lookbackDays, double megaEveryDayShare,
@@ -66,7 +67,7 @@ public record RouteClassProperties(List<String> agencies, String refreshCron, Ge
 
         public Capacity {
             skipSubtypes = skipSubtypes == null ? List.of() : List.copyOf(skipSubtypes);
-            peak = peak == null ? List.of() : List.copyOf(peak);
+            peak = peak == null || peak.isEmpty() ? CityTime.PEAK : List.copyOf(peak);
             rules = rules == null ? List.of() : List.copyOf(rules);
             overrides = overrides == null ? Map.of() : Map.copyOf(overrides);
         }

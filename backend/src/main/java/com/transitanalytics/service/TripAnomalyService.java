@@ -5,7 +5,7 @@ import com.transitanalytics.geo.Geo;
 import com.transitanalytics.service.TripAnomalies.Outcome;
 import com.transitanalytics.service.TripAnomalies.Report;
 import com.transitanalytics.service.TripAnomalies.ScheduledTrip;
-import com.transitanalytics.service.TripAnomalies.Shape;
+import com.transitanalytics.service.TripShapes.Shape;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -98,8 +98,8 @@ public class TripAnomalyService {
                 .sorted(Comparator.comparing(TripAnomalyDto.Trip::scheduledDeparture).reversed()
                         .thenComparing(TripAnomalyDto.Trip::line, TimetableMath.LINE_ORDER))
                 .toList();
-        return new TripAnomalyDto.Report(from, to, TripAnomalies.summary(outcomes),
-                TripAnomalies.lines(outcomes), abnormal.size(),
+        return new TripAnomalyDto.Report(from, to, TripSummaries.summary(outcomes),
+                TripSummaries.lines(outcomes), abnormal.size(),
                 abnormal.subList(0, Math.min(MAX_TRIPS, abnormal.size())));
     }
 
@@ -266,7 +266,7 @@ public class TripAnomalyService {
                             .add(new double[] {rs.getDouble("latitude"), rs.getDouble("longitude")});
                 });
         Map<String, Shape> byId = new HashMap<>();
-        points.forEach((id, list) -> byId.put(id, TripAnomalies.shape(list)));
+        points.forEach((id, list) -> byId.put(id, TripShapes.shape(list)));
         Shapes fresh = new Shapes(version, byId);
         shapes = fresh;
         return fresh;

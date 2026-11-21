@@ -1,5 +1,6 @@
 package com.transitanalytics.buslanes;
 
+import com.transitanalytics.domain.CityTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
@@ -81,7 +82,7 @@ public class BusLanes {
     }
 
     /** Fetches on schedule; a failure is logged and the lanes stay as they are. */
-    @Scheduled(cron = "${app.bus-lanes.refresh-cron:-}", zone = "Europe/Warsaw")
+    @Scheduled(cron = "${app.bus-lanes.refresh-cron:-}", zone = CityTime.ZONE_ID)
     void refreshOnSchedule() {
         try {
             refresh();

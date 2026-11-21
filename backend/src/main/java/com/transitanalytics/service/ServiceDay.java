@@ -1,5 +1,7 @@
 package com.transitanalytics.service;
 
+import com.transitanalytics.domain.CityTime;
+
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -16,7 +18,7 @@ final class ServiceDay {
 
     /** A service day runs from 03:00 to 03:00; times before 03:00 count as hours 24, 25 and 26 of the day before. */
     static final int DAY_START_HOUR = 3;
-    static final ZoneId ZONE = ZoneId.of("Europe/Warsaw");
+    static final ZoneId ZONE = CityTime.ZONE;
 
     /** Hour of the service day: 3–23, then 24, 25, 26 for the hours after midnight. */
     static int serviceHour(double epochSeconds) {
@@ -29,6 +31,27 @@ final class ServiceDay {
      * this feed (103-05_P_1349_… is brigade 103-05). Live feeds name brigades the same way.
      */
     static final String BRIGADE_SQL = "coalesce(t.block_id, split_part(t.gtfs_id, '_', 1))";
+
+    /** SQL: whether a date (an SQL expression of type date) is a weekday, Monday to Friday. */
+    static String weekdaySql(String date) {
+        return "extract(isodow FROM " + date + ") <= 5";
+    }
+
+    /**
+     * SQL: whether a recorded time (an SQL timestamptz expression) falls on a weekday's service day: a report at 00:30
+     * on Saturday still belongs to Friday's service.
+     */
+    static String weekdayServiceDaySql(String instant) {
+        return weekdaySql(serviceTimeSql(instant));
+    }
+
+    /**
+     * SQL: a recorded time (an SQL timestamptz expression) as a local timestamp moved back by the day's start, so its
+     * date is the service day and its time runs from 00:00 at 03:00.
+     */
+    static String serviceTimeSql(String instant) {
+        return "((%s AT TIME ZONE '%s') - make_interval(hours => %d))".formatted(instant, ZONE.getId(), DAY_START_HOUR);
+    }
 
     /** GTFS times before this (03:00, in seconds) belong to the service day before the timetable's date. */
     static final int DAY_START_SECONDS = DAY_START_HOUR * 3600;

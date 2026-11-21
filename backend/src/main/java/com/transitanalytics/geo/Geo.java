@@ -17,6 +17,11 @@ public final class Geo {
         return new double[] {lon * M_PER_DEG * COS_LAT, lat * M_PER_DEG};
     }
 
+    /** Metres {east, north} back to [latitude, longitude]. */
+    public static double[] latLon(double x, double y) {
+        return new double[] {y / M_PER_DEG, x / (M_PER_DEG * COS_LAT)};
+    }
+
     public static double meters(double[] a, double[] b) {
         return Math.hypot((b[1] - a[1]) * M_PER_DEG * COS_LAT, (b[0] - a[0]) * M_PER_DEG);
     }

@@ -116,8 +116,8 @@ public class BrigadeDayService {
         for (Outcome o : anomalies.currentOutcomes(day).orElseGet(() -> anomalies.judge(trips, reports, day, now))) {
             outcomes.put(key(o.line(), o.departure(), o.arrival()), o);
         }
-        Map<ScheduledTrip, List<Report>> matched = TripAnomalies.matchReports(TripAnomalies.byBrigade(trips),
-                TripAnomalies.withBrigades(reports));
+        Map<ScheduledTrip, List<Report>> matched = TripMatching.matchReports(TripMatching.byBrigade(trips),
+                TripMatching.withBrigades(reports));
 
         String outbound = trips.get(0).stops()[trips.get(0).size() - 1];
         List<BrigadeDto.Trip> result = new ArrayList<>();

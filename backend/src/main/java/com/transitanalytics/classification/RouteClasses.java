@@ -1,6 +1,7 @@
 package com.transitanalytics.classification;
 
 import com.transitanalytics.domain.CityBoundaries;
+import com.transitanalytics.domain.CityTime;
 import com.transitanalytics.domain.RouteCapacity;
 import com.transitanalytics.domain.RouteGeometry;
 import com.transitanalytics.domain.RouteSubtype;
@@ -78,7 +79,7 @@ public class RouteClasses {
     }
 
     /** Every night: the buses running each line change from day to day. */
-    @Scheduled(cron = "${app.route-classes.refresh-cron}", zone = "Europe/Warsaw")
+    @Scheduled(cron = "${app.route-classes.refresh-cron}", zone = CityTime.ZONE_ID)
     public void nightly() {
         classifyAll();
     }
@@ -184,12 +185,12 @@ public class RouteClasses {
         Map<String, Map<DayType, Double>> shares = new HashMap<>();
         jdbc.query("""
                 SELECT p.route_name,
-                       CASE extract(isodow FROM p.observed_at AT TIME ZONE 'Europe/Warsaw')
+                       CASE extract(isodow FROM p.observed_at AT TIME ZONE '%s')
                             WHEN 6 THEN 'SATURDAY' WHEN 7 THEN 'SUNDAY' ELSE 'WEEKDAY' END AS day_type,
                        avg(CASE WHEN v.vehicle_class = 'mega' THEN 1.0 ELSE 0.0 END) AS share
                 FROM position_sample p JOIN vehicle v ON v.id = p.vehicle_id
                 WHERE p.observed_at >= ? AND p.route_name IS NOT NULL AND v.vehicle_class IS NOT NULL
-                GROUP BY 1, 2""",
+                GROUP BY 1, 2""".formatted(CityTime.ZONE_ID),
                 rs -> {
                     shares.computeIfAbsent(rs.getString("route_name"), k -> new EnumMap<>(DayType.class))
                             .put(DayType.valueOf(rs.getString("day_type")), rs.getDouble("share"));
