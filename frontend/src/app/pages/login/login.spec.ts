@@ -3,7 +3,9 @@ import { renderPage, text } from '../../testing/page-testing';
 import { Login } from './login';
 
 describe('Login page', () => {
-  const auth = (loading: boolean, error: string | null) => ({ auth: { session: null, loading, error } });
+  const auth = (loading: boolean, error: string | null) => ({
+    auth: { session: null, loading, error },
+  });
 
   it('signs in with the typed credentials, but not with an empty form', () => {
     const { el, store, render } = renderPage(Login, auth(false, null));
@@ -19,15 +21,20 @@ describe('Login page', () => {
     password.dispatchEvent(new Event('input'));
     form.dispatchEvent(new Event('submit'));
     render();
-    expect(store.dispatch).toHaveBeenCalledWith(AuthActions.login({ username: 'ann', password: 'secret' }));
+    expect(store.dispatch).toHaveBeenCalledWith(
+      AuthActions.login({ username: 'ann', password: 'secret' }),
+    );
   });
 
   it('shows progress and the error from the last attempt', () => {
-    expect(text(renderPage(Login, auth(true, null)).el.querySelector('button'))).toBe('Signing in…');
+    expect(text(renderPage(Login, auth(true, null)).el.querySelector('button'))).toBe(
+      'Signing in…',
+    );
   });
 
-  it('shows the error from the last attempt', () => {
+  it('leaves a failed attempt to the toast: nothing of it on the form', () => {
     const { el } = renderPage(Login, auth(false, 'Invalid username or password'));
-    expect(text(el.querySelector('.error'))).toBe('Invalid username or password');
+    expect(text(el)).not.toContain('Invalid username or password');
+    expect(el.querySelector('.error')).toBeNull();
   });
 });

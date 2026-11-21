@@ -6,15 +6,11 @@ import {
   CorridorReport,
   LineDetail,
   LinePerformance,
-  LineStats,
+  LineStatsReport,
   LivePosition,
 } from '../core/models/models';
 import { CorridorsActions } from '../store/corridors/corridors.actions';
 import { corridorsFeature } from '../store/corridors/corridors.reducer';
-import { DelayReplayActions } from '../store/delay-replay/delay-replay.actions';
-import { delayReplayFeature } from '../store/delay-replay/delay-replay.reducer';
-import { LineStatsActions } from '../store/line-stats/line-stats.actions';
-import { lineStatsFeature } from '../store/line-stats/line-stats.reducer';
 import { LivePositionsActions } from '../store/live-positions/live-positions.actions';
 import { livePositionsFeature } from '../store/live-positions/live-positions.reducer';
 import { PositionHistoryActions } from '../store/position-history/position-history.actions';
@@ -22,11 +18,11 @@ import { positionHistoryFeature } from '../store/position-history/position-histo
 import { RouteDetailActions } from '../store/route-detail/route-detail.actions';
 import { routeDetailFeature } from '../store/route-detail/route-detail.reducer';
 import { renderPage, stateAfter, useSvgMaps, text } from '../testing/page-testing';
+import { LineStatsActions } from '../store/line-stats/line-stats.actions';
+import { lineStatsFeature } from '../store/line-stats/line-stats.reducer';
 import { Corridors } from './corridors/corridors';
-import { Delays } from './delays/delays';
-import { LineStatsPage } from './line-stats/line-stats';
-import { LiveMap } from './live-map/live-map';
-import { Positions } from './positions/positions';
+import { LiveMap } from './home/live-map/live-map';
+import { PositionHistory } from './home/position-history/position-history';
 import { RoutesPage } from './routes/routes';
 
 /** A compact replay row: vehicle, latitude, longitude, delay, line and brigade indexes. */
@@ -37,76 +33,6 @@ afterEach(() => {
   TestBed.resetTestingModule();
   vi.useRealTimers();
   vi.restoreAllMocks();
-});
-
-const line = (route: string, lengthKm: number, peakSpeedKmh: number): LineStats => ({
-  routeId: Number(route),
-  route,
-  color: null,
-  textColor: null,
-  lengthKm,
-  shortestTravelSeconds: 1800,
-  longestTravelSeconds: 2400,
-  peakSpeedKmh,
-  offPeakSpeedKmh: 20,
-  peakIntervalMinutes: 10,
-  offPeakIntervalMinutes: 15,
-  peakRegularityCv: 0.2,
-  offPeakRegularityCv: 0.3,
-  peakVehicles: 5,
-  offPeakVehicles: 4,
-  trips: 60,
-});
-
-describe('Line statistics page', () => {
-  it('loads the report, states the periods and ranks lines in the top 5 tables', () => {
-    const report = {
-      serviceId: 'P_1349',
-      validDays: 59,
-      firstDate: '2026-11-02',
-      lastDate: '2027-01-29',
-      peak: [
-        { from: '06:30', to: '08:30' },
-        { from: '15:00', to: '17:00' },
-      ],
-      offPeak: [
-        { from: '08:30', to: '15:00' },
-        { from: '17:00', to: '20:00' },
-      ],
-      lines: [line('5', 8.6, 18), line('103', 19.8, 25), line('10', 9.9, 16)],
-    };
-    const { el, store } = renderPage(
-      LineStatsPage,
-      stateAfter(lineStatsFeature, LineStatsActions.loaded({ report })),
-    );
-
-    expect(store.dispatch).toHaveBeenCalledWith(LineStatsActions.load());
-    expect(text(el.querySelector('.intro'))).toContain('Peak hours: 06:30–08:30 and 15:00–17:00');
-    expect(text(el.querySelector('.intro'))).toContain('Off-peak: 08:30–15:00 and 17:00–20:00');
-    const longest = [...el.querySelectorAll('.top')].find(
-      (t) => text(t.querySelector('h2')) === 'Top 5 longest lines',
-    )!;
-    expect(
-      [...longest.querySelectorAll('tbody tr')].map((r) => text(r.querySelector('td'))),
-    ).toEqual(['103', '10', '5']);
-  });
-
-  it('says when no timetable is imported', () => {
-    const report = {
-      serviceId: null,
-      validDays: 0,
-      firstDate: null,
-      lastDate: null,
-      peak: [],
-      offPeak: [],
-      lines: [],
-    };
-    const { el } = renderPage(
-      LineStatsPage,
-      stateAfter(lineStatsFeature, LineStatsActions.loaded({ report })),
-    );
-    expect(text(el)).toContain('No timetable yet');
-  });
 });
 
 describe('Important corridors page', () => {
@@ -159,30 +85,60 @@ describe('Important corridors page', () => {
   });
 });
 
-describe('Position history page', () => {
-  it('loads the window in the URL, with its line, report page, sort and outlier choice', () => {
+describe('Position history (Home)', () => {
+  it('loads the window, line and operator in the URL, and the operators once', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-11-16T12:00:30Z'));
-    const { store } = renderPage(Positions, stateAfter(positionHistoryFeature), {
+    const { store } = renderPage(PositionHistory, stateAfter(positionHistoryFeature), {
       range: '1h',
       route: '103',
-      page: '3',
-      sort: 'delay,desc',
-      hideOutliers: '1',
+      agency: 'TUROSN',
     });
 
-    const query = {
-      from: '2026-11-16T11:00:40.000Z',
-      to: '2026-11-16T12:00:40.000Z',
-      route: '103',
-    };
-    expect(store.dispatch).toHaveBeenCalledWith(PositionHistoryActions.load({ query }));
     expect(store.dispatch).toHaveBeenCalledWith(
-      PositionHistoryActions.loadSamples({
-        query,
-        page: 2,
-        sort: 'delay,desc',
-        excludeOutliers: true,
+      PositionHistoryActions.load({
+        query: {
+          from: '2026-11-16T11:00:40.000Z',
+          to: '2026-11-16T12:00:40.000Z',
+          route: '103',
+          agency: 'TUROSN',
+        },
+      }),
+    );
+    expect(store.dispatch).toHaveBeenCalledWith(PositionHistoryActions.loadAgencies());
+  });
+
+  it('shows the city operator unless another one, or all, is chosen', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-16T12:00:30Z'));
+    const city = renderPage(PositionHistory, stateAfter(positionHistoryFeature), { range: '1h' });
+    expect(city.store.dispatch).toHaveBeenCalledWith(
+      PositionHistoryActions.load({
+        query: {
+          from: '2026-11-16T11:00:40.000Z',
+          to: '2026-11-16T12:00:40.000Z',
+          route: null,
+          agency: 'BKM',
+        },
+      }),
+    );
+  });
+
+  it('shows every operator when all are chosen', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-16T12:00:30Z'));
+    const all = renderPage(PositionHistory, stateAfter(positionHistoryFeature), {
+      range: '1h',
+      agency: 'all',
+    });
+    expect(all.store.dispatch).toHaveBeenCalledWith(
+      PositionHistoryActions.load({
+        query: {
+          from: '2026-11-16T11:00:40.000Z',
+          to: '2026-11-16T12:00:40.000Z',
+          route: null,
+          agency: null,
+        },
       }),
     );
   });
@@ -190,24 +146,93 @@ describe('Position history page', () => {
   it('refreshes a short preset window each poll', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-11-16T12:00:30Z'));
-    const { store } = renderPage(Positions, stateAfter(positionHistoryFeature), { range: '5m' });
+    const { store } = renderPage(PositionHistory, stateAfter(positionHistoryFeature), {
+      range: '5m',
+    });
     expect(store.dispatch).toHaveBeenCalledWith(
       PositionHistoryActions.load({
-        query: { from: '2026-11-16T11:55:40.000Z', to: '2026-11-16T12:00:40.000Z', route: null },
+        query: {
+          from: '2026-11-16T11:55:40.000Z',
+          to: '2026-11-16T12:00:40.000Z',
+          route: null,
+          agency: 'BKM',
+        },
       }),
     );
     const before = vi.mocked(store.dispatch).mock.calls.length;
     vi.advanceTimersByTime(10_000);
-    expect(vi.mocked(store.dispatch).mock.calls.length).toBe(before + 2);
+    expect(vi.mocked(store.dispatch).mock.calls.length).toBe(before + 1);
   });
 
-  it('refreshes a preset window every minute, but not a custom one', () => {
+  it('refreshes a long preset window every minute', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-11-16T12:00:30Z'));
-    const preset = renderPage(Positions, stateAfter(positionHistoryFeature), { range: '6h' });
+    const preset = renderPage(PositionHistory, stateAfter(positionHistoryFeature), { range: '6h' });
     const before = vi.mocked(preset.store.dispatch).mock.calls.length;
-    vi.advanceTimersByTime(60_000);
-    expect(vi.mocked(preset.store.dispatch).mock.calls.length).toBe(before + 2);
+    vi.advanceTimersByTime(10_000);
+    expect(vi.mocked(preset.store.dispatch).mock.calls.length).toBe(before);
+    vi.advanceTimersByTime(50_000);
+    expect(vi.mocked(preset.store.dispatch).mock.calls.length).toBe(before + 1);
+  });
+
+  it('loads a window chosen after the first refresh at once', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-16T12:00:30Z'));
+    const { store, setQuery } = renderPage(PositionHistory, stateAfter(positionHistoryFeature), {
+      range: '6h',
+    });
+    vi.advanceTimersByTime(25_000);
+    setQuery({ from: '2026-11-16T08:00', to: '2026-11-16T10:00' });
+    expect(store.dispatch).toHaveBeenLastCalledWith(
+      PositionHistoryActions.load({
+        query: {
+          from: new Date('2026-11-16T08:00').toISOString(),
+          to: new Date('2026-11-16T10:00').toISOString(),
+          route: null,
+          agency: 'BKM',
+        },
+      }),
+    );
+    setQuery({ range: '12h' });
+    expect(vi.mocked(store.dispatch).mock.lastCall![0]).toMatchObject({
+      query: { to: '2026-11-16T12:01:00.000Z', from: '2026-11-16T00:01:00.000Z' },
+    });
+  });
+
+  it('never reloads a custom window', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-16T12:00:30Z'));
+    const custom = renderPage(PositionHistory, stateAfter(positionHistoryFeature), {
+      from: '2026-11-16T08:00',
+      to: '2026-11-16T10:00',
+    });
+    const loads = vi.mocked(custom.store.dispatch).mock.calls.length;
+    vi.advanceTimersByTime(120_000);
+    expect(vi.mocked(custom.store.dispatch).mock.calls.length).toBe(loads);
+  });
+
+  it('shows four delay bands', () => {
+    const { el } = renderPage(
+      PositionHistory,
+      stateAfter(
+        positionHistoryFeature,
+        PositionHistoryActions.delaysLoaded({
+          delays: [
+            { fromMinutes: null, toMinutes: 2, vehicles: 90, reports: 900 },
+            { fromMinutes: 2, toMinutes: 5, vehicles: 30, reports: 60 },
+            { fromMinutes: 5, toMinutes: 10, vehicles: 10, reports: 30 },
+            { fromMinutes: 10, toMinutes: null, vehicles: 2, reports: 10 },
+          ],
+        }),
+      ),
+      { range: '1h' },
+    );
+    expect([...el.querySelectorAll('table.bands tbody tr td:first-child')].map(text)).toEqual([
+      'On time (under 2 min late, or early)',
+      'More than 2 min (2–5)',
+      'More than 5 min (5–10)',
+      'More than 10 min',
+    ]);
   });
 });
 
@@ -243,13 +268,23 @@ describe('Position history charts', () => {
       '2026-11-17T11:00:00Z',
     ]);
     // A new window, 10:00–14:00, chosen; its series hasn't arrived yet.
-    const query = { from: '2026-11-17T10:00:00.000Z', to: '2026-11-17T14:00:00.000Z', route: null };
+    const query = {
+      from: '2026-11-17T10:00:00.000Z',
+      to: '2026-11-17T14:00:00.000Z',
+      route: null,
+      agency: 'BKM',
+    };
     const { fixture } = renderPage(
-      Positions,
+      PositionHistory,
       stateAfter(
         positionHistoryFeature,
         PositionHistoryActions.load({
-          query: { from: '2026-11-17T08:00:00.000Z', to: '2026-11-17T12:00:00.000Z', route: null },
+          query: {
+            from: '2026-11-17T08:00:00.000Z',
+            to: '2026-11-17T12:00:00.000Z',
+            route: null,
+            agency: 'BKM',
+          },
         }),
         PositionHistoryActions.fleetLoaded({ series: old }),
         PositionHistoryActions.load({ query }),
@@ -273,13 +308,17 @@ describe('Position history charts', () => {
 });
 
 describe('Position history controls', () => {
-  it('put the time range, a custom window and the line in the URL, back on the first page', () => {
+  it('put the time range, a custom window, the line and the operator in the URL', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 10, 16, 12, 0, 30));
-    const { el, fixture } = renderPage(Positions, stateAfter(positionHistoryFeature), {
-      range: '1h',
-      page: '3',
-    });
+    const { el, fixture } = renderPage(
+      PositionHistory,
+      stateAfter(
+        positionHistoryFeature,
+        PositionHistoryActions.agenciesLoaded({ agencies: ['BKM', 'TUROSN'] }),
+      ),
+      { range: '1h', route: '103' },
+    );
     const navigate = vi
       .spyOn(fixture.debugElement.injector.get(Router), 'navigate')
       .mockResolvedValue(true);
@@ -292,169 +331,33 @@ describe('Position history controls', () => {
       ...el.querySelectorAll('app-time-window .presets button'),
     ] as HTMLButtonElement[];
     presets.find((b) => text(b) === '30 min')!.click();
-    expect(navigate).toHaveBeenLastCalledWith(
-      ...merge({ range: '30m', from: null, to: null, page: null }),
-    );
+    expect(navigate).toHaveBeenLastCalledWith(...merge({ range: '30m', from: null, to: null }));
 
     const [from] = [...el.querySelectorAll('input[type=datetime-local]')] as HTMLInputElement[];
     from.value = '2026-11-16T08:00';
     from.dispatchEvent(new Event('change'));
     expect(navigate).toHaveBeenLastCalledWith(
-      ...merge({ range: null, from: '2026-11-16T08:00', to: '2026-11-16T12:00', page: null }),
+      ...merge({ range: null, from: '2026-11-16T08:00', to: '2026-11-16T12:00' }),
     );
 
-    const line = el.querySelector('select') as HTMLSelectElement;
+    const agency = el.querySelector('select.agency') as HTMLSelectElement;
+    expect([...agency.options].map(text)).toEqual(['All operators', 'BKM', 'TUROSN']);
+    expect(agency.value).toBe('BKM');
+    agency.value = 'TUROSN';
+    agency.dispatchEvent(new Event('change'));
+    expect(navigate).toHaveBeenLastCalledWith(...merge({ agency: 'TUROSN', route: null }));
+    agency.value = 'all';
+    agency.dispatchEvent(new Event('change'));
+    expect(navigate).toHaveBeenLastCalledWith(...merge({ agency: 'all', route: null }));
+
+    const line = el.querySelectorAll('select:not(.window-preset)')[1] as HTMLSelectElement;
+    line.value = '';
     line.dispatchEvent(new Event('change'));
-    expect(navigate).toHaveBeenLastCalledWith(...merge({ route: null, page: null }));
+    expect(navigate).toHaveBeenLastCalledWith(...merge({ route: null }));
   });
 });
 
-describe('Delays page', () => {
-  it('loads the replay for the window and lines in the URL', () => {
-    useSvgMaps();
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-11-16T12:00:30Z'));
-    const { store, el } = renderPage(Delays, stateAfter(delayReplayFeature), {
-      range: '30m',
-      lines: '103, 5',
-    });
-
-    expect(store.dispatch).toHaveBeenCalledWith(
-      DelayReplayActions.load({
-        query: {
-          from: '2026-11-16T11:30:40.000Z',
-          to: '2026-11-16T12:00:40.000Z',
-          routes: ['103', '5'],
-        },
-      }),
-    );
-    const active = el.querySelector('app-time-window .presets button.active');
-    expect(text(active)).toBe('30 min');
-  });
-
-  it('shows a failure from the store', () => {
-    useSvgMaps();
-    const { el } = renderPage(
-      Delays,
-      stateAfter(
-        delayReplayFeature,
-        DelayReplayActions.load({ query: { from: 'a', to: 'b', routes: [] } }),
-        DelayReplayActions.failure({ error: 'Too long a window' }),
-      ),
-    );
-    expect(text(el)).toContain('Too long a window');
-  });
-});
-
-describe('Delays player', () => {
-  it('plays a loaded replay, pauses, and scrubs to a moment', async () => {
-    useSvgMaps();
-    const replay = {
-      from: '2026-11-16T11:00:00Z',
-      to: '2026-11-16T11:02:00Z',
-      stepSeconds: 60,
-      routes: ['103'],
-      vehicles: ['230', '009'],
-      lines: ['103'],
-      brigades: ['103-05'],
-      frames: [
-        {
-          time: '2026-11-16T11:00:00Z',
-          positions: [[0, 53.13, 23.16, 120, 0, 0]] as ReplayRow[],
-        },
-        {
-          time: '2026-11-16T11:01:00Z',
-          positions: [
-            [0, 53.131, 23.161, 180, 0, 0],
-            [1, 53.12, 23.15, -60, null, null],
-          ] as ReplayRow[],
-        },
-      ],
-    };
-    const { el, render, fixture } = renderPage(
-      Delays,
-      stateAfter(
-        delayReplayFeature,
-        DelayReplayActions.load({ query: { from: replay.from, to: replay.to, routes: [] } }),
-        DelayReplayActions.replayLoaded({ replay }),
-      ),
-    );
-    await fixture.whenStable();
-    render();
-    const play = el.querySelector('button.play') as HTMLButtonElement;
-    expect(text(play)).toBe('❚❚ Pause');
-
-    play.click();
-    render();
-    expect(text(play)).toBe('▶ Play');
-
-    const timeline = el.querySelector('input.timeline') as HTMLInputElement;
-    timeline.value = String(Date.parse('2026-11-16T11:01:00Z'));
-    timeline.dispatchEvent(new Event('input'));
-    render();
-    expect(text(el.querySelector('.time .muted'))).toBe('· 2 vehicles');
-  });
-
-  it("shows a bus's brigade and the rest of its day at the replay's moment", async () => {
-    useSvgMaps();
-    const run = (from: string, to: string) => ({
-      line: '103',
-      headsign: 'Choroszcz',
-      from: 'Piastowska',
-      to: 'Choroszcz',
-      departure: `2026-11-16T${from}:00Z`,
-      arrival: `2026-11-16T${to}:00Z`,
-    });
-    const schedule = vi.fn(() =>
-      of({
-        brigade: '103-05',
-        serviceDay: '2026-11-16',
-        runs: [run('09:00', '09:40'), run('10:30', '11:20'), run('11:40', '12:20')],
-      }),
-    );
-    const replay = {
-      from: '2026-11-16T11:00:00Z',
-      to: '2026-11-16T11:02:00Z',
-      stepSeconds: 60,
-      routes: [],
-      vehicles: ['230'],
-      lines: ['103'],
-      brigades: ['103-05'],
-      frames: [
-        { time: '2026-11-16T11:00:00Z', positions: [[0, 53.13, 23.16, 120, 0, 0]] as ReplayRow[] },
-      ],
-    };
-    const { el, render, fixture } = renderPage(
-      Delays,
-      stateAfter(
-        delayReplayFeature,
-        DelayReplayActions.load({ query: { from: replay.from, to: replay.to, routes: [] } }),
-        DelayReplayActions.replayLoaded({ replay }),
-      ),
-      {},
-      [{ provide: BrigadeApi, useValue: { schedule } }],
-    );
-    await fixture.whenStable();
-    render();
-    (el.querySelector('button.play') as HTMLButtonElement).click();
-    render();
-    expect(el.querySelectorAll('.leaflet-city-boundaries-pane path')).toHaveLength(2);
-    expect(text(el.querySelector('.legend'))).toContain('City limits');
-
-    const marker = el.querySelector('.leaflet-overlay-pane path.leaflet-interactive')!;
-    marker.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    // The schedule of the day being replayed, not today's.
-    expect(schedule).toHaveBeenCalledWith('103-05', new Date('2026-11-16T11:00:00Z'));
-    const popup = el.querySelector('.leaflet-popup-content')!;
-    expect(text(popup)).toContain('bus 230');
-    expect(text(popup.querySelector('.brigade'))).toContain('Brigade 103-05 · rest of that day');
-    const runs = [...popup.querySelectorAll('ol.runs li')];
-    expect(runs).toHaveLength(2);
-    expect(runs[0].classList).toContain('now');
-  });
-});
-
-describe('Live map page', () => {
+describe('Live map (Home)', () => {
   const position = (
     vehicleNumber: string,
     delaySeconds: number | null,
@@ -505,13 +408,14 @@ describe('Live map page', () => {
         position('512', null),
         position('1051', 900, 'WSCHODEXPRESS'),
       ),
-      { minDelay: '5', agency: 'BKM' },
+      // The recorded positions' filters (window, operator) are other parameters: they don't change the map.
+      { mapMinDelay: '5', mapAgency: 'BKM', range: '1h', agency: 'WSCHODEXPRESS' },
       [noSchedules],
     );
     vi.advanceTimersByTime(0);
     expect(store.dispatch).toHaveBeenCalledWith(LivePositionsActions.load());
     render();
-    expect(text(el.querySelector('.header .muted'))).toContain(
+    expect(text(el.querySelector('.header .status'))).toContain(
       '1 of 4 vehicles (BKM, delayed over 5 min)',
     );
     expect([...el.querySelectorAll('select.agency option')].map(text)).toEqual([
@@ -521,8 +425,8 @@ describe('Live map page', () => {
     ]);
   });
 
-  it('puts the operator in the URL, and resets every filter', () => {
-    const { el, fixture } = renderPage(LiveMap, live(position('230', 600)), { minDelay: '5' }, [
+  it('puts the operator and the kind of line in the URL, and resets every filter', () => {
+    const { el, fixture } = renderPage(LiveMap, live(position('230', 600)), { mapMinDelay: '5' }, [
       noSchedules,
     ]);
     const router = fixture.debugElement.injector.get(Router);
@@ -532,18 +436,32 @@ describe('Live map page', () => {
     select.value = 'BKM';
     select.dispatchEvent(new Event('change'));
     expect(navigate).toHaveBeenLastCalledWith([], {
-      queryParams: { agency: 'BKM' },
+      queryParams: { mapAgency: 'BKM' },
+      queryParamsHandling: 'merge',
+    });
+
+    const lines = el.querySelector('select.line-type') as HTMLSelectElement;
+    expect([...lines.options].map((o) => o.textContent?.trim())).toEqual([
+      'All lines',
+      'Urban',
+      'Suburban',
+      'Regional (4xx)',
+    ]);
+    lines.value = 'suburban';
+    lines.dispatchEvent(new Event('change'));
+    expect(navigate).toHaveBeenLastCalledWith([], {
+      queryParams: { mapLineType: 'suburban' },
       queryParamsHandling: 'merge',
     });
 
     (el.querySelector('button.reset') as HTMLButtonElement).click();
     expect(navigate).toHaveBeenLastCalledWith([], {
-      queryParams: { minDelay: null, agency: null },
+      queryParams: { mapMinDelay: null, mapAgency: null, mapLineType: null },
       queryParamsHandling: 'merge',
     });
   });
 
-  it("colours vehicles by delay, outlined by kind of line, and shows the rest of the brigade's day", async () => {
+  it("colours vehicles by delay, with no outline but a shadow, and shows the rest of the brigade's day", async () => {
     useSvgMaps();
     const now = Date.now();
     const at = (minutes: number) => new Date(now + minutes * 60_000).toISOString();
@@ -570,7 +488,9 @@ describe('Live map page', () => {
 
     const marker = el.querySelector('path.leaflet-interactive') as SVGPathElement;
     expect(marker.getAttribute('fill')).toBe('#d7301f');
-    expect(marker.getAttribute('stroke')).toBe('#111111');
+    expect(marker.getAttribute('stroke')).toBe('none');
+    expect(marker.classList).toContain('live-vehicle');
+    expect(text(el.querySelector('.legend'))).not.toContain('Suburban');
 
     // The city limits and centre are drawn under the vehicles, and don't take clicks.
     expect(el.querySelectorAll('.leaflet-city-boundaries-pane path')).toHaveLength(2);
@@ -773,17 +693,33 @@ describe('Routes page', () => {
       segments: [],
       vehicles: { days: 7, vehicles: [], brigades: [], switches: [] },
     } as LinePerformance;
-    const { el, store, fixture } = renderPage(
-      RoutesPage,
-      stateAfter(
+    // Every line's weekday statistics: the chosen line's (route 2) regularity goes in its tile.
+    const lineStats = {
+      serviceId: 'P_1349',
+      validDays: 59,
+      firstDate: '2026-11-02',
+      lastDate: '2027-01-29',
+      peak: [{ from: '06:30', to: '08:30' }],
+      offPeak: [{ from: '08:30', to: '15:00' }],
+      lines: [
+        { routeId: 1, peakRegularityCv: 0.9, offPeakRegularityCv: 0.9 },
+        { routeId: 2, peakRegularityCv: 0.18, offPeakRegularityCv: 0.45 },
+      ],
+    } as unknown as LineStatsReport;
+    const { el, store, fixture } = renderPage(RoutesPage, {
+      ...stateAfter(
         routeDetailFeature,
         RouteDetailActions.linesLoaded({ lines }),
         RouteDetailActions.select({ line: '103' }),
         RouteDetailActions.detailLoaded({ detail }),
         RouteDetailActions.performanceLoaded({ line: '103', performance }),
       ),
-    );
+      ...stateAfter(lineStatsFeature, LineStatsActions.loaded({ report: lineStats })),
+    });
 
+    expect(store.dispatch).toHaveBeenCalledWith(LineStatsActions.load());
+    expect(text(el.querySelector('.tile.regularity strong'))).toBe('A peak · D off-peak');
+    expect(text(el.querySelector('.tile.regularity'))).toContain('Peak 06:30–08:30');
     expect(store.dispatch).toHaveBeenCalledWith(RouteDetailActions.select({ line: '5' }));
     expect(text(el.querySelector('.line-title h2'))).toBe('Piastowska ⇄ Choroszcz/Cmentarz');
     // Every depot's area, the operator's named; a dashed way from it to where brigades start.
@@ -792,7 +728,7 @@ describe('Routes page', () => {
     expect([...el.querySelectorAll('.leaflet-tooltip.depot-label')].map(text)).toEqual([
       'Zajezdnia autobusowa KZK, ul. Pomocna 1',
     ]);
-    const dashed = [...el.querySelectorAll('.map .leaflet-overlay-pane path')].filter(
+    const dashed = [...el.querySelectorAll('.leaflet-map .leaflet-overlay-pane path')].filter(
       (p) => p.getAttribute('stroke-dasharray') === '8 6',
     );
     expect(dashed).toHaveLength(1);
@@ -819,7 +755,7 @@ describe('Routes page', () => {
       'Secondary capacity',
     ]);
     expect(text(el.querySelector('.line-classes dd'))).toContain('Two radial legs at an angle');
-    expect(el.querySelectorAll('app-variant-tiles .tile')).toHaveLength(5);
+    expect(el.querySelectorAll('app-variant-tiles .tile')).toHaveLength(6);
     expect(text(el.querySelector('app-travel-charts'))).toContain('109 full runs');
     const links = [...el.querySelectorAll('.line-links a')] as HTMLAnchorElement[];
     expect(links.map(text)).toEqual(['Trips', 'Timetable on the website ↗']);
@@ -952,7 +888,7 @@ describe('Routes page', () => {
     ]);
     expect(text(rows[0].querySelector('td:nth-child(2)'))).toBe('Dworzec PKS → Turośń Dolna W2');
     expect(text(el.querySelector('.map-legend'))).toContain('thin and dashed: driven rarely');
-    const paths = () => [...el.querySelectorAll('.map .leaflet-overlay-pane path')];
+    const paths = () => [...el.querySelectorAll('.leaflet-map .leaflet-overlay-pane path')];
     expect(paths().filter((p) => p.getAttribute('stroke-dasharray') === '6 5')).toHaveLength(1);
     // Choosing one draws it thick and fades the rest.
     (rows[1] as HTMLElement).click();

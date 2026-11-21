@@ -21,12 +21,26 @@ export function rowNumber(page: PageMeta | null | undefined, i: number): number 
       </span>
       @if (p.totalPages > 1) {
         <span class="buttons">
-          <button type="button" [disabled]="p.number === 0" (click)="pageChange.emit(0)" aria-label="First page">
+          <button
+            type="button"
+            [disabled]="p.number === 0"
+            (click)="pageChange.emit(0)"
+            aria-label="First page"
+          >
             «
           </button>
-          <button type="button" [disabled]="p.number === 0" (click)="pageChange.emit(p.number - 1)">Previous</button>
-          <button type="button" [disabled]="isLast()" (click)="pageChange.emit(p.number + 1)">Next</button>
-          <button type="button" [disabled]="isLast()" (click)="pageChange.emit(p.totalPages - 1)" aria-label="Last page">
+          <button type="button" [disabled]="p.number === 0" (click)="pageChange.emit(p.number - 1)">
+            Previous
+          </button>
+          <button type="button" [disabled]="isLast()" (click)="pageChange.emit(p.number + 1)">
+            Next
+          </button>
+          <button
+            type="button"
+            [disabled]="isLast()"
+            (click)="pageChange.emit(p.totalPages - 1)"
+            aria-label="Last page"
+          >
             »
           </button>
         </span>

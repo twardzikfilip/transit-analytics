@@ -1,6 +1,7 @@
 package com.transitanalytics.security;
 
 import com.transitanalytics.dto.BrigadeDto;
+import com.transitanalytics.dto.NetworkCoverageDto;
 import com.transitanalytics.dto.DelayGenerationDto;
 import com.transitanalytics.dto.HotspotDto;
 import com.transitanalytics.dto.LineStatsDto;
@@ -15,6 +16,7 @@ import com.transitanalytics.gtfs.GtfsImportInProgressException;
 import com.transitanalytics.gtfs.GtfsImportResult;
 import com.transitanalytics.recording.PositionHistoryService;
 import com.transitanalytics.service.BrigadeDayService;
+import com.transitanalytics.service.NetworkCoverageService;
 import com.transitanalytics.service.BrigadeScheduleService;
 import com.transitanalytics.domain.CityBoundaries;
 import com.transitanalytics.web.BoundaryController;
@@ -29,6 +31,7 @@ import com.transitanalytics.service.TripAnomalyService;
 import com.transitanalytics.service.VehicleService;
 
 import com.transitanalytics.web.BrigadeController;
+import com.transitanalytics.web.NetworkCoverageController;
 import com.transitanalytics.web.DelayGenerationController;
 import com.transitanalytics.web.GtfsController;
 import com.transitanalytics.web.HotspotController;
@@ -83,7 +86,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(controllers = {AuthController.class, VehicleController.class, ZbiorkomController.class,
         GtfsController.class, PositionHistoryController.class,
         LineStatsController.class, FleetController.class, BrigadeController.class, HotspotController.class,
-        DelayGenerationController.class, TripAnomalyController.class, BoundaryController.class})
+        DelayGenerationController.class, TripAnomalyController.class, BoundaryController.class,
+        NetworkCoverageController.class})
 @Import({SecurityConfig.class, JwtAuthFilter.class, JwtService.class, SecurityWebTest.Metrics.class})
 @TestPropertySource(properties = {
         "app.jwt.secret=test-secret-test-secret-test-secret-123456",
@@ -170,6 +174,9 @@ class SecurityWebTest {
 
     @MockitoBean
     TripAnomalyService tripAnomalyService;
+
+    @MockitoBean
+    NetworkCoverageService networkCoverageService;
 
     @Test
     void loginReturnsToken() throws Exception {
@@ -288,14 +295,14 @@ class SecurityWebTest {
     void guestCanReadPositionHistory() throws Exception {
         Instant from = Instant.parse("2026-11-16T10:00:00Z");
         Instant to = Instant.parse("2026-11-16T11:00:00Z");
-        given(positionHistoryService.fleet(from, to, "103")).willReturn(new PositionHistoryDto.FleetSeries(from, to, 60,
+        given(positionHistoryService.fleet(from, to, "103", "BKM")).willReturn(new PositionHistoryDto.FleetSeries(from, to, 60,
                 "103", List.of(new PositionHistoryDto.FleetPoint(from, 7.0, 7, 7, 30.0)),
                 new PositionHistoryDto.Summary(7, 8, 7, 7, from, 30.0, from, from)));
-        given(positionHistoryService.delays(from, to, null)).willReturn(List.of(
-                new PositionHistoryDto.DelayBand(null, 1, 5, 40), new PositionHistoryDto.DelayBand(10, null, 1, 2)));
+        given(positionHistoryService.delays(from, to, null, null)).willReturn(List.of(
+                new PositionHistoryDto.DelayBand(null, 2, 5, 40), new PositionHistoryDto.DelayBand(10, null, 1, 2)));
 
         mvc.perform(get("/api/positions/fleet").param("from", from.toString()).param("to", to.toString())
-                        .param("route", "103").header("Authorization", bearer("guest", "GUEST")))
+                        .param("route", "103").param("agency", "BKM").header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.points[0].vehicles").value(7))
                 .andExpect(jsonPath("$.stepSeconds").value(60))
@@ -303,7 +310,7 @@ class SecurityWebTest {
         mvc.perform(get("/api/positions/delays").param("from", from.toString()).param("to", to.toString())
                         .header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].toMinutes").value(1))
+                .andExpect(jsonPath("$[0].toMinutes").value(2))
                 .andExpect(jsonPath("$[1].fromMinutes").value(10));
         mvc.perform(get("/api/positions/fleet").param("from", from.toString()).param("to", to.toString()))
                 .andExpect(status().isUnauthorized());
@@ -311,7 +318,7 @@ class SecurityWebTest {
 
     @Test
     void positionHistoryRejectsBadWindows() throws Exception {
-        given(positionHistoryService.fleet(any(), any(), any()))
+        given(positionHistoryService.fleet(any(), any(), any(), any()))
                 .willThrow(new IllegalArgumentException("from must be before to"));
 
         mvc.perform(get("/api/positions/fleet").param("from", "2026-11-16T11:00:00Z").param("to", "2026-11-16T10:00:00Z")
@@ -481,9 +488,9 @@ class SecurityWebTest {
     void guestCanReadTheBrigadesOfADayAndOnesDay() throws Exception {
         LocalDate day = LocalDate.of(2026, 11, 18);
         given(brigadeDayService.today()).willReturn(day);
-        given(brigadeDayService.brigades(day, null)).willReturn(new BrigadeDto.DayList(day, "BKM",
+        given(brigadeDayService.brigades(null)).willReturn(new BrigadeDto.BrigadeList("BKM",
                 List.of(new BrigadeDto.Agency("BKM", "BKM")), List.of(new BrigadeDto.BrigadeRef("103-05",
-                List.of("103"), 10, Instant.parse("2026-11-18T04:00:00Z"), Instant.parse("2026-11-18T20:00:00Z")))));
+                List.of("103")))));
         given(brigadeDayService.day("103-05", day)).willReturn(new BrigadeDto.Day("103-05", day,
                 new BrigadeDto.Summary(0, 0, 0, 0, 0, 0, null, null, List.of()), List.of()));
 
@@ -496,6 +503,21 @@ class SecurityWebTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.brigade").value("103-05"));
         mvc.perform(get("/api/brigades/103-05/day")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void guestCanReadTheNetworkCoverage() throws Exception {
+        given(networkCoverageService.coverage()).willReturn(new NetworkCoverageDto(List.of(), 10,
+                new NetworkCoverageDto.Place("Białystok", new NetworkCoverageDto.Shape(List.of(), List.of()), 102),
+                List.of(new NetworkCoverageDto.RadiusCoverage(400, new NetworkCoverageDto.Coverage(102, 75, 0.74),
+                        new NetworkCoverageDto.Coverage(81, 66, 0.82))),
+                List.of(), 21, List.of(), 5, List.of(), 0.1, new NetworkCoverageDto.Population(289_217, "2025-12-31", "GUS"),
+                new NetworkCoverageDto.Sources("OSM", "2026-11-20", "city"),
+                new NetworkCoverageDto.Belt(5, 20, List.of(), List.of())));
+        mvc.perform(get("/api/network-coverage").header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.coverages[0].city.share").value(0.74));
+        mvc.perform(get("/api/network-coverage")).andExpect(status().isUnauthorized());
     }
 
     @Test

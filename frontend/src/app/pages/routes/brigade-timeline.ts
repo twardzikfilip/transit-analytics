@@ -11,8 +11,8 @@ const LABEL = 72;
 const RIGHT = 12;
 let nextId = 0;
 
-/** Bar colours per direction: categorical slots 1 and 3. */
-export const DIRECTION_COLORS = ['var(--chart-line)', 'var(--chart-series-3)'];
+/** The two directions: BKM's light blue and green (styles.scss). */
+export const DIRECTION_COLORS = ['var(--lightblue-bkm)', 'var(--green-bkm)'];
 
 interface Hover {
   x: number;

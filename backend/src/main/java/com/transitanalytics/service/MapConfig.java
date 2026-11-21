@@ -8,7 +8,7 @@ import org.springframework.web.client.RestClient;
 import tools.jackson.databind.json.JsonMapper;
 
 @Configuration
-@EnableConfigurationProperties(MapProperties.class)
+@EnableConfigurationProperties({MapProperties.class, NetworkCoverageProperties.class})
 class MapConfig {
 
     /** Built from Boot's builder (so calls are traced), with the configured timeout. */

@@ -14,8 +14,8 @@ export const loadList = createEffect(
   (actions$ = inject(Actions), api = inject(BrigadeApi)) =>
     actions$.pipe(
       ofType(BrigadesActions.loadList),
-      switchMap(({ date, agency }) =>
-        api.list(date, agency).pipe(
+      switchMap(({ agency }) =>
+        api.list(agency).pipe(
           map((list) => BrigadesActions.listLoaded({ list })),
           catchError(toFailure),
         ),

@@ -1,13 +1,8 @@
 <div class="page-header">
-  <h1>Important corridors</h1>
   @if (report()?.serviceId; as service) {
     <span class="muted">Weekday timetable {{ service }}</span>
   }
 </div>
-
-@if (error(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
-}
 
 <p class="muted intro">
   Stretches of at least 4 consecutive stops where two or more lines run together, joined end to end

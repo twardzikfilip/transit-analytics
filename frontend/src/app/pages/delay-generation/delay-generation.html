@@ -1,5 +1,4 @@
 <div class="page-header">
-  <h1>Delay generation</h1>
   @if (report(); as r) {
     <span class="muted">
       {{ r.from | date: 'd MMM, HH:mm' }} – {{ r.to | date: 'd MMM, HH:mm' }}
@@ -22,10 +21,6 @@
     <span class="muted" role="status">Loading…</span>
   }
 </app-time-window>
-
-@if (error(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
-}
 
 @if (report(); as r) {
   <p class="summary">
@@ -170,7 +165,7 @@
                 >
               </td>
               <td class="num">{{ signed(l.medianGainSeconds) }}</td>
-              <td class="num">{{ (l.gainingShare * 100).toFixed(0) }}%</td>
+              <td class="num">{{ wholePercent(l.gainingShare) }}</td>
               <td class="num">{{ l.generatedMinutesPerDay.toFixed(0) }} min</td>
               <td>
                 {{ worst(l) }}
@@ -192,9 +187,6 @@
       <h2>Line {{ chosen }}</h2>
       <button type="button" (click)="chooseLine(null)">Close</button>
     </div>
-    @if (lineError(); as message) {
-      <p class="error" role="alert">{{ message }}</p>
-    }
     @if (lineLoading() && !lineReport()) {
       <p class="muted" role="status">Loading line {{ chosen }}…</p>
     }

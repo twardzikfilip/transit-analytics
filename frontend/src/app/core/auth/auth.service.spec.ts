@@ -17,7 +17,9 @@ describe('AuthService', () => {
 
   beforeEach(() => {
     localStorage.clear();
-    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
     service = TestBed.inject(AuthService);
     http = TestBed.inject(HttpTestingController);
   });
@@ -51,7 +53,10 @@ describe('AuthService', () => {
 
     localStorage.setItem('transit.session', '{not json');
     expect(AuthService.restoreSession()).toBeNull();
-    localStorage.setItem('transit.session', JSON.stringify({ token: 'no-payload', username: 'x', role: 'GUEST' }));
+    localStorage.setItem(
+      'transit.session',
+      JSON.stringify({ token: 'no-payload', username: 'x', role: 'GUEST' }),
+    );
     expect(AuthService.restoreSession()).toBeNull();
   });
 });

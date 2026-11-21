@@ -18,7 +18,9 @@ describe('traceLogin', () => {
   beforeEach(() => {
     // Same context manager as the app (initTelemetry); without one, context.with() is a no-op.
     context.setGlobalContextManager(new StackContextManager().enable());
-    trace.setGlobalTracerProvider(new TracerProvider({ spanProcessors: [new SimpleSpanProcessor({ exporter: spans })] }));
+    trace.setGlobalTracerProvider(
+      new TracerProvider({ spanProcessors: [new SimpleSpanProcessor({ exporter: spans })] }),
+    );
   });
 
   afterEach(() => {
@@ -41,7 +43,9 @@ describe('traceLogin', () => {
 
   it('records wrong credentials as a failed login, not as an error', async () => {
     const denied = throwError(() => new HttpErrorResponse({ status: 401 }));
-    await expect(lastValueFrom(traceLogin('admin', denied))).rejects.toBeInstanceOf(HttpErrorResponse);
+    await expect(lastValueFrom(traceLogin('admin', denied))).rejects.toBeInstanceOf(
+      HttpErrorResponse,
+    );
 
     const [span] = spans.getFinishedSpans();
     expect(span.attributes['login.outcome']).toBe('invalid_credentials');
@@ -50,7 +54,9 @@ describe('traceLogin', () => {
 
   it('marks server failures as errors', async () => {
     const broken = throwError(() => new HttpErrorResponse({ status: 500 }));
-    await expect(lastValueFrom(traceLogin('admin', broken))).rejects.toBeInstanceOf(HttpErrorResponse);
+    await expect(lastValueFrom(traceLogin('admin', broken))).rejects.toBeInstanceOf(
+      HttpErrorResponse,
+    );
 
     const [span] = spans.getFinishedSpans();
     expect(span.attributes['login.outcome']).toBe('error');

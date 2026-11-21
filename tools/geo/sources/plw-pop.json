@@ -1,0 +1,105 @@
+{
+ "7095320": [
+  "Turczyn",
+  "gmina Choroszcz",
+  null
+ ],
+ "7095383": [
+  "Porosły-Kolonia",
+  "gmina Choroszcz",
+  null
+ ],
+ "7095591": [
+  "Dzikie-Kolonia",
+  "gmina Choroszcz",
+  null
+ ],
+ "7095625": [
+  "Żółtki-Kolonia",
+  "gmina Choroszcz",
+  null
+ ],
+ "7096846": [
+  "Kulikówka",
+  "gmina Dobrzyniewo Duże",
+  null
+ ],
+ "7097814": [
+  "Nowodworce",
+  "gmina Wasilków",
+  null
+ ],
+ "7097848": [
+  "Jurowce",
+  "gmina Wasilków",
+  null
+ ],
+ "7097904": [
+  "Rybniki",
+  "gmina Wasilków",
+  null
+ ],
+ "7097906": [
+  "Katrynka",
+  "gmina Wasilków",
+  null
+ ],
+ "7098651": [
+  "Sobolewo",
+  "gmina Grabówka",
+  [
+   1952,
+   "https://www.polskawliczbach.pl/wies_Sobolewo_suprasl_podlaskie",
+   "Sobolewo"
+  ]
+ ],
+ "7098660": [
+  "Zielona",
+  "gmina Grabówka",
+  null
+ ],
+ "7098663": [
+  "Henrykowo",
+  "gmina Grabówka",
+  null
+ ],
+ "7101813": [
+  "Białostoczek",
+  "gmina Zabłudów",
+  null
+ ],
+ "7101919": [
+  "Halickie",
+  "gmina Zabłudów",
+  null
+ ],
+ "7102000": [
+  "Józefowo",
+  "gmina Zabłudów",
+  null
+ ],
+ "7102002": [
+  "Skrybicze",
+  "gmina Zabłudów",
+  null
+ ],
+ "7102003": [
+  "Bogdaniec",
+  "gmina Zabłudów",
+  null
+ ],
+ "7104740": [
+  "Pasynki",
+  "gmina Zabłudów",
+  [
+   105,
+   "https://www.polskawliczbach.pl/wies_Pasynki_zabludow_podlaskie",
+   "Pasynki"
+  ]
+ ],
+ "7106290": [
+  "Kojrany",
+  "gmina Juchnowiec Kościelny",
+  null
+ ]
+}

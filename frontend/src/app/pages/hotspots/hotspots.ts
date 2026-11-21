@@ -8,7 +8,12 @@ import { distinctUntilChanged, map } from 'rxjs';
 import { HotspotsActions } from '../../store/hotspots/hotspots.actions';
 import { hotspotsFeature } from '../../store/hotspots/hotspots.reducer';
 import { TimeWindowPicker } from '../../shared/time-window/time-window-picker';
-import { TimeWindow, readWindow, sameQuery, windowQuery } from '../../shared/time-window/time-window';
+import {
+  TimeWindow,
+  readWindow,
+  sameQuery,
+  windowQuery,
+} from '../../shared/time-window/time-window';
 import { approachText, hourText, linesText, lostTime, nearText, waitText } from './hotspot-format';
 import { HotspotMap } from './hotspot-map';
 
@@ -34,7 +39,6 @@ export class Hotspots {
 
   protected readonly report = this.store.selectSignal(hotspotsFeature.selectReport);
   protected readonly loading = this.store.selectSignal(hotspotsFeature.selectLoading);
-  protected readonly error = this.store.selectSignal(hotspotsFeature.selectError);
 
   protected readonly defaultPreset = DEFAULT_PRESET;
   /** The window and line in the URL (?range=1mo&line=21); a change loads their report. */

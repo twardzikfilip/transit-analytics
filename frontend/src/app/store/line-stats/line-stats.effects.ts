@@ -13,7 +13,9 @@ export const loadLineStats = createEffect(
       switchMap(() =>
         api.weekday().pipe(
           map((report) => LineStatsActions.loaded({ report })),
-          catchError((err: HttpErrorResponse) => of(LineStatsActions.failure({ error: errorMessage(err) }))),
+          catchError((err: HttpErrorResponse) =>
+            of(LineStatsActions.failure({ error: errorMessage(err) })),
+          ),
         ),
       ),
     ),

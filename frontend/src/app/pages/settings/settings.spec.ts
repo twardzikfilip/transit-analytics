@@ -43,17 +43,43 @@ describe('Settings page', () => {
     expect(text(running.querySelector('button.primary'))).toBe('Importing…');
   });
 
-  it('shows the failure, and nothing of the import to guests', () => {
+  it('leaves a failed import to the toast: nothing of it on the page', () => {
     const failed = renderPage(Settings, {
       ...signedIn('ADMIN'),
-      ...stateAfter(gtfsImportFeature, GtfsImportActions.importFailure({ error: 'Feed unavailable' })),
+      ...stateAfter(
+        gtfsImportFeature,
+        GtfsImportActions.importFailure({ error: 'Feed unavailable' }),
+      ),
     }).el;
-    expect(text(failed.querySelector('.error'))).toBe('Import failed: Feed unavailable');
+    expect(text(failed)).not.toContain('Feed unavailable');
+    expect(failed.querySelector('.error')).toBeNull();
   });
 
   it('hides the import from guests', () => {
-    const guest = renderPage(Settings, { ...signedIn('GUEST'), ...stateAfter(gtfsImportFeature) }).el;
+    const guest = renderPage(Settings, {
+      ...signedIn('GUEST'),
+      ...stateAfter(gtfsImportFeature),
+    }).el;
     expect(guest.querySelector('.gtfs')).toBeNull();
-    expect([...guest.querySelectorAll('dd')].map(text)).toEqual(['ann', 'GUEST']);
+    expect([...guest.querySelectorAll('dd')].map(text)).toEqual(['ann', 'GUEST', 'Light Dark']);
+  });
+
+  it('switches between the light and dark theme, light by default', () => {
+    const { el, render } = renderPage(Settings, {
+      ...signedIn('GUEST'),
+      ...stateAfter(gtfsImportFeature),
+    });
+    const [light, dark] = [
+      ...el.querySelectorAll('app-theme-switch button'),
+    ] as HTMLButtonElement[];
+    expect(light.getAttribute('aria-pressed')).toBe('true');
+    dark.click();
+    render();
+    expect(dark.getAttribute('aria-pressed')).toBe('true');
+    expect(document.documentElement.dataset['theme']).toBe('dark');
+    light.click();
+    render();
+    expect(document.documentElement.dataset['theme']).toBe('light');
+    localStorage.removeItem('theme');
   });
 });

@@ -15,9 +15,24 @@ describe('HourChart', () => {
     const fixture = render({
       series: [
         // 07–09 is one line; 12 stands alone after the gap, so it is drawn as a dot.
-        { label: 'Average', color: 'blue', points: [{ x: 7.5, y: 50 }, { x: 8.5, y: 52 }, { x: 12.5, y: 49 }] },
+        {
+          label: 'Average',
+          color: 'blue',
+          points: [
+            { x: 7.5, y: 50 },
+            { x: 8.5, y: 52 },
+            { x: 12.5, y: 49 },
+          ],
+        },
       ],
-      band: { label: 'Shortest–longest run', color: 'blue', points: [{ x: 7.5, lo: 45, hi: 56 }, { x: 8.5, lo: 47, hi: 57 }] },
+      band: {
+        label: 'Shortest–longest run',
+        color: 'blue',
+        points: [
+          { x: 7.5, lo: 45, hi: 56 },
+          { x: 8.5, lo: 47, hi: 57 },
+        ],
+      },
       refs: [{ label: 'Scheduled shortest', value: 45 }],
       unit: 'min',
     });
@@ -36,15 +51,28 @@ describe('HourChart', () => {
 
   it('reads values with the arrow keys and says when there is nothing to show', () => {
     const fixture = render({
-      series: [{ label: 'Average', color: 'blue', points: [{ x: 7.5, y: 50 }, { x: 8.5, y: 52 }] }],
+      series: [
+        {
+          label: 'Average',
+          color: 'blue',
+          points: [
+            { x: 7.5, y: 50 },
+            { x: 8.5, y: 52 },
+          ],
+        },
+      ],
       unit: 'min',
     });
     const el: HTMLElement = fixture.nativeElement;
     el.querySelector('svg')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
     fixture.detectChanges();
-    expect(el.querySelector('.chart-tooltip')?.textContent?.replace(/\s+/g, ' ')).toContain('07:00–08:00 Average 50 min');
+    expect(el.querySelector('.chart-tooltip')?.textContent?.replace(/\s+/g, ' ')).toContain(
+      '07:00–08:00 Average 50 min',
+    );
 
     const empty = render({ series: [], empty: 'No full runs recorded yet.' });
-    expect(empty.nativeElement.querySelector('.empty')?.textContent?.trim()).toBe('No full runs recorded yet.');
+    expect(empty.nativeElement.querySelector('.empty')?.textContent?.trim()).toBe(
+      'No full runs recorded yet.',
+    );
   });
 });

@@ -6,7 +6,7 @@ import com.transitanalytics.service.TripAnomalies.Outcome;
 import com.transitanalytics.service.TripAnomalies.Recording;
 import com.transitanalytics.service.TripAnomalies.Report;
 import com.transitanalytics.service.TripAnomalies.ScheduledTrip;
-import com.transitanalytics.service.TripAnomalies.Shape;
+import com.transitanalytics.service.TripShapes.Shape;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -29,7 +29,7 @@ class TripAnomaliesTest {
     private static final double LON = 23.15;
     /** Stops A–E northwards, 330 m apart; trips towards "North" run A→E, towards "South" E→A, 2 min a stop. */
     private static final String[] NAMES = {"A", "B", "C", "D", "E"};
-    private static final Map<String, Shape> SHAPES = Map.of("S", TripAnomalies.shape(List.of(
+    private static final Map<String, Shape> SHAPES = Map.of("S", TripShapes.shape(List.of(
             new double[] {53.10, LON}, new double[] {53.112, LON})));
     /** Recording all morning, but not 09:30–09:40. */
     private static final Recording RECORDING = recording();
@@ -178,9 +178,9 @@ class TripAnomaliesTest {
                         + "brigade's next trip towards South, so it probably finished the trip.");
 
         List<Outcome> all = new ArrayList<>(outcomes.values());
-        TripAnomalyDto.Summary summary = TripAnomalies.summary(all);
+        TripAnomalyDto.Summary summary = TripSummaries.summary(all);
         assertThat(summary).isEqualTo(new TripAnomalyDto.Summary(10, 8, 2, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0));
-        assertThat(TripAnomalies.lines(all)).singleElement()
+        assertThat(TripSummaries.lines(all)).singleElement()
                 .isEqualTo(new TripAnomalyDto.LineCounts("9", 8, 2, 1, 0, 1, 1, 1, 1, 1));
     }
 
@@ -265,7 +265,7 @@ class TripAnomaliesTest {
         assertThat(changed.trip().changeAt()).as("when bus 1 stopped for good").isEqualTo(at("07:04"));
         assertThat(changed.vehicleIds()).containsExactly(1L, 3L, 2L);
         assertThat(changed.trip().replacementLine()).isNull();
-        assertThat(TripAnomalies.summary(List.of(changed))).satisfies(s -> {
+        assertThat(TripSummaries.summary(List.of(changed))).satisfies(s -> {
             assertThat(s.vehicleChanged()).isEqualTo(1);
             assertThat(s.changedBrokenDown()).isEqualTo(1);
             assertThat(s.changedReassigned()).isZero();
@@ -275,7 +275,7 @@ class TripAnomaliesTest {
         List<Report> layover = new ArrayList<>(drive(1, trip, 0));
         layover.addAll(drive(2, trip, 0, 1, 2, 3, 4));
         assertThat(judge(List.of(trip), layover, NOON).get(trip.tripId()).kind()).isEqualTo(Kind.COMPLETED);
-        assertThat(TripAnomalies.vehicleChange(trip, layover)).isNull();
+        assertThat(TripHandovers.vehicleChange(trip, layover)).isNull();
     }
 
     @Test
@@ -410,16 +410,16 @@ class TripAnomaliesTest {
         Report last = new Report(1, "V1", at("07:05"), "9", "009-01", "North", 150, 2, 53.10, LON);
         // Joined heading to G, 1 km on: stops D–F unserved.
         Report far = new Report(2, "V2", at("07:15"), "9", "009-01", "North", 400, 6, 53.109, LON);
-        var further = new TripAnomalies.Change(stopped, last, far, 6, stopped, 30, 400);
+        var further = new TripHandovers.Change(stopped, last, far, 6, stopped, 30, 400);
         assertThat(further.samePlace(trip)).isFalse();
         assertThat(further.skippedStops(trip)).isEqualTo(3);
         assertThat(further.standMinutes()).isEqualTo(12);
         // Heading to the next stop, or first seen next to the old bus: the same place.
-        assertThat(new TripAnomalies.Change(stopped, last, far, 3, stopped, 30, 400).samePlace(trip)).isTrue();
+        assertThat(new TripHandovers.Change(stopped, last, far, 3, stopped, 30, 400).samePlace(trip)).isTrue();
         Report beside = new Report(2, "V2", at("07:15"), "9", "009-01", "North", 400, 6, 53.1005, LON);
-        assertThat(new TripAnomalies.Change(stopped, last, beside, 6, stopped, 30, 400).skippedStops(trip)).isZero();
+        assertThat(new TripHandovers.Change(stopped, last, beside, 6, stopped, 30, 400).skippedStops(trip)).isZero();
         // Heading to the first stop, 1 km back: not the same place, however few stops it reads as.
-        var back = new TripAnomalies.Change(stopped, last, far, 0, stopped, 30, 400);
+        var back = new TripHandovers.Change(stopped, last, far, 0, stopped, 30, 400);
         assertThat(back.samePlace(trip)).isFalse();
         assertThat(back.skippedStops(trip)).isZero();
         assertThat(back.stopsBack(trip)).isEqualTo(2);
@@ -450,19 +450,19 @@ class TripAnomaliesTest {
         List<ScheduledTrip> brigade = List.of(arriving, leaving);
         // Waiting at the terminus at 07:09 for the 07:12 trip, under another headsign: the next trip, not the last.
         Report waiting = new Report(1, "V1", at("07:09"), "9", "009-01", "Południe", 0, 0, 53.112, LON);
-        assertThat(TripAnomalies.match(waiting, brigade)).isSameAs(leaving);
+        assertThat(TripMatching.match(waiting, brigade)).isSameAs(leaving);
         // Heading to stop 4 of the first trip at 07:07.
-        assertThat(TripAnomalies.match(new Report(1, "V1", at("07:07"), "9", "009-01", "North", 0, 4, 53.11, LON),
+        assertThat(TripMatching.match(new Report(1, "V1", at("07:07"), "9", "009-01", "North", 0, 4, 53.11, LON),
                 brigade)).isSameAs(arriving);
         // Ten minutes late: still the first trip, by its scheduled time.
-        assertThat(TripAnomalies.match(new Report(1, "V1", at("07:16"), "9", "009-01", "North", 600, 3, 53.1, LON),
+        assertThat(TripMatching.match(new Report(1, "V1", at("07:16"), "9", "009-01", "North", 600, 3, 53.1, LON),
                 brigade)).isSameAs(arriving);
         // Another line, or an hour away: nothing.
-        assertThat(TripAnomalies.match(new Report(1, "V1", at("07:07"), "10", "009-01", "North", 0, 4, 0, 0),
+        assertThat(TripMatching.match(new Report(1, "V1", at("07:07"), "10", "009-01", "North", 0, 4, 0, 0),
                 brigade)).isNull();
-        assertThat(TripAnomalies.match(new Report(1, "V1", at("08:30"), "9", "009-01", "North", 0, 4, 0, 0),
+        assertThat(TripMatching.match(new Report(1, "V1", at("08:30"), "9", "009-01", "North", 0, 4, 0, 0),
                 brigade)).isNull();
-        assertThat(TripAnomalies.match(waiting, null)).isNull();
+        assertThat(TripMatching.match(waiting, null)).isNull();
     }
 
     @Test
@@ -473,22 +473,22 @@ class TripAnomaliesTest {
                 new Report(1, "V1", at("07:30"), "9", null, "North", 0, 3, 0, 0),
                 new Report(1, "V1", at("07:33"), "9", "009-02", "North", 0, 3, 0, 0),
                 new Report(2, "V2", at("07:34"), "9", null, "North", 0, 3, 0, 0));
-        assertThat(TripAnomalies.withBrigades(reports)).extracting(Report::brigade)
+        assertThat(TripMatching.withBrigades(reports)).extracting(Report::brigade)
                 .containsExactly("009-01", "009-01", "009-02", "009-02", null);
     }
 
     @Test
     void measuresDistanceFromTheRouteAndGapsInRecording() {
         Shape shape = SHAPES.get("S");
-        assertThat(TripAnomalies.distance(shape, 53.105, LON)).isLessThan(1);
-        assertThat(TripAnomalies.distance(shape, 53.105, LON + 0.003)).isBetween(195.0, 205.0);
-        assertThat(TripAnomalies.distance(shape, 53.115, LON)).as("past the end").isBetween(330.0, 340.0);
+        assertThat(TripShapes.distance(shape, 53.105, LON)).isLessThan(1);
+        assertThat(TripShapes.distance(shape, 53.105, LON + 0.003)).isBetween(195.0, 205.0);
+        assertThat(TripShapes.distance(shape, 53.115, LON)).as("past the end").isBetween(330.0, 340.0);
         // A tracker searching near its last segment gives the same answers.
-        TripAnomalies.Tracker tracker = new TripAnomalies.Tracker(TripAnomalies.shape(List.of(
+        TripShapes.Tracker tracker = new TripShapes.Tracker(TripShapes.shape(List.of(
                 new double[] {53.10, LON}, new double[] {53.105, LON}, new double[] {53.105, LON + 0.01})));
         assertThat(tracker.distance(53.102, LON)).isLessThan(1);
         assertThat(tracker.distance(53.106, LON + 0.008)).isBetween(105.0, 115.0);
-        assertThat(TripAnomalies.distance(TripAnomalies.shape(List.<double[]>of(new double[] {53.1, LON})),
+        assertThat(TripShapes.distance(TripShapes.shape(List.<double[]>of(new double[] {53.1, LON})),
                 53.101, LON)).isBetween(110.0, 112.0);
 
         assertThat(RECORDING.covers(at("09:00"), at("09:29"))).isTrue();

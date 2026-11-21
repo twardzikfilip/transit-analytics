@@ -1,19 +1,9 @@
 import { formatDelay } from '../../shared/format/time';
 
-/**
- * The diverging scale for a change in delay (seconds per bus): blue where buses recover delay, red where they gain
- * it, grey around zero. Each arm is a one-hue ramp validated light → dark; the ends are far apart for colour-blind
- * readers too. Numbers are always shown beside the colour.
- */
-export const DELAY_CHANGE_CLASSES: { to: number; color: string; label: string; dark: boolean }[] = [
-  { to: -60, color: '#104281', label: 'recovers 1 min or more', dark: true },
-  { to: -30, color: '#2a78d6', label: 'recovers 30–60 s', dark: true },
-  { to: -10, color: '#86b6ef', label: 'recovers 10–30 s', dark: false },
-  { to: 10, color: '#d4d3ce', label: 'within 10 s', dark: false },
-  { to: 30, color: '#ec948a', label: 'gains 10–30 s', dark: false },
-  { to: 60, color: '#e34948', label: 'gains 30–60 s', dark: true },
-  { to: Infinity, color: '#a32626', label: 'gains 1 min or more', dark: true },
-];
+/** The diverging scale for a change in delay (see shared/palette.ts). */
+import { DELAY_CHANGE_CLASSES } from '../../shared/palette';
+
+export { DELAY_CHANGE_CLASSES };
 
 /** The class of a change in delay: its colour, and whether text on it should be light. */
 export function changeClass(seconds: number): (typeof DELAY_CHANGE_CLASSES)[number] {

@@ -19,7 +19,6 @@ export class StopTimes {
   protected readonly stopTimes = this.store.selectSignal(stopTimesFeature.selectAll);
   protected readonly page = this.store.selectSignal(stopTimesFeature.selectPage);
   protected readonly loading = this.store.selectSignal(stopTimesFeature.selectLoading);
-  protected readonly error = this.store.selectSignal(stopTimesFeature.selectError);
 
   protected readonly query = listQuery({
     filters: ['tripId', 'stopId'],
@@ -33,7 +32,8 @@ export class StopTimes {
   protected readonly first = computed<StopTime | undefined>(() => this.stopTimes()[0]);
   protected readonly title = computed(() => {
     const first = this.first();
-    if (this.query.get('tripId')) return first ? `Trip ${first.routeName} → ${first.tripHeadsign ?? ''}` : 'Trip';
+    if (this.query.get('tripId'))
+      return first ? `Trip ${first.routeName} → ${first.tripHeadsign ?? ''}` : 'Trip';
     if (this.query.get('stopId')) return first ? `Departures from ${first.stopName}` : 'Departures';
     return 'Stop times';
   });
@@ -45,7 +45,11 @@ export class StopTimes {
     const pickup = boardingRule(st.pickupType);
     const dropOff = boardingRule(st.dropOffType);
     if (pickup && pickup === dropOff) return `Stops ${pickup}`;
-    return [pickup && `boarding ${pickup}`, dropOff && `alighting ${dropOff}`].filter(Boolean).join(', ') || null;
+    return (
+      [pickup && `boarding ${pickup}`, dropOff && `alighting ${dropOff}`]
+        .filter(Boolean)
+        .join(', ') || null
+    );
   }
 
   protected index(i: number): number {

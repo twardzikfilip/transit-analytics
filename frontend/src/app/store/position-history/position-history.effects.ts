@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { catchError, map, of, switchMap } from 'rxjs';
+import { catchError, exhaustMap, map, of, switchMap } from 'rxjs';
 import { PositionHistoryApi } from '../../core/api/api.services';
 import { errorMessage } from '../paged';
 import { PositionHistoryActions } from './position-history.actions';
@@ -15,7 +15,7 @@ export const loadFleet = createEffect(
     actions$.pipe(
       ofType(PositionHistoryActions.load),
       switchMap(({ query }) =>
-        api.fleet(query, query.route).pipe(
+        api.fleet(query, query).pipe(
           map((series) => PositionHistoryActions.fleetLoaded({ series })),
           catchError(toFailure),
         ),
@@ -29,7 +29,7 @@ export const loadDelays = createEffect(
     actions$.pipe(
       ofType(PositionHistoryActions.load),
       switchMap(({ query }) =>
-        api.delays(query, query.route).pipe(
+        api.delays(query, query).pipe(
           map((delays) => PositionHistoryActions.delaysLoaded({ delays })),
           catchError(toFailure),
         ),
@@ -43,7 +43,7 @@ export const loadRoutes = createEffect(
     actions$.pipe(
       ofType(PositionHistoryActions.load),
       switchMap(({ query }) =>
-        api.routes(query).pipe(
+        api.routes(query, query.agency).pipe(
           map((routes) => PositionHistoryActions.routesLoaded({ routes })),
           catchError(toFailure),
         ),
@@ -52,13 +52,13 @@ export const loadRoutes = createEffect(
   { functional: true },
 );
 
-export const loadSamples = createEffect(
+export const loadAgencies = createEffect(
   (actions$ = inject(Actions), api = inject(PositionHistoryApi)) =>
     actions$.pipe(
-      ofType(PositionHistoryActions.loadSamples),
-      switchMap(({ query, page, sort, excludeOutliers }) =>
-        api.samples(query, query.route, page, 50, sort, excludeOutliers).pipe(
-          map((samples) => PositionHistoryActions.samplesLoaded({ samples })),
+      ofType(PositionHistoryActions.loadAgencies),
+      exhaustMap(() =>
+        api.agencies().pipe(
+          map((agencies) => PositionHistoryActions.agenciesLoaded({ agencies })),
           catchError(toFailure),
         ),
       ),

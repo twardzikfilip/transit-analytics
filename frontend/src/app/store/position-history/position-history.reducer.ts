@@ -1,11 +1,5 @@
 import { createFeature, createReducer, on } from '@ngrx/store';
-import {
-  DelayBand,
-  FleetSeries,
-  Page,
-  PositionSample,
-  RouteActivity,
-} from '../../core/models/models';
+import { DelayBand, FleetSeries, RouteActivity } from '../../core/models/models';
 import { HistoryQuery, PositionHistoryActions } from './position-history.actions';
 
 export interface PositionHistoryState {
@@ -14,12 +8,11 @@ export interface PositionHistoryState {
   series: FleetSeries | null;
   /** Lines recorded in the window, for the line filter. */
   routes: RouteActivity[];
-  /** Vehicles and reports per minute of delay. */
+  /** Vehicles and reports per delay band. */
   delays: DelayBand[];
-  /** One page of raw position reports, newest first. */
-  samples: Page<PositionSample> | null;
+  /** Operators on the feed, the city operator first; empty until loaded. */
+  agencies: string[];
   loadingSeries: boolean;
-  loadingSamples: boolean;
   error: string | null;
 }
 
@@ -28,9 +21,8 @@ const initialState: PositionHistoryState = {
   series: null,
   routes: [],
   delays: [],
-  samples: null,
+  agencies: [],
   loadingSeries: false,
-  loadingSamples: false,
   error: null,
 };
 
@@ -51,16 +43,10 @@ export const positionHistoryFeature = createFeature({
     })),
     on(PositionHistoryActions.routesLoaded, (state, { routes }) => ({ ...state, routes })),
     on(PositionHistoryActions.delaysLoaded, (state, { delays }) => ({ ...state, delays })),
-    on(PositionHistoryActions.loadSamples, (state) => ({ ...state, loadingSamples: true })),
-    on(PositionHistoryActions.samplesLoaded, (state, { samples }) => ({
-      ...state,
-      samples,
-      loadingSamples: false,
-    })),
+    on(PositionHistoryActions.agenciesLoaded, (state, { agencies }) => ({ ...state, agencies })),
     on(PositionHistoryActions.failure, (state, { error }) => ({
       ...state,
       loadingSeries: false,
-      loadingSamples: false,
       error,
     })),
   ),

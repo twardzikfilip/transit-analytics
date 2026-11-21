@@ -1,9 +1,9 @@
 import { ActionReducer, createFeature, createReducer, on } from '@ngrx/store';
-import { BrigadeDay, BrigadeDayList } from '../../core/models/models';
+import { BrigadeDay, BrigadeList } from '../../core/models/models';
 import { BrigadesActions } from './brigades.actions';
 
 export interface BrigadesState {
-  list: BrigadeDayList | null;
+  list: BrigadeList | null;
   loadingList: boolean;
   /** The chosen brigade's day; kept while another loads, so the page doesn't go blank. */
   day: BrigadeDay | null;

@@ -1,78 +1,83 @@
 <div class="page-header">
-  <h1>Brigades</h1>
   @if (shown(); as d) {
     <span class="muted">Brigade {{ d.brigade }} · service day {{ d.serviceDay }}</span>
   }
 </div>
 
-<div class="controls">
-  <label>
-    Day
-    <input type="date" [value]="date()" (change)="setDate($any($event.target).value)" />
-  </label>
-  <div class="search">
-    <label for="brigade-search">Brigade</label>
-    <input
-      id="brigade-search"
-      type="search"
-      list="brigade-list"
-      autocomplete="off"
-      [placeholder]="brigade() ?? 'Search: brigade or line, e.g. 103-05 or 103'"
-      [value]="search()"
-      (input)="typed($any($event.target).value)"
-      (change)="typed($any($event.target).value)"
-    />
+@if (!brigade()) {
+  <div class="controls">
+    <label>
+      Brigade
+      <input
+        id="brigade-search"
+        class="search"
+        type="search"
+        list="brigade-list"
+        autocomplete="off"
+        placeholder="Search: brigade or line, e.g. 103-05 or 103"
+        [value]="search()"
+        (input)="typed($any($event.target).value)"
+        (change)="typed($any($event.target).value)"
+      />
+    </label>
     <datalist id="brigade-list">
       @for (b of matches(); track b.brigade) {
         <option [value]="b.brigade">{{ describe(b) }}</option>
       }
     </datalist>
-    <button type="button" (click)="step(-1)" [disabled]="!brigade()" aria-label="Previous brigade">
-      ‹
-    </button>
-    <button type="button" (click)="step(1)" [disabled]="!brigade()" aria-label="Next brigade">
-      ›
-    </button>
+    <label>
+      Agency
+      <select [value]="agency()" (change)="setAgency($any($event.target).value)">
+        @for (a of list()?.agencies ?? []; track a.id) {
+          <option [value]="a.id" [selected]="a.id === agency()">{{ a.name }}</option>
+        }
+      </select>
+    </label>
+    @if (loadingList()) {
+      <span class="muted" role="status">Loading…</span>
+    }
   </div>
-  <label>
-    Agency
-    <select [value]="agency()" (change)="setAgency($any($event.target).value)">
-      @for (a of list()?.agencies ?? []; track a.id) {
-        <option [value]="a.id" [selected]="a.id === agency()">{{ a.name }}</option>
-      }
-    </select>
-  </label>
-  @if (loadingList() || loadingDay()) {
-    <span class="muted" role="status">Loading…</span>
-  }
-</div>
 
-@if (error(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
+  <section class="card pick">
+    @if (list() && !list()!.brigades.length) {
+      <p class="muted">This operator's timetable doesn't name brigades.</p>
+    }
+    <dl class="brigade-lines">
+      @for (g of byLine(); track g.line) {
+        <dt>Line {{ g.line }}</dt>
+        <dd>
+          <ul class="brigade-chips">
+            @for (b of g.brigades; track b.brigade) {
+              <li>
+                <button
+                  type="button"
+                  class="chip"
+                  (click)="choose(b.brigade)"
+                  [title]="describe(b)"
+                >
+                  {{ b.brigade }}
+                </button>
+              </li>
+            }
+          </ul>
+        </dd>
+      }
+    </dl>
+  </section>
+} @else {
+  <div class="controls day-controls">
+    <button type="button" (click)="back()">‹ All brigades</button>
+    <label>
+      Day
+      <input type="date" [value]="date()" (change)="setDate($any($event.target).value)" />
+    </label>
+    @if (loadingDay()) {
+      <span class="muted" role="status">Loading…</span>
+    }
+  </div>
 }
 
-@if (!brigade()) {
-  <section class="card pick">
-    <p>
-      Pick a brigade:
-      {{
-        list()?.brigades?.length
-          ? list()!.brigades.length + ' run on ' + date() + '.'
-          : 'none runs on this day.'
-      }}
-      Type its name or line in the search box.
-    </p>
-    <ul class="brigade-chips">
-      @for (b of matches().slice(0, 60); track b.brigade) {
-        <li>
-          <button type="button" class="chip" (click)="choose(b.brigade)" [title]="describe(b)">
-            {{ b.brigade }}
-          </button>
-        </li>
-      }
-    </ul>
-  </section>
-} @else if (shown(); as d) {
+@if (shown(); as d) {
   @if (!d.trips.length) {
     <p class="muted">Brigade {{ d.brigade }} doesn't run on {{ d.serviceDay }}.</p>
   } @else {

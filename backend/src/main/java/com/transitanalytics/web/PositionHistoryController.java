@@ -7,7 +7,6 @@ import com.transitanalytics.service.ReportWindows;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -37,57 +36,35 @@ public class PositionHistoryController {
     public PositionHistoryDto.FleetSeries fleet(
             @Parameter(description = "Start, inclusive (ISO-8601); the first recording when absent", example = "2026-11-16T05:00:00Z") @RequestParam(required = false) Instant from,
             @Parameter(description = "End, exclusive (ISO-8601); now when absent", example = "2026-11-16T17:00:00Z") @RequestParam(required = false) Instant to,
-            @Parameter(description = "Line, e.g. 103; all lines when left out") @RequestParam(required = false) String route) {
+            @Parameter(description = "Line, e.g. 103; all lines when left out") @RequestParam(required = false) String route,
+            @Parameter(description = "Operator, e.g. BKM; all operators when left out") @RequestParam(required = false) String agency) {
         ReportWindow w = windows.resolve(from, to);
-        return history.fleet(w.from(), w.to(), blankToNull(route));
+        return history.fleet(w.from(), w.to(), blankToNull(route), blankToNull(agency));
     }
 
     @Operation(summary = "Delay distribution",
-            description = "Vehicles and reports per delay band: under 1 min (incl. early), 1–2, 2–3, … 9–10, "
-                    + "10 min or more. A vehicle counts in every band it was in during the window.")
+            description = "Vehicles and reports per delay band: on time (under 2 min late, or early), 2–5, 5–10, "
+                    + "and 10 min or more. A vehicle counts in every band it was in during the window.")
     @GetMapping("/delays")
     public List<PositionHistoryDto.DelayBand> delays(@RequestParam(required = false) Instant from, @RequestParam(required = false) Instant to,
-                                                     @RequestParam(required = false) String route) {
+                                                     @RequestParam(required = false) String route,
+            @Parameter(description = "Operator, e.g. BKM; all operators when left out") @RequestParam(required = false) String agency) {
         ReportWindow w = windows.resolve(from, to);
-        return history.delays(w.from(), w.to(), blankToNull(route));
-    }
-
-    @Operation(summary = "Replay of vehicle positions",
-            description = "Animation frames for [from, to) (at most 92 days): per step the latest position of every "
-                    + "vehicle, as compact rows [vehicleIndex, latitude, longitude, delaySeconds, lineIndex]. The "
-                    + "step is 1 minute (one poll) for short windows and grows to keep at most 360 frames. Repeat "
-                    + "route for several lines; leave it out for all.")
-    @GetMapping("/replay")
-    public PositionHistoryDto.Replay replay(@RequestParam(required = false) Instant from, @RequestParam(required = false) Instant to,
-                                            @RequestParam(required = false) List<String> route) {
-        ReportWindow w = windows.resolve(from, to);
-        return history.replay(w.from(), w.to(), route);
+        return history.delays(w.from(), w.to(), blankToNull(route), blankToNull(agency));
     }
 
     @Operation(summary = "Lines recorded in a time window", description = "For the line filter, in line order.")
     @GetMapping("/routes")
-    public List<PositionHistoryDto.RouteActivity> routes(@RequestParam(required = false) Instant from, @RequestParam(required = false) Instant to) {
+    public List<PositionHistoryDto.RouteActivity> routes(@RequestParam(required = false) Instant from, @RequestParam(required = false) Instant to,
+            @Parameter(description = "Operator, e.g. BKM; all operators when left out") @RequestParam(required = false) String agency) {
         ReportWindow w = windows.resolve(from, to);
-        return history.routes(w.from(), w.to());
+        return history.routes(w.from(), w.to(), blankToNull(agency));
     }
 
-    @Operation(summary = "Recorded position reports",
-            description = "Paged (size up to 500). Sort by time, vehicle, line, duty, towards, delay or nextStop, "
-                    + "with ,asc or ,desc (default time,desc); ties are newest first.")
-    @GetMapping
-    public Page<PositionHistoryDto.Sample> samples(
-            @RequestParam(required = false) Instant from,
-            @RequestParam(required = false) Instant to,
-            @RequestParam(required = false) String route,
-            @Parameter(description = "Vehicle number, e.g. 230") @RequestParam(required = false) String vehicle,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size,
-            @Parameter(description = "e.g. delay,desc", example = "time,desc")
-            @RequestParam(defaultValue = "time,desc") String sort,
-            @Parameter(description = "Leave out outliers: reports more than 30 min late (likely feed errors)")
-            @RequestParam(defaultValue = "false") boolean excludeOutliers) {
-        ReportWindow w = windows.resolve(from, to);
-        return history.samples(w.from(), w.to(), blankToNull(route), blankToNull(vehicle), page, size, sort, excludeOutliers);
+    @Operation(summary = "Operators on the feed", description = "For the operator filter: the city operator first.")
+    @GetMapping("/agencies")
+    public List<String> agencies() {
+        return history.agencies();
     }
 
     private static String blankToNull(String value) {

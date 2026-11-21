@@ -5,6 +5,7 @@ import com.transitanalytics.service.TripAnomalies.Kind;
 import com.transitanalytics.service.TripAnomalies.Outcome;
 import com.transitanalytics.service.TripAnomalies.Report;
 import com.transitanalytics.service.TripAnomalies.ScheduledTrip;
+import com.transitanalytics.zbiorkom.BialystokFeed;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -50,45 +51,37 @@ public class BrigadeDayService {
     }
 
     /**
-     * The brigades of an agency running on a service day. Agencies whose timetable doesn't name brigades (another
-     * operator's feed without them) aren't offered.
+     * Every brigade of an agency in the timetable, whatever day it runs, each with the lines it runs. Every agency is
+     * offered; one whose timetable doesn't name brigades (another operator's feed without them) has none.
      *
-     * @param agency the agency's timetable id; null or unknown: the city's (the main feed's) agency
+     * @param agency the agency's timetable id; null or unknown: the city's (BKM), else the agency with most trips
      */
-    public BrigadeDto.DayList brigades(LocalDate day, String agency) {
-        String services = "SELECT service_id FROM calendar_date WHERE date = ? AND exception_type = 1";
+    public BrigadeDto.BrigadeList brigades(String agency) {
         String named = "(t.block_id IS NOT NULL OR strpos(t.gtfs_id, ':') = 0)";
         List<BrigadeDto.Agency> agencies = jdbc.query("""
                 SELECT a.gtfs_id, a.name, count(*) AS trips, strpos(a.gtfs_id, ':') > 0 AS other
                 FROM trip t JOIN route r ON r.id = t.route_id JOIN agency a ON a.id = r.agency_id
-                WHERE t.service_id IN (%s) AND %s
                 GROUP BY a.gtfs_id, a.name
-                ORDER BY other, trips DESC, a.name""".formatted(services, named),
-                (rs, i) -> new BrigadeDto.Agency(rs.getString("gtfs_id"), rs.getString("name")), day);
-        String chosen = agencies.stream().map(BrigadeDto.Agency::id).filter(id -> id.equals(agency)).findFirst()
-                .orElse(agencies.isEmpty() ? null : agencies.get(0).id());
+                ORDER BY other, trips DESC, a.name""",
+                (rs, i) -> new BrigadeDto.Agency(rs.getString("gtfs_id"), rs.getString("name")));
+        List<String> ids = agencies.stream().map(BrigadeDto.Agency::id).toList();
+        String chosen = ids.contains(agency) ? agency
+                : ids.contains(BialystokFeed.CITY_AGENCY) ? BialystokFeed.CITY_AGENCY
+                : ids.isEmpty() ? null : ids.get(0);
         if (chosen == null) {
-            return new BrigadeDto.DayList(day, null, agencies, List.of());
+            return new BrigadeDto.BrigadeList(null, agencies, List.of());
         }
-        Instant zero = ServiceDay.gtfsTimeZero(day);
         List<BrigadeDto.BrigadeRef> brigades = new ArrayList<>(jdbc.query("""
-                WITH trips AS (
-                    SELECT %s AS brigade, coalesce(nullif(r.short_name, ''), r.long_name) AS line,
-                           (SELECT extract(epoch FROM min(st.departure_time)::interval)::int
-                            FROM stop_time st WHERE st.trip_id = t.id) AS dep,
-                           (SELECT extract(epoch FROM max(st.arrival_time)::interval)::int
-                            FROM stop_time st WHERE st.trip_id = t.id) AS arr
-                    FROM trip t JOIN route r ON r.id = t.route_id JOIN agency a ON a.id = r.agency_id
-                    WHERE t.service_id IN (%s) AND %s AND a.gtfs_id = ?)
-                SELECT brigade, array_agg(DISTINCT line) AS lines, count(*) AS trips, min(dep) AS first, max(arr) AS last
-                FROM trips GROUP BY brigade""".formatted(ServiceDay.BRIGADE_SQL, services, named),
+                SELECT %s AS brigade, array_agg(DISTINCT coalesce(nullif(r.short_name, ''), r.long_name)) AS lines
+                FROM trip t JOIN route r ON r.id = t.route_id JOIN agency a ON a.id = r.agency_id
+                WHERE %s AND a.gtfs_id = ?
+                GROUP BY 1""".formatted(ServiceDay.BRIGADE_SQL, named),
                 (rs, i) -> new BrigadeDto.BrigadeRef(rs.getString("brigade"),
-                        List.of((String[]) rs.getArray("lines").getArray()).stream().sorted(LINE_ORDER).toList(),
-                        rs.getInt("trips"), zero.plusSeconds(rs.getInt("first")), zero.plusSeconds(rs.getInt("last"))),
-                day, chosen));
+                        List.of((String[]) rs.getArray("lines").getArray()).stream().sorted(LINE_ORDER).toList()),
+                chosen));
         brigades.sort(Comparator.comparing((BrigadeDto.BrigadeRef b) -> b.lines().get(0), LINE_ORDER)
                 .thenComparing(BrigadeDto.BrigadeRef::brigade));
-        return new BrigadeDto.DayList(day, chosen, agencies, brigades);
+        return new BrigadeDto.BrigadeList(chosen, agencies, brigades);
     }
 
     /** A brigade's trips on a service day, each with its outcome and what ran. */
@@ -99,7 +92,7 @@ public class BrigadeDayService {
             return new BrigadeDto.Day(brigade, day, summary(List.of()), List.of());
         }
         Instant now = clock.instant();
-        Instant end = ServiceDay.start(day.plusDays(1));
+        Instant end = TripAnomalyService.reportsEnd(day, trips);
         Instant from = ServiceDay.start(day);
         List<Report> reports = from.isBefore(now)
                 ? anomalies.reports(from, end.isAfter(now) ? now : end, brigade) : List.of();
@@ -109,8 +102,8 @@ public class BrigadeDayService {
         for (Outcome o : anomalies.currentOutcomes(day).orElseGet(() -> anomalies.judge(trips, reports, day, now))) {
             outcomes.put(key(o.line(), o.departure(), o.arrival()), o);
         }
-        Map<ScheduledTrip, List<Report>> matched = TripAnomalies.matchReports(TripAnomalies.byBrigade(trips),
-                TripAnomalies.withBrigades(reports));
+        Map<ScheduledTrip, List<Report>> matched = TripMatching.matchReports(TripMatching.byBrigade(trips),
+                TripMatching.withBrigades(reports));
 
         String outbound = trips.get(0).stops()[trips.get(0).size() - 1];
         List<BrigadeDto.Trip> result = new ArrayList<>();

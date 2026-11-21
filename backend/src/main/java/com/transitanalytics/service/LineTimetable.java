@@ -79,6 +79,72 @@ public class LineTimetable {
             return new Timetable(null, List.of(), List.of(), List.of(), Map.of(), true);
         }
         String service = String.join(",", services);
+        TripRows rows = tripRows(route, services);
+        List<TripRow> trips = rows.trips();
+        boolean noBrigades = rows.noBrigades();
+        if (!trips.isEmpty() && rows.noDirection()) {
+            trips = withDirections(trips);
+        }
+
+        // Variants: one per direction and shape. The base route of a direction is its most frequent shape.
+        Map<String, List<TripRow>> byVariant = trips.stream().collect(Collectors.groupingBy(
+                t -> variantKey(t.direction(), t.shapeId()), LinkedHashMap::new, Collectors.toList()));
+        Map<Integer, String> mainShape = new HashMap<>();
+        trips.stream().collect(Collectors.groupingBy(TripRow::direction)).forEach((dir, list) ->
+                mainShape.put(dir, TimetableMath.mostFrequent(list.stream().map(TripRow::shapeId).toList())));
+
+        // Stops of each variant from its trip with the most stops.
+        Map<String, TripRow> representative = new LinkedHashMap<>();
+        byVariant.forEach((key, list) -> representative.put(key, list.stream()
+                .max(Comparator.comparingInt(TripRow::stops).thenComparing(TripRow::id, Comparator.reverseOrder()))
+                .orElseThrow()));
+        Map<Long, List<StopPoint>> stopsByTrip = stops(representative.values().stream().map(TripRow::id).toList());
+        Map<String, List<double[]>> shapes = withShapes
+                ? shapes(byVariant.values().stream().map(l -> l.get(0).shapeId()).filter(Objects::nonNull).toList())
+                : Map.of();
+
+        // Termini: where buses turn round in service, plus the base routes' ends. Depot runs start or end elsewhere.
+        // A feed without brigades (another operator's): termini from the base routes only, and no depot runs (each
+        // trip would look like a brigade of its own).
+        List<Place> endStops = endStops(noBrigades ? List.of() : trips, trips.stream()
+                .filter(t -> Objects.equals(t.shapeId(), mainShape.get(t.direction()))).toList());
+        Map<Long, String> depot = noBrigades ? Map.of() : depotRuns(trips, endStops);
+
+        Map<Integer, Double> mainKm = new HashMap<>();
+        byVariant.forEach((key, list) -> {
+            TripRow first = list.get(0);
+            if (Objects.equals(first.shapeId(), mainShape.get(first.direction()))) {
+                mainKm.put(first.direction(), maxKm(list));
+            }
+        });
+
+        List<Variant> variants = new ArrayList<>();
+        byVariant.forEach((key, list) -> {
+            TripRow first = list.get(0);
+            double km = maxKm(list);
+            long depotTrips = list.stream().filter(t -> depot.containsKey(t.id())).count();
+            String kind = Objects.equals(first.shapeId(), mainShape.get(first.direction())) ? "main"
+                    : depotTrips * 2 >= list.size() ? "depot"
+                    : km > mainKm.getOrDefault(first.direction(), 0.0) + LONGER_MARGIN_KM ? "longer" : "shorter";
+            List<StopPoint> stops = stopsByTrip.getOrDefault(representative.get(key).id(), List.of());
+            List<double[]> points = !withShapes ? List.of()
+                    : shapes.containsKey(first.shapeId()) ? shapes.get(first.shapeId())
+                    : stops.stream().filter(s -> s.lat() != null && s.lon() != null)
+                            .map(s -> new double[]{s.lat(), s.lon()}).toList();
+            variants.add(variant(list, kind, km, stops, points));
+        });
+        List<String> kindOrder = List.of("main", "longer", "shorter", "depot");
+        variants.sort(Comparator.comparingInt(Variant::direction)
+                .thenComparingInt(v -> kindOrder.indexOf(v.kind()))
+                .thenComparing(Variant::km, Comparator.reverseOrder()));
+        return new Timetable(service, trips, variants, endStops, depot, !noBrigades);
+    }
+
+    /** A line's trips in its services, and whether the feed leaves out directions and brigades for all of them. */
+    private record TripRows(List<TripRow> trips, boolean noDirection, boolean noBrigades) {
+    }
+
+    private TripRows tripRows(Route route, List<String> services) {
         boolean[] noDirection = {true};
         boolean[] noBrigades = {true};
         List<Object> args = new ArrayList<>(List.of(route.getId()));
@@ -113,72 +179,24 @@ public class LineTimetable {
                                 (Double) rs.getObject("last_lon")));
                 },
                 args.toArray());
-        if (!trips.isEmpty() && noDirection[0]) {
-            trips = withDirections(trips);
-        }
+        return new TripRows(trips, noDirection[0], noBrigades[0]);
+    }
 
-        // Variants: one per direction and shape. The base route of a direction is its most frequent shape.
-        Map<String, List<TripRow>> byVariant = trips.stream().collect(Collectors.groupingBy(
-                t -> variantKey(t.direction(), t.shapeId()), LinkedHashMap::new, Collectors.toList()));
-        Map<Integer, String> mainShape = new HashMap<>();
-        trips.stream().collect(Collectors.groupingBy(TripRow::direction)).forEach((dir, list) ->
-                mainShape.put(dir, TimetableMath.mostFrequent(list.stream().map(TripRow::shapeId).toList())));
-
-        // Stops of each variant from its trip with the most stops.
-        Map<String, TripRow> representative = new LinkedHashMap<>();
-        byVariant.forEach((key, list) -> representative.put(key, list.stream()
-                .max(Comparator.comparingInt(TripRow::stops).thenComparing(TripRow::id, Comparator.reverseOrder()))
-                .orElseThrow()));
-        Map<Long, List<StopPoint>> stopsByTrip = stops(representative.values().stream().map(TripRow::id).toList());
-        Map<String, List<double[]>> shapes = withShapes
-                ? shapes(byVariant.values().stream().map(l -> l.get(0).shapeId()).filter(Objects::nonNull).toList())
-                : Map.of();
-
-        // Termini: where buses turn round in service, plus the base routes' ends. Depot runs start or end elsewhere.
-        // A feed without brigades (another operator's): termini from the base routes only, and no depot runs (each
-        // trip would look like a brigade of its own).
-        List<Place> endStops = endStops(noBrigades[0] ? List.of() : trips, trips.stream()
-                .filter(t -> Objects.equals(t.shapeId(), mainShape.get(t.direction()))).toList());
-        Map<Long, String> depot = noBrigades[0] ? Map.of() : depotRuns(trips, endStops);
-
-        Map<Integer, Double> mainKm = new HashMap<>();
-        byVariant.forEach((key, list) -> {
-            TripRow first = list.get(0);
-            if (Objects.equals(first.shapeId(), mainShape.get(first.direction()))) {
-                mainKm.put(first.direction(), maxKm(list));
-            }
-        });
-
-        List<Variant> variants = new ArrayList<>();
-        byVariant.forEach((key, list) -> {
-            TripRow first = list.get(0);
-            double km = maxKm(list);
-            long depotTrips = list.stream().filter(t -> depot.containsKey(t.id())).count();
-            String kind = Objects.equals(first.shapeId(), mainShape.get(first.direction())) ? "main"
-                    : depotTrips * 2 >= list.size() ? "depot"
-                    : km > mainKm.getOrDefault(first.direction(), 0.0) + LONGER_MARGIN_KM ? "longer" : "shorter";
-            List<Double> speeds = list.stream().filter(t -> t.km() != null && t.duration() > 0)
-                    .map(t -> t.km() / (t.duration() / 3600.0)).toList();
-            List<StopPoint> stops = stopsByTrip.getOrDefault(representative.get(key).id(), List.of());
-            List<double[]> points = !withShapes ? List.of()
-                    : shapes.containsKey(first.shapeId()) ? shapes.get(first.shapeId())
-                    : stops.stream().filter(s -> s.lat() != null && s.lon() != null)
-                            .map(s -> new double[]{s.lat(), s.lon()}).toList();
-            variants.add(new Variant(first.direction(), first.shapeId(),
-                    TimetableMath.mostFrequent(list.stream().map(TripRow::headsign).toList()), kind,
-                    TimetableMath.round(km, 2), list.size(),
-                    list.stream().mapToInt(t -> t.duration() / 60).min().orElse(0),
-                    list.stream().mapToInt(t -> t.duration() / 60).max().orElse(0),
-                    speeds.stream().min(Double::compare).map(v -> TimetableMath.round(v, 1)).orElse(null),
-                    speeds.stream().max(Double::compare).map(v -> TimetableMath.round(v, 1)).orElse(null),
-                    stops.isEmpty() ? null : stops.get(0).name(),
-                    stops.isEmpty() ? null : stops.get(stops.size() - 1).name(), points, stops));
-        });
-        List<String> kindOrder = List.of("main", "longer", "shorter", "depot");
-        variants.sort(Comparator.comparingInt(Variant::direction)
-                .thenComparingInt(v -> kindOrder.indexOf(v.kind()))
-                .thenComparing(Variant::km, Comparator.reverseOrder()));
-        return new Timetable(service, trips, variants, endStops, depot, !noBrigades[0]);
+    /** A variant from its trips: its usual headsign, length, running times and speeds, stops and route. */
+    private static Variant variant(List<TripRow> trips, String kind, double km, List<StopPoint> stops,
+                                   List<double[]> points) {
+        TripRow first = trips.get(0);
+        List<Double> speeds = trips.stream().filter(t -> t.km() != null && t.duration() > 0)
+                .map(t -> t.km() / (t.duration() / 3600.0)).toList();
+        return new Variant(first.direction(), first.shapeId(),
+                TimetableMath.mostFrequent(trips.stream().map(TripRow::headsign).toList()), kind,
+                TimetableMath.round(km, 2), trips.size(),
+                trips.stream().mapToInt(t -> t.duration() / 60).min().orElse(0),
+                trips.stream().mapToInt(t -> t.duration() / 60).max().orElse(0),
+                speeds.stream().min(Double::compare).map(v -> TimetableMath.round(v, 1)).orElse(null),
+                speeds.stream().max(Double::compare).map(v -> TimetableMath.round(v, 1)).orElse(null),
+                stops.isEmpty() ? null : stops.get(0).name(),
+                stops.isEmpty() ? null : stops.get(stops.size() - 1).name(), points, stops);
     }
 
     /**
@@ -197,14 +215,15 @@ public class LineTimetable {
                 WITH days AS (
                     SELECT cd.date, count(*) AS trips
                     FROM trip t JOIN calendar_date cd ON cd.service_id = t.service_id AND cd.exception_type = 1
-                    WHERE t.route_id = ? AND extract(isodow FROM cd.date) <= 5
+                    WHERE t.route_id = ? AND %s
                     GROUP BY cd.date
                     ORDER BY (cd.date >= current_date) DESC, count(*) DESC, cd.date
                     LIMIT 1)
                 SELECT DISTINCT t.service_id
                 FROM days d JOIN calendar_date cd ON cd.date = d.date AND cd.exception_type = 1
                 JOIN trip t ON t.service_id = cd.service_id AND t.route_id = ?
-                ORDER BY t.service_id""", (rs, i) -> rs.getString(1), route.getId(), route.getId());
+                ORDER BY t.service_id""".formatted(ServiceDay.weekdaySql("cd.date")), (rs, i) -> rs.getString(1),
+                route.getId(), route.getId());
         return day;
     }
 

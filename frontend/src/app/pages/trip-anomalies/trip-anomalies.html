@@ -1,5 +1,4 @@
 <div class="page-header">
-  <h1>Abnormal trips</h1>
   @if (report(); as r) {
     <span class="muted">
       Trips scheduled to run {{ r.from | date: 'd MMM, HH:mm' }} –
@@ -16,10 +15,6 @@
     <span class="muted" role="status">Loading…</span>
   }
 </app-time-window>
-
-@if (error(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
-}
 
 @if (report(); as r) {
   <div class="cards" [class.loading]="loading()">

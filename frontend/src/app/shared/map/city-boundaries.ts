@@ -24,7 +24,7 @@ export function drawCityBoundaries(
       interactive: false,
       color: style.color,
       dashArray: style.dashArray,
-      weight: 3,
+      weight: style.weight,
       opacity: 0.9,
       fill: false,
     });

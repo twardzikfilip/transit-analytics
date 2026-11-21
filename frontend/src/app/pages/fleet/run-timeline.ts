@@ -26,7 +26,7 @@ interface Hover {
   selector: 'app-run-timeline',
   template: `
     <ul class="legend">
-      <li><span class="swatch" style="background: var(--chart-line)"></span>run (on a line)</li>
+      <li><span class="swatch" style="background: var(--lightblue-bkm)"></span>run (on a line)</li>
       <li><span class="swatch dashed"></span>break of 30 min or more</li>
     </ul>
     <div class="plot">
@@ -81,7 +81,7 @@ interface Hover {
               [attr.width]="r.w"
               [attr.height]="bar"
               rx="2"
-              style="fill: var(--chart-line)"
+              style="fill: var(--lightblue-bkm)"
               (pointerenter)="show(r, row.mid)"
             />
             @if (r.w > r.text.length * 7 + 6) {

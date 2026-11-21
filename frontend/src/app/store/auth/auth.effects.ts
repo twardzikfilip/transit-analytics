@@ -15,7 +15,11 @@ export const login = createEffect(
         traceLogin(username, auth.login(username, password)).pipe(
           map((session) => AuthActions.loginSuccess({ session })),
           catchError((err: HttpErrorResponse) =>
-            of(AuthActions.loginFailure({ error: err.status === 401 ? 'Invalid username or password' : 'Login failed' })),
+            of(
+              AuthActions.loginFailure({
+                error: err.status === 401 ? 'Invalid username or password' : 'Login failed',
+              }),
+            ),
           ),
         ),
       ),

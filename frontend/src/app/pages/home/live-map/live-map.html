@@ -1,0 +1,84 @@
+<div class="header">
+  <h2>Live map <span class="muted now">now</span></h2>
+  <span class="muted status">
+    @if (filtering()) {
+      {{ visible().length }} of {{ count() }} vehicles ({{ filterSummary() }})
+    } @else {
+      {{ count() }} vehicles
+    }
+    @if (lastUpdated(); as t) {
+      · updated {{ t | date: 'mediumTime' }}
+    }
+  </span>
+</div>
+<div class="filters">
+  <label>
+    Operator
+    <select class="agency" [value]="agency()" (change)="setAgency($any($event.target).value)">
+      <option value="">All operators</option>
+      @for (a of agencies(); track a) {
+        <option [value]="a" [selected]="a === agency()">{{ a }}</option>
+      }
+    </select>
+  </label>
+  <label>
+    Lines
+    <select class="line-type" (change)="setLineType($any($event.target).value)">
+      <option value="" [selected]="lineType() === null">All lines</option>
+      @for (t of lineTypes; track t.key) {
+        <option [value]="t.key" [selected]="t.key === lineType()">{{ t.label }}</option>
+      }
+    </select>
+  </label>
+  <label class="delay">
+    Delay over
+    <span class="input-with-unit">
+      <input
+        type="number"
+        min="0"
+        step="1"
+        inputmode="numeric"
+        placeholder="any"
+        aria-label="Show only vehicles delayed more than this many minutes"
+        [value]="minDelay() ?? ''"
+        (input)="setMinDelay($any($event.target).value)"
+      />
+      min
+    </span>
+  </label>
+  @for (preset of [2, 5, 10]; track preset) {
+    <button type="button" [class.active]="minDelay() === preset" (click)="setMinDelay('' + preset)">
+      &gt; {{ preset }} min
+    </button>
+  }
+  <button type="button" class="reset" [disabled]="!filtering()" (click)="resetFilters()">
+    Reset filters
+  </button>
+</div>
+<div #map class="map"></div>
+<div class="legend muted" aria-label="Map legend">
+  <span class="group">
+    Delay
+    @for (s of delayStops; track s.seconds) {
+      <span class="item"><span class="dot" [style.background]="s.color"></span>{{ s.label }}</span>
+    }
+    <span class="item"><span class="dot" [style.background]="noDelayColor"></span>unknown</span>
+  </span>
+  <span class="group">
+    Lines on the map
+    @for (b of boundaries; track b.label) {
+      <span class="item"
+        ><span
+          class="line-swatch"
+          [class.bus-lane]="b.label === 'Bus lane'"
+          [style.border-top-color]="b.color"
+          [style.border-top-style]="b.dashArray ? 'dashed' : 'solid'"
+        ></span
+        >{{ b.label }}</span
+      >
+    }
+  </span>
+</div>
+<p class="muted source">
+  Live data: <a href="https://zbiorkom.live" target="_blank" rel="noopener">zbiorkom.live</a>
+</p>

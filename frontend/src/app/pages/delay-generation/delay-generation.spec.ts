@@ -208,7 +208,9 @@ describe('Delay generation page', () => {
       queryParams: { range: '1mo', from: null, to: null },
       queryParamsHandling: 'merge',
     });
-    const part = el.querySelector('app-time-window select') as HTMLSelectElement;
+    const part = el.querySelector(
+      'app-time-window select:not(.window-preset)',
+    ) as HTMLSelectElement;
     part.value = 'am-peak';
     part.dispatchEvent(new Event('change'));
     expect(navigate).toHaveBeenLastCalledWith([], {
@@ -305,7 +307,8 @@ describe('Delay generation page', () => {
       DelayGenerationActions.lineFailure({ error: 'Server error' }),
     );
     const { el } = renderPage(DelayGeneration, empty, { line: '21' });
-    expect(text(el.querySelector('.line-detail .error'))).toBe('Server error');
+    // The error itself is a toast (core/api/error-toasts.ts), not text on the page.
+    expect(text(el)).not.toContain('Server error');
     expect(text(el.querySelector('.line-detail'))).toContain('No runs of this line were measured');
   });
 });
@@ -362,13 +365,17 @@ describe('delay generation effects', () => {
   it('loads the network, or reports the failure', () => {
     const r = report();
     const api = { report: vi.fn(() => of(r)) };
-    expect(run(load, api, DelayGenerationActions.load({ window: { from: 'A', to: 'B' } }))).toEqual([
-      DelayGenerationActions.loaded({ report: r }),
-    ]);
+    expect(run(load, api, DelayGenerationActions.load({ window: { from: 'A', to: 'B' } }))).toEqual(
+      [DelayGenerationActions.loaded({ report: r })],
+    );
     expect(api.report).toHaveBeenCalledWith({ from: 'A', to: 'B' });
-    expect(run(load, { report: failing }, DelayGenerationActions.load({ window: { from: 'A', to: 'B' } }))).toEqual([
-      DelayGenerationActions.failure({ error: 'Down' }),
-    ]);
+    expect(
+      run(
+        load,
+        { report: failing },
+        DelayGenerationActions.load({ window: { from: 'A', to: 'B' } }),
+      ),
+    ).toEqual([DelayGenerationActions.failure({ error: 'Down' })]);
   });
 
   it('loads a line, reports a failure, and does nothing on clear', () => {

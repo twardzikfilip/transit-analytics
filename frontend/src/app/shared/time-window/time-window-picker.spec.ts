@@ -46,13 +46,45 @@ describe('time window picker', () => {
     expect(text(el)).toContain('From the first recording');
   });
 
+  it('offers the same presets as a dropdown for phones, showing Custom for a custom window', () => {
+    const { el, fixture, setQuery } = renderPage(
+      Host,
+      {},
+      { from: '2026-11-16T05:00', to: '2026-11-16T17:00' },
+    );
+    const select = () => el.querySelector('.preset-select select') as HTMLSelectElement;
+    expect(select().options).toHaveLength(12);
+    expect(select().selectedOptions[0].textContent?.trim()).toBe('Custom');
+
+    setQuery({ range: '24h' });
+    expect(select().options).toHaveLength(11);
+    expect(select().value).toBe('24h');
+
+    const navigate = vi
+      .spyOn(fixture.debugElement.injector.get(Router), 'navigate')
+      .mockResolvedValue(true);
+    select().value = '3d';
+    select().dispatchEvent(new Event('change'));
+    expect(navigate).toHaveBeenLastCalledWith([], {
+      queryParams: { page: null, range: '3d', from: null, to: null },
+      queryParamsHandling: 'merge',
+    });
+  });
+
   it('puts presets, a custom window and operators in the URL, clearing the reset parameters', () => {
     const { el, fixture, render } = renderPage(Host, {}, { range: '1h' });
-    const navigate = vi.spyOn(fixture.debugElement.injector.get(Router), 'navigate').mockResolvedValue(true);
-    const merge = (queryParams: Record<string, unknown>) => [[], { queryParams, queryParamsHandling: 'merge' }];
+    const navigate = vi
+      .spyOn(fixture.debugElement.injector.get(Router), 'navigate')
+      .mockResolvedValue(true);
+    const merge = (queryParams: Record<string, unknown>) => [
+      [],
+      { queryParams, queryParamsHandling: 'merge' },
+    ];
 
     (el.querySelectorAll('.presets button')[10] as HTMLButtonElement).click();
-    expect(navigate).toHaveBeenLastCalledWith(...merge({ page: null, range: 'all', from: null, to: null }));
+    expect(navigate).toHaveBeenLastCalledWith(
+      ...merge({ page: null, range: 'all', from: null, to: null }),
+    );
 
     const to = el.querySelectorAll('input[type=datetime-local]')[1] as HTMLInputElement;
     to.value = '2026-11-16T12:00';
@@ -70,7 +102,9 @@ describe('time window picker', () => {
     const boxes = [...el.querySelectorAll('app-agency-picker input')] as HTMLInputElement[];
     expect(boxes.map((b) => b.checked)).toEqual([true, true, true]);
     boxes[1].click();
-    expect(navigate).toHaveBeenLastCalledWith(...merge({ page: null, agency: ['BKM', 'WSCHODEXPRESS'] }));
+    expect(navigate).toHaveBeenLastCalledWith(
+      ...merge({ page: null, agency: ['BKM', 'WSCHODEXPRESS'] }),
+    );
   });
 
   it('has no operator dropdown unless the page gives operators', () => {
@@ -93,7 +127,9 @@ describe('operator dropdown', () => {
 
   it('keeps one operator chosen, selects all again, and closes on a click outside', () => {
     const { el, fixture, render } = renderPage(Host, {}, { agency: 'BKM' });
-    const navigate = vi.spyOn(fixture.debugElement.injector.get(Router), 'navigate').mockResolvedValue(true);
+    const navigate = vi
+      .spyOn(fixture.debugElement.injector.get(Router), 'navigate')
+      .mockResolvedValue(true);
     const toggle = el.querySelector('app-agency-picker button') as HTMLButtonElement;
     expect(text(toggle)).toBe('BKM ▾');
     toggle.click();

@@ -22,7 +22,6 @@ export class Trips {
   protected readonly trips = this.store.selectSignal(tripsFeature.selectAll);
   protected readonly page = this.store.selectSignal(tripsFeature.selectPage);
   protected readonly loading = this.store.selectSignal(tripsFeature.selectLoading);
-  protected readonly error = this.store.selectSignal(tripsFeature.selectError);
   /** For the route picker. */
   protected readonly routes = this.store.selectSignal(routesFeature.selectAll);
 

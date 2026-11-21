@@ -1,18 +1,13 @@
-import { createActionGroup, props } from '@ngrx/store';
-import {
-  DelayBand,
-  FleetSeries,
-  Page,
-  PositionSample,
-  RouteActivity,
-} from '../../core/models/models';
+import { createActionGroup, emptyProps, props } from '@ngrx/store';
+import { DelayBand, FleetSeries, RouteActivity } from '../../core/models/models';
 
-/** A time window ([from, to), ISO instants) and an optional line. */
+/** A time window ([from, to), ISO instants), and optionally a line and an operator (null for all). */
 export interface HistoryQuery {
   /** Null for all time. */
   from: string | null;
   to: string;
   route: string | null;
+  agency: string | null;
 }
 
 export const PositionHistoryActions = createActionGroup({
@@ -23,17 +18,9 @@ export const PositionHistoryActions = createActionGroup({
     'Fleet Loaded': props<{ series: FleetSeries }>(),
     'Routes Loaded': props<{ routes: RouteActivity[] }>(),
     'Delays Loaded': props<{ delays: DelayBand[] }>(),
-    /**
-     * @param sort e.g. "delay,desc"
-     * @param excludeOutliers leave out reports more than 30 min late
-     */
-    'Load Samples': props<{
-      query: HistoryQuery;
-      page: number;
-      sort: string;
-      excludeOutliers: boolean;
-    }>(),
-    'Samples Loaded': props<{ samples: Page<PositionSample> }>(),
+    /** Loads the operators for the operator filter (once). */
+    'Load Agencies': emptyProps(),
+    'Agencies Loaded': props<{ agencies: string[] }>(),
     Failure: props<{ error: string }>(),
   },
 });

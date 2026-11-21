@@ -20,8 +20,9 @@ import {
 } from './brigade-format';
 
 /**
- * Brigades: pick a day, an agency and one of its brigades (all in the URL: ?date=2026-11-18&agency=BKM&brigade=103-05)
- * to see its trips as scheduled and, under each, what actually ran: when, by which bus, how late, and what wasn't run.
+ * Brigades: pick an agency (BKM at first) and one of its brigades, any in the timetable; then a day (all in the URL:
+ * ?agency=BKM&brigade=103-05&date=2026-11-18) to see its trips as scheduled and, under each, what actually ran: when,
+ * by which bus, how late, and what wasn't run. The day only matters to one brigade, so only its view asks for it.
  */
 @Component({
   selector: 'app-brigades',
@@ -39,11 +40,10 @@ export class BrigadesPage {
   protected readonly day = this.store.selectSignal(brigadesFeature.selectDay);
   protected readonly loadingList = this.store.selectSignal(brigadesFeature.selectLoadingList);
   protected readonly loadingDay = this.store.selectSignal(brigadesFeature.selectLoadingDay);
-  protected readonly error = this.store.selectSignal(brigadesFeature.selectError);
 
-  /** The day in the URL, else today's service day (as the backend says). */
+  /** The day in the URL, else today's service day (as the backend says, with the brigade's day). */
   protected readonly date = computed(
-    () => this.params().get('date') ?? this.list()?.serviceDay ?? '',
+    () => this.params().get('date') ?? this.day()?.serviceDay ?? '',
   );
   protected readonly agency = computed(
     () => this.params().get('agency') ?? this.list()?.agency ?? '',
@@ -63,6 +63,8 @@ export class BrigadesPage {
     const q = this.search().trim().toLowerCase();
     return q ? brigades.filter((b) => this.searchText(b).includes(q)) : brigades;
   });
+  /** Every matching brigade, one row per line. */
+  protected readonly byLine = computed(() => groupByLine(this.matches()));
 
   protected readonly kindLabels = KIND_LABELS;
   protected readonly delayText = delayText;
@@ -76,16 +78,13 @@ export class BrigadesPage {
   protected readonly problems = PROBLEMS;
 
   constructor() {
-    // The brigades of the day and agency in the URL.
-    let listed = '';
+    // Every brigade of the agency in the URL.
+    let listed: string | null | undefined;
     effect(() => {
-      const p = this.params();
-      const key = `${p.get('date')}|${p.get('agency')}`;
-      if (key !== listed) {
-        listed = key;
-        this.store.dispatch(
-          BrigadesActions.loadList({ date: p.get('date'), agency: p.get('agency') }),
-        );
+      const agency = this.params().get('agency');
+      if (agency !== listed) {
+        listed = agency;
+        this.store.dispatch(BrigadesActions.loadList({ agency }));
       }
     });
     // The chosen brigade's day.
@@ -106,9 +105,9 @@ export class BrigadesPage {
     });
   }
 
-  /** "103-05 · 103 · 05:12–22:40 · 10 trips", for the search list. */
+  /** "103-05 · line 103", for the search list. */
   protected describe(b: BrigadeRef): string {
-    return `${b.brigade} · line ${b.lines.join(', ')} · ${span(b.first, b.last)} · ${b.trips} trips`;
+    return `${b.brigade} · line ${b.lines.join(', ')}`;
   }
 
   private searchText(b: BrigadeRef): string {
@@ -120,7 +119,7 @@ export class BrigadesPage {
   }
 
   protected setAgency(agency: string): void {
-    this.navigate({ agency, brigade: null });
+    this.navigate({ agency, brigade: null, date: null });
   }
 
   /** Typed or picked in the search box: a brigade's exact name chooses it. */
@@ -132,17 +131,14 @@ export class BrigadesPage {
     if (exact) this.choose(exact.brigade);
   }
 
+  /** Back to every brigade. */
+  protected back(): void {
+    this.navigate({ brigade: null, date: null });
+  }
+
   protected choose(brigade: string): void {
     this.search.set('');
     this.navigate({ brigade });
-  }
-
-  /** Steps to the previous or next brigade of the list. */
-  protected step(by: number): void {
-    const brigades = this.list()?.brigades ?? [];
-    const i = brigades.findIndex((b) => b.brigade === this.brigade());
-    const next = brigades[i + by];
-    if (next) this.choose(next.brigade);
   }
 
   /** Chosen on the chart: its row in the table. */
@@ -154,4 +150,31 @@ export class BrigadesPage {
         ?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' }),
     );
   }
+}
+
+const natural = new Intl.Collator('en', { numeric: true }).compare;
+
+/**
+ * The line a brigade belongs to: the line its name starts with ("016-02" → "16"), else the first line it runs.
+ * A brigade can run several lines; its name says which one is its own.
+ */
+export function homeLine(b: BrigadeRef): string {
+  const prefix = b.brigade.split('-')[0];
+  const own = b.lines.find((l) => l === prefix || l === prefix.replace(/^0+(?=.)/, ''));
+  return own ?? b.lines[0] ?? prefix;
+}
+
+/** Brigades grouped by their line, lines in natural order (2, 10, 100, N1), brigades in order within each line. */
+export function groupByLine(brigades: BrigadeRef[]): { line: string; brigades: BrigadeRef[] }[] {
+  const groups = new Map<string, BrigadeRef[]>();
+  for (const b of brigades) {
+    const line = homeLine(b);
+    groups.set(line, [...(groups.get(line) ?? []), b]);
+  }
+  return [...groups.entries()]
+    .sort(([a], [b]) => natural(a, b))
+    .map(([line, list]) => ({
+      line,
+      brigades: list.sort((a, b) => natural(a.brigade, b.brigade)),
+    }));
 }

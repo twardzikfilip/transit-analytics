@@ -119,7 +119,7 @@ describe('timetable list pages', () => {
         query: { page: 0, size: 50, sort: 'stopSequence', filters: { tripId: '5', stopId: null } },
       }),
     );
-    expect(text(trip.el.querySelector('h1'))).toBe('Trip 103 → Choroszcz');
+    expect(text(trip.el.querySelector('h2.subtitle'))).toBe('Trip 103 → Choroszcz');
     expect(text(trip.el.querySelector('tbody'))).toContain('Stops on request');
     expect(text(trip.el.querySelector('tbody'))).toContain('boarding none');
   });
@@ -136,6 +136,6 @@ describe('timetable list pages', () => {
         },
       }),
     );
-    expect(text(board.el.querySelector('h1'))).toBe('Departures');
+    expect(text(board.el.querySelector('h2.subtitle'))).toBe('Departures');
   });
 });

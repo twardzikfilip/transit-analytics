@@ -38,7 +38,8 @@ export function listQuery(options: {
     /** Changes filters and goes back to page 1; null or '' removes a filter. */
     setFilters: (changes: Record<string, string | number | null>) => {
       const queryParams: Record<string, string | number | null> = { page: null };
-      for (const [key, value] of Object.entries(changes)) queryParams[key] = value === '' ? null : value;
+      for (const [key, value] of Object.entries(changes))
+        queryParams[key] = value === '' ? null : value;
       setQuery(queryParams);
     },
     /** Zero-based page index. */

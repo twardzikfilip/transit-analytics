@@ -60,10 +60,8 @@ export class Fleet {
 
   protected readonly report = this.store.selectSignal(fleetFeature.selectReport);
   protected readonly loading = this.store.selectSignal(fleetFeature.selectLoading);
-  protected readonly error = this.store.selectSignal(fleetFeature.selectError);
   protected readonly detail = this.store.selectSignal(fleetFeature.selectVehicle);
   protected readonly loadingVehicle = this.store.selectSignal(fleetFeature.selectLoadingVehicle);
-  protected readonly vehicleError = this.store.selectSignal(fleetFeature.selectVehicleError);
 
   protected readonly defaultPreset = DEFAULT_PRESET;
   private readonly query$ = inject(ActivatedRoute).queryParamMap.pipe(

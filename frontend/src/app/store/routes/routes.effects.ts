@@ -13,7 +13,9 @@ export const loadRoutes = createEffect(
       switchMap(() =>
         api.list(0, 1000).pipe(
           map((page) => RoutesActions.loadSuccess({ routes: page.content })),
-          catchError((err: HttpErrorResponse) => of(RoutesActions.failure({ error: errorMessage(err) }))),
+          catchError((err: HttpErrorResponse) =>
+            of(RoutesActions.failure({ error: errorMessage(err) })),
+          ),
         ),
       ),
     ),

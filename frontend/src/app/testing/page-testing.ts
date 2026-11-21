@@ -39,12 +39,54 @@ export const TEST_BUS_LANES: BusLanes = {
   sections: 2,
   official: { km: 1, date: '2025-01-28', source: 'City', url: 'https://example.org/lanes' },
   lanes: [
-    { id: 1, name: 'Lipowa', forward: 1, backward: 1, bothWays: true, points: [[53.13, 23.15], [53.13, 23.16]] },
-    { id: 2, name: 'Sienkiewicza', forward: 1, backward: 0, bothWays: false, points: [[53.14, 23.16], [53.13, 23.16]] },
+    {
+      id: 1,
+      name: 'Lipowa',
+      forward: 1,
+      backward: 1,
+      bothWays: true,
+      points: [
+        [53.13, 23.15],
+        [53.13, 23.16],
+      ],
+    },
+    {
+      id: 2,
+      name: 'Sienkiewicza',
+      forward: 1,
+      backward: 0,
+      bothWays: false,
+      points: [
+        [53.14, 23.16],
+        [53.13, 23.16],
+      ],
+    },
   ],
   stretches: [
-    { id: 0, name: 'Lipowa', heading: 'eastbound', km: 0.67, paths: [[[53.13, 23.15], [53.13, 23.16]]] },
-    { id: 1, name: 'Sienkiewicza', heading: 'southbound', km: 0.53, paths: [[[53.14, 23.16], [53.13, 23.16]]] },
+    {
+      id: 0,
+      name: 'Lipowa',
+      heading: 'eastbound',
+      km: 0.67,
+      paths: [
+        [
+          [53.13, 23.15],
+          [53.13, 23.16],
+        ],
+      ],
+    },
+    {
+      id: 1,
+      name: 'Sienkiewicza',
+      heading: 'southbound',
+      km: 0.53,
+      paths: [
+        [
+          [53.14, 23.16],
+          [53.13, 23.16],
+        ],
+      ],
+    },
   ],
 };
 

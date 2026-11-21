@@ -3,6 +3,7 @@ package com.transitanalytics.service;
 import com.transitanalytics.dto.HotspotDto.Approach;
 import com.transitanalytics.dto.HotspotDto.Hotspot;
 import com.transitanalytics.dto.HotspotDto.LineTime;
+import com.transitanalytics.geo.Geo;
 
 import java.time.Instant;
 import java.util.ArrayDeque;
@@ -181,7 +182,6 @@ final class StandstillHotspots {
 
     /** Points in square cells of a fixed size, for finding the ones near a place without comparing with all. */
     static final class Grid<T> {
-        private static final double M_PER_DEG_LAT = 111_320;
         private final List<T> items;
         private final ToDoubleFunction<T> lat;
         private final ToDoubleFunction<T> lon;
@@ -195,7 +195,7 @@ final class StandstillHotspots {
             this.lon = lon;
             this.cell = cellMeters;
             double meanLat = items.stream().mapToDouble(lat).average().orElse(53);
-            this.mPerDegLon = M_PER_DEG_LAT * Math.cos(Math.toRadians(meanLat));
+            this.mPerDegLon = Geo.M_PER_DEG * Math.cos(Math.toRadians(meanLat));
             for (int i = 0; i < items.size(); i++) {
                 cells.computeIfAbsent(key(cx(lon.applyAsDouble(items.get(i))), cy(lat.applyAsDouble(items.get(i)))),
                         k -> new ArrayList<>()).add(i);
@@ -207,7 +207,7 @@ final class StandstillHotspots {
         }
 
         private long cy(double latDeg) {
-            return (long) Math.floor(latDeg * M_PER_DEG_LAT / cell);
+            return (long) Math.floor(latDeg * Geo.M_PER_DEG / cell);
         }
 
         private static long key(long x, long y) {

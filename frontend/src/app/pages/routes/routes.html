@@ -1,76 +1,16 @@
 <div class="page-header">
-  <h1>Routes</h1>
   @if (detail()?.serviceId; as service) {
     <span class="muted">Weekday timetable {{ service }}</span>
   }
 </div>
 
-@if (error(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
-}
-
 <!-- Lines to pick: a row per kind of line, a column per geometry; thicker and darker buttons carry more. -->
-<section class="line-table" aria-label="Lines">
-  @if (table().rows.length) {
-    <div class="data-table-wrap">
-      <table class="lines">
-        <thead>
-          <tr>
-            <th scope="col"><span class="sr-only">Kind of line</span></th>
-            @for (c of table().columns; track c.label) {
-              <th scope="col" [title]="c.description">{{ c.label }}</th>
-            }
-          </tr>
-        </thead>
-        <tbody>
-          @for (r of table().rows; track r.label) {
-            <tr>
-              <th scope="row">{{ r.label }}</th>
-              @for (cell of r.cells; track $index) {
-                <td>
-                  @for (l of cell; track l.line) {
-                    <button
-                      type="button"
-                      class="chip"
-                      [class]="'capacity-' + (l.capacityClass ?? 'none')"
-                      [style.--chip-color]="'var(' + r.color + ')'"
-                      [attr.aria-pressed]="l.line === selected()"
-                      [title]="
-                        'Line ' +
-                        l.name +
-                        ': ' +
-                        geometryLabel(l.geometry).toLowerCase() +
-                        (l.capacityClass
-                          ? ', ' + capacityLabel(l.capacityClass).toLowerCase() + ' capacity'
-                          : '')
-                      "
-                      (click)="select(l.line)"
-                    >
-                      {{ l.name }}
-                    </button>
-                  }
-                </td>
-              }
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
-    <ul class="capacity-legend" aria-label="Capacity classes">
-      @for (c of capacities; track c.capacity) {
-        <li [title]="c.description">
-          <span class="chip sample" [class]="'capacity-' + c.capacity" aria-hidden="true">12</span>
-          {{ c.label }}
-        </li>
-      }
-      <li class="muted">
-        Thicker border, stronger fill: carries more. Hover a heading or a class for its meaning.
-      </li>
-    </ul>
-  } @else {
-    <p class="muted">{{ error() ? '' : 'Loading lines…' }}</p>
-  }
-</section>
+<app-line-chooser
+  [table]="table()"
+  [selected]="selected()"
+  [message]="error() ? '' : 'Loading lines…'"
+  (choose)="select($event)"
+/>
 
 @if (detail(); as d) {
   <div class="line-title" [class.loading]="loadingDetail()">
@@ -167,7 +107,7 @@
 
 <!-- Kept in the page (Leaflet needs its element); hidden for a line with neither a timetable nor recordings. -->
 <section class="card map-card" [hidden]="!hasMap()">
-  <div #map class="map" role="region" aria-label="Map of the line"></div>
+  <div #map class="leaflet-map" role="region" aria-label="Map of the line"></div>
   @if (recorded(); as r) {
     <ul class="map-legend">
       <li>Each colour a variant, as listed below; thin and dashed: driven rarely</li>
@@ -286,56 +226,11 @@
   } @else if (!d.serviceId) {
     <p class="muted">No timetable yet. An admin can import it under Settings.</p>
   } @else {
-    <app-variant-tiles [detail]="d" [class.loading]="loadingDetail()" />
+    <app-variant-tiles [detail]="d" [regularity]="regularity()" [class.loading]="loadingDetail()" />
 
     <section class="card section">
       <h2>Variants</h2>
-      <div class="data-table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Variant</th>
-              <th>From → to</th>
-              <th class="num">Length</th>
-              <th class="num">Trips a weekday</th>
-              <th class="num">Scheduled travel time</th>
-              <th class="num">Scheduled speed</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (v of d.variants; track v.direction + '|' + v.shapeId) {
-              <tr [class.main]="v.kind === 'main'" [class.depot-row]="v.kind === 'depot'">
-                <td>
-                  @if (v.kind === 'depot') {
-                    <span class="tag depot">Depot run</span>
-                  } @else {
-                    {{ kindLabel(v.kind) }}
-                  }
-                </td>
-                <td>{{ v.firstStop }} → {{ v.lastStop }}</td>
-                <td class="num">{{ v.km | number: '1.1-1' }} km</td>
-                <td class="num">{{ v.tripsPerDay }}</td>
-                <td class="num">
-                  {{
-                    v.shortestMin === v.longestMin
-                      ? v.shortestMin
-                      : v.shortestMin + '–' + v.longestMin
-                  }}
-                  min
-                </td>
-                <td class="num">
-                  {{
-                    v.minSpeedKmh === v.maxSpeedKmh
-                      ? v.minSpeedKmh
-                      : v.minSpeedKmh + '–' + v.maxSpeedKmh
-                  }}
-                  km/h
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+      <app-variant-table [variants]="d.variants" />
     </section>
 
     @if (d.brigadesKnown) {
@@ -350,49 +245,10 @@
 
     <section class="card section">
       <h2>Speed between stops in peak hours</h2>
-      <p class="muted">
-        Average speed on each stretch between two stops, on full runs leaving 06:30–08:30 or
-        15:00–17:00. Each bar is as wide as the stretch is long; the three slowest are numbered.
-      </p>
-      @for (s of performance()?.segments ?? []; track s.direction) {
-        <div class="chart">
-          <h3>
-            Towards {{ s.headsign }} <span class="muted">· {{ s.runs }} runs</span>
-          </h3>
-          @if (s.runs) {
-            <app-segment-chart [profile]="s" />
-            <details>
-              <summary>Show as a table</summary>
-              <table class="data-table compact">
-                <thead>
-                  <tr>
-                    <th>From</th>
-                    <th>To</th>
-                    <th class="num">Distance</th>
-                    <th class="num">Speed</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (seg of s.segments; track $index) {
-                    <tr>
-                      <td>{{ seg.from }}</td>
-                      <td>{{ seg.to }}</td>
-                      <td class="num">{{ seg.toKm - seg.fromKm | number: '1.2-2' }} km</td>
-                      <td class="num">{{ seg.kmh ?? '—' }} km/h</td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </details>
-          } @else {
-            <p class="muted">No full peak-hour runs recorded in this direction yet.</p>
-          }
-        </div>
-      } @empty {
-        <p class="muted">
-          {{ loadingPerformance() ? 'Loading real-time data…' : 'No recorded runs.' }}
-        </p>
-      }
+      <app-speed-profiles
+        [segments]="performance()?.segments ?? []"
+        [loading]="loadingPerformance()"
+      />
     </section>
 
     @if (d.brigadesKnown) {
@@ -461,6 +317,16 @@
         <li>
           <strong>Scheduled average speed:</strong> distance divided by travel time of the base
           route's slowest and fastest scheduled run. Time at stops counts.
+        </li>
+        <li>
+          <strong>Regularity:</strong> how evenly departures are spread, as the coefficient of
+          variation (CV) of the gaps between consecutive departures: standard deviation ÷ mean. It
+          is measured at the first stop of the base route, counting every trip of the line that
+          departs there, per direction and period (the break between the two peaks is not a gap),
+          then averaged weighted by the number of gaps. 0 means perfectly even. Grades follow TCQSM:
+          A ≤ 0.21, B ≤ 0.30, C ≤ 0.39, D ≤ 0.52, E ≤ 0.74, F above. For passengers arriving at
+          random the average wait is half the mean gap × (1 + CV²), so uneven spacing adds waiting
+          even at the same frequency. "—" means fewer than 4 departures in the period.
         </li>
         <li>
           <strong>Standard end stops</strong> are where buses turn round in service: a brigade ends

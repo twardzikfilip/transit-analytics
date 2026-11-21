@@ -1,5 +1,5 @@
 /**
- * Brigades (vehicle duties): the ones running on a day (GET /api/brigades), and one brigade's day, each trip
+ * Brigades (vehicle duties): every one in the timetable (GET /api/brigades), and one brigade's day, each trip
  * scheduled with what actually ran (GET /api/brigades/{brigade}/day).
  */
 
@@ -11,15 +11,13 @@ export interface BrigadeAgency {
 
 export interface BrigadeRef {
   brigade: string;
+  /** The lines it runs, on any day. */
   lines: string[];
-  trips: number;
-  first: string;
-  last: string;
 }
 
-export interface BrigadeDayList {
-  serviceDay: string;
-  /** The agency the brigades are of; null when no agency names brigades that day. */
+/** Every brigade of an agency, whatever day it runs. */
+export interface BrigadeList {
+  /** The agency the brigades are of; null when no agency names brigades. */
   agency: string | null;
   agencies: BrigadeAgency[];
   brigades: BrigadeRef[];

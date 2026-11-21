@@ -14,33 +14,28 @@
 }
 
 .search {
-  display: grid;
-  grid-template-columns: auto auto auto;
-  grid-template-rows: auto auto;
-  column-gap: 0.25rem;
-  row-gap: 0.2rem;
-  font-size: 0.85rem;
-
-  label {
-    grid-column: 1 / -1;
-  }
-
-  input {
-    min-width: 16rem;
-  }
-
-  button {
-    padding: 0.3rem 0.6rem;
-  }
+  min-width: 16rem;
 }
 
 .card {
   margin-bottom: 1rem;
 }
 
-.card > p.muted {
-  margin: 0 0 0.5rem;
-  font-size: 0.9rem;
+.brigade-lines {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.4rem 1rem;
+  align-items: baseline;
+  margin: 0;
+
+  dt {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  dd {
+    margin: 0;
+  }
 }
 
 .brigade-chips {
@@ -53,10 +48,11 @@
 }
 
 .tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+  --tile-min: 11rem;
+
+  @media (max-width: 600px) {
+    --tile-min: 9rem;
+  }
 }
 
 .tile {
@@ -100,17 +96,18 @@
   height: 0.75rem;
   border-radius: 2px;
 
+  /* The legend's swatches: the chart's colours, BKM's light blue and green (TRIP_COLORS). */
   &.a {
-    background: #2a78d6;
+    background: var(--lightblue-bkm);
   }
 
   &.b {
-    background: #c2189b;
+    background: var(--green-bkm);
   }
 
   &.actual {
-    background: rgba(42, 120, 214, 0.4);
-    border: 1.5px solid #2a78d6;
+    background: color-mix(in srgb, var(--lightblue-bkm) 40%, transparent);
+    border: 1.5px solid var(--lightblue-bkm);
   }
 
   &.not-run {

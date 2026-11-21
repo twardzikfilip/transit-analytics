@@ -16,7 +16,8 @@ import {
 
 describe('time window', () => {
   const now = new Date(2026, 10, 16, 14, 2, 41);
-  const preset = (range: string | null) => resolveWindow({ range, from: null, to: null }, now, '24h');
+  const preset = (range: string | null) =>
+    resolveWindow({ range, from: null, to: null }, now, '24h');
 
   it('offers the presets from a minute to a month, and all time', () => {
     expect(WINDOW_PRESETS.map((p) => p.label)).toEqual([
@@ -57,17 +58,24 @@ describe('time window', () => {
     expect(windowQuery(all)).toEqual({ from: null, to: all.to.toISOString() });
     expect(preset('5y').preset).toBe('24h');
     expect(resolveWindow({ range: null, from: null, to: null }, now, '1w').preset).toBe('1w');
-    expect(resolveWindow({ range: null, from: null, to: null }, now, 'nonsense').preset).toBe('24h');
+    expect(resolveWindow({ range: null, from: null, to: null }, now, 'nonsense').preset).toBe(
+      '24h',
+    );
   });
 
   it('takes a custom window from the URL, but not a reversed one', () => {
-    const params = convertToParamMap({ from: '2026-11-16T05:00', to: '2026-11-16T17:00', agency: ['BKM', 'X'] });
+    const params = convertToParamMap({
+      from: '2026-11-16T05:00',
+      to: '2026-11-16T17:00',
+      agency: ['BKM', 'X'],
+    });
     const custom = readWindow(params, '24h', now);
     expect(custom.preset).toBeNull();
     expect(toLocalInput(custom.from!)).toBe('2026-11-16T05:00');
     expect(readAgencies(params)).toEqual(['BKM', 'X']);
     expect(
-      resolveWindow({ range: null, from: '2026-11-16T17:00', to: '2026-11-16T05:00' }, now, '24h').preset,
+      resolveWindow({ range: null, from: '2026-11-16T17:00', to: '2026-11-16T05:00' }, now, '24h')
+        .preset,
     ).toBe('24h');
   });
 
@@ -89,8 +97,14 @@ describe('time window', () => {
   });
 
   it('compares windows: presets by key, custom ones by time, and the operators', () => {
-    const a: { window: TimeWindow; agencies?: string[] } = { window: preset('1h'), agencies: ['BKM'] };
-    const later = { window: resolveWindow({ range: '1h', from: null, to: null }, new Date(), '24h'), agencies: ['BKM'] };
+    const a: { window: TimeWindow; agencies?: string[] } = {
+      window: preset('1h'),
+      agencies: ['BKM'],
+    };
+    const later = {
+      window: resolveWindow({ range: '1h', from: null, to: null }, new Date(), '24h'),
+      agencies: ['BKM'],
+    };
     expect(sameQuery(a, later)).toBe(true);
     expect(sameQuery(a, { ...a, agencies: [] })).toBe(false);
     expect(sameQuery(a, { window: preset('2h') })).toBe(false);

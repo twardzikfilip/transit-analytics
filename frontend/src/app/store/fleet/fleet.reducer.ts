@@ -33,7 +33,11 @@ const reducer: ActionReducer<FleetState> = createReducer(
     loadingVehicle: true,
     vehicleError: null,
   })),
-  on(FleetActions.vehicleLoaded, (state, { vehicle }) => ({ ...state, vehicle, loadingVehicle: false })),
+  on(FleetActions.vehicleLoaded, (state, { vehicle }) => ({
+    ...state,
+    vehicle,
+    loadingVehicle: false,
+  })),
   on(FleetActions.vehicleFailure, (state, { error }) => ({
     ...state,
     loadingVehicle: false,

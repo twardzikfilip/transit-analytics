@@ -1,5 +1,3 @@
-import { RouteSubtype } from '../core/models/models';
-
 /**
  * Colours used in code (map layers can't use CSS custom properties). Theme colours are read from the tokens in
  * styles.scss with cssColor(), so they follow light and dark mode; the data scales below are fixed.
@@ -19,8 +17,11 @@ export const DELAY_STOPS: { seconds: number; color: string; label: string }[] = 
   { seconds: 600, color: '#d7301f', label: '10+ min' },
 ];
 
+/** Neutral grey: no data, not seen, no figure (always with a label). */
+export const NEUTRAL_GREY = '#8a8f98';
+
 /** A vehicle without a known delay. */
-export const NO_DELAY_COLOR = '#8a8f98';
+export const NO_DELAY_COLOR = NEUTRAL_GREY;
 
 /** The marker colour for a delay, blended between the stops. */
 export function delayColor(seconds: number | null): string {
@@ -55,34 +56,18 @@ function hex(color: string): number[] {
 }
 
 /**
- * Vehicle outline by kind of line (Live map): urban blue, suburban black, regional (4xx) magenta. Night lines are
- * urban lines and share their colour.
- */
-export const SUBTYPE_OUTLINES: { subtype: RouteSubtype; color: string; label: string }[] = [
-  { subtype: 'urban', color: '#1c5cab', label: 'Urban' },
-  { subtype: 'suburban', color: '#111111', label: 'Suburban' },
-  { subtype: 'regional', color: '#c2189b', label: 'Regional (4xx)' },
-];
-
-export function subtypeOutline(subtype: RouteSubtype | null): string {
-  const kind = subtype === 'night_urban' ? 'urban' : subtype;
-  return SUBTYPE_OUTLINES.find((o) => o.subtype === kind)?.color ?? NO_DELAY_COLOR;
-}
-
-/**
  * Sequential blue, light → dark (reference palette steps 250–700; the lightest still stands out on a grey map),
  * for magnitudes such as buses per stretch.
  */
 export const SEQUENTIAL_BLUE = ['#86b6ef', '#5598e7', '#2a78d6', '#1c5cab', '#104281', '#0d366b'];
 
 /**
- * City boundaries on maps: the city limits teal and dashed, the centre (Osiedle Centrum) brown and solid. Neither is
- * the purple the OpenStreetMap tiles use for administrative borders, nor a delay or line-kind colour. Drawn under
- * the vehicles and named in the map legend.
+ * City boundaries on maps: both 1 px in Bootstrap's $dark, the city limits dashed and the centre (Osiedle Centrum)
+ * solid. Drawn under the vehicles and named in the map legend.
  */
 export const BOUNDARY_STYLES = {
-  city: { color: '#0b7285', dashArray: '6 4', label: 'City limits' },
-  centre: { color: '#8a4b08', dashArray: undefined, label: 'City centre' },
+  city: { color: '#212529', dashArray: '6 4', weight: 1, label: 'City limits' },
+  centre: { color: '#212529', dashArray: undefined, weight: 1, label: 'City centre' },
 } as const;
 
 /**
@@ -101,12 +86,75 @@ export const VARIANT_COLORS = [
 ];
 
 /**
- * Bus lanes on maps: a wide, translucent violet band under the vehicles and the line, so it reads as part of the
- * street. Not a delay, line-kind, boundary or depot colour.
+ * Bus lanes on maps: a wide, translucent band in the primary colour (--primary in styles.scss) under the vehicles
+ * and the line, so it reads as part of the street.
  */
 export const BUS_LANE_STYLE = {
-  color: '#6f42c1',
+  color: '#00a9bc',
   weight: 6,
   opacity: 0.45,
   label: 'Bus lane',
 } as const;
+
+/** Dark ink for outlines and dots on maps (chosen or highlighted marks, stops). */
+export const INK = '#1f2933';
+/** White, for outlines that separate neighbouring areas on maps. */
+export const WHITE = '#ffffff';
+
+/** Network coverage maps: the area near a stop (one see-through blue), and the woods (light green, lined). */
+export const COVERAGE_STYLE = {
+  covered: '#2a78d6',
+  forestFill: '#9fdc8f',
+  forestLine: '#4f9a45',
+  /** The Biała valley: light blue, lined like the woods. */
+  valleyFill: '#b9e3f8',
+  valleyLine: '#2b8cc4',
+} as const;
+
+/**
+ * Population density (residents per km²) on the density map: steps light → dark on the sequential blue scale; `max`
+ * is exclusive, null for the last step. The woods sit below the first step (nobody lives there): pale grey, lined.
+ * Places without a figure are white with a dashed grey outline.
+ */
+export const DENSITY_SCALE: { min: number; max: number | null; color: string }[] = [
+  { min: 0, max: 250, color: SEQUENTIAL_BLUE[0] },
+  { min: 250, max: 1000, color: SEQUENTIAL_BLUE[1] },
+  { min: 1000, max: 2500, color: SEQUENTIAL_BLUE[2] },
+  { min: 2500, max: 5000, color: SEQUENTIAL_BLUE[3] },
+  { min: 5000, max: 10000, color: SEQUENTIAL_BLUE[4] },
+  { min: 10000, max: null, color: SEQUENTIAL_BLUE[5] },
+];
+export const DENSITY_NONE = { fill: '#f1f3f5', line: '#9aa1a9' } as const;
+export const DENSITY_UNKNOWN = { fill: WHITE, line: NEUTRAL_GREY } as const;
+
+/** BKM's colours, as $green_bkm and $lightblue_bkm (--green-bkm, --lightblue-bkm) in styles.scss. */
+export const GREEN_BKM = '#4cb034';
+export const LIGHTBLUE_BKM = '#2393ca';
+
+/**
+ * Brigades: consecutive trips alternate between BKM's light blue and green; a part not run (status: critical), not
+ * seen or without data (neutral), a change of bus (status: warning).
+ */
+export const TRIP_COLORS = [LIGHTBLUE_BKM, GREEN_BKM];
+export const NOT_RUN_COLOR = '#d7301f';
+export const NOT_SEEN_COLOR = NEUTRAL_GREY;
+export const CHANGE_COLOR = '#d48806';
+
+/** Bus lanes by direction: one direction only, and both ways. */
+export const ONE_WAY_COLOR = '#6f42c1';
+export const BOTH_WAYS_COLOR = '#e8590c';
+
+/**
+ * The diverging scale for a change in delay (seconds per bus): blue where buses recover delay, red where they gain
+ * it, grey around zero. Each arm is a one-hue ramp validated light → dark; the ends are far apart for colour-blind
+ * readers too. Numbers are always shown beside the colour.
+ */
+export const DELAY_CHANGE_CLASSES: { to: number; color: string; label: string; dark: boolean }[] = [
+  { to: -60, color: '#104281', label: 'recovers 1 min or more', dark: true },
+  { to: -30, color: '#2a78d6', label: 'recovers 30–60 s', dark: true },
+  { to: -10, color: '#86b6ef', label: 'recovers 10–30 s', dark: false },
+  { to: 10, color: '#d4d3ce', label: 'within 10 s', dark: false },
+  { to: 30, color: '#ec948a', label: 'gains 10–30 s', dark: false },
+  { to: 60, color: '#e34948', label: 'gains 30–60 s', dark: true },
+  { to: Infinity, color: '#a32626', label: 'gains 1 min or more', dark: true },
+];

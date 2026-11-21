@@ -57,7 +57,10 @@ afterEach(() => {
   TestBed.resetTestingModule();
 });
 
-const CUSTOM = { from: new Date('2026-11-01T06:00').toISOString(), to: new Date('2026-11-17T06:00').toISOString() };
+const CUSTOM = {
+  from: new Date('2026-11-01T06:00').toISOString(),
+  to: new Date('2026-11-17T06:00').toISOString(),
+};
 
 describe('Stop hotspots page', () => {
   it('loads the window and line in the URL and lists the hotspots, the most time lost first', () => {
@@ -75,7 +78,9 @@ describe('Stop hotspots page', () => {
       'Buses stood still away from stops 4574 times, for 47.9 h (6.8 h a day over 7 days recorded). ' +
         '2 hotspots hold 92% of that time.',
     );
-    const select = el.querySelector('app-time-window select') as HTMLSelectElement;
+    const select = el.querySelector(
+      'app-time-window select:not(.window-preset)',
+    ) as HTMLSelectElement;
     expect([...select.options].map((o) => o.text)).toEqual(['All lines', 'Line 9', 'Line 21']);
     expect(select.value).toBe('21');
     const cells = [...el.querySelectorAll('table.hotspots tbody tr:first-child td')].map(text);
@@ -132,14 +137,18 @@ describe('Stop hotspots page', () => {
       .spyOn(fixture.debugElement.injector.get(Router), 'navigate')
       .mockResolvedValue(true);
 
-    expect(store.dispatch).toHaveBeenCalledWith(HotspotsActions.load({ window: CUSTOM, line: null }));
+    expect(store.dispatch).toHaveBeenCalledWith(
+      HotspotsActions.load({ window: CUSTOM, line: null }),
+    );
     expect(text(el.querySelector('table.hotspots tbody'))).toContain('No place where buses');
     (el.querySelectorAll('app-time-window .presets button')[6] as HTMLButtonElement).click();
     expect(navigate).toHaveBeenLastCalledWith([], {
       queryParams: { range: '24h', from: null, to: null },
       queryParamsHandling: 'merge',
     });
-    const select = el.querySelector('app-time-window select') as HTMLSelectElement;
+    const select = el.querySelector(
+      'app-time-window select:not(.window-preset)',
+    ) as HTMLSelectElement;
     select.value = '9';
     select.dispatchEvent(new Event('change'));
     expect(navigate).toHaveBeenLastCalledWith([], {
@@ -148,11 +157,15 @@ describe('Stop hotspots page', () => {
     });
 
     setQuery({ from: '2026-11-01T06:00', to: '2026-11-17T06:00', line: '9' });
-    expect(store.dispatch).toHaveBeenLastCalledWith(HotspotsActions.load({ window: CUSTOM, line: '9' }));
+    expect(store.dispatch).toHaveBeenLastCalledWith(
+      HotspotsActions.load({ window: CUSTOM, line: '9' }),
+    );
     const loads = (store.dispatch as unknown as { mock: { calls: unknown[][] } }).mock.calls.length;
     setQuery({ from: '2026-11-01T06:00', to: '2026-11-17T06:00', line: '9', other: 'x' });
     // Same window and line: no reload.
-    expect((store.dispatch as unknown as { mock: { calls: unknown[][] } }).mock.calls).toHaveLength(loads);
+    expect((store.dispatch as unknown as { mock: { calls: unknown[][] } }).mock.calls).toHaveLength(
+      loads,
+    );
   });
 
   it('formats times, places, headings and lines', () => {

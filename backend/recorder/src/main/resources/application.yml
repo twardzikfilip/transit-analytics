@@ -36,8 +36,8 @@ app:
     enabled: ${RECORDING_ENABLED:true}
     cron: "*/10 * * * * *"         # every 10 seconds
     zone: Europe/Warsaw
-    window-start: "03:30"
-    window-end: "01:30"
+    window-start: "00:00"           # all day: night lines run 00:10–04:06 on weekend nights
+    window-end: "23:59:59"
     min-interval: 8s               # never poll more than once in 10 seconds
     archive-dir: ${RECORDING_ARCHIVE_DIR:data/raw}
     spool-dir: ${RECORDING_SPOOL_DIR:data/spool}

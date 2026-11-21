@@ -1,5 +1,6 @@
 package com.transitanalytics.buslanes;
 
+import com.transitanalytics.domain.CityTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
@@ -23,12 +24,12 @@ import java.util.Locale;
 
 /**
  * The city's bus lanes: the saved copy ({@code file}) when there is one, else the built-in
- * {@code map/bus-lanes.json}; fetched again from OpenStreetMap (Overpass) at {@code refresh-cron} or on request.
+ * {@code places/osm/bus-lanes.json}; fetched again from OpenStreetMap (Overpass) at {@code refresh-cron} or on request.
  */
 public class BusLanes {
 
     private static final Logger log = LoggerFactory.getLogger(BusLanes.class);
-    static final String BUILT_IN = "map/bus-lanes.json";
+    static final String BUILT_IN = "places/osm/bus-lanes.json";
 
     /** The lanes with what is built from them; replaced as a whole on a refresh. */
     /** @param bothWays per lane: buses have a lane the other way too (see {@link BusLaneMatcher#bothWays}) */
@@ -81,7 +82,7 @@ public class BusLanes {
     }
 
     /** Fetches on schedule; a failure is logged and the lanes stay as they are. */
-    @Scheduled(cron = "${app.bus-lanes.refresh-cron:-}", zone = "Europe/Warsaw")
+    @Scheduled(cron = "${app.bus-lanes.refresh-cron:-}", zone = CityTime.ZONE_ID)
     void refreshOnSchedule() {
         try {
             refresh();

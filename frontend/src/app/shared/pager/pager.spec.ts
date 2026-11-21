@@ -4,7 +4,12 @@ import { Pager, rowNumber } from './pager';
 describe('Pager', () => {
   it('shows the position and moves between pages, disabling buttons at the ends', () => {
     const fixture = TestBed.createComponent(Pager);
-    fixture.componentRef.setInput('page', { number: 0, size: 50, totalElements: 1083, totalPages: 22 });
+    fixture.componentRef.setInput('page', {
+      number: 0,
+      size: 50,
+      totalElements: 1083,
+      totalPages: 22,
+    });
     fixture.componentRef.setInput('noun', 'stops');
     fixture.detectChanges();
     const el: HTMLElement = fixture.nativeElement;
@@ -18,7 +23,12 @@ describe('Pager', () => {
     buttons()[3].click();
     expect(pages).toEqual([1, 21]);
 
-    fixture.componentRef.setInput('page', { number: 0, size: 50, totalElements: 12, totalPages: 1 });
+    fixture.componentRef.setInput('page', {
+      number: 0,
+      size: 50,
+      totalElements: 12,
+      totalPages: 1,
+    });
     fixture.detectChanges();
     expect(buttons()).toHaveLength(0);
     expect(el.textContent?.trim()).toBe('12 stops');

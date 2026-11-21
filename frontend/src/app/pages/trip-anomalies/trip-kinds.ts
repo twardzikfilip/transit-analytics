@@ -6,6 +6,7 @@ import {
   TripAnomalySummary,
 } from '../../core/models/models';
 import { duration, formatDelay } from '../../shared/format/time';
+import { shareOf } from '../../shared/format/number';
 
 /** Kinds of abnormal trip, the most serious first, with where their count is in the summary and per line. */
 export const KINDS: {
@@ -112,9 +113,7 @@ export function kindLabel(kind: TripAnomalyKind): string {
 
 /** A share as a percentage: "4.2%", "0%"; "—" without a total. */
 export function percent(part: number, total: number): string {
-  if (!total) return '—';
-  const p = (part / total) * 100;
-  return p === 0 ? '0%' : p < 10 ? `${p.toFixed(1)}%` : `${Math.round(p)}%`;
+  return shareOf(part, total, { adaptive: true, empty: '—' });
 }
 
 /** A delay with its sign ("+2:15", "−0:40") or "—". */

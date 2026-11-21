@@ -4,7 +4,12 @@ import { positionHistoryFeature } from './position-history.reducer';
 
 describe('position history reducer', () => {
   const reduce = positionHistoryFeature.reducer;
-  const query = { from: '2026-11-16T10:00:00Z', to: '2026-11-16T11:00:00Z', route: '103' };
+  const query = {
+    from: '2026-11-16T10:00:00Z',
+    to: '2026-11-16T11:00:00Z',
+    route: '103',
+    agency: 'BKM',
+  };
   const series: FleetSeries = {
     from: query.from,
     to: query.to,
@@ -28,13 +33,16 @@ describe('position history reducer', () => {
     state = reduce(state, PositionHistoryActions.fleetLoaded({ series }));
     expect(state.loadingSeries).toBe(false);
 
-    state = reduce(state, PositionHistoryActions.load({ query: { ...query, route: null } }));
+    state = reduce(
+      state,
+      PositionHistoryActions.load({ query: { ...query, route: null, agency: null } }),
+    );
     expect(state.loadingSeries).toBe(true);
     expect(state.series).toBe(series);
     expect(state.query?.route).toBeNull();
   });
 
-  it('stores lines and samples, and stops loading on failure', () => {
+  it('stores lines, delays and operators, and stops loading on failure', () => {
     let state = reduce(
       undefined,
       PositionHistoryActions.routesLoaded({ routes: [{ route: '2', samples: 10 }] }),
@@ -43,25 +51,18 @@ describe('position history reducer', () => {
     state = reduce(
       state,
       PositionHistoryActions.delaysLoaded({
-        delays: [{ fromMinutes: 1, toMinutes: 2, vehicles: 3, reports: 9 }],
+        delays: [{ fromMinutes: 2, toMinutes: 5, vehicles: 3, reports: 9 }],
       }),
     );
     expect(state.delays[0].vehicles).toBe(3);
-    state = reduce(
-      state,
-      PositionHistoryActions.loadSamples({
-        query,
-        page: 0,
-        sort: 'time,desc',
-        excludeOutliers: false,
-      }),
-    );
-    expect(state.loadingSamples).toBe(true);
+    state = reduce(state, PositionHistoryActions.agenciesLoaded({ agencies: ['BKM'] }));
+    expect(state.agencies).toEqual(['BKM']);
+    state = reduce(state, PositionHistoryActions.load({ query }));
     state = reduce(
       state,
       PositionHistoryActions.failure({ error: 'The time window can be at most 31 days' }),
     );
-    expect(state.loadingSamples).toBe(false);
+    expect(state.loadingSeries).toBe(false);
     expect(state.error).toBe('The time window can be at most 31 days');
   });
 });

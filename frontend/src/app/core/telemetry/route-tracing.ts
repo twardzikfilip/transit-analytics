@@ -1,6 +1,12 @@
 import { EnvironmentProviders, inject, provideAppInitializer } from '@angular/core';
 import { Span, SpanStatusCode, trace } from '@opentelemetry/api';
-import { NavigationCancel, NavigationEnd, NavigationError, NavigationStart, Router } from '@angular/router';
+import {
+  NavigationCancel,
+  NavigationEnd,
+  NavigationError,
+  NavigationStart,
+  Router,
+} from '@angular/router';
 import { TRACER_NAME } from './telemetry.config';
 import { routeOf } from './route-of';
 

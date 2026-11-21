@@ -1,20 +1,24 @@
-<div class="page-header">
-  <h1>Trips</h1>
-</div>
-
 <div class="list-filters">
   <label>
     Route
-    <select [value]="query.get('routeId')" (change)="query.setFilters({ routeId: $any($event.target).value })">
+    <select
+      [value]="query.get('routeId')"
+      (change)="query.setFilters({ routeId: $any($event.target).value })"
+    >
       <option value="">All routes</option>
       @for (route of routes(); track route.id) {
-        <option [value]="route.id" [selected]="query.get('routeId') === '' + route.id">{{ route.name }}</option>
+        <option [value]="route.id" [selected]="query.get('routeId') === '' + route.id">
+          {{ route.name }}
+        </option>
       }
     </select>
   </label>
   <label>
     Direction
-    <select [value]="query.get('direction')" (change)="query.setFilters({ direction: $any($event.target).value })">
+    <select
+      [value]="query.get('direction')"
+      (change)="query.setFilters({ direction: $any($event.target).value })"
+    >
       <option value="">Both</option>
       <option value="0">Outbound (0)</option>
       <option value="1">Inbound (1)</option>
@@ -22,16 +26,26 @@
   </label>
   <label>
     Headsign
-    <input type="search" placeholder="e.g. Dworzec" [value]="query.get('q')" (input)="onSearch($any($event.target).value)" />
+    <input
+      type="search"
+      placeholder="e.g. Dworzec"
+      [value]="query.get('q')"
+      (input)="onSearch($any($event.target).value)"
+    />
   </label>
   @if (query.get('serviceId'); as service) {
-    <span class="chip">Service {{ service }} <button type="button" (click)="query.setFilters({ serviceId: null })" aria-label="Clear service filter">×</button></span>
+    <span class="chip"
+      >Service {{ service }}
+      <button
+        type="button"
+        (click)="query.setFilters({ serviceId: null })"
+        aria-label="Clear service filter"
+      >
+        ×
+      </button></span
+    >
   }
 </div>
-
-@if (error(); as message) {
-  <p class="error">{{ message }}</p>
-}
 
 <div class="card data-table-wrap">
   <table class="data-table" [class.loading]="loading()">
@@ -52,13 +66,24 @@
         <tr>
           <td class="index">{{ index(i) }}</td>
           <td>
-            <a class="route-badge" [style.--route-color]="routeColor(trip.routeColor)" [routerLink]="[]"
-               [queryParams]="{ routeId: trip.routeId, page: null }" queryParamsHandling="merge">{{ trip.routeName }}</a>
+            <a
+              class="route-badge"
+              [style.--route-color]="routeColor(trip.routeColor)"
+              [routerLink]="[]"
+              [queryParams]="{ routeId: trip.routeId, page: null }"
+              queryParamsHandling="merge"
+              >{{ trip.routeName }}</a
+            >
           </td>
           <td>{{ trip.headsign ?? '—' }}</td>
           <td class="num">{{ trip.direction ?? '—' }}</td>
           <td class="num">
-            <a [routerLink]="[]" [queryParams]="{ serviceId: trip.serviceId, page: null }" queryParamsHandling="merge">{{ trip.serviceId }}</a>
+            <a
+              [routerLink]="[]"
+              [queryParams]="{ serviceId: trip.serviceId, page: null }"
+              queryParamsHandling="merge"
+              >{{ trip.serviceId }}</a
+            >
           </td>
           <td>{{ trip.shortName ?? '—' }}</td>
           <td>
@@ -69,7 +94,9 @@
               <span title="Bikes allowed">🚲</span>
             }
           </td>
-          <td class="num"><a [routerLink]="['/stop-times']" [queryParams]="{ tripId: trip.id }">Stop times</a></td>
+          <td class="num">
+            <a [routerLink]="['/stop-times']" [queryParams]="{ tripId: trip.id }">Stop times</a>
+          </td>
         </tr>
       } @empty {
         <tr>

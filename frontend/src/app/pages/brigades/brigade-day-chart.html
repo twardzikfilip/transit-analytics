@@ -1,0 +1,159 @@
+<div class="scroll">
+  <svg
+    [attr.width]="width()"
+    [attr.height]="height"
+    role="img"
+    [attr.aria-label]="'Brigade timeline: ' + trips().length + ' trips, scheduled and actual'"
+    (mouseleave)="hovered.set(null)"
+  >
+    <defs>
+      <pattern
+        id="not-run"
+        width="6"
+        height="6"
+        patternUnits="userSpaceOnUse"
+        patternTransform="rotate(45)"
+      >
+        <rect width="6" height="6" [attr.fill]="notRun" fill-opacity="0.15" />
+        <line x1="0" y1="0" x2="0" y2="6" [attr.stroke]="notRun" stroke-width="2.5" />
+      </pattern>
+      <pattern
+        id="not-seen"
+        width="6"
+        height="6"
+        patternUnits="userSpaceOnUse"
+        patternTransform="rotate(45)"
+      >
+        <line x1="0" y1="0" x2="0" y2="6" [attr.stroke]="notSeen" stroke-width="2" />
+      </pattern>
+    </defs>
+
+    @for (t of ticks(); track t.x) {
+      <line
+        class="grid"
+        [attr.x1]="t.x"
+        [attr.x2]="t.x"
+        [attr.y1]="AXIS_Y + 4"
+        [attr.y2]="height - 4"
+      />
+      <text class="tick" [attr.x]="t.x" [attr.y]="AXIS_Y">{{ t.label }}</text>
+    }
+    <text class="lane" x="4" [attr.y]="SCHED_Y + 13">Scheduled</text>
+    <text class="lane" x="4" [attr.y]="ACTUAL_Y[0] + 22">Actual</text>
+
+    @for (row of rows(); track row.trip.tripId; let i = $index) {
+      <g
+        class="trip"
+        [class.chosen]="selected() === i"
+        [class.dim]="selected() !== null && selected() !== i"
+        (mouseenter)="hovered.set(i)"
+        (click)="choose.emit(i)"
+      >
+        <rect
+          class="hit"
+          [attr.x]="row.hit.x"
+          [attr.width]="row.hit.width"
+          [attr.y]="SCHED_LABEL_Y[0] - 12"
+          [attr.height]="BUS_LABEL_Y[1] - SCHED_LABEL_Y[0] + 16"
+        />
+        <!-- Scheduled -->
+        <rect
+          class="scheduled"
+          [attr.x]="row.scheduled.x"
+          [attr.width]="row.scheduled.width"
+          [attr.y]="SCHED_Y"
+          [attr.height]="BAR_H"
+          rx="3"
+          [attr.fill]="row.color"
+        />
+        <text class="label" [attr.x]="row.scheduled.x" [attr.y]="SCHED_LABEL_Y[i % 2]">
+          {{ row.label }}
+        </text>
+        <!-- From the scheduled start to the actual one: a slant is lateness. -->
+        @if (row.connector; as c) {
+          <line
+            class="connector"
+            [attr.x1]="c.from"
+            [attr.y1]="SCHED_Y + BAR_H"
+            [attr.x2]="c.to"
+            [attr.y2]="row.y"
+          />
+        }
+        <!-- Actual: a bar per bus -->
+        @for (r of row.runs; track $index) {
+          <rect
+            class="actual"
+            [attr.x]="r.x"
+            [attr.width]="r.width"
+            [attr.y]="row.y"
+            [attr.height]="BAR_H"
+            rx="3"
+            [attr.fill]="row.color"
+            [attr.stroke]="row.color"
+            [class.pending]="row.trip.kind === 'pending'"
+          />
+        }
+        @for (m of row.missing; track $index) {
+          <rect
+            class="missing"
+            [attr.x]="m.x"
+            [attr.width]="m.width"
+            [attr.y]="row.y"
+            [attr.height]="BAR_H"
+            [attr.fill]="m.why === 'not-run' ? 'url(#not-run)' : 'url(#not-seen)'"
+            [attr.stroke]="m.why === 'not-run' ? notRun : notSeen"
+          />
+        }
+        @if (row.noData; as n) {
+          <rect
+            class="no-data"
+            [attr.x]="n.x"
+            [attr.width]="n.width"
+            [attr.y]="row.y"
+            [attr.height]="BAR_H"
+            rx="3"
+          />
+        }
+        @for (c of row.changes; track $index) {
+          <g class="marker" [attr.transform]="'translate(' + c + ',' + (row.y - 1) + ')'">
+            <circle r="7" [attr.fill]="change" />
+            <text class="marker-text" y="3.5">⇄</text>
+          </g>
+        }
+        @if (row.lostAt !== null) {
+          <g
+            class="marker"
+            [attr.transform]="'translate(' + row.lostAt + ',' + (row.y + BAR_H / 2) + ')'"
+          >
+            <circle r="7" [attr.fill]="notRun" />
+            <text class="marker-text" y="3.5">✕</text>
+          </g>
+        }
+        @if (row.detourAt !== null) {
+          <g
+            class="marker"
+            [attr.transform]="'translate(' + row.detourAt + ',' + (row.y - 1) + ')'"
+          >
+            <circle r="7" [attr.fill]="change" />
+            <text class="marker-text" y="3.5">↷</text>
+          </g>
+        }
+        <text class="label bus" [attr.x]="row.busX" [attr.y]="BUS_LABEL_Y[i % 2]">
+          {{ row.busLabel }}
+        </text>
+      </g>
+    }
+  </svg>
+</div>
+@if (tip(); as t) {
+  <div class="tooltip" role="status" [style.left.px]="t.left">
+    <strong>{{ t.title }}</strong>
+    <span>Scheduled {{ t.scheduled }}</span>
+    <span>Ran {{ t.actual }}{{ t.buses ? ' · bus ' + t.buses : '' }}</span>
+    <span>Set off {{ t.start }} · last seen {{ t.end }}</span>
+    <span class="kind">{{ t.kind }}</span>
+    @if (t.note) {
+      <span class="note">{{ t.note }}</span>
+    }
+  </div>
+}

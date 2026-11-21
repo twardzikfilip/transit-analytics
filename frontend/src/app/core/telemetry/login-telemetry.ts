@@ -16,7 +16,9 @@ export type LoginOutcome = 'success' | 'invalid_credentials' | 'error';
  */
 export function traceLogin(username: string, login$: Observable<Session>): Observable<Session> {
   return new Observable<Session>((subscriber) => {
-    const span = trace.getTracer(TRACER_NAME).startSpan('auth.login', { attributes: { 'user.name': username } });
+    const span = trace
+      .getTracer(TRACER_NAME)
+      .startSpan('auth.login', { attributes: { 'user.name': username } });
     let ended = false;
     const finish = (outcome: LoginOutcome, role?: string, error?: unknown) => {
       if (ended) return;

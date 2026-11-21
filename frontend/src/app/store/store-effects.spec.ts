@@ -14,7 +14,10 @@ import { RoutesActions } from './routes/routes.actions';
 import { StopsActions } from './stops/stops.actions';
 import { loadStops } from './stops/stops.effects';
 
-function run(effect: (actions$: Actions) => Observable<unknown>, ...dispatched: unknown[]): unknown[] {
+function run(
+  effect: (actions$: Actions) => Observable<unknown>,
+  ...dispatched: unknown[]
+): unknown[] {
   const actions = new Subject<unknown>();
   const out: unknown[] = [];
   effect(actions as unknown as Actions).subscribe((a) => out.push(a));
@@ -27,19 +30,23 @@ describe('store effects', () => {
 
   it('logs in, telling wrong credentials apart from other failures', () => {
     const ok = { login: () => of(session) } as unknown as AuthService;
-    expect(run((a) => login(a, ok), AuthActions.login({ username: 'ann', password: 'x' }))).toEqual([
-      AuthActions.loginSuccess({ session }),
-    ]);
+    expect(run((a) => login(a, ok), AuthActions.login({ username: 'ann', password: 'x' }))).toEqual(
+      [AuthActions.loginSuccess({ session })],
+    );
 
-    const denied = { login: () => throwError(() => new HttpErrorResponse({ status: 401 })) } as unknown as AuthService;
-    expect(run((a) => login(a, denied), AuthActions.login({ username: 'ann', password: 'x' }))).toEqual([
-      AuthActions.loginFailure({ error: 'Invalid username or password' }),
-    ]);
+    const denied = {
+      login: () => throwError(() => new HttpErrorResponse({ status: 401 })),
+    } as unknown as AuthService;
+    expect(
+      run((a) => login(a, denied), AuthActions.login({ username: 'ann', password: 'x' })),
+    ).toEqual([AuthActions.loginFailure({ error: 'Invalid username or password' })]);
 
-    const broken = { login: () => throwError(() => new HttpErrorResponse({ status: 503 })) } as unknown as AuthService;
-    expect(run((a) => login(a, broken), AuthActions.login({ username: 'ann', password: 'x' }))).toEqual([
-      AuthActions.loginFailure({ error: 'Login failed' }),
-    ]);
+    const broken = {
+      login: () => throwError(() => new HttpErrorResponse({ status: 503 })),
+    } as unknown as AuthService;
+    expect(
+      run((a) => login(a, broken), AuthActions.login({ username: 'ann', password: 'x' })),
+    ).toEqual([AuthActions.loginFailure({ error: 'Login failed' })]);
   });
 
   it('saves the session and goes home after logging in; clears it and goes to the login page on logout', () => {
@@ -57,16 +64,24 @@ describe('store effects', () => {
   });
 
   it('loads a page of a timetable list with the query, reporting failures', () => {
-    const page = { content: [], page: { number: 0, size: 20, totalElements: 0, totalPages: 0 } } as unknown as Page<Stop>;
+    const page = {
+      content: [],
+      page: { number: 0, size: 20, totalElements: 0, totalPages: 0 },
+    } as unknown as Page<Stop>;
     const list = vi.fn(() => of(page));
     const query = { page: 0, size: 20, sort: 'name', filters: { q: 'rynek' } };
-    expect(run((a) => loadStops(a, { list } as unknown as StopApi), StopsActions.load({ query }))).toEqual([
-      StopsActions.loadSuccess({ result: page }),
-    ]);
+    expect(
+      run((a) => loadStops(a, { list } as unknown as StopApi), StopsActions.load({ query })),
+    ).toEqual([StopsActions.loadSuccess({ result: page })]);
     expect(list).toHaveBeenCalledWith(0, 20, 'name', { q: 'rynek' });
 
-    const failing = { list: () => throwError(() => new HttpErrorResponse({ status: 500, statusText: 'Error' })) };
-    const out = run((a) => loadStops(a, failing as unknown as StopApi), StopsActions.load({ query }));
+    const failing = {
+      list: () => throwError(() => new HttpErrorResponse({ status: 500, statusText: 'Error' })),
+    };
+    const out = run(
+      (a) => loadStops(a, failing as unknown as StopApi),
+      StopsActions.load({ query }),
+    );
     expect((out[0] as { type: string }).type).toBe(StopsActions.failure.type);
   });
 
@@ -76,6 +91,8 @@ describe('store effects', () => {
     expect(run((a) => importBialystok(a, api), GtfsImportActions.importBialystok())).toEqual([
       GtfsImportActions.importSuccess({ result }),
     ]);
-    expect(run(reloadRoutesAfterImport, GtfsImportActions.importSuccess({ result }))).toEqual([RoutesActions.load()]);
+    expect(run(reloadRoutesAfterImport, GtfsImportActions.importSuccess({ result }))).toEqual([
+      RoutesActions.load(),
+    ]);
   });
 });

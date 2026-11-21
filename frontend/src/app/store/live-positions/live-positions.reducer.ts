@@ -12,7 +12,11 @@ export interface LivePositionsState extends EntityState<LivePosition> {
 
 const adapter = createEntityAdapter<LivePosition>({ selectId: (p) => p.vehicleNumber });
 
-const initialState: LivePositionsState = adapter.getInitialState({ loading: false, error: null, lastUpdated: null });
+const initialState: LivePositionsState = adapter.getInitialState({
+  loading: false,
+  error: null,
+  lastUpdated: null,
+});
 
 export const livePositionsFeature = createFeature({
   name: 'livePositions',

@@ -14,7 +14,9 @@ export const load = createEffect(
       switchMap(({ window, agencies }) =>
         api.report(window, agencies).pipe(
           map((report) => FleetActions.loaded({ report })),
-          catchError((err: HttpErrorResponse) => of(FleetActions.failure({ error: errorMessage(err) }))),
+          catchError((err: HttpErrorResponse) =>
+            of(FleetActions.failure({ error: errorMessage(err) })),
+          ),
         ),
       ),
     ),

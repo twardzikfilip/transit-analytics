@@ -20,7 +20,6 @@ export class Stops {
   protected readonly stops = this.store.selectSignal(stopsFeature.selectAll);
   protected readonly page = this.store.selectSignal(stopsFeature.selectPage);
   protected readonly loading = this.store.selectSignal(stopsFeature.selectLoading);
-  protected readonly error = this.store.selectSignal(stopsFeature.selectError);
 
   protected readonly query = listQuery({
     filters: ['q', 'zoneId'],

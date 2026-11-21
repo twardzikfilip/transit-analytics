@@ -63,7 +63,6 @@ export class TripAnomalies {
 
   protected readonly report = this.store.selectSignal(tripAnomaliesFeature.selectReport);
   protected readonly loading = this.store.selectSignal(tripAnomaliesFeature.selectLoading);
-  protected readonly error = this.store.selectSignal(tripAnomaliesFeature.selectError);
 
   protected readonly defaultPreset = DEFAULT_PRESET;
   protected readonly kinds = KINDS;

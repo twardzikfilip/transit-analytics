@@ -1,22 +1,18 @@
 import {
   Component,
-  DestroyRef,
   ElementRef,
-  afterNextRender,
   computed,
   effect,
-  inject,
   input,
   output,
-  signal,
   untracked,
   viewChild,
 } from '@angular/core';
 import * as L from 'leaflet';
 import { Hotspot } from '../../core/models/models';
 import { escapeHtml } from '../../shared/format/html';
-import { createBaseMap } from '../../shared/map/base-map';
-import { cssColor } from '../../shared/palette';
+import { leafletHost } from '../../shared/map/leaflet-host';
+import { cssColor, INK } from '../../shared/palette';
 import { lostTime, nearText, waitText } from './hotspot-format';
 
 /** Marker radius in px of the hotspot with the most time lost; the others are smaller, by area. */
@@ -36,8 +32,13 @@ export function radiusFor(hours: number, maxHours: number): number {
 @Component({
   selector: 'app-hotspot-map',
   template: `
-    <div #map class="map" role="region" aria-label="Map of stop hotspots by time lost"></div>
-    <div class="legend">
+    <div
+      #map
+      class="leaflet-map"
+      role="region"
+      aria-label="Map of stop hotspots by time lost"
+    ></div>
+    <div class="legend inset">
       <span class="muted">Time lost:</span>
       @for (s of samples(); track s.hours) {
         <span class="item">
@@ -65,33 +66,7 @@ export function radiusFor(hours: number, maxHours: number): number {
       display: block;
     }
 
-    .map {
-      height: 520px;
-    }
-
     @media (max-width: 600px) {
-      .map {
-        height: 360px;
-      }
-    }
-
-    .map ::ng-deep .grey-tiles {
-      filter: grayscale(1) contrast(0.85) brightness(1.05);
-    }
-
-    .legend {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.4rem 1rem;
-      padding: 0.6rem 1rem;
-      font-size: 0.85rem;
-    }
-
-    .item {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
     }
   `,
 })
@@ -102,11 +77,12 @@ export class HotspotMap {
   readonly choose = output<number>();
 
   private readonly mapEl = viewChild.required<ElementRef<HTMLDivElement>>('map');
-  private map?: L.Map;
-  private layer?: L.LayerGroup;
+  private readonly host = leafletHost(() => this.mapEl().nativeElement, {
+    canvas: true,
+    grey: true,
+  });
   private spread?: L.Circle;
   private readonly markers = new Map<number, L.CircleMarker>();
-  private readonly ready = signal(false);
   /** A hotspot clicked on the map: the map stays where it is when it becomes the chosen one. */
   private chosenOnMap: number | null = null;
 
@@ -125,27 +101,21 @@ export class HotspotMap {
   });
 
   constructor() {
-    afterNextRender(() => {
-      this.map = createBaseMap(this.mapEl().nativeElement, { canvas: true, grey: true });
-      this.layer = L.layerGroup().addTo(this.map);
-      this.ready.set(true);
-    });
-    inject(DestroyRef).onDestroy(() => this.map?.remove());
     effect(() => {
       const hotspots = this.hotspots();
-      if (this.ready()) {
+      if (this.host.ready()) {
         this.draw(hotspots);
         untracked(() => this.highlight(this.selected(), false));
       }
     });
     effect(() => {
       const id = this.selected();
-      if (this.ready()) untracked(() => this.highlight(id, true));
+      if (this.host.ready()) untracked(() => this.highlight(id, true));
     });
   }
 
   private draw(hotspots: Hotspot[]): void {
-    const layer = this.layer!;
+    const layer = this.host.layer;
     layer.clearLayers();
     this.markers.clear();
     this.spread = undefined;
@@ -174,13 +144,13 @@ export class HotspotMap {
     }
     // Frame the places where most time is lost.
     for (const h of hotspots.slice(0, 40)) bounds.extend([h.lat, h.lon]);
-    if (bounds.isValid()) this.map!.fitBounds(bounds, { padding: [24, 24], maxZoom: 15 });
+    if (bounds.isValid()) this.host.map.fitBounds(bounds, { padding: [24, 24], maxZoom: 15 });
   }
 
   /** Outlines the chosen hotspot and shows its spread; moves the map to it when it was chosen in the table. */
   private highlight(id: number | null, move: boolean): void {
     for (const [key, marker] of this.markers) {
-      marker.setStyle({ weight: key === id ? 3 : 1, color: key === id ? '#1f2933' : this.color });
+      marker.setStyle({ weight: key === id ? 3 : 1, color: key === id ? INK : this.color });
     }
     this.spread?.remove();
     this.spread = undefined;
@@ -189,14 +159,14 @@ export class HotspotMap {
     this.markers.get(h.id)?.bringToFront();
     this.spread = L.circle([h.lat, h.lon], {
       radius: Math.max(5, h.radiusMeters),
-      color: '#1f2933',
+      color: INK,
       weight: 1,
       dashArray: '4 4',
       fill: false,
       interactive: false,
-    }).addTo(this.layer!);
+    }).addTo(this.host.layer);
     if (move && h.id !== this.chosenOnMap) {
-      this.map!.setView([h.lat, h.lon], Math.max(this.map!.getZoom(), 16));
+      this.host.map.setView([h.lat, h.lon], Math.max(this.host.map.getZoom(), 16));
     }
     this.chosenOnMap = null;
   }

@@ -3,14 +3,20 @@ import { TestBed } from '@angular/core/testing';
 import { Actions } from '@ngrx/effects';
 import { Subject, of, throwError } from 'rxjs';
 import { BrigadeApi } from '../../core/api/api.services';
-import { ActualRun, BrigadeDay, BrigadeDayList, BrigadeTrip } from '../../core/models/models';
+import {
+  ActualRun,
+  BrigadeDay,
+  BrigadeList,
+  BrigadeRef,
+  BrigadeTrip,
+} from '../../core/models/models';
 import { BrigadesActions } from '../../store/brigades/brigades.actions';
 import { loadDay, loadList } from '../../store/brigades/brigades.effects';
 import { brigadesFeature } from '../../store/brigades/brigades.reducer';
 import { renderPage, stateAfter, text } from '../../testing/page-testing';
 import { BrigadeDayChart, fit } from './brigade-day-chart';
 import { TRIP_COLORS, actualSpan, busesText, delayText, share, shortStop } from './brigade-format';
-import { BrigadesPage } from './brigades';
+import { BrigadesPage, groupByLine } from './brigades';
 
 const at = (hhmm: string) => `2026-11-18T${hhmm}:00Z`;
 
@@ -59,16 +65,15 @@ function trip(
   };
 }
 
-const LIST: BrigadeDayList = {
-  serviceDay: '2026-11-18',
+const LIST: BrigadeList = {
   agency: 'BKM',
   agencies: [
     { id: 'BKM', name: 'BKM' },
     { id: 'X', name: 'Other' },
   ],
   brigades: [
-    { brigade: '103-05', lines: ['103'], trips: 4, first: at('05:00'), last: at('09:00') },
-    { brigade: '016-02', lines: ['16'], trips: 2, first: at('06:00'), last: at('07:00') },
+    { brigade: '103-05', lines: ['103'] },
+    { brigade: '016-02', lines: ['16'] },
   ],
 };
 
@@ -103,14 +108,29 @@ function day(): BrigadeDay {
 }
 
 describe('Brigades page', () => {
-  it('loads the brigades of the day and agency in the URL, and the chosen brigade', () => {
+  it("loads every brigade of the URL's agency, and the chosen brigade on the URL's day", () => {
     const { store } = renderPage(BrigadesPage, {}, { date: '2026-11-18', brigade: '103-05' });
-    expect(store.dispatch).toHaveBeenCalledWith(
-      BrigadesActions.loadList({ date: '2026-11-18', agency: null }),
-    );
+    expect(store.dispatch).toHaveBeenCalledWith(BrigadesActions.loadList({ agency: null }));
     expect(store.dispatch).toHaveBeenCalledWith(
       BrigadesActions.loadDay({ brigade: '103-05', date: '2026-11-18' }),
     );
+  });
+
+  it('groups brigades by their own line, in natural order', () => {
+    const ref = (brigade: string, lines: string[]): BrigadeRef => ({ brigade, lines });
+    const groups = groupByLine([
+      ref('103-10', ['103']),
+      ref('N1-01', ['N1']),
+      ref('002-01', ['100', '2']),
+      ref('103-02', ['103', '3']),
+      ref('010-01', ['10']),
+    ]);
+    expect(groups.map((g) => [g.line, g.brigades.map((b) => b.brigade)])).toEqual([
+      ['2', ['002-01']],
+      ['10', ['010-01']],
+      ['103', ['103-02', '103-10']],
+      ['N1', ['N1-01']],
+    ]);
   });
 
   it('offers the brigades to pick from, with the agencies', () => {
@@ -119,15 +139,22 @@ describe('Brigades page', () => {
       stateAfter(brigadesFeature, BrigadesActions.listLoaded({ list: LIST })),
     );
     expect(store.dispatch).toHaveBeenCalledWith(BrigadesActions.clearDay());
+    // One row per line, lines in natural order; every brigade shown.
+    expect([...el.querySelectorAll('.brigade-lines dt')].map(text)).toEqual([
+      'Line 16',
+      'Line 103',
+    ]);
     expect([...el.querySelectorAll('.brigade-chips button')].map(text)).toEqual([
-      '103-05',
       '016-02',
+      '103-05',
     ]);
     expect(el.querySelectorAll('datalist option')).toHaveLength(2);
     expect(text(el.querySelector('datalist option'))).toContain('line 103');
     expect([...el.querySelectorAll('select option')].map(text)).toEqual(['BKM', 'Other']);
-    expect((el.querySelector('input[type=date]') as HTMLInputElement).value).toBe('2026-11-18');
-    expect(text(el.querySelector('.pick'))).toContain('2 run on 2026-11-18');
+    // No day to pick until a brigade is chosen: the list is every brigade, whatever day it runs.
+    expect(el.querySelector('input[type=date]')).toBeNull();
+    expect(el.querySelector('.controls input[type=search]')).not.toBeNull();
+    expect(text(el.querySelector('.pick'))).not.toContain('Pick a brigade');
   });
 
   it("shows the brigade's day: tiles, the timeline and every trip", () => {
@@ -140,6 +167,14 @@ describe('Brigades page', () => {
       ),
       { date: '2026-11-18', brigade: '103-05' },
     );
+    // The day picker belongs to one brigade's view, with the way back to every brigade.
+    expect((el.querySelector('.day-controls input[type=date]') as HTMLInputElement).value).toBe(
+      '2026-11-18',
+    );
+    expect(text(el.querySelector('.day-controls button'))).toContain('All brigades');
+    // Only the way back and the day: searching and the agency belong to the list of every brigade.
+    expect(el.querySelector('input[type=search]')).toBeNull();
+    expect(el.querySelector('select')).toBeNull();
     expect(text(el.querySelector('.tile.alert strong'))).toBe('2');
     expect(text(el.querySelector('.tiles'))).toContain('209, 486');
     expect(text(el.querySelector('.tiles'))).toContain('the bus changed during the day');
@@ -240,9 +275,9 @@ describe('Brigades effects', () => {
       out.push(a),
     );
     loadDay(list as unknown as Actions, api as unknown as BrigadeApi).subscribe((a) => out.push(a));
-    list.next(BrigadesActions.loadList({ date: '2026-11-18', agency: 'BKM' }));
+    list.next(BrigadesActions.loadList({ agency: 'BKM' }));
     list.next(BrigadesActions.loadDay({ brigade: '103-05', date: null }));
-    expect(api.list).toHaveBeenCalledWith('2026-11-18', 'BKM');
+    expect(api.list).toHaveBeenCalledWith('BKM');
     expect(api.day).toHaveBeenCalledWith('103-05', null);
     expect(out).toEqual([
       BrigadesActions.listLoaded({ list: LIST }),

@@ -3,7 +3,7 @@ import { Component, ElementRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { distinctUntilChanged, map } from 'rxjs';
+import { catchError, distinctUntilChanged, map, of } from 'rxjs';
 import { BusLaneApi } from '../../core/api/api.services';
 import { LaneStretchFigures } from '../../core/models/models';
 import { HourChart, HourSeries } from '../../shared/hour-chart/hour-chart';
@@ -19,6 +19,7 @@ import { busLanesFeature } from '../../store/bus-lanes/bus-lanes.reducer';
 import { BusLaneMap } from './bus-lane-map';
 import { LaneDirectionMap } from './lane-direction-map';
 import { delayText, headingText, linesText, slowdownText, speedText } from './lane-format';
+import { kmh } from '../../shared/format/number';
 
 export const DEFAULT_PRESET = '1w';
 
@@ -50,9 +51,14 @@ export class BusLanesPage {
 
   protected readonly report = this.store.selectSignal(busLanesFeature.selectReport);
   protected readonly loading = this.store.selectSignal(busLanesFeature.selectLoading);
-  protected readonly error = this.store.selectSignal(busLanesFeature.selectError);
   /** The lanes themselves; fixed data, fetched once. */
-  protected readonly lanes = toSignal(inject(BusLaneApi).lanes(), { initialValue: null });
+  /** The lanes; null until they arrive, or when they can't be loaded (the error shows as a toast). */
+  protected readonly lanes = toSignal(
+    inject(BusLaneApi)
+      .lanes()
+      .pipe(catchError(() => of(null))),
+    { initialValue: null },
+  );
 
   protected readonly defaultPreset = DEFAULT_PRESET;
   private readonly window$ = inject(ActivatedRoute).queryParamMap.pipe(
@@ -142,7 +148,7 @@ export class BusLanesPage {
   protected readonly slowdownText = slowdownText;
   protected readonly headingText = headingText;
   protected readonly linesText = linesText;
-  protected readonly kmh = (v: number) => `${v.toFixed(1)} km/h`;
+  protected readonly kmh = kmh;
   protected readonly perKm = (v: number) => delayText(v);
 
   constructor() {

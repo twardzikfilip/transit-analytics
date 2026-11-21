@@ -29,7 +29,9 @@ describe('authInterceptor', () => {
 
   it('sends the token with API calls but not with the login itself', () => {
     http.get('/api/vehicles').subscribe();
-    expect(backend.expectOne('/api/vehicles').request.headers.get('Authorization')).toBe('Bearer jwt');
+    expect(backend.expectOne('/api/vehicles').request.headers.get('Authorization')).toBe(
+      'Bearer jwt',
+    );
 
     http.post('/api/auth/login', {}).subscribe();
     expect(backend.expectOne('/api/auth/login').request.headers.has('Authorization')).toBe(false);

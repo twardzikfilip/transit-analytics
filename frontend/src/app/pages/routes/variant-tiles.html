@@ -92,3 +92,32 @@
     }}</span
   >
 </div>
+<div class="card tile regularity">
+  <span class="muted">Regularity</span>
+  @if (regularity(); as r) {
+    <strong>
+      <span class="grade" [attr.data-grade]="grade(r.peakCv)">{{ grade(r.peakCv) ?? '—' }}</span>
+      peak ·
+      <span class="grade" [attr.data-grade]="grade(r.offPeakCv)">{{
+        grade(r.offPeakCv) ?? '—'
+      }}</span>
+      off-peak
+    </strong>
+    <span class="muted small"
+      >how evenly departures are spread on a weekday (TCQSM grades, A best)</span
+    >
+    <ul class="variant-lines stacked">
+      <li [attr.title]="meaning(r.peakCv)">
+        <span class="what"><span class="kind">Peak</span> {{ periods(r.peak) }}</span>
+        <span class="value">{{ meaning(r.peakCv) }}</span>
+      </li>
+      <li [attr.title]="meaning(r.offPeakCv)">
+        <span class="what"><span class="kind">Off-peak</span> {{ periods(r.offPeak) }}</span>
+        <span class="value">{{ meaning(r.offPeakCv) }}</span>
+      </li>
+    </ul>
+  } @else {
+    <strong>—</strong>
+    <span class="muted small">not known for this line</span>
+  }
+</div>

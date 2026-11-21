@@ -31,17 +31,14 @@ public class BrigadeController {
         this.clock = clock;
     }
 
-    @Operation(summary = "The brigades running on a service day",
-            description = "An agency's brigades on the service day (default: today's), each with its lines, trips, "
-                    + "first departure and last arrival; and the agencies to choose from (those whose timetable "
-                    + "names brigades). The agency defaults to the city's (BKM).")
+    @Operation(summary = "Every brigade in the timetable",
+            description = "An agency's brigades, whatever day they run, each with the lines it runs; and every agency "
+                    + "to choose from (one whose timetable doesn't name brigades has none). The agency defaults to the city's (BKM).")
     @GetMapping
-    public BrigadeDto.DayList brigades(
-            @Parameter(description = "Service day, e.g. 2026-11-19; default today's")
-            @RequestParam(required = false) LocalDate date,
+    public BrigadeDto.BrigadeList brigades(
             @Parameter(description = "Agency's timetable id, e.g. BKM; default the city's")
             @RequestParam(required = false) String agency) {
-        return days.brigades(date == null ? days.today() : date, agency);
+        return days.brigades(agency);
     }
 
     @Operation(summary = "A brigade's day: each trip scheduled and what actually ran",

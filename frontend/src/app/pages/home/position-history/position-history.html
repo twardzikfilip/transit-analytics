@@ -1,0 +1,176 @@
+<header class="section-head">
+  <h2>Recorded positions</h2>
+  @if (series()?.summary; as s) {
+    @if (s.last) {
+      <span class="muted">Last recorded {{ s.last | date: 'medium' }}</span>
+    }
+  }
+</header>
+
+<!-- These filters scope this section only (figures, charts, delay distribution), not the live map above. -->
+<app-time-window defaultPreset="24h">
+  <label>
+    Operator
+    <select class="agency" (change)="setAgency($any($event.target).value)">
+      <option [value]="allAgencies" [selected]="agency() === null">All operators</option>
+      @for (a of agencyOptions(); track a) {
+        <option [value]="a" [selected]="agency() === a">{{ a }}</option>
+      }
+    </select>
+  </label>
+  <label>
+    Line
+    <select (change)="setRoute($any($event.target).value)">
+      <option value="" [selected]="route() === ''">All lines</option>
+      @for (r of routes(); track r.route) {
+        <option [value]="r.route" [selected]="route() === r.route">{{ r.route }}</option>
+      }
+      @if (route() && !routes().some((r) => r.route === route())) {
+        <option [value]="route()" selected>{{ route() }}</option>
+      }
+    </select>
+  </label>
+</app-time-window>
+
+@if (series()?.summary; as s) {
+  <div class="figures" [class.loading]="loadingSeries()">
+    <div class="card figure">
+      <span class="muted">Running now</span>
+      <strong>{{ s.latestVehicles | number }}</strong>
+      <span class="muted small">
+        @if (s.latestPoll) {
+          in the poll at {{ s.latestPoll | date: 'HH:mm' }}
+        } @else {
+          no poll in this window
+        }
+      </span>
+    </div>
+    <div class="card figure">
+      <span class="muted">Most at once</span>
+      <strong>{{ s.peakVehicles | number }}</strong>
+      <span class="muted small">largest single poll</span>
+    </div>
+    <div class="card figure">
+      <span class="muted">Different vehicles seen</span>
+      <strong>{{ s.vehicles | number }}</strong>
+      <span class="muted small">over the whole window, as vehicles start and end their runs</span>
+    </div>
+    <div class="card figure">
+      <span class="muted">Mean delay</span>
+      <strong>{{ formatDelay(s.meanDelaySeconds) }}</strong>
+      <span class="muted small">min:s, over {{ s.samples | number }} reports</span>
+    </div>
+  </div>
+}
+
+<section class="card chart-card">
+  <div class="chart-head">
+    <div>
+      <h2>Vehicles running and mean delay</h2>
+      <p class="muted">
+        {{ route() ? 'Line ' + route() : 'All lines' }}, {{ stepLabel() }}. Breaks in a line are
+        periods with no recording.
+      </p>
+    </div>
+    <button type="button" (click)="showTable.set(!showTable())" [attr.aria-pressed]="showTable()">
+      {{ showTable() ? 'Show charts' : 'Show table' }}
+    </button>
+  </div>
+
+  @if (charts(); as c) {
+    @if (showTable()) {
+      <div class="data-table-wrap table-view">
+        <table class="data-table" [class.loading]="loadingSeries()">
+          <thead>
+            <tr>
+              <th>From</th>
+              <th class="num">Vehicles running</th>
+              <th class="num">Most at once</th>
+              <th class="num">Reports</th>
+              <th class="num">Mean delay</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of c.rows; track p.time) {
+              <tr>
+                <td class="time">{{ p.time | date: 'EEE d MMM, HH:mm' }}</td>
+                <td class="num">{{ p.vehicles | number: '1.0-1' }}</td>
+                <td class="num">{{ p.peakVehicles | number }}</td>
+                <td class="num">{{ p.samples | number }}</td>
+                <td class="num">{{ formatDelay(p.meanDelaySeconds) }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5" class="muted">Nothing was recorded in this time range.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <h3>Vehicles running</h3>
+      <app-time-series-chart
+        [points]="c.vehicles"
+        [from]="c.from"
+        [to]="c.to"
+        [stepMs]="c.stepMs"
+        unit="vehicles"
+        label="Vehicles running over time"
+        [loading]="loadingSeries()"
+      />
+      <h3>Mean delay <span class="muted">(below zero: early)</span></h3>
+      <app-time-series-chart
+        [points]="c.delay"
+        [from]="c.from"
+        [to]="c.to"
+        [stepMs]="c.stepMs"
+        unit="min"
+        label="Mean delay over time, in minutes"
+        [format]="delayTooltip"
+        [axisFormat]="delayAxis"
+        [loading]="loadingSeries()"
+      />
+    }
+  } @else {
+    <p class="muted">Loading…</p>
+  }
+</section>
+
+<section class="card delays-card">
+  <h2>
+    Delay distribution <span class="coverage">{{ coverage() }}</span>
+  </h2>
+  <p class="muted">
+    How late vehicles were in the selected time window, line and operator; it changes with the
+    filters above. <em>Vehicles</em> counts each vehicle in every band it was in at some point, so
+    the column doesn't add up to the vehicles seen. <em>Share of time</em> is the share of all
+    reports.
+  </p>
+  <div class="data-table-wrap">
+    <table class="data-table bands" [class.loading]="loadingSeries()">
+      <thead>
+        <tr>
+          <th>Delay</th>
+          <th class="num">Vehicles</th>
+          <th class="num">Reports</th>
+          <th>Share of time</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (b of delayBands(); track b.label) {
+          <tr>
+            <td>{{ b.label }}</td>
+            <td class="num">{{ b.vehicles | number }}</td>
+            <td class="num">{{ b.reports | number }}</td>
+            <td class="share">
+              <span class="bar" aria-hidden="true"
+                ><span [style.width.%]="b.share * 100"></span
+              ></span>
+              <span class="num">{{ formatShare(b.share) }}</span>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</section>

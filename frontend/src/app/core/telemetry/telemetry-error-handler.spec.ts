@@ -1,5 +1,9 @@
 import { SpanStatusCode, trace } from '@opentelemetry/api';
-import { InMemorySpanExporter, SimpleSpanProcessor, TracerProvider } from '@opentelemetry/sdk-trace';
+import {
+  InMemorySpanExporter,
+  SimpleSpanProcessor,
+  TracerProvider,
+} from '@opentelemetry/sdk-trace';
 import { TelemetryErrorHandler } from './telemetry-error-handler';
 import { routeOf } from './route-of';
 
@@ -7,7 +11,9 @@ describe('TelemetryErrorHandler', () => {
   const exporter = new InMemorySpanExporter();
 
   beforeEach(() => {
-    trace.setGlobalTracerProvider(new TracerProvider({ spanProcessors: [new SimpleSpanProcessor({ exporter })] }));
+    trace.setGlobalTracerProvider(
+      new TracerProvider({ spanProcessors: [new SimpleSpanProcessor({ exporter })] }),
+    );
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
   });
 

@@ -1,18 +1,55 @@
-<aside class="sidebar">
-  <div class="brand">Transit Analytics</div>
-  <nav>
-    @for (item of navItems; track item.path) {
-      <a [routerLink]="item.path" routerLinkActive="active">
-        <span class="icon" aria-hidden="true">{{ item.icon }}</span>
-        {{ item.label }}
-      </a>
+<aside id="sidebar" class="sidebar" [class.open]="navOpen()">
+  <div class="brand">
+    <span>Transit Analytics</span>
+    <button type="button" class="nav-close" aria-label="Hide pages" (click)="navOpen.set(false)">
+      <app-icon name="chevronLeft" />
+    </button>
+  </div>
+  <nav aria-label="Pages">
+    @for (group of navGroups; track $index) {
+      @if (group.label) {
+        <h2 class="group">{{ group.label }}</h2>
+      }
+      <ul>
+        @for (item of group.items; track item.path) {
+          <li>
+            <a
+              [routerLink]="item.path"
+              routerLinkActive="active"
+              ariaCurrentWhenActive="page"
+              (click)="navOpen.set(false)"
+            >
+              <app-icon class="icon" [name]="item.icon" />
+              <span>{{ item.label }}</span>
+            </a>
+          </li>
+        }
+      </ul>
     }
   </nav>
 </aside>
 
+<!-- On a phone, the open sidebar covers the page; a tap beside it hides it. -->
+@if (navOpen()) {
+  <div class="backdrop" aria-hidden="true" (click)="navOpen.set(false)"></div>
+}
+
 <div class="main">
   <header class="topbar">
-    <span class="user">{{ username() }} <span class="role">{{ role() }}</span></span>
+    <button
+      type="button"
+      class="nav-toggle"
+      aria-controls="sidebar"
+      [attr.aria-expanded]="navOpen()"
+      [attr.aria-label]="navOpen() ? 'Hide pages' : 'Show pages'"
+      (click)="toggleNav($event)"
+    >
+      <app-icon name="sidebar" />
+    </button>
+    <h1 class="page-title">{{ pageTitle() }}</h1>
+    <span class="user"
+      >{{ username() }} <span class="role">{{ role() }}</span></span
+    >
     <div class="menu">
       <button
         type="button"

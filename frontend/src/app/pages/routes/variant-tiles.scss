@@ -68,3 +68,9 @@
     }
   }
 }
+
+/* The regularity grades in the tile's headline, a little larger than in tables. */
+.regularity strong .grade {
+  font-size: 0.9rem;
+  vertical-align: 0.15em;
+}

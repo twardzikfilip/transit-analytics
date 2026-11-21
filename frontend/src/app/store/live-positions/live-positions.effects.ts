@@ -15,7 +15,9 @@ export const loadLivePositions = createEffect(
       // A new poll cancels one still in flight.
       switchMap(() =>
         api.bialystokPositions().pipe(
-          map((positions) => LivePositionsActions.loadSuccess({ positions, loadedAt: new Date().toISOString() })),
+          map((positions) =>
+            LivePositionsActions.loadSuccess({ positions, loadedAt: new Date().toISOString() }),
+          ),
           catchError(toFailure),
         ),
       ),
