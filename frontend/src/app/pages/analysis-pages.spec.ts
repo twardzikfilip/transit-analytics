@@ -792,7 +792,7 @@ describe('Routes page', () => {
     expect([...el.querySelectorAll('.leaflet-tooltip.depot-label')].map(text)).toEqual([
       'Zajezdnia autobusowa KZK, ul. Pomocna 1',
     ]);
-    const dashed = [...el.querySelectorAll('.map .leaflet-overlay-pane path')].filter(
+    const dashed = [...el.querySelectorAll('.leaflet-map .leaflet-overlay-pane path')].filter(
       (p) => p.getAttribute('stroke-dasharray') === '8 6',
     );
     expect(dashed).toHaveLength(1);
@@ -952,7 +952,7 @@ describe('Routes page', () => {
     ]);
     expect(text(rows[0].querySelector('td:nth-child(2)'))).toBe('Dworzec PKS → Turośń Dolna W2');
     expect(text(el.querySelector('.map-legend'))).toContain('thin and dashed: driven rarely');
-    const paths = () => [...el.querySelectorAll('.map .leaflet-overlay-pane path')];
+    const paths = () => [...el.querySelectorAll('.leaflet-map .leaflet-overlay-pane path')];
     expect(paths().filter((p) => p.getAttribute('stroke-dasharray') === '6 5')).toHaveLength(1);
     // Choosing one draws it thick and fades the rest.
     (rows[1] as HTMLElement).click();

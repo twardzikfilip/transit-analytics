@@ -1,0 +1,114 @@
+:host {
+  display: block;
+  position: relative;
+}
+
+.scroll {
+  overflow-x: auto;
+}
+
+svg {
+  display: block;
+  font-size: 11px;
+}
+
+.grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.tick {
+  fill: var(--muted);
+  text-anchor: middle;
+}
+
+.lane {
+  fill: var(--muted);
+  font-weight: 600;
+}
+
+.label {
+  fill: var(--fg);
+  pointer-events: none;
+}
+
+.label.bus {
+  fill: var(--muted);
+}
+
+.hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.actual {
+  fill-opacity: 0.4;
+  stroke-width: 1.5;
+}
+
+.actual.pending {
+  stroke-dasharray: 3 3;
+  fill-opacity: 0.15;
+}
+
+.missing {
+  stroke-width: 1;
+}
+
+.no-data {
+  fill: none;
+  stroke: var(--muted);
+  stroke-dasharray: 4 3;
+}
+
+.connector {
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+}
+
+.marker {
+  pointer-events: none;
+}
+
+.marker-text {
+  fill: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.trip.dim {
+  opacity: 0.35;
+}
+
+.trip.chosen .scheduled,
+.trip.chosen .actual {
+  stroke: var(--fg);
+  stroke-width: 2;
+}
+
+.tooltip {
+  position: absolute;
+  top: calc(var(--chart-height) + 4px);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  max-width: 22rem;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.82rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  pointer-events: none;
+}
+
+.tooltip .kind {
+  font-weight: 600;
+}
+
+.tooltip .note {
+  color: var(--muted);
+}

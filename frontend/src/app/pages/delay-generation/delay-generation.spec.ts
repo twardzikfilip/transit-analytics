@@ -362,13 +362,17 @@ describe('delay generation effects', () => {
   it('loads the network, or reports the failure', () => {
     const r = report();
     const api = { report: vi.fn(() => of(r)) };
-    expect(run(load, api, DelayGenerationActions.load({ window: { from: 'A', to: 'B' } }))).toEqual([
-      DelayGenerationActions.loaded({ report: r }),
-    ]);
+    expect(run(load, api, DelayGenerationActions.load({ window: { from: 'A', to: 'B' } }))).toEqual(
+      [DelayGenerationActions.loaded({ report: r })],
+    );
     expect(api.report).toHaveBeenCalledWith({ from: 'A', to: 'B' });
-    expect(run(load, { report: failing }, DelayGenerationActions.load({ window: { from: 'A', to: 'B' } }))).toEqual([
-      DelayGenerationActions.failure({ error: 'Down' }),
-    ]);
+    expect(
+      run(
+        load,
+        { report: failing },
+        DelayGenerationActions.load({ window: { from: 'A', to: 'B' } }),
+      ),
+    ).toEqual([DelayGenerationActions.failure({ error: 'Down' })]);
   });
 
   it('loads a line, reports a failure, and does nothing on clear', () => {

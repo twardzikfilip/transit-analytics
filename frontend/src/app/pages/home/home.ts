@@ -8,7 +8,9 @@ import { authFeature } from '../../store/auth/auth.reducer';
   imports: [RouterLink],
   template: `
     <h1>Welcome, {{ username() }}</h1>
-    <p>You are signed in as <strong>{{ role() }}</strong>.</p>
+    <p>
+      You are signed in as <strong>{{ role() }}</strong>.
+    </p>
     <div class="tiles">
       <a class="card" routerLink="/fleet">
         <h2>Fleet</h2>
@@ -22,8 +24,7 @@ import { authFeature } from '../../store/auth/auth.reducer';
   `,
   styles: `
     .tiles {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      --tile-min: 240px;
       gap: 1rem;
       margin-top: 1.5rem;
     }

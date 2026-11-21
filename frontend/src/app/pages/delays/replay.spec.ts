@@ -1,11 +1,5 @@
 import { ReplayResponse } from '../../core/models/models';
-import {
-  averageDelay,
-  defaultSpeed,
-  delayColor,
-  parseReplay,
-  positionsAt,
-} from './replay';
+import { averageDelay, defaultSpeed, delayColor, parseReplay, positionsAt } from './replay';
 
 describe('delay replay', () => {
   const raw: ReplayResponse = {

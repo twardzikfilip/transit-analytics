@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import * as L from 'leaflet';
 import { createBaseMap } from './base-map';
+import { WHITE } from '../palette';
 
 /** A line on a {@link PathMap}: points [lat, lon] in order, its colour (a CSS colour) and its name in the legend. */
 export interface PathLine {
@@ -122,7 +123,7 @@ export class PathMap {
             radius: 7,
             color: line.color,
             weight: 3,
-            fillColor: '#fff',
+            fillColor: WHITE,
             fillOpacity: 1,
           })
             .bindTooltip(line.end)

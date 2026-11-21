@@ -1,20 +1,9 @@
-import {
-  Component,
-  DestroyRef,
-  ElementRef,
-  afterNextRender,
-  computed,
-  effect,
-  inject,
-  input,
-  signal,
-  viewChild,
-} from '@angular/core';
+import { Component, ElementRef, computed, effect, input, viewChild } from '@angular/core';
 import * as L from 'leaflet';
 import { SegmentLoad } from '../../core/models/models';
 import { SEQUENTIAL_BLUE } from '../../shared/palette';
 import { MAX_WIDTH, colorClasses, colorFor, widthFor } from './load-scale';
-import { createBaseMap } from '../../shared/map/base-map';
+import { leafletHost } from '../../shared/map/leaflet-host';
 
 /**
  * Every stretch between two stops on a map (grey base map), drawn by its peak-hour buses: as line width in proportion
@@ -32,9 +21,10 @@ export class LoadMap {
   readonly peakLabel = input('');
 
   private readonly mapEl = viewChild.required<ElementRef<HTMLDivElement>>('map');
-  private map?: L.Map;
-  private layer?: L.LayerGroup;
-  private readonly ready = signal(false);
+  private readonly host = leafletHost(() => this.mapEl().nativeElement, {
+    canvas: true,
+    grey: true,
+  });
 
   protected readonly max = computed(() => Math.max(0, ...this.segments().map((s) => s.peakBuses)));
   protected readonly classes = computed(() => colorClasses(this.max()));
@@ -48,20 +38,14 @@ export class LoadMap {
   protected readonly maxWidth = MAX_WIDTH;
 
   constructor() {
-    afterNextRender(() => {
-      this.map = createBaseMap(this.mapEl().nativeElement, { canvas: true, grey: true });
-      this.layer = L.layerGroup().addTo(this.map);
-      this.ready.set(true);
-    });
-    inject(DestroyRef).onDestroy(() => this.map?.remove());
     effect(() => {
       const segments = this.segments();
-      if (this.ready()) this.draw(segments);
+      if (this.host.ready()) this.draw(segments);
     });
   }
 
   private draw(segments: SegmentLoad[]): void {
-    const layer = this.layer!;
+    const layer = this.host.layer;
     layer.clearLayers();
     const max = this.max();
     const classes = this.classes();
@@ -89,7 +73,7 @@ export class LoadMap {
       // Frame the busier part of the network (the city); suburban ends are a zoom-out away.
       if (s.peakBuses >= max * 0.15) s.points.forEach((p) => bounds.extend(p));
     }
-    if (bounds.isValid()) this.map!.fitBounds(bounds, { padding: [12, 12] });
+    if (bounds.isValid()) this.host.map.fitBounds(bounds, { padding: [12, 12] });
   }
 }
 

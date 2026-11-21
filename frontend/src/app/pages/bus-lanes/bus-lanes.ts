@@ -19,6 +19,7 @@ import { busLanesFeature } from '../../store/bus-lanes/bus-lanes.reducer';
 import { BusLaneMap } from './bus-lane-map';
 import { LaneDirectionMap } from './lane-direction-map';
 import { delayText, headingText, linesText, slowdownText, speedText } from './lane-format';
+import { kmh } from '../../shared/format/number';
 
 export const DEFAULT_PRESET = '1w';
 
@@ -142,7 +143,7 @@ export class BusLanesPage {
   protected readonly slowdownText = slowdownText;
   protected readonly headingText = headingText;
   protected readonly linesText = linesText;
-  protected readonly kmh = (v: number) => `${v.toFixed(1)} km/h`;
+  protected readonly kmh = kmh;
   protected readonly perKm = (v: number) => delayText(v);
 
   constructor() {

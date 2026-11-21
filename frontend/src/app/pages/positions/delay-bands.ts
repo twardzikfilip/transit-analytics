@@ -1,4 +1,5 @@
 import { DelayBand } from '../../core/models/models';
+import { percent } from '../../shared/format/number';
 
 export interface DelayBandRow extends DelayBand {
   label: string;
@@ -20,8 +21,7 @@ export function bandRows(bands: DelayBand[]): DelayBandRow[] {
 
 /** Share as a percentage with one decimal; a small but non-zero share shows as "<0.1%" rather than "0.0%". */
 export function formatShare(share: number): string {
-  if (share > 0 && share < 0.001) return '<0.1%';
-  return `${(share * 100).toFixed(1)}%`;
+  return percent(share, { tiny: true });
 }
 
 /**

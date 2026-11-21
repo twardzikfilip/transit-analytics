@@ -1,15 +1,5 @@
 import { DatePipe } from '@angular/common';
-import {
-  Component,
-  DestroyRef,
-  ElementRef,
-  afterNextRender,
-  computed,
-  effect,
-  inject,
-  signal,
-  viewChild,
-} from '@angular/core';
+import { Component, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { injectSetQuery } from '../../shared/url-query';
@@ -22,7 +12,7 @@ import { livePositionsFeature } from '../../store/live-positions/live-positions.
 import { agencies, delayedOver, ofAgency, parseMinDelay } from './delay-filter';
 import { escapeHtml } from '../../shared/format/html';
 import { formatDelay, localTime } from '../../shared/format/time';
-import { createBaseMap } from '../../shared/map/base-map';
+import { leafletHost } from '../../shared/map/leaflet-host';
 import {
   BOUNDARY_STYLES,
   BUS_LANE_STYLE,
@@ -49,11 +39,14 @@ const REFRESH_MS = 5000;
 })
 export class LiveMap {
   private readonly store = inject(Store);
-  private readonly destroyRef = inject(DestroyRef);
   private readonly mapEl = viewChild.required<ElementRef<HTMLDivElement>>('map');
 
-  private map?: L.Map;
-  private readonly mapReady = signal(false);
+  private readonly host = leafletHost(() => this.mapEl().nativeElement, {
+    setUp: (map) => {
+      this.drawBoundaries(map);
+      this.drawBusLanes(map);
+    },
+  });
   private readonly markers = new Map<string, L.CircleMarker>();
 
   protected readonly positions = this.store.selectSignal(livePositionsFeature.selectAll);
@@ -91,14 +84,6 @@ export class LiveMap {
   private readonly drawBusLanes = injectBusLanes();
 
   constructor() {
-    afterNextRender(() => {
-      this.map = createBaseMap(this.mapEl().nativeElement);
-      this.drawBoundaries(this.map);
-      this.drawBusLanes(this.map);
-      this.mapReady.set(true);
-    });
-    this.destroyRef.onDestroy(() => this.map?.remove());
-
     // Poll through the store: the effect fetches, the reducer holds the latest positions.
     timer(0, REFRESH_MS)
       .pipe(takeUntilDestroyed())
@@ -106,7 +91,7 @@ export class LiveMap {
 
     effect(() => {
       const positions = this.visible();
-      if (this.mapReady()) this.render(positions);
+      if (this.host.ready()) this.render(positions);
     });
   }
 
@@ -141,7 +126,7 @@ export class LiveMap {
   }
 
   private render(positions: LivePosition[]): void {
-    if (!this.map) return;
+    if (!this.host.map) return;
     const seen = new Set<string>();
     for (const p of positions) {
       seen.add(p.vehicleNumber);
@@ -160,7 +145,7 @@ export class LiveMap {
             offset: [0, -6],
           })
           .on('popupopen', () => this.loadSchedule(p.brigade))
-          .addTo(this.map);
+          .addTo(this.host.map);
         this.markers.set(p.vehicleNumber, marker);
       }
     }

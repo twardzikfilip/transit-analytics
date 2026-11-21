@@ -95,10 +95,12 @@ export interface LineTableRow {
  * Lines in a table: a row per kind of line (urban, suburban, night, regional), a column per geometry, and a last
  * column for lines not classified, when there are any. Empty rows are left out; lines keep their order.
  */
-export function lineTable(lines: LineRef[]): {
+export interface LineTable {
   columns: { label: string; description: string }[];
   rows: LineTableRow[];
-} {
+}
+
+export function lineTable(lines: LineRef[]): LineTable {
   const unclassified = lines.some((l) => l.geometry === null);
   const geometries: (RouteGeometry | null)[] = [
     ...GEOMETRIES.map((g) => g.geometry),

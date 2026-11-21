@@ -1,9 +1,7 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import {
   Component,
-  DestroyRef,
   ElementRef,
-  afterNextRender,
   computed,
   effect,
   inject,
@@ -23,22 +21,22 @@ import { BrigadeTimeline } from './brigade-timeline';
 import { EndStops } from './end-stops';
 import { LineVehiclesSection } from './line-vehicles';
 import { clock, duration } from '../../shared/format/time';
-import { cssColor } from '../../shared/palette';
+import { cssColor, INK, WHITE } from '../../shared/palette';
 import {
   CAPACITIES,
   GEOMETRIES,
   SUBTYPES,
-  capacityLabel,
-  geometryLabel,
   lineTable,
   subtypeLabel,
   variantKindLabel,
 } from './format';
-import { SegmentChart } from './segment-chart';
 import { TravelCharts } from './travel-charts';
 import { VariantTiles } from './variant-tiles';
+import { VariantTable } from './variant-table';
+import { SpeedProfiles } from './speed-profiles';
+import { LineChooser } from './line-chooser';
 import { DepotRuns } from './depot-runs';
-import { createBaseMap } from '../../shared/map/base-map';
+import { leafletHost } from '../../shared/map/leaflet-host';
 import { injectBusLanes } from '../../shared/map/bus-lanes';
 import { injectCityBoundaries } from '../../shared/map/city-boundaries';
 import { BOUNDARY_STYLES, BUS_LANE_STYLE, VARIANT_COLORS } from '../../shared/palette';
@@ -58,10 +56,12 @@ export const RARE_SHARE = 0.05;
     RouterLink,
     DatePipe,
     DecimalPipe,
+    LineChooser,
     VariantTiles,
+    VariantTable,
+    SpeedProfiles,
     DepotRuns,
     TravelCharts,
-    SegmentChart,
     BrigadeTimeline,
     EndStops,
     LineVehiclesSection,
@@ -88,10 +88,7 @@ export class RoutesPage {
 
   /** The lines to pick: a row per kind of line, a column per geometry; the buttons show the capacity. */
   protected readonly table = computed(() => lineTable(this.lines()));
-  protected readonly capacities = CAPACITIES;
   protected readonly geometries = GEOMETRIES;
-  protected readonly capacityLabel = capacityLabel;
-  protected readonly geometryLabel = geometryLabel;
   /** What a line's classes mean, for the line title. */
   protected readonly classes = computed(() => {
     const d = this.detail();
@@ -109,7 +106,6 @@ export class RoutesPage {
   protected readonly clock = clock;
   protected readonly duration = duration;
   protected readonly subtypeLabel = subtypeLabel;
-  protected readonly kindLabel = variantKindLabel;
 
   protected readonly mains = computed(
     () => this.detail()?.variants.filter((v) => v.kind === 'main') ?? [],
@@ -141,11 +137,15 @@ export class RoutesPage {
     return !d || d.id !== null || this.recorded() !== null;
   });
 
-  private map?: L.Map;
-  private readonly mapReady = signal(false);
+  private readonly host = leafletHost(() => this.mapEl().nativeElement, {
+    canvas: true,
+    setUp: (map) => {
+      this.drawBoundaries(map);
+      this.drawBusLanes(map);
+    },
+  });
   /** The line on the map, so a recorded variant chosen stays chosen while the same line is shown. */
   private drawnLine: string | null = null;
-  private layers?: L.LayerGroup;
   /** City limits, and the centre lines are classified by (geometry). */
   private readonly drawBoundaries = injectCityBoundaries('lineCentre');
   private readonly drawBusLanes = injectBusLanes();
@@ -165,18 +165,9 @@ export class RoutesPage {
       }
     });
 
-    afterNextRender(() => {
-      this.map = createBaseMap(this.mapEl().nativeElement, { canvas: true });
-      this.drawBoundaries(this.map);
-      this.drawBusLanes(this.map);
-      this.layers = L.layerGroup().addTo(this.map);
-      this.mapReady.set(true);
-    });
-    inject(DestroyRef).onDestroy(() => this.map?.remove());
-
     effect(() => {
       const detail = this.detail();
-      if (this.mapReady() && detail) {
+      if (this.host.ready() && detail) {
         if (detail.id === null) {
           // Drawn again when the line's data changes, not when a variant is chosen (that redraws on its own).
           untracked(() => {
@@ -207,7 +198,7 @@ export class RoutesPage {
    * depot and where the line's brigades start and end their day.
    */
   private drawRoute(detail: LineDetail): void {
-    const layers = this.layers!;
+    const layers = this.host.layer;
     layers.clearLayers();
     const color = cssColor(this.colorVar(detail.subtype), '#2a78d6');
     const depotColor = cssColor('--depot', '#eda100');
@@ -241,7 +232,7 @@ export class RoutesPage {
           radius: 4,
           color,
           weight: 2,
-          fillColor: zone2 ? color : '#ffffff',
+          fillColor: zone2 ? color : WHITE,
           fillOpacity: 1,
         })
           .bindTooltip(`${s.name}${zone2 ? ' · zone 2' : ''}`)
@@ -254,7 +245,7 @@ export class RoutesPage {
     for (const d of detail.depots) {
       for (const ring of d.outlines) {
         const area = L.polygon(ring, {
-          color: '#1f2933',
+          color: INK,
           weight: d.code === own ? 2.5 : 1.5,
           fillColor: depotColor,
           fillOpacity: d.code === own ? 0.6 : 0.35,
@@ -286,7 +277,7 @@ export class RoutesPage {
         radius: 6,
         color: depotColor,
         weight: 3,
-        fillColor: '#ffffff',
+        fillColor: WHITE,
         fillOpacity: 1,
       })
         .bindTooltip(`${l.stop}: ${out ? 'buses enter service' : 'buses leave service'}`)
@@ -294,8 +285,8 @@ export class RoutesPage {
       l.path.forEach((p) => bounds.extend(p));
     }
     // The map may just have been shown again (it is hidden for lines without a timetable).
-    this.map!.invalidateSize();
-    if (bounds.isValid()) this.map!.fitBounds(bounds, { padding: [24, 24] });
+    this.host.map.invalidateSize();
+    if (bounds.isValid()) this.host.map.fitBounds(bounds, { padding: [24, 24] });
   }
   /** Chooses a recorded variant in the list (again: none); the map highlights it and moves to it. */
   protected chooseVariant(id: number): void {
@@ -309,7 +300,7 @@ export class RoutesPage {
    * end. A chosen variant is drawn thick, the others faded.
    */
   private drawRecorded(move = false): void {
-    const layers = this.layers!;
+    const layers = this.host.layer;
     layers.clearLayers();
     const r = this.recorded();
     if (!r) return;
@@ -342,7 +333,7 @@ export class RoutesPage {
           color: v.color,
           weight: 2,
           opacity: faded ? 0.25 : 1,
-          fillColor: filled ? v.color : '#ffffff',
+          fillColor: filled ? v.color : WHITE,
           fillOpacity: faded ? 0.25 : 1,
         })
           .bindTooltip(`${escapeHtml(v.headsign)}: ${filled ? 'runs end' : 'runs start'} here`)
@@ -352,10 +343,10 @@ export class RoutesPage {
       v.path.forEach((p) => bounds.extend(p));
       if (v.id === chosen) v.path.forEach((p) => chosenBounds.extend(p));
     }
-    this.map!.invalidateSize();
+    this.host.map.invalidateSize();
     const frame = chosenBounds.isValid() ? chosenBounds : bounds;
     if ((move || !chosenBounds.isValid()) && frame.isValid()) {
-      this.map!.fitBounds(frame, { padding: [24, 24] });
+      this.host.map.fitBounds(frame, { padding: [24, 24] });
     }
   }
 }

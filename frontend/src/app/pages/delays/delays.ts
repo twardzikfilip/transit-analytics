@@ -3,7 +3,6 @@ import {
   Component,
   DestroyRef,
   ElementRef,
-  afterNextRender,
   computed,
   effect,
   inject,
@@ -34,10 +33,10 @@ import {
   positionsAt,
 } from './replay';
 import { escapeHtml } from '../../shared/format/html';
-import { createBaseMap } from '../../shared/map/base-map';
+import { leafletHost } from '../../shared/map/leaflet-host';
 import { injectBusLanes } from '../../shared/map/bus-lanes';
 import { injectCityBoundaries } from '../../shared/map/city-boundaries';
-import { BOUNDARY_STYLES, BUS_LANE_STYLE } from '../../shared/palette';
+import { BOUNDARY_STYLES, BUS_LANE_STYLE, INK } from '../../shared/palette';
 import {
   BrigadeSchedules,
   brigadeSection,
@@ -119,8 +118,13 @@ export class Delays {
   private lastUiUpdate = 0;
   private animation: number | null = null;
 
-  private map?: L.Map;
-  private readonly mapReady = signal(false);
+  private readonly host = leafletHost(() => this.mapEl().nativeElement, {
+    canvas: true,
+    setUp: (map) => {
+      this.drawBoundaries(map);
+      this.drawBusLanes(map);
+    },
+  });
   private readonly markers = new Map<string, L.CircleMarker>();
   /** Latest shown state per vehicle, for tooltips. */
   private readonly shown = new Map<string, ReplayPosition>();
@@ -132,16 +136,7 @@ export class Delays {
   private readonly drawBusLanes = injectBusLanes();
 
   constructor() {
-    afterNextRender(() => {
-      this.map = createBaseMap(this.mapEl().nativeElement, { canvas: true });
-      this.drawBoundaries(this.map);
-      this.drawBusLanes(this.map);
-      this.mapReady.set(true);
-    });
-    this.destroyRef.onDestroy(() => {
-      this.stop();
-      this.map?.remove();
-    });
+    this.destroyRef.onDestroy(() => this.stop());
 
     // Load whenever the window or lines in the URL change.
     inject(ActivatedRoute)
@@ -162,7 +157,7 @@ export class Delays {
     // A new replay starts from the beginning, at a speed that suits its length, and plays.
     effect(() => {
       const replay = this.replay();
-      if (!replay || !this.mapReady()) return;
+      if (!replay || !this.host.ready()) return;
       untracked(() => {
         this.speed.set(defaultSpeed(replay.to - replay.from));
         this.seek(replay.frames[0]?.time ?? replay.from);
@@ -183,7 +178,6 @@ export class Delays {
   protected allLines(): void {
     this.navigate({ lines: null });
   }
-
 
   // --- playback ------------------------------------------------------------------------------------------------
 
@@ -269,7 +263,7 @@ export class Delays {
   }
 
   private render(positions: ReplayPosition[]): void {
-    if (!this.map) return;
+    if (!this.host.map) return;
     const seen = new Set<string>();
     for (const p of positions) {
       seen.add(p.vehicle);
@@ -282,7 +276,7 @@ export class Delays {
       } else {
         const marker = L.circleMarker([p.latitude, p.longitude], {
           radius: 6,
-          color: '#1f2933',
+          color: INK,
           weight: 1,
           fillColor: color,
           fillOpacity: 0.95,
@@ -296,7 +290,7 @@ export class Delays {
           .on('popupclose', () => {
             if (this.popupVehicle === p.vehicle) this.popupVehicle = null;
           })
-          .addTo(this.map);
+          .addTo(this.host.map);
         this.markers.set(p.vehicle, marker);
       }
     }

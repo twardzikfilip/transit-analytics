@@ -170,7 +170,7 @@
                 >
               </td>
               <td class="num">{{ signed(l.medianGainSeconds) }}</td>
-              <td class="num">{{ (l.gainingShare * 100).toFixed(0) }}%</td>
+              <td class="num">{{ wholePercent(l.gainingShare) }}</td>
               <td class="num">{{ l.generatedMinutesPerDay.toFixed(0) }} min</td>
               <td>
                 {{ worst(l) }}

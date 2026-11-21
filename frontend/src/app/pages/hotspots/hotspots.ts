@@ -8,7 +8,12 @@ import { distinctUntilChanged, map } from 'rxjs';
 import { HotspotsActions } from '../../store/hotspots/hotspots.actions';
 import { hotspotsFeature } from '../../store/hotspots/hotspots.reducer';
 import { TimeWindowPicker } from '../../shared/time-window/time-window-picker';
-import { TimeWindow, readWindow, sameQuery, windowQuery } from '../../shared/time-window/time-window';
+import {
+  TimeWindow,
+  readWindow,
+  sameQuery,
+  windowQuery,
+} from '../../shared/time-window/time-window';
 import { approachText, hourText, linesText, lostTime, nearText, waitText } from './hotspot-format';
 import { HotspotMap } from './hotspot-map';
 

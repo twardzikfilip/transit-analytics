@@ -521,6 +521,11 @@ app-time-window label {
   }
 }
 
+/* A legend with the side padding of a card's content, under a map that runs edge to edge. */
+.legend.inset {
+  padding: 0.6rem 1rem;
+}
+
 .swatch {
   display: inline-block;
   flex: none;
