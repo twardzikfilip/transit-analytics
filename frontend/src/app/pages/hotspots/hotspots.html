@@ -21,10 +21,6 @@
   }
 </app-time-window>
 
-@if (error(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
-}
-
 @if (report(); as r) {
   <p class="summary">
     Buses{{ r.line ? ' on line ' + r.line : '' }} stood still away from stops

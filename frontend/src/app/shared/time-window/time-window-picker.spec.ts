@@ -48,11 +48,18 @@ describe('time window picker', () => {
 
   it('puts presets, a custom window and operators in the URL, clearing the reset parameters', () => {
     const { el, fixture, render } = renderPage(Host, {}, { range: '1h' });
-    const navigate = vi.spyOn(fixture.debugElement.injector.get(Router), 'navigate').mockResolvedValue(true);
-    const merge = (queryParams: Record<string, unknown>) => [[], { queryParams, queryParamsHandling: 'merge' }];
+    const navigate = vi
+      .spyOn(fixture.debugElement.injector.get(Router), 'navigate')
+      .mockResolvedValue(true);
+    const merge = (queryParams: Record<string, unknown>) => [
+      [],
+      { queryParams, queryParamsHandling: 'merge' },
+    ];
 
     (el.querySelectorAll('.presets button')[10] as HTMLButtonElement).click();
-    expect(navigate).toHaveBeenLastCalledWith(...merge({ page: null, range: 'all', from: null, to: null }));
+    expect(navigate).toHaveBeenLastCalledWith(
+      ...merge({ page: null, range: 'all', from: null, to: null }),
+    );
 
     const to = el.querySelectorAll('input[type=datetime-local]')[1] as HTMLInputElement;
     to.value = '2026-11-16T12:00';
@@ -70,7 +77,9 @@ describe('time window picker', () => {
     const boxes = [...el.querySelectorAll('app-agency-picker input')] as HTMLInputElement[];
     expect(boxes.map((b) => b.checked)).toEqual([true, true, true]);
     boxes[1].click();
-    expect(navigate).toHaveBeenLastCalledWith(...merge({ page: null, agency: ['BKM', 'WSCHODEXPRESS'] }));
+    expect(navigate).toHaveBeenLastCalledWith(
+      ...merge({ page: null, agency: ['BKM', 'WSCHODEXPRESS'] }),
+    );
   });
 
   it('has no operator dropdown unless the page gives operators', () => {
@@ -93,7 +102,9 @@ describe('operator dropdown', () => {
 
   it('keeps one operator chosen, selects all again, and closes on a click outside', () => {
     const { el, fixture, render } = renderPage(Host, {}, { agency: 'BKM' });
-    const navigate = vi.spyOn(fixture.debugElement.injector.get(Router), 'navigate').mockResolvedValue(true);
+    const navigate = vi
+      .spyOn(fixture.debugElement.injector.get(Router), 'navigate')
+      .mockResolvedValue(true);
     const toggle = el.querySelector('app-agency-picker button') as HTMLButtonElement;
     expect(text(toggle)).toBe('BKM ▾');
     toggle.click();

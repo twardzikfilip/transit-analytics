@@ -5,6 +5,37 @@
 
 .tile {
   margin: 0;
+  /* One height for every tile. The title and the lines under it stay put; only the list below them scrolls. */
+  height: 200px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  > h2,
+  > p {
+    flex: none;
+  }
+
+  /* The list spans the tile from border to border, with the same room on both sides: a padding, plus the
+     scrollbar's width reserved on both edges (both-edges). The scrollbar takes the right one, by the tile's edge,
+     so it never covers the list, and the list sits evenly between the borders whatever the browser's scrollbar
+     width. */
+  > .mini-list,
+  > app-count-bars {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    margin-right: -1.25rem;
+    margin-left: -1.25rem;
+    padding-right: calc(1.25rem - 10px);
+    padding-left: calc(1.25rem - 10px);
+    scrollbar-gutter: stable both-edges;
+    scrollbar-width: thin;
+  }
+
+  > app-count-bars {
+    display: block;
+  }
 
   h2 {
     margin: 0 0 0.25rem;
@@ -29,14 +60,15 @@
 
 .meter {
   height: 8px;
-  border-radius: 4px;
-  background: var(--hover);
+  border-radius: 999px;
+  background: var(--progress-rest);
   overflow: hidden;
 
   span {
     display: block;
     height: 100%;
-    background: var(--chart-line);
+    border-radius: 999px;
+    background: var(--primary);
   }
 }
 
@@ -122,6 +154,7 @@ button.link {
 .search {
   position: relative;
   max-width: 420px;
+  margin-bottom: 0.75rem;
 
   input {
     width: 100%;
@@ -157,8 +190,12 @@ button.link {
   }
 }
 
+.back {
+  margin-bottom: 1rem;
+}
+
 .detail {
-  margin-top: 1rem;
+  margin-bottom: 1rem;
 
   h4 {
     margin: 1.25rem 0 0.25rem;
@@ -172,10 +209,6 @@ button.link {
 
   h3 {
     margin: 0;
-  }
-
-  .close {
-    margin-left: auto;
   }
 }
 
@@ -210,5 +243,5 @@ button.link {
 }
 
 .story-row > td {
-  background: var(--bg);
+  background: var(--subtle);
 }

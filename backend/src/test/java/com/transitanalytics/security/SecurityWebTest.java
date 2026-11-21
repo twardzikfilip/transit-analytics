@@ -488,9 +488,9 @@ class SecurityWebTest {
     void guestCanReadTheBrigadesOfADayAndOnesDay() throws Exception {
         LocalDate day = LocalDate.of(2026, 11, 18);
         given(brigadeDayService.today()).willReturn(day);
-        given(brigadeDayService.brigades(day, null)).willReturn(new BrigadeDto.DayList(day, "BKM",
+        given(brigadeDayService.brigades(null)).willReturn(new BrigadeDto.BrigadeList("BKM",
                 List.of(new BrigadeDto.Agency("BKM", "BKM")), List.of(new BrigadeDto.BrigadeRef("103-05",
-                List.of("103"), 10, Instant.parse("2026-11-18T04:00:00Z"), Instant.parse("2026-11-18T20:00:00Z")))));
+                List.of("103")))));
         given(brigadeDayService.day("103-05", day)).willReturn(new BrigadeDto.Day("103-05", day,
                 new BrigadeDto.Summary(0, 0, 0, 0, 0, 0, null, null, List.of()), List.of()));
 
@@ -511,7 +511,7 @@ class SecurityWebTest {
                 new NetworkCoverageDto.Place("Białystok", new NetworkCoverageDto.Shape(List.of(), List.of()), 102),
                 List.of(new NetworkCoverageDto.RadiusCoverage(400, new NetworkCoverageDto.Coverage(102, 75, 0.74),
                         new NetworkCoverageDto.Coverage(81, 66, 0.82))),
-                List.of(), 21, List.of(), 0.1, new NetworkCoverageDto.Population(289_217, "2025-12-31", "GUS"),
+                List.of(), 21, List.of(), 5, List.of(), 0.1, new NetworkCoverageDto.Population(289_217, "2025-12-31", "GUS"),
                 new NetworkCoverageDto.Sources("OSM", "2026-11-20", "city"),
                 new NetworkCoverageDto.Belt(5, 20, List.of(), List.of())));
         mvc.perform(get("/api/network-coverage").header("Authorization", bearer("guest", "GUEST")))

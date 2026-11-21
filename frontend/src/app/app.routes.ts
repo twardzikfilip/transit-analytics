@@ -17,7 +17,11 @@ export const routes: Routes = [
       },
       {
         path: 'fleet',
-        title: 'Fleet',
+        // "Vehicle Details" while one bus is shown (?vehicle=id), else "Fleet Overview"; worked out again whenever
+        // the query changes.
+        title: (route) =>
+          route.queryParamMap.get('vehicle') ? 'Vehicle Details' : 'Fleet Overview',
+        runGuardsAndResolvers: 'paramsOrQueryParamsChange',
         loadChildren: () => import('./pages/fleet/fleet.routes').then((m) => m.FLEET_ROUTES),
       },
       // Former pages, now part of Fleet, Routes and Home.
@@ -27,6 +31,8 @@ export const routes: Routes = [
       { path: 'live-map', redirectTo: 'home' },
       { path: 'positions', redirectTo: 'home' },
       { path: 'delays', redirectTo: 'home' },
+      // Line statistics: each line's regularity is now on Routes.
+      { path: 'lines', redirectTo: 'routes' },
       {
         path: 'hotspots',
         title: 'Stop hotspots',
@@ -54,12 +60,6 @@ export const routes: Routes = [
           import('./pages/delay-generation/delay-generation.routes').then(
             (m) => m.DELAY_GENERATION_ROUTES,
           ),
-      },
-      {
-        path: 'lines',
-        title: 'Line statistics',
-        loadChildren: () =>
-          import('./pages/line-stats/line-stats.routes').then((m) => m.LINE_STATS_ROUTES),
       },
       {
         path: 'corridors',

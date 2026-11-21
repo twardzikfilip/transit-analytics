@@ -1,6 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { REGULARITY_GRADES } from '../line-stats/regularity';
+import { REGULARITY_GRADES } from '../../shared/regularity';
 import { CorridorsActions } from '../../store/corridors/corridors.actions';
 import { corridorsFeature } from '../../store/corridors/corridors.reducer';
 import { LoadMap } from './load-map';
@@ -21,7 +21,6 @@ export class Corridors {
 
   protected readonly report = this.store.selectSignal(corridorsFeature.selectReport);
   protected readonly loading = this.store.selectSignal(corridorsFeature.selectLoading);
-  protected readonly error = this.store.selectSignal(corridorsFeature.selectError);
 
   protected readonly corridors = computed(() => this.report()?.corridors ?? []);
   protected readonly oneWay = computed(() => this.corridors().filter((c) => c.oneWay).length);

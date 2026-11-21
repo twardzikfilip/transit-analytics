@@ -24,18 +24,27 @@ describe('live positions reducer', () => {
   });
 
   it('replaces all positions on every successful load', () => {
-    let state = reduce(undefined, LivePositionsActions.loadSuccess({ positions: [bus('230'), bus('009')], loadedAt: 't1' }));
+    let state = reduce(
+      undefined,
+      LivePositionsActions.loadSuccess({ positions: [bus('230'), bus('009')], loadedAt: 't1' }),
+    );
     expect(state.ids).toEqual(['230', '009']);
     expect(state.lastUpdated).toBe('t1');
 
-    state = reduce(state, LivePositionsActions.loadSuccess({ positions: [bus('230', 53.2)], loadedAt: 't2' }));
+    state = reduce(
+      state,
+      LivePositionsActions.loadSuccess({ positions: [bus('230', 53.2)], loadedAt: 't2' }),
+    );
     expect(state.ids).toEqual(['230']);
     expect(state.entities['230']?.latitude).toBe(53.2);
     expect(state.lastUpdated).toBe('t2');
   });
 
   it('keeps the last positions when a load fails, and clears the error on the next success', () => {
-    let state = reduce(undefined, LivePositionsActions.loadSuccess({ positions: [bus('230')], loadedAt: 't1' }));
+    let state = reduce(
+      undefined,
+      LivePositionsActions.loadSuccess({ positions: [bus('230')], loadedAt: 't1' }),
+    );
     state = reduce(state, LivePositionsActions.load());
     expect(state.loading).toBe(true);
 
@@ -44,7 +53,10 @@ describe('live positions reducer', () => {
     expect(state.error).toBe('Live data source unavailable');
     expect(state.loading).toBe(false);
 
-    state = reduce(state, LivePositionsActions.loadSuccess({ positions: [bus('230')], loadedAt: 't2' }));
+    state = reduce(
+      state,
+      LivePositionsActions.loadSuccess({ positions: [bus('230')], loadedAt: 't2' }),
+    );
     expect(state.error).toBeNull();
   });
 });

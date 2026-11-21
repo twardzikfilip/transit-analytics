@@ -31,7 +31,10 @@ function kindWord(p: PlaceDensity): string {
   return p.kind === 'town' ? 'town' : p.kind === 'village' ? 'village' : 'district';
 }
 
-/** A place's tooltip on the density map (HTML): residents, area, and densities with and without its woods. */
+/**
+ * A place's tooltip on the density map (HTML): residents, area, and densities with and without where nobody lives (its
+ * woods and the Biała valley).
+ */
 export function densityTooltip(p: PlaceDensity): string {
   const what = kindWord(p);
   const title =
@@ -41,9 +44,15 @@ export function densityTooltip(p: PlaceDensity): string {
     return `${title}<br>${area(p.areaKm2)}<br>No population figure found`;
   }
   const when = p.kind === 'district' ? '' : ` (${escapeHtml(asOf(p.populationDate))})`;
+  const empty =
+    p.forestKm2 > 0 && p.valleyKm2 > 0
+      ? `the woods and the Biała valley (${area(p.forestKm2 + p.valleyKm2)})`
+      : p.valleyKm2 > 0
+        ? `the Biała valley (${area(p.valleyKm2)})`
+        : `the woods (${area(p.forestKm2)})`;
   const densities =
-    p.forestKm2 > 0
-      ? `${density(p.landDensity)} outside the woods (${area(p.forestKm2)})<br>` +
+    p.forestKm2 > 0 || p.valleyKm2 > 0
+      ? `${density(p.landDensity)} outside ${empty}<br>` +
         `${density(p.density)} over the whole ${what}`
       : density(p.density);
   return `${title}<br>${int(p.population)} residents${when}, ${area(p.areaKm2)}<br>${densities}`;

@@ -76,7 +76,8 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
 - `GET /api/lines/stats` — per line, from the regular weekday timetable: length (main route, km), shortest and
   longest end-to-end travel time, average speed, interval, regularity (coefficient of variation of the gaps between
   departures, graded A–F as in TCQSM) and vehicles in peak (06:30–08:30, 15:00–17:00) and off-peak
-  (08:30–15:00, 17:00–20:00) hours, the same periods as on every timetable page. The definitions are on the Line statistics page.
+  (08:30–15:00, 17:00–20:00) hours, the same periods as on every timetable page. Routes shows the chosen line's
+  regularity from it; the definitions are on the Routes page.
 - **Time windows.** Every report over recorded positions (position history, Fleet, hotspots, delay generation,
   abnormal trips) takes `from` and `to` (ISO-8601 instants, `to` exclusive). Both are optional: `to` defaults to now,
   and without `from` the window starts at the first recorded position (*all time*). `from` after `to` is a 400.
@@ -205,9 +206,10 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   `[lat, lon]`, read by `domain/CityBoundaries` from `places/osm/bialystok.json` (OpenStreetMap relations 2910925 and
   4091287; © OpenStreetMap contributors, ODbL). Drawn on the live map and the other maps.
 - `GET /api/network-coverage` — how much of the city lies within each walking distance of the nearest stop of the
-  city's lines (400, 500 and 600 m, `map/network-coverage.yml`), of all of it and of the part outside its woods; the
-  woods; and each district, and each village and town reaching within 5 km of the city limits, with its area,
-  residents, density (also outside its woods) and share near a stop. Areas are measured on a 10 m grid (20 m over the
+  city's lines (400, 500 and 600 m, `map/network-coverage.yml`), of all of it and of the part outside its woods and
+  the uninhabited valley of the river Biała; the woods and the valley; and each district, and each village and town
+  reaching within 5 km of the city limits, with its area, residents, density (also outside its woods and the valley)
+  and share near a stop. Areas are measured on a 10 m grid (20 m over the
   belt). Worked out again when the timetable's stops change.
 
 ### Reference data about places
@@ -418,8 +420,12 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
   and the hamburger menu (Settings, Logout)
 - Theme: light by default, dark when chosen in Settings (remembered in the browser; `core/theme/theme.ts` sets
   `data-theme` on `<html>`). The colour tokens are at the top of `styles.scss`: Bootstrap's greys, the primary teal
-  `#00a9bc` (sidebar, focus, chosen buttons; the open page 20% darker), and one radius (4 px) and shadow for cards,
+  `#00a9bc` (sidebar, focus, chosen buttons; the open page 20% darker), and one radius (8 px) and shadow for cards,
   inputs, buttons, charts and maps.
+- Errors: every 4xx or 5xx answer from the API (and a server that can't be reached) shows as a toast in the bottom
+  right corner, with the backend's message (`core/api/error-toasts.ts`, ngx-toastr); pages never show the error text
+  themselves. `errors-as-toasts.spec.ts` opens every page with the API failing to check that. ngx-toastr 20 declares
+  Angular 21; `overrides` in `package.json` lets it run on Angular 22 until a release supports it.
 - `store` — NgRx slices with functional effects: `auth`, `livePositions`, `routes` (all routes), and
   `stops`, `trips`, `stopTimes`, which hold one server-side page each (shared helpers in `store/paged.ts`);
   `gtfsImport` tracks the import. Only `auth` is registered at startup; every other slice is registered by its
@@ -446,8 +452,8 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
   different vehicles seen, and the delay distribution in four bands (on time, more than 2, 5 and 10 min). Preset
   ranges refresh with each poll (up to 1 h) or every minute; a change of window loads at once. Store slices
   `livePositions` and `positionHistory`, registered by Home's lazy route. The former pages `/live-map`,
-  `/positions` and `/delays` lead to Home.
-- Line statistics: the figures above for every line in a sortable table (weekday timetable, planned values).
+  `/positions` and `/delays` lead to Home. The former Line statistics page (`/lines`) leads to Routes, where each
+  line's regularity is a tile.
 - Routes: pick a line from a table of kinds of line (rows: urban, suburban, night, regional) by geometry (columns:
   radial, diameter, arcantial, tangential, feeder, and not classified for other operators' lines); a line's button
   shows its capacity class by its border's thickness and its fill (strongest for main lines, dashed for irregular
@@ -511,10 +517,11 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
   hatched grey, markers for a bus change, a lost trip and a detour, and outlines for trips without data or still to
   come. Hover a trip for details; a table lists every trip with the same.
 - Network coverage: for each walking distance (400, 500, 600 m), tiles with the share of the city within it of the
-  nearest bus stop, with and without the woods, and a map (rolls up to its title) of the area near a stop with the
-  woods hatched green; the woods listed. Then the population density: one map of the districts and the villages and
-  towns around the city on one scale (density outside the woods; the woods as nobody living there; places without a
-  figure left white), and tables of the districts, the districts with large woods, and the belt.
+  nearest bus stop, with and without the woods and the Biała valley, and a map (rolls up to its title) of the area
+  near a stop with the woods hatched green and the valley hatched light blue; the woods and the valley's stretches
+  listed. Then the population density: one map of the districts and the villages and towns around the city on one
+  scale (density outside the woods and the valley; those as nobody living there; places without a figure left
+  white), and tables of the districts, the districts with large woods or valley, and the belt.
 - Abnormal trips: the trips of any time window (preset windows up to 12 hours refresh every minute). Cards count the trips by outcome (click a kind to list only those), a table shows the
   lines with abnormal trips, and the trips table lists each abnormal trip with its kind, scheduled times, line and
   brigade, buses, the stops it was seen on, its delays and what happened (filter by line, or by bus). Bus changes show

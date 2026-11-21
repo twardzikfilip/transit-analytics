@@ -57,7 +57,10 @@ export function errorMessage(err: HttpErrorResponse): string {
 }
 
 /** Loads a page whenever `load` is dispatched; a newer query cancels one still in flight. */
-export function pagedLoadEffect<T>(actions: PagedActions<T>, fetch: (query: PageQuery) => Observable<Page<T>>) {
+export function pagedLoadEffect<T>(
+  actions: PagedActions<T>,
+  fetch: (query: PageQuery) => Observable<Page<T>>,
+) {
   return (actions$: Actions) =>
     actions$.pipe(
       ofType(actions.load),
@@ -69,5 +72,3 @@ export function pagedLoadEffect<T>(actions: PagedActions<T>, fetch: (query: Page
       ),
     );
 }
-
-

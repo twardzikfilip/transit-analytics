@@ -73,7 +73,7 @@ export class Sources {
       name: 'BKM timetable (GTFS)',
       url: 'https://komunikacja.bialystok.pl',
       gives: 'City lines, stops, trips, stop times and route shapes.',
-      usedOn: 'Routes, Line statistics, Corridors, Stops, Trips, Stop times; schedules everywhere',
+      usedOn: 'Routes, Corridors, Stops, Trips, Stop times; schedules everywhere',
       refreshed: 'Import in Settings',
     },
     {
@@ -123,7 +123,7 @@ export class Sources {
       name: 'Vehicle models (own list)',
       url: null,
       gives: 'Length, class and capacity of each bus model.',
-      usedOn: 'Fleet, Line statistics, Corridors',
+      usedOn: 'Fleet, Corridors',
       refreshed: 'By hand',
     },
   ];

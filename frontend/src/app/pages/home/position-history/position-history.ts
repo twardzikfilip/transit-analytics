@@ -55,7 +55,6 @@ export class PositionHistory {
   protected readonly loadingSeries = this.store.selectSignal(
     positionHistoryFeature.selectLoadingSeries,
   );
-  protected readonly error = this.store.selectSignal(positionHistoryFeature.selectError);
   protected readonly query = this.store.selectSignal(positionHistoryFeature.selectQuery);
   private readonly delays = this.store.selectSignal(positionHistoryFeature.selectDelays);
   protected readonly delayBands = computed(() => bandRows(this.delays()));

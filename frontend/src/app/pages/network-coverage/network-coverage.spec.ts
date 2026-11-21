@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { of, throwError } from 'rxjs';
 import { NetworkCoverageApi } from '../../core/api/api.services';
 import { AreaShape, NetworkCoverage, PlaceDensity } from '../../core/models/models';
-import { DENSITY_SCALE } from '../../shared/palette';
+import { COVERAGE_STYLE, DENSITY_SCALE } from '../../shared/palette';
 import { renderPage, text, useSvgMaps } from '../../testing/page-testing';
 import {
   asOf,
@@ -38,6 +38,7 @@ function place(name: string, shape: AreaShape, extra: Partial<PlaceDensity> = {}
     populationSource: 'city register',
     density: 5000,
     forestKm2: 0,
+    valleyKm2: 0,
     landKm2: 2,
     landDensity: 5000,
     largeForest: false,
@@ -46,10 +47,10 @@ function place(name: string, shape: AreaShape, extra: Partial<PlaceDensity> = {}
   };
 }
 
-const coverage = (radius: number, share: number, withoutForest: number) => ({
+const coverage = (radius: number, share: number, inhabited: number) => ({
   radiusMeters: radius,
   city: { areaKm2: 101.94, coveredKm2: 101.94 * share, share },
-  withoutForest: { areaKm2: 80.59, coveredKm2: 80.59 * withoutForest, share: withoutForest },
+  withoutWoodsAndValley: { areaKm2: 75.21, coveredKm2: 75.21 * inhabited, share: inhabited },
 });
 
 const DATA: NetworkCoverage = {
@@ -72,6 +73,11 @@ const DATA: NetworkCoverage = {
     { name: 'Smaller woods', named: false, district: null, areaKm2: 0.42, pieces: 30, shapes: [] },
   ],
   forestKm2: 21.35,
+  valley: [
+    { name: 'Stawy Dojlidzkie', areaKm2: 0.88, shape: square(53.11, 23.21, 0.01) },
+    { name: 'West of Białostoczek', areaKm2: 4.5, shape: square(53.15, 23.11, 0.02) },
+  ],
+  valleyKm2: 5.38,
   districts: [
     place('Piaski', square(53.13, 23.15)),
     place('Dojlidy', square(53.13, 23.16), {
@@ -79,8 +85,9 @@ const DATA: NetworkCoverage = {
       population: 3243,
       density: 232,
       forestKm2: 6.95,
-      landKm2: 7.01,
-      landDensity: 463,
+      valleyKm2: 0.5,
+      landKm2: 6.51,
+      landDensity: 498,
       largeForest: true,
     }),
   ],
@@ -137,8 +144,11 @@ describe('Network coverage page', () => {
       'Stops within 600 m',
     ]);
     const tiles = (s: Element) => [...s.querySelectorAll('.tile strong')].map(text);
-    expect(tiles(sections[0])).toEqual(['101.94 km²', '74.0%', '21.35 km²', '82.3%']);
-    expect(tiles(sections[1])).toEqual(['101.94 km²', '81.0%', '21.35 km²', '88.0%']);
+    expect(tiles(sections[0])).toEqual(['101.94 km²', '74.0%', '21.35 km²', '5.38 km²', '82.3%']);
+    expect(tiles(sections[1])).toEqual(['101.94 km²', '81.0%', '21.35 km²', '5.38 km²', '88.0%']);
+    expect(text(sections[0].querySelectorAll('.tile .muted')[8])).toContain(
+      'Without the woods and the Biała valley',
+    );
     expect(text(sections[2].querySelectorAll('.tile .muted')[2])).toBe(
       'Within 600 m of the nearest bus stop',
     );
@@ -149,7 +159,9 @@ describe('Network coverage page', () => {
 
     // Rolling up the 500 m map leaves the others.
     const toggle = sections[1].querySelector('.collapse-toggle') as HTMLButtonElement;
-    expect(text(toggle)).toBe('▾ Area within 500 m of the nearest bus stop, and the woods');
+    expect(text(toggle)).toBe(
+      '▾ Area within 500 m of the nearest bus stop, the woods and the Biała valley',
+    );
     toggle.click();
     fixture.detectChanges();
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
@@ -164,6 +176,19 @@ describe('Network coverage page', () => {
     const id = wood?.getAttribute('fill')?.match(/url\(#(.+)\)/)?.[1];
     expect(el.querySelector(`.leaflet-woods-pane pattern#${id} line`)).not.toBeNull();
     expect(text(el.querySelector('table.data-table tbody tr'))).toContain('Las Solnicki');
+
+    // The Biała valley: light blue, hatched, on its own pane, in the legend and in its own table.
+    const valley = sections[0].querySelector('.leaflet-valley-pane path');
+    expect(valley?.getAttribute('stroke')).toBe(COVERAGE_STYLE.valleyLine);
+    const valleyId = valley?.getAttribute('fill')?.match(/url\(#(.+)\)/)?.[1];
+    expect(
+      sections[0].querySelector(`.leaflet-valley-pane pattern#${valleyId} line`),
+    ).not.toBeNull();
+    expect(text(sections[0].querySelector('app-coverage-map .legend'))).toContain('Biała valley');
+    const stretches = [...el.querySelectorAll('table.valley tbody tr td:first-child')].map(text);
+    expect(stretches).toEqual(['Stawy Dojlidzkie', 'West of Białostoczek']);
+    expect(text(el.querySelector('table.valley tbody tr'))).toContain('88.0 ha');
+    expect(text(el.querySelector('table.valley tfoot'))).toContain('5.38 km²');
   });
 
   it('lists districts and villages with their densities and coverage at each distance', () => {
@@ -180,8 +205,9 @@ describe('Network coverage page', () => {
 
     const wooded = el.querySelectorAll('table.wooded tbody tr');
     expect(wooded).toHaveLength(1);
-    expect(text(wooded[0])).toContain('463 /km²');
-    expect(text(wooded[0])).toContain('+100%');
+    expect(text(wooded[0])).toContain('498 /km²');
+    expect(text(wooded[0])).toContain('50.0 ha');
+    expect(text(wooded[0])).toContain('+115%');
 
     const belt = [...el.querySelectorAll('table.belt tbody tr')];
     expect(belt.map((r) => text(r.querySelector('td')))).toEqual(['Kleosin', 'Turczyn']);
@@ -193,7 +219,7 @@ describe('Network coverage page', () => {
     const fills = [...el.querySelectorAll('.leaflet-fills-pane path')];
     expect(fills.map((f) => f.getAttribute('fill'))).toEqual([
       densityColor(5000),
-      densityColor(463),
+      densityColor(498),
       densityColor(4395),
       '#ffffff',
     ]);
@@ -202,11 +228,13 @@ describe('Network coverage page', () => {
       el.querySelector('app-district-map .leaflet-woods-pane path')?.getAttribute('fill'),
     ).toMatch(/^url\(#no-people-hatch/);
     const legend = text(el.querySelector('app-district-map .legend'));
-    expect(legend).toContain('0, woods');
+    expect(legend).toContain('0: woods, Biała valley');
+    // The valley on the density map, as nobody lives there: woods (2) and the two stretches.
+    expect(el.querySelectorAll('app-district-map .leaflet-woods-pane path')).toHaveLength(4);
     expect(legend).toContain('No figure');
   });
 
-  it('says when it fails', () => {
+  it('leaves a failure to the toast: nothing of it on the page', () => {
     useSvgMaps();
     const { el } = renderPage(NetworkCoveragePage, {}, {}, [
       {
@@ -214,7 +242,8 @@ describe('Network coverage page', () => {
         useValue: { coverage: () => throwError(() => new HttpErrorResponse({ status: 500 })) },
       },
     ]);
-    expect(el.querySelector('[role="alert"]')).not.toBeNull();
+    expect(el.querySelector('[role="alert"], .error')).toBeNull();
+    expect(text(el)).not.toContain('Http failure');
   });
 
   it('colours densities, names steps and dates, and words tooltips', () => {
@@ -229,7 +258,7 @@ describe('Network coverage page', () => {
     expect(asOf('2023-12-31')).toBe('31.12.2023');
     expect(asOf('2012')).toBe('2012');
     expect(densityTooltip(DATA.belt.places[1])).toContain('No population figure found');
-    expect(densityTooltip(DATA.districts[1])).toContain('outside the woods');
+    expect(densityTooltip(DATA.districts[1])).toContain('outside the woods and the Biała valley');
     expect(densityTooltip(DATA.belt.places[0])).toContain('(village, gmina Juchnowiec Kościelny)');
   });
 });

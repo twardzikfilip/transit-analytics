@@ -1,5 +1,9 @@
 import { context, metrics, propagation, trace } from '@opentelemetry/api';
-import { CompositePropagator, W3CBaggagePropagator, W3CTraceContextPropagator } from '@opentelemetry/core';
+import {
+  CompositePropagator,
+  W3CBaggagePropagator,
+  W3CTraceContextPropagator,
+} from '@opentelemetry/core';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { registerInstrumentations } from '@opentelemetry/instrumentation';
@@ -41,12 +45,16 @@ export function initTelemetry(): void {
   const tracerProvider = new TracerProvider({
     resource,
     sampler: new ParentBasedSampler({ root: new TraceIdRatioBasedSampler(config.sampleRatio) }),
-    spanProcessors: [new BatchSpanProcessor({ exporter: new OTLPTraceExporter({ url: `${base}/v1/traces` }) })],
+    spanProcessors: [
+      new BatchSpanProcessor({ exporter: new OTLPTraceExporter({ url: `${base}/v1/traces` }) }),
+    ],
   });
   trace.setGlobalTracerProvider(tracerProvider);
   context.setGlobalContextManager(new StackContextManager().enable());
   propagation.setGlobalPropagator(
-    new CompositePropagator({ propagators: [new W3CTraceContextPropagator(), new W3CBaggagePropagator()] }),
+    new CompositePropagator({
+      propagators: [new W3CTraceContextPropagator(), new W3CBaggagePropagator()],
+    }),
   );
 
   // Never trace the exporter's own requests. No request/response headers or bodies are recorded.
@@ -92,11 +100,26 @@ export function initTelemetry(): void {
 function recordWebVitals(): void {
   const meter = metrics.getMeter(TRACER_NAME);
   const histograms = {
-    LCP: meter.createHistogram('web_vitals.lcp', { unit: 'ms', description: 'Largest Contentful Paint' }),
-    INP: meter.createHistogram('web_vitals.inp', { unit: 'ms', description: 'Interaction to Next Paint' }),
-    FCP: meter.createHistogram('web_vitals.fcp', { unit: 'ms', description: 'First Contentful Paint' }),
-    TTFB: meter.createHistogram('web_vitals.ttfb', { unit: 'ms', description: 'Time to First Byte' }),
-    CLS: meter.createHistogram('web_vitals.cls', { unit: '1', description: 'Cumulative Layout Shift' }),
+    LCP: meter.createHistogram('web_vitals.lcp', {
+      unit: 'ms',
+      description: 'Largest Contentful Paint',
+    }),
+    INP: meter.createHistogram('web_vitals.inp', {
+      unit: 'ms',
+      description: 'Interaction to Next Paint',
+    }),
+    FCP: meter.createHistogram('web_vitals.fcp', {
+      unit: 'ms',
+      description: 'First Contentful Paint',
+    }),
+    TTFB: meter.createHistogram('web_vitals.ttfb', {
+      unit: 'ms',
+      description: 'Time to First Byte',
+    }),
+    CLS: meter.createHistogram('web_vitals.cls', {
+      unit: '1',
+      description: 'Cumulative Layout Shift',
+    }),
   };
   const report = (m: Metric) =>
     histograms[m.name as keyof typeof histograms]?.record(m.value, {

@@ -2,7 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Corridor } from '../../core/models/models';
-import { regularityGrade, regularityMeaning } from '../line-stats/regularity';
+import { regularityGrade, regularityMeaning } from '../../shared/regularity';
 import { CorridorSortKey, DEFAULT_SORT, nextCorridorSort, sortCorridors } from './sort';
 
 /**

@@ -68,12 +68,10 @@ export class DelayGeneration {
   /** A share in whole percent, "42%". */
   protected readonly wholePercent = (share: number) => percent(share, { digits: 0 });
   protected readonly loading = this.store.selectSignal(delayGenerationFeature.selectLoading);
-  protected readonly error = this.store.selectSignal(delayGenerationFeature.selectError);
   protected readonly lineReport = this.store.selectSignal(delayGenerationFeature.selectLine);
   protected readonly lineLoading = this.store.selectSignal(
     delayGenerationFeature.selectLineLoading,
   );
-  protected readonly lineError = this.store.selectSignal(delayGenerationFeature.selectLineError);
 
   protected readonly defaultPreset = DEFAULT_PRESET;
   private readonly params = inject(ActivatedRoute).queryParamMap;

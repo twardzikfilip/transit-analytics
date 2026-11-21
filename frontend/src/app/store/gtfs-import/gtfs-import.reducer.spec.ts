@@ -22,7 +22,10 @@ describe('GTFS import reducer', () => {
     expect(state).toEqual({ running: false, result, error: null });
 
     state = reduce(state, GtfsImportActions.importBialystok());
-    state = reduce(state, GtfsImportActions.importFailure({ error: 'Live data source unavailable' }));
+    state = reduce(
+      state,
+      GtfsImportActions.importFailure({ error: 'Live data source unavailable' }),
+    );
     expect(state.running).toBe(false);
     expect(state.error).toBe('Live data source unavailable');
     expect(state.result).toBe(result);

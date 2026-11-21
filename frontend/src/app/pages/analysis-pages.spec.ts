@@ -6,13 +6,11 @@ import {
   CorridorReport,
   LineDetail,
   LinePerformance,
-  LineStats,
+  LineStatsReport,
   LivePosition,
 } from '../core/models/models';
 import { CorridorsActions } from '../store/corridors/corridors.actions';
 import { corridorsFeature } from '../store/corridors/corridors.reducer';
-import { LineStatsActions } from '../store/line-stats/line-stats.actions';
-import { lineStatsFeature } from '../store/line-stats/line-stats.reducer';
 import { LivePositionsActions } from '../store/live-positions/live-positions.actions';
 import { livePositionsFeature } from '../store/live-positions/live-positions.reducer';
 import { PositionHistoryActions } from '../store/position-history/position-history.actions';
@@ -20,8 +18,9 @@ import { positionHistoryFeature } from '../store/position-history/position-histo
 import { RouteDetailActions } from '../store/route-detail/route-detail.actions';
 import { routeDetailFeature } from '../store/route-detail/route-detail.reducer';
 import { renderPage, stateAfter, useSvgMaps, text } from '../testing/page-testing';
+import { LineStatsActions } from '../store/line-stats/line-stats.actions';
+import { lineStatsFeature } from '../store/line-stats/line-stats.reducer';
 import { Corridors } from './corridors/corridors';
-import { LineStatsPage } from './line-stats/line-stats';
 import { LiveMap } from './home/live-map/live-map';
 import { PositionHistory } from './home/position-history/position-history';
 import { RoutesPage } from './routes/routes';
@@ -34,76 +33,6 @@ afterEach(() => {
   TestBed.resetTestingModule();
   vi.useRealTimers();
   vi.restoreAllMocks();
-});
-
-const line = (route: string, lengthKm: number, peakSpeedKmh: number): LineStats => ({
-  routeId: Number(route),
-  route,
-  color: null,
-  textColor: null,
-  lengthKm,
-  shortestTravelSeconds: 1800,
-  longestTravelSeconds: 2400,
-  peakSpeedKmh,
-  offPeakSpeedKmh: 20,
-  peakIntervalMinutes: 10,
-  offPeakIntervalMinutes: 15,
-  peakRegularityCv: 0.2,
-  offPeakRegularityCv: 0.3,
-  peakVehicles: 5,
-  offPeakVehicles: 4,
-  trips: 60,
-});
-
-describe('Line statistics page', () => {
-  it('loads the report, states the periods and ranks lines in the top 5 tables', () => {
-    const report = {
-      serviceId: 'P_1349',
-      validDays: 59,
-      firstDate: '2026-11-02',
-      lastDate: '2027-01-29',
-      peak: [
-        { from: '06:30', to: '08:30' },
-        { from: '15:00', to: '17:00' },
-      ],
-      offPeak: [
-        { from: '08:30', to: '15:00' },
-        { from: '17:00', to: '20:00' },
-      ],
-      lines: [line('5', 8.6, 18), line('103', 19.8, 25), line('10', 9.9, 16)],
-    };
-    const { el, store } = renderPage(
-      LineStatsPage,
-      stateAfter(lineStatsFeature, LineStatsActions.loaded({ report })),
-    );
-
-    expect(store.dispatch).toHaveBeenCalledWith(LineStatsActions.load());
-    expect(text(el.querySelector('.intro'))).toContain('Peak hours: 06:30–08:30 and 15:00–17:00');
-    expect(text(el.querySelector('.intro'))).toContain('Off-peak: 08:30–15:00 and 17:00–20:00');
-    const longest = [...el.querySelectorAll('.top')].find(
-      (t) => text(t.querySelector('h2')) === 'Top 5 longest lines',
-    )!;
-    expect(
-      [...longest.querySelectorAll('tbody tr')].map((r) => text(r.querySelector('td'))),
-    ).toEqual(['103', '10', '5']);
-  });
-
-  it('says when no timetable is imported', () => {
-    const report = {
-      serviceId: null,
-      validDays: 0,
-      firstDate: null,
-      lastDate: null,
-      peak: [],
-      offPeak: [],
-      lines: [],
-    };
-    const { el } = renderPage(
-      LineStatsPage,
-      stateAfter(lineStatsFeature, LineStatsActions.loaded({ report })),
-    );
-    expect(text(el)).toContain('No timetable yet');
-  });
 });
 
 describe('Important corridors page', () => {
@@ -496,7 +425,7 @@ describe('Live map (Home)', () => {
     ]);
   });
 
-  it('puts the operator in the URL, and resets every filter', () => {
+  it('puts the operator and the kind of line in the URL, and resets every filter', () => {
     const { el, fixture } = renderPage(LiveMap, live(position('230', 600)), { mapMinDelay: '5' }, [
       noSchedules,
     ]);
@@ -511,14 +440,28 @@ describe('Live map (Home)', () => {
       queryParamsHandling: 'merge',
     });
 
+    const lines = el.querySelector('select.line-type') as HTMLSelectElement;
+    expect([...lines.options].map((o) => o.textContent?.trim())).toEqual([
+      'All lines',
+      'Urban',
+      'Suburban',
+      'Regional (4xx)',
+    ]);
+    lines.value = 'suburban';
+    lines.dispatchEvent(new Event('change'));
+    expect(navigate).toHaveBeenLastCalledWith([], {
+      queryParams: { mapLineType: 'suburban' },
+      queryParamsHandling: 'merge',
+    });
+
     (el.querySelector('button.reset') as HTMLButtonElement).click();
     expect(navigate).toHaveBeenLastCalledWith([], {
-      queryParams: { mapMinDelay: null, mapAgency: null },
+      queryParams: { mapMinDelay: null, mapAgency: null, mapLineType: null },
       queryParamsHandling: 'merge',
     });
   });
 
-  it("colours vehicles by delay, outlined by kind of line, and shows the rest of the brigade's day", async () => {
+  it("colours vehicles by delay, with no outline but a shadow, and shows the rest of the brigade's day", async () => {
     useSvgMaps();
     const now = Date.now();
     const at = (minutes: number) => new Date(now + minutes * 60_000).toISOString();
@@ -545,7 +488,9 @@ describe('Live map (Home)', () => {
 
     const marker = el.querySelector('path.leaflet-interactive') as SVGPathElement;
     expect(marker.getAttribute('fill')).toBe('#d7301f');
-    expect(marker.getAttribute('stroke')).toBe('#111111');
+    expect(marker.getAttribute('stroke')).toBe('none');
+    expect(marker.classList).toContain('live-vehicle');
+    expect(text(el.querySelector('.legend'))).not.toContain('Suburban');
 
     // The city limits and centre are drawn under the vehicles, and don't take clicks.
     expect(el.querySelectorAll('.leaflet-city-boundaries-pane path')).toHaveLength(2);
@@ -748,17 +693,33 @@ describe('Routes page', () => {
       segments: [],
       vehicles: { days: 7, vehicles: [], brigades: [], switches: [] },
     } as LinePerformance;
-    const { el, store, fixture } = renderPage(
-      RoutesPage,
-      stateAfter(
+    // Every line's weekday statistics: the chosen line's (route 2) regularity goes in its tile.
+    const lineStats = {
+      serviceId: 'P_1349',
+      validDays: 59,
+      firstDate: '2026-11-02',
+      lastDate: '2027-01-29',
+      peak: [{ from: '06:30', to: '08:30' }],
+      offPeak: [{ from: '08:30', to: '15:00' }],
+      lines: [
+        { routeId: 1, peakRegularityCv: 0.9, offPeakRegularityCv: 0.9 },
+        { routeId: 2, peakRegularityCv: 0.18, offPeakRegularityCv: 0.45 },
+      ],
+    } as unknown as LineStatsReport;
+    const { el, store, fixture } = renderPage(RoutesPage, {
+      ...stateAfter(
         routeDetailFeature,
         RouteDetailActions.linesLoaded({ lines }),
         RouteDetailActions.select({ line: '103' }),
         RouteDetailActions.detailLoaded({ detail }),
         RouteDetailActions.performanceLoaded({ line: '103', performance }),
       ),
-    );
+      ...stateAfter(lineStatsFeature, LineStatsActions.loaded({ report: lineStats })),
+    });
 
+    expect(store.dispatch).toHaveBeenCalledWith(LineStatsActions.load());
+    expect(text(el.querySelector('.tile.regularity strong'))).toBe('A peak · D off-peak');
+    expect(text(el.querySelector('.tile.regularity'))).toContain('Peak 06:30–08:30');
     expect(store.dispatch).toHaveBeenCalledWith(RouteDetailActions.select({ line: '5' }));
     expect(text(el.querySelector('.line-title h2'))).toBe('Piastowska ⇄ Choroszcz/Cmentarz');
     // Every depot's area, the operator's named; a dashed way from it to where brigades start.
@@ -794,7 +755,7 @@ describe('Routes page', () => {
       'Secondary capacity',
     ]);
     expect(text(el.querySelector('.line-classes dd'))).toContain('Two radial legs at an angle');
-    expect(el.querySelectorAll('app-variant-tiles .tile')).toHaveLength(5);
+    expect(el.querySelectorAll('app-variant-tiles .tile')).toHaveLength(6);
     expect(text(el.querySelector('app-travel-charts'))).toContain('109 full runs');
     const links = [...el.querySelectorAll('.line-links a')] as HTMLAnchorElement[];
     expect(links.map(text)).toEqual(['Trips', 'Timetable on the website ↗']);

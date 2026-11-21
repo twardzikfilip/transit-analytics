@@ -15,7 +15,9 @@ export const importBialystok = createEffect(
       exhaustMap(() =>
         api.importBialystok().pipe(
           map((result) => GtfsImportActions.importSuccess({ result })),
-          catchError((err: HttpErrorResponse) => of(GtfsImportActions.importFailure({ error: errorMessage(err) }))),
+          catchError((err: HttpErrorResponse) =>
+            of(GtfsImportActions.importFailure({ error: errorMessage(err) })),
+          ),
         ),
       ),
     ),

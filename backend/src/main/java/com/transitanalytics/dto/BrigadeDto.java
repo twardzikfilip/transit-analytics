@@ -23,12 +23,12 @@ public final class BrigadeDto {
     }
 
     /**
-     * The brigades running on a service day, for picking one.
+     * Every brigade in the timetable, whatever day it runs, for picking one.
      *
      * @param agency    the agency they are of (its timetable id, e.g. BKM)
-     * @param agencies  agencies whose timetable names brigades, that day
+     * @param agencies  every agency in the timetable; one whose timetable doesn't name brigades has none
      */
-    public record DayList(LocalDate serviceDay, String agency, List<Agency> agencies, List<BrigadeRef> brigades) {
+    public record BrigadeList(String agency, List<Agency> agencies, List<BrigadeRef> brigades) {
     }
 
     /** An agency to pick: its timetable id and name. */
@@ -38,10 +38,9 @@ public final class BrigadeDto {
     /**
      * A brigade to pick.
      *
-     * @param lines the lines it runs that day
-     * @param first its first departure, {@code last} its last arrival
+     * @param lines the lines it runs, on any day
      */
-    public record BrigadeRef(String brigade, List<String> lines, int trips, Instant first, Instant last) {
+    public record BrigadeRef(String brigade, List<String> lines) {
     }
 
     /**

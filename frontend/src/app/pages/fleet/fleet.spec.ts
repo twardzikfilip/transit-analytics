@@ -1,4 +1,5 @@
-import { Router } from '@angular/router';
+import { ParamMap, Router, convertToParamMap } from '@angular/router';
+import { routes } from '../../app.routes';
 import { FleetReport, FleetVehicle, VehicleDetail, VehicleUsage } from '../../core/models/models';
 import { FleetActions } from '../../store/fleet/fleet.actions';
 import { fleetFeature } from '../../store/fleet/fleet.reducer';
@@ -266,7 +267,11 @@ describe('Fleet page', () => {
     expect(text(el.querySelector('.breakdowns .hero'))).toBe('1');
     expect(text(el.querySelector('.breakdowns li'))).toContain('not back yet (1.2 days)');
     expect(el.querySelectorAll('app-bar-chart rect.bar')).toHaveLength(3);
-    expect(text(el.querySelector('.vehicle'))).toContain('Search for a bus');
+    // The search comes first, above the time window; no bus is shown, so this is the overview.
+    const order = [...el.querySelectorAll('.search, app-time-window')].map((e) => e.tagName);
+    expect(order).toEqual(['DIV', 'APP-TIME-WINDOW']);
+    expect(el.querySelector('.detail')).toBeNull();
+    expect(el.querySelector('button.back')).toBeNull();
     expect(text(el.querySelector('app-agency-picker'))).toContain('BKM');
   });
 
@@ -402,6 +407,11 @@ describe('Fleet page', () => {
       ),
       { ...URL, vehicle: '1' },
     );
+    // The bus's details instead of the overview: no tiles or fleet chart; the search and window stay on top.
+    expect(el.querySelector('.tiles')).toBeNull();
+    expect(text(el)).not.toContain('Hours in service per bus');
+    expect(el.querySelector('.search input')).not.toBeNull();
+    expect(el.querySelector('app-time-window')).not.toBeNull();
     expect(text(el.querySelector('.detail-header'))).toContain('Solaris Urbino 12');
     expect(text(el.querySelector('.detail-header'))).toContain(
       '3.5 h in service on 2 days · lines 11, 103',
@@ -427,7 +437,7 @@ describe('Fleet page', () => {
     const navigate = vi
       .spyOn(fixture.debugElement.injector.get(Router), 'navigate')
       .mockResolvedValue(true);
-    (el.querySelector('.detail .close') as HTMLButtonElement).click();
+    (el.querySelector('button.back') as HTMLButtonElement).click();
     expect(navigate).toHaveBeenLastCalledWith([], {
       queryParams: { vehicle: null },
       queryParamsHandling: 'merge',
@@ -479,8 +489,17 @@ describe('Fleet page', () => {
       URL,
     );
     expect(text(el.querySelector('[role=status]'))).toBe('Loading…');
-    expect(text(el.querySelector('.vehicle [role=alert]'))).toBe('Vehicle 9 not found');
+    // The error itself is a toast (core/api/error-toasts.ts), not text on the page.
+    expect(text(el)).not.toContain('Vehicle 9 not found');
     expect(text(el.querySelector('.tile .mini-list'))).toBe('No bus in service in this window.');
     expect(text(el)).toContain('No buses.');
+  });
+
+  it('is titled Fleet Overview, or Vehicle Details while a bus is shown', () => {
+    const fleet = routes.flatMap((r) => r.children ?? []).find((r) => r.path === 'fleet');
+    const title = fleet?.title as (route: { queryParamMap: ParamMap }) => string;
+    expect(title({ queryParamMap: convertToParamMap({}) })).toBe('Fleet Overview');
+    expect(title({ queryParamMap: convertToParamMap({ vehicle: '7' }) })).toBe('Vehicle Details');
+    expect(fleet?.runGuardsAndResolvers).toBe('paramsOrQueryParamsChange');
   });
 });

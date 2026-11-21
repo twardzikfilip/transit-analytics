@@ -73,22 +73,47 @@ describe('Routes page parts', () => {
 
     const el = render(VariantTiles, { detail });
 
-    expect(el.querySelectorAll('.tile')).toHaveLength(5);
+    expect(el.querySelectorAll('.tile')).toHaveLength(6);
     expect(text(el.querySelector('.tile strong'))).toBe('9.9 km');
     expect(el.querySelectorAll('.tile:first-child li')).toHaveLength(3);
     expect(text(el.querySelector('.tile:first-child li.depot'))).toContain('Wiejska');
     expect(text(el)).toContain('only on longer variants');
     expect(text(el)).toContain('15 trips a weekday');
-    expect(text(el.querySelector('.tile:last-child strong'))).toBe('2');
+    const brigades = () => [...el.querySelectorAll('.tile')][4];
+    expect(text(brigades().querySelector('strong'))).toBe('2');
+    // Regularity not known yet (or for a line without weekday statistics).
+    expect(text(el.querySelector('.tile.regularity strong'))).toBe('—');
 
     // Another operator's timetable without brigades: says so instead of 0.
     const other = render(VariantTiles, {
       detail: { ...detail, brigades: [], brigadesKnown: false },
     });
-    expect(text(other.querySelector('.tile:last-child strong'))).toBe('Not given');
-    expect(text(other.querySelector('.tile:last-child .small'))).toBe(
+    const otherBrigades = [...other.querySelectorAll('.tile')][4];
+    expect(text(otherBrigades.querySelector('strong'))).toBe('Not given');
+    expect(text(otherBrigades.querySelector('.small'))).toBe(
       "15 trips a weekday; this timetable doesn't say which bus runs each trip",
     );
+
+    // Its regularity in peak and off-peak hours, graded, with when those hours are.
+    const regular = render(VariantTiles, {
+      detail,
+      regularity: {
+        peakCv: 0.28,
+        offPeakCv: 0.6,
+        peak: [
+          { from: '06:30', to: '08:30' },
+          { from: '15:00', to: '17:00' },
+        ],
+        offPeak: [{ from: '08:30', to: '15:00' }],
+      },
+    });
+    const tile = regular.querySelector('.tile.regularity')!;
+    expect(text(tile.querySelector('strong'))).toBe('B peak · E off-peak');
+    expect(tile.querySelector('.grade')?.getAttribute('data-grade')).toBe('B');
+    const rows = [...tile.querySelectorAll('li')].map(text);
+    expect(rows[0]).toContain('Peak 06:30–08:30, 15:00–17:00');
+    expect(rows[0]).toContain('Grade B: even (CV 0.28)');
+    expect(rows[1]).toContain('Grade E: very uneven (CV 0.60)');
   });
 
   it('lists depot runs with their brigade and direction, or says there are none', () => {

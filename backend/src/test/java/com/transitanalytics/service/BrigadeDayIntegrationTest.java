@@ -56,6 +56,13 @@ class BrigadeDayIntegrationTest {
         timetable.trip(route, "ITB-01_IT_BD_2", 0, "IT-BD 4", "IT-BD-S", "07:30", 6, stops);
         timetable.trip(route, "ITB-01_IT_BD_3", 0, "IT-BD 4", "IT-BD-S", "08:00", 6, stops);
         timetable.trip(route, "ITB-02_IT_BD_1", 0, "IT-BD 4", "IT-BD-S", "07:00", 6, stops);
+        // Another operator's feed, whose timetable doesn't name brigades.
+        long otherRoute = timetable.route("it:IT-BX", "IT-BX");
+        long otherAgency = jdbc.queryForObject("""
+                INSERT INTO agency (gtfs_id, name, url, timezone)
+                VALUES ('it:IT-BXA', 'Other operator', 'https://example.org', 'Europe/Warsaw') RETURNING id""", Long.class);
+        jdbc.update("UPDATE route SET agency_id = ? WHERE id = ?", otherAgency, otherRoute);
+        timetable.trip(otherRoute, "it:IT-BX-1", 0, "IT-BD 4", "IT-BD-S", "07:00", 6, stops);
 
         long a = vehicle("IT-BD-A");
         long b = vehicle("IT-BD-B");
@@ -70,15 +77,17 @@ class BrigadeDayIntegrationTest {
 
         var service = new BrigadeDayService(jdbc, anomalies, Clock.fixed(local("09:00:00"), ZoneOffset.UTC));
 
-        BrigadeDto.DayList list = service.brigades(DAY, "IT-BDA");
+        BrigadeDto.BrigadeList list = service.brigades("IT-BDA");
         assertThat(list.agency()).isEqualTo("IT-BDA");
         assertThat(list.agencies()).extracting(BrigadeDto.Agency::id).contains("IT-BDA");
         assertThat(list.brigades()).extracting(BrigadeDto.BrigadeRef::brigade).containsExactly("ITB-01", "ITB-02");
         assertThat(list.brigades().get(0).lines()).containsExactly("IT-BD");
-        assertThat(list.brigades().get(0).trips()).isEqualTo(3);
-        assertThat(list.brigades().get(0).first()).isEqualTo(local("07:00:00"));
-        assertThat(list.brigades().get(0).last()).isEqualTo(local("08:06:00"));
-        assertThat(service.brigades(DAY, "IT-NONE").agency()).as("unknown: the main agency").isNotEqualTo("IT-NONE");
+        assertThat(service.brigades("IT-NONE").agency()).as("unknown: the main agency").isNotEqualTo("IT-NONE");
+        BrigadeDto.BrigadeList unnamed = service.brigades("it:IT-BXA");
+        assertThat(unnamed.agencies()).as("every agency is offered").extracting(BrigadeDto.Agency::id)
+                .contains("IT-BDA", "it:IT-BXA");
+        assertThat(unnamed.agency()).isEqualTo("it:IT-BXA");
+        assertThat(unnamed.brigades()).as("its timetable names no brigades").isEmpty();
 
         BrigadeDto.Day day = service.day("ITB-01", DAY);
         assertThat(day.trips()).extracting(BrigadeDto.Trip::kind).containsExactly("completed", "lost", "completed");
@@ -144,11 +153,8 @@ class BrigadeDayIntegrationTest {
         }
 
         var service = new BrigadeDayService(jdbc, anomalies, Clock.fixed(fourAm, ZoneOffset.UTC));
-        assertThat(service.brigades(DAY, "IT-BNA").brigades()).singleElement().satisfies(b -> {
-            assertThat(b.brigade()).isEqualTo("ITN-01");
-            assertThat(b.first()).isEqualTo(tuesday.plusSeconds(10 * 60));
-            assertThat(b.last()).isEqualTo(tuesday.plusSeconds(3 * 3600 + 4 * 60));
-        });
+        assertThat(service.brigades("IT-BNA").brigades()).extracting(BrigadeDto.BrigadeRef::brigade)
+                .as("listed whatever day it runs").containsExactly("ITN-01");
 
         BrigadeDto.Day day = service.day("ITN-01", DAY);
         assertThat(day.trips()).extracting(BrigadeDto.Trip::departure)

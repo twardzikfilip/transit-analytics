@@ -34,8 +34,8 @@ class NetworkCoverageServiceTest {
         assertThat(NONE.districts().stream().mapToDouble(PlaceDensity::areaKm2).sum())
                 .isCloseTo(NONE.city().areaKm2(), within(0.5));
         assertThat(NONE.forestKm2()).isPositive();
-        assertThat(NONE.coverages().get(0).withoutForest().areaKm2())
-                .isCloseTo(NONE.city().areaKm2() - NONE.forestKm2(), within(0.01));
+        assertThat(NONE.coverages().get(0).withoutWoodsAndValley().areaKm2())
+                .isCloseTo(NONE.city().areaKm2() - NONE.forestKm2() - NONE.valleyKm2(), within(0.01));
         assertThat(NONE.forests()).extracting(NetworkCoverageDto.Forest::name).contains("Las Zwierzyniecki");
         assertThat(NONE.forests().stream().mapToDouble(NetworkCoverageDto.Forest::areaKm2).sum())
                 .isCloseTo(NONE.forestKm2(), within(0.05));
@@ -44,8 +44,25 @@ class NetworkCoverageServiceTest {
         assertThat(dojlidy.kind()).isEqualTo("district");
         assertThat(dojlidy.largeForest()).isTrue();
         assertThat(dojlidy.landDensity()).isGreaterThan(dojlidy.density());
-        assertThat(dojlidy.landKm2()).isCloseTo(dojlidy.areaKm2() - dojlidy.forestKm2(), within(0.002));
+        assertThat(dojlidy.landKm2())
+                .isCloseTo(dojlidy.areaKm2() - dojlidy.forestKm2() - dojlidy.valleyKm2(), within(0.003));
         assertThat(dojlidy.populationSource()).contains("2025");
+    }
+
+    @Test
+    void leavesTheBialaValleyOutLikeTheWoods() {
+        // Two stretches: from Piastowska to Stawy Dojlidzkie, and from Białostoczek west and north.
+        assertThat(NONE.valley()).hasSize(2);
+        assertThat(NONE.valley()).allSatisfy(v -> assertThat(v.areaKm2()).isBetween(0.5, 6.0));
+        assertThat(NONE.valleyKm2()).isCloseTo(
+                NONE.valley().stream().mapToDouble(NetworkCoverageDto.ValleyStretch::areaKm2).sum(), within(0.002));
+        // The ponds are in Dojlidy, the meadows by Bacieczki in Wysoki Stoczek; the centre has none.
+        assertThat(place(NONE.districts(), "Dojlidy").valleyKm2()).isGreaterThan(0.3);
+        assertThat(place(NONE.districts(), "Wysoki Stoczek").valleyKm2()).isGreaterThan(0.3);
+        assertThat(place(NONE.districts(), "Centrum").valleyKm2()).isZero();
+        assertThat(NONE.districts().stream().mapToDouble(PlaceDensity::valleyKm2).sum())
+                .isCloseTo(NONE.valleyKm2(), within(0.05));
+        assertThat(NONE.belt().places()).allSatisfy(p -> assertThat(p.valleyKm2()).isZero());
     }
 
     @Test

@@ -6,7 +6,8 @@ import { HasRoleDirective } from './has-role.directive';
 
 @Component({
   imports: [HasRoleDirective],
-  template: `<button *appHasRole="'ADMIN'">Delete</button><span *appHasRole="['ADMIN', 'GUEST']">View</span>`,
+  template: `<button *appHasRole="'ADMIN'">Delete</button
+    ><span *appHasRole="['ADMIN', 'GUEST']">View</span>`,
 })
 class Host {}
 

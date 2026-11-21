@@ -9,7 +9,15 @@ import { timer } from 'rxjs';
 import { LivePosition } from '../../../core/models/models';
 import { LivePositionsActions } from '../../../store/live-positions/live-positions.actions';
 import { livePositionsFeature } from '../../../store/live-positions/live-positions.reducer';
-import { agencies, delayedOver, ofAgency, parseMinDelay } from './delay-filter';
+import {
+  LINE_TYPES,
+  agencies,
+  delayedOver,
+  ofAgency,
+  ofLineType,
+  parseLineType,
+  parseMinDelay,
+} from './delay-filter';
 import { escapeHtml } from '../../../shared/format/html';
 import { formatDelay, localTime } from '../../../shared/format/time';
 import { leafletHost } from '../../../shared/map/leaflet-host';
@@ -18,9 +26,7 @@ import {
   BUS_LANE_STYLE,
   DELAY_STOPS,
   NO_DELAY_COLOR,
-  SUBTYPE_OUTLINES,
   delayColor,
-  subtypeOutline,
 } from '../../../shared/palette';
 import {
   BrigadeSchedules,
@@ -56,29 +62,44 @@ export class LiveMap {
   protected readonly positions = this.store.selectSignal(livePositionsFeature.selectAll);
   protected readonly count = this.store.selectSignal(livePositionsFeature.selectTotal);
   protected readonly lastUpdated = this.store.selectSignal(livePositionsFeature.selectLastUpdated);
-  protected readonly error = this.store.selectSignal(livePositionsFeature.selectError);
 
   private readonly setQuery = injectSetQuery();
   private readonly params = toSignal(inject(ActivatedRoute).queryParamMap, { requireSync: true });
   /**
    * The map's own filters, kept in the URL under their own names, so the time window and operator of the recorded
-   * positions below it never change the map: "delay over N minutes" (?mapMinDelay=5; null = all vehicles) and the
-   * operator (?mapAgency=BKM; '' = all operators).
+   * positions below it never change the map: "delay over N minutes" (?mapMinDelay=5; null = all vehicles), the
+   * operator (?mapAgency=BKM; '' = all operators) and the kind of line (?mapLineType=suburban; null = all lines).
    */
   protected readonly minDelay = computed(() => parseMinDelay(this.params().get('mapMinDelay')));
   protected readonly agency = computed(() => this.params().get('mapAgency') ?? '');
+  protected readonly lineType = computed(() => parseLineType(this.params().get('mapLineType')));
   /** Operators on the map now, plus the selected one even when none of its vehicles is reporting. */
   protected readonly agencies = computed(() => agencies(this.positions(), this.agency()));
-  protected readonly filtering = computed(() => this.minDelay() !== null || this.agency() !== '');
+  protected readonly filtering = computed(
+    () => this.minDelay() !== null || this.agency() !== '' || this.lineType() !== null,
+  );
+  /** The filters in force, for the header: "BKM, suburban lines, delayed over 5 min". */
+  protected readonly filterSummary = computed(() =>
+    [
+      this.agency(),
+      this.lineType() && `${this.lineType()} lines`,
+      this.minDelay() !== null && `delayed over ${this.minDelay()} min`,
+    ]
+      .filter(Boolean)
+      .join(', '),
+  );
   /** The vehicles on the map. */
   protected readonly visible = computed(() =>
-    delayedOver(ofAgency(this.positions(), this.agency()), this.minDelay()),
+    delayedOver(
+      ofLineType(ofAgency(this.positions(), this.agency()), this.lineType()),
+      this.minDelay(),
+    ),
   );
 
   /** Legend. */
   protected readonly delayStops = DELAY_STOPS;
   protected readonly noDelayColor = NO_DELAY_COLOR;
-  protected readonly outlines = SUBTYPE_OUTLINES;
+  protected readonly lineTypes = LINE_TYPES;
   protected readonly boundaries = [
     BOUNDARY_STYLES.city,
     BOUNDARY_STYLES.centre,
@@ -106,9 +127,13 @@ export class LiveMap {
     this.setQuery({ mapAgency: agency || null });
   }
 
+  protected setLineType(type: string): void {
+    this.setQuery({ mapLineType: parseLineType(type) });
+  }
+
   /** Clears every filter: all vehicles on the map again. */
   protected resetFilters(): void {
-    this.setQuery({ mapMinDelay: null, mapAgency: null });
+    this.setQuery({ mapMinDelay: null, mapAgency: null, mapLineType: null });
   }
 
   /** Fetches a brigade's schedule for its popup, unless a recent one is at hand; the popup updates when it arrives. */
@@ -138,14 +163,20 @@ export class LiveMap {
     for (const p of positions) {
       seen.add(p.vehicleNumber);
       const latLng: L.LatLngExpression = [p.latitude, p.longitude];
-      // Fill: delay, as on the Delays map. Outline: kind of line.
-      const style = { color: subtypeOutline(p.subtype), fillColor: delayColor(p.delaySeconds) };
+      // Fill: delay. No outline: a shadow (.live-vehicle in styles.scss) lifts each vehicle off the map.
+      const style = { fillColor: delayColor(p.delaySeconds) };
       const existing = this.markers.get(p.vehicleNumber);
       if (existing) {
         existing.setLatLng(latLng).setStyle(style).setPopupContent(this.popup(p));
         existing.off('popupopen').on('popupopen', () => this.loadSchedule(p.brigade));
       } else {
-        const marker = L.circleMarker(latLng, { radius: 7, ...style, fillOpacity: 0.9, weight: 3 })
+        const marker = L.circleMarker(latLng, {
+          radius: 7,
+          ...style,
+          stroke: false,
+          fillOpacity: 0.9,
+          className: 'live-vehicle',
+        })
           .bindPopup(this.popup(p), { maxWidth: 320 })
           .bindTooltip(escapeHtml(p.routeName ?? p.vehicleNumber), {
             direction: 'top',

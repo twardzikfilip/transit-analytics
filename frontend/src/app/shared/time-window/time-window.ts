@@ -45,7 +45,6 @@ export interface TimeWindow {
   preset: string | null;
 }
 
-
 /** The window in the URL: a valid custom from/to, else the preset, else the page's default preset. */
 export function resolveWindow(
   params: { range: string | null; from: string | null; to: string | null },
@@ -63,7 +62,11 @@ export function resolveWindow(
     WINDOW_PRESETS[6];
   const step = preset.ms !== null && preset.ms <= SHORT_WINDOW_MS ? POLL_MS : MINUTE;
   const end = new Date(Math.floor(now.getTime() / step) * step + step);
-  return { from: preset.ms === null ? null : new Date(end.getTime() - preset.ms), to: end, preset: preset.key };
+  return {
+    from: preset.ms === null ? null : new Date(end.getTime() - preset.ms),
+    to: end,
+    preset: preset.key,
+  };
 }
 
 /** The window in a URL's query parameters. */
@@ -112,7 +115,10 @@ export function refreshMs(w: TimeWindow): number {
 }
 
 /** Same window and operators: whether a reload is needed. */
-export function sameQuery<Q extends { window: TimeWindow; agencies?: string[] }>(a: Q, b: Q): boolean {
+export function sameQuery<Q extends { window: TimeWindow; agencies?: string[] }>(
+  a: Q,
+  b: Q,
+): boolean {
   return (
     a.window.preset === b.window.preset &&
     (a.window.preset !== null ||

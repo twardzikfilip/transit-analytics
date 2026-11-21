@@ -14,7 +14,6 @@ export class Login {
   private readonly store = inject(Store);
 
   protected readonly loading = this.store.selectSignal(authFeature.selectLoading);
-  protected readonly error = this.store.selectSignal(authFeature.selectError);
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
     username: ['', Validators.required],

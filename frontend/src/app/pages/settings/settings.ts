@@ -45,10 +45,6 @@ const TABLE_LABELS: Record<string, string> = {
         {{ running() ? 'Importing…' : 'Import Białystok timetable' }}
       </button>
 
-      @if (error(); as message) {
-        <p class="error" role="alert">Import failed: {{ message }}</p>
-      }
-
       @if (result(); as r) {
         <div class="result" role="status">
           <p>
@@ -123,7 +119,6 @@ export class Settings {
 
   protected readonly running = this.store.selectSignal(gtfsImportFeature.selectRunning);
   protected readonly result = this.store.selectSignal(gtfsImportFeature.selectResult);
-  protected readonly error = this.store.selectSignal(gtfsImportFeature.selectError);
 
   /** Keep the server's table order instead of sorting by name. */
   protected readonly keepOrder = () => 0;

@@ -35,7 +35,9 @@ const PANES = { fills: 410, woods: 420, lines: 430 };
     ></div>
     <ul class="legend" aria-label="Residents per km²">
       <li class="muted">Residents per km²:</li>
-      <li><span class="swatch outlined" [style.background]="noneSwatch"></span>0, woods</li>
+      <li>
+        <span class="swatch outlined" [style.background]="noneSwatch"></span>0: woods, Biała valley
+      </li>
       @for (s of scale; track s.min) {
         <li>
           <span class="swatch outlined" [style.background]="s.color"></span>{{ stepLabel(s) }}
@@ -110,8 +112,15 @@ export class DistrictMap {
     this.labels.forEach((l) => l.label.remove());
     this.labels = [];
     for (const p of [...data.districts, ...data.belt.places]) this.drawPlace(p);
-    const woods = [...data.forests.flatMap((f) => f.shapes), ...data.belt.woods];
-    for (const shape of woods) {
+    // Where nobody lives: the woods, and the Biała valley.
+    const empty = [
+      ...[...data.forests.flatMap((f) => f.shapes), ...data.belt.woods].map((shape) => ({
+        shape,
+        tip: 'Woods: no residents',
+      })),
+      ...data.valley.map((v) => ({ shape: v.shape, tip: 'Biała valley: no residents' })),
+    ];
+    for (const { shape, tip } of empty) {
       L.polygon(rings(shape), {
         pane: 'woods',
         color: DENSITY_NONE.line,
@@ -119,7 +128,7 @@ export class DistrictMap {
         fillColor: hatchFill(this.hatchId),
         fillOpacity: 1,
       })
-        .bindTooltip('Woods: no residents', { sticky: true })
+        .bindTooltip(tip, { sticky: true })
         .addTo(layer);
     }
     const svg = map.getPane('woods')?.querySelector('svg');
@@ -129,7 +138,7 @@ export class DistrictMap {
       pane: 'lines',
       color: city.color,
       dashArray: city.dashArray,
-      weight: 3,
+      weight: city.weight,
       fill: false,
       interactive: false,
     }).addTo(layer);

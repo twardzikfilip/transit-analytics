@@ -8,12 +8,16 @@ import { leafletHost, paneRenderer } from '../../shared/map/leaflet-host';
 import { rings } from '../../shared/map/shapes';
 import { BOUNDARY_STYLES, COVERAGE_STYLE, INK } from '../../shared/palette';
 
-/** Panes, bottom to top: the covered area (one see-through layer, so overlaps don't darken), woods, border, stops. */
-const PANES = { covered: 410, woods: 420, border: 430, stops: 440 };
+/**
+ * Panes, bottom to top: the covered area (one see-through layer, so overlaps don't darken), woods, the Biała valley,
+ * border, stops.
+ */
+const PANES = { covered: 410, woods: 420, valley: 425, border: 430, stops: 440 };
 
 /**
  * The city limits, the area within `radius` m of the nearest stop (a circle around each, drawn as one area: solid
- * circles on a pane that is see-through as a whole), and the woods, light green with lines.
+ * circles on a pane that is see-through as a whole), the woods, light green with lines, and the uninhabited valley of
+ * the river Biała, light blue with lines.
  */
 @Component({
   selector: 'app-coverage-map',
@@ -23,7 +27,9 @@ const PANES = { covered: 410, woods: 420, border: 430, stops: 440 };
       class="leaflet-map"
       role="region"
       [attr.aria-label]="
-        'Map of the area within ' + radius() + ' m of the nearest stop, and the woods'
+        'Map of the area within ' +
+        radius() +
+        ' m of the nearest stop, the woods and the Biała valley'
       "
     ></div>
     <ul class="legend">
@@ -31,6 +37,10 @@ const PANES = { covered: 410, woods: 420, border: 430, stops: 440 };
       <li>
         <span class="swatch" [style.background]="forestSwatch" [style.border]="forestBorder"></span
         >Woods
+      </li>
+      <li>
+        <span class="swatch" [style.background]="valleySwatch" [style.border]="valleyBorder"></span
+        >Biała valley
       </li>
       <li>
         <span class="line-swatch" [style.border-top-color]="border.color"></span>{{ border.label }}
@@ -69,6 +79,11 @@ export class CoverageMap {
     COVERAGE_STYLE.forestLine,
   );
   protected readonly forestBorder = `1px solid ${COVERAGE_STYLE.forestLine}`;
+  protected readonly valleySwatch = hatchSwatch(
+    COVERAGE_STYLE.valleyFill,
+    COVERAGE_STYLE.valleyLine,
+  );
+  protected readonly valleyBorder = `1px solid ${COVERAGE_STYLE.valleyLine}`;
   private readonly mapEl = viewChild.required<ElementRef<HTMLDivElement>>('map');
   private readonly host = leafletHost(() => this.mapEl().nativeElement, {
     grey: true,
@@ -77,6 +92,7 @@ export class CoverageMap {
     setUp: (map) => (map.getPane('covered')!.style.opacity = '0.35'),
   });
   private readonly hatchId = uniqueId('forest-hatch');
+  private readonly valleyHatchId = uniqueId('valley-hatch');
 
   constructor() {
     effect(() => {
@@ -117,11 +133,34 @@ export class CoverageMap {
     }
     const svg = map.getPane('woods')?.querySelector('svg');
     if (svg) defineHatch(svg, this.hatchId, COVERAGE_STYLE.forestFill, COVERAGE_STYLE.forestLine);
+    for (const stretch of data.valley) {
+      const tip =
+        `<strong>Biała valley: ${escapeHtml(stretch.name)}</strong><br>` +
+        `${area(stretch.areaKm2)}, nobody lives here`;
+      L.polygon(rings(stretch.shape), {
+        pane: 'valley',
+        color: COVERAGE_STYLE.valleyLine,
+        weight: 1,
+        fillColor: hatchFill(this.valleyHatchId),
+        fillOpacity: 1,
+      })
+        .bindTooltip(tip, { sticky: true })
+        .addTo(layer);
+    }
+    const valleySvg = map.getPane('valley')?.querySelector('svg');
+    if (valleySvg) {
+      defineHatch(
+        valleySvg,
+        this.valleyHatchId,
+        COVERAGE_STYLE.valleyFill,
+        COVERAGE_STYLE.valleyLine,
+      );
+    }
     const border = L.polygon(rings(data.city.shape), {
       pane: 'border',
       color: this.border.color,
       dashArray: this.border.dashArray,
-      weight: 3,
+      weight: this.border.weight,
       fill: false,
       interactive: false,
     }).addTo(layer);

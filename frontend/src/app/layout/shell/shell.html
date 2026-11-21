@@ -1,8 +1,10 @@
 <aside class="sidebar">
   <div class="brand">Transit Analytics</div>
   <nav aria-label="Pages">
-    @for (group of navGroups; track group.label) {
-      <h2 class="group">{{ group.label }}</h2>
+    @for (group of navGroups; track $index) {
+      @if (group.label) {
+        <h2 class="group">{{ group.label }}</h2>
+      }
       <ul>
         @for (item of group.items; track item.path) {
           <li>

@@ -1,5 +1,12 @@
 import { LivePosition } from '../../../core/models/models';
-import { agencies, delayedOver, ofAgency, parseMinDelay } from './delay-filter';
+import {
+  agencies,
+  delayedOver,
+  ofAgency,
+  ofLineType,
+  parseLineType,
+  parseMinDelay,
+} from './delay-filter';
 
 describe('live map delay filter', () => {
   const bus = (vehicleNumber: string, delaySeconds: number | null): LivePosition => ({
@@ -54,5 +61,21 @@ describe('live map delay filter', () => {
     expect(ofAgency([a, b], '')).toEqual([a, b]);
     expect(agencies([b, a, a])).toEqual(['BKM', 'WSCHODEXPRESS']);
     expect(agencies([a], 'TUROSN')).toEqual(['BKM', 'TUROSN']);
+  });
+
+  it('filters by kind of line, night lines counting as urban', () => {
+    const urban = { ...bus('u', 0), subtype: 'urban' as const };
+    const night = { ...bus('n', 0), subtype: 'night_urban' as const };
+    const suburban = { ...bus('s', 0), subtype: 'suburban' as const };
+    const regional = { ...bus('r', 0), subtype: 'regional' as const };
+    const unknown = { ...bus('x', 0), subtype: null };
+    const all = [urban, night, suburban, regional, unknown];
+    expect(ofLineType(all, null)).toEqual(all);
+    expect(ofLineType(all, 'urban')).toEqual([urban, night]);
+    expect(ofLineType(all, 'suburban')).toEqual([suburban]);
+    expect(ofLineType(all, 'regional')).toEqual([regional]);
+    expect(parseLineType('suburban')).toBe('suburban');
+    expect(parseLineType('night_urban')).toBeNull();
+    expect(parseLineType(null)).toBeNull();
   });
 });

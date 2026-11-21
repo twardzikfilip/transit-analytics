@@ -305,7 +305,8 @@ describe('Delay generation page', () => {
       DelayGenerationActions.lineFailure({ error: 'Server error' }),
     );
     const { el } = renderPage(DelayGeneration, empty, { line: '21' });
-    expect(text(el.querySelector('.line-detail .error'))).toBe('Server error');
+    // The error itself is a toast (core/api/error-toasts.ts), not text on the page.
+    expect(text(el)).not.toContain('Server error');
     expect(text(el.querySelector('.line-detail'))).toContain('No runs of this line were measured');
   });
 });

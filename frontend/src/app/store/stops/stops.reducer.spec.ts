@@ -28,12 +28,20 @@ describe('stops reducer (paged)', () => {
     expect(state.loading).toBe(true);
     expect(state.query).toEqual(query);
 
-    state = reduce(state, StopsActions.loadSuccess({ result: { content: [stop(1, 'A'), stop(2, 'B')], page: meta } }));
+    state = reduce(
+      state,
+      StopsActions.loadSuccess({ result: { content: [stop(1, 'A'), stop(2, 'B')], page: meta } }),
+    );
     expect(state.ids).toEqual([1, 2]);
     expect(state.page).toEqual(meta);
     expect(state.loading).toBe(false);
 
-    state = reduce(state, StopsActions.loadSuccess({ result: { content: [stop(3, 'C')], page: { ...meta, number: 2 } } }));
+    state = reduce(
+      state,
+      StopsActions.loadSuccess({
+        result: { content: [stop(3, 'C')], page: { ...meta, number: 2 } },
+      }),
+    );
     expect(state.ids).toEqual([3]);
   });
 

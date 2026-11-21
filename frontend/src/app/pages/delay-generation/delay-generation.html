@@ -22,10 +22,6 @@
   }
 </app-time-window>
 
-@if (error(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
-}
-
 @if (report(); as r) {
   <p class="summary">
     <strong>{{ r.runs }}</strong> runs measured over {{ r.days }}
@@ -191,9 +187,6 @@
       <h2>Line {{ chosen }}</h2>
       <button type="button" (click)="chooseLine(null)">Close</button>
     </div>
-    @if (lineError(); as message) {
-      <p class="error" role="alert">{{ message }}</p>
-    }
     @if (lineLoading() && !lineReport()) {
       <p class="muted" role="status">Loading line {{ chosen }}…</p>
     }

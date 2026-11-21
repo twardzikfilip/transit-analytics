@@ -4,10 +4,6 @@
   }
 </div>
 
-@if (error(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
-}
-
 <!-- Lines to pick: a row per kind of line, a column per geometry; thicker and darker buttons carry more. -->
 <app-line-chooser
   [table]="table()"
@@ -230,7 +226,7 @@
   } @else if (!d.serviceId) {
     <p class="muted">No timetable yet. An admin can import it under Settings.</p>
   } @else {
-    <app-variant-tiles [detail]="d" [class.loading]="loadingDetail()" />
+    <app-variant-tiles [detail]="d" [regularity]="regularity()" [class.loading]="loadingDetail()" />
 
     <section class="card section">
       <h2>Variants</h2>
@@ -321,6 +317,16 @@
         <li>
           <strong>Scheduled average speed:</strong> distance divided by travel time of the base
           route's slowest and fastest scheduled run. Time at stops counts.
+        </li>
+        <li>
+          <strong>Regularity:</strong> how evenly departures are spread, as the coefficient of
+          variation (CV) of the gaps between consecutive departures: standard deviation ÷ mean. It
+          is measured at the first stop of the base route, counting every trip of the line that
+          departs there, per direction and period (the break between the two peaks is not a gap),
+          then averaged weighted by the number of gaps. 0 means perfectly even. Grades follow TCQSM:
+          A ≤ 0.21, B ≤ 0.30, C ≤ 0.39, D ≤ 0.52, E ≤ 0.74, F above. For passengers arriving at
+          random the average wait is half the mean gap × (1 + CV²), so uneven spacing adds waiting
+          even at the same frequency. "—" means fewer than 4 departures in the period.
         </li>
         <li>
           <strong>Standard end stops</strong> are where buses turn round in service: a brigade ends

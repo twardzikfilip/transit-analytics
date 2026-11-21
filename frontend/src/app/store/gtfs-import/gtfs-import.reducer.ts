@@ -16,7 +16,15 @@ export const gtfsImportFeature = createFeature({
   reducer: createReducer(
     initialState,
     on(GtfsImportActions.importBialystok, (state) => ({ ...state, running: true, error: null })),
-    on(GtfsImportActions.importSuccess, (state, { result }) => ({ ...state, running: false, result })),
-    on(GtfsImportActions.importFailure, (state, { error }) => ({ ...state, running: false, error })),
+    on(GtfsImportActions.importSuccess, (state, { result }) => ({
+      ...state,
+      running: false,
+      result,
+    })),
+    on(GtfsImportActions.importFailure, (state, { error }) => ({
+      ...state,
+      running: false,
+      error,
+    })),
   ),
 });

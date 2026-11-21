@@ -1,19 +1,14 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, map, of, startWith } from 'rxjs';
 import { NetworkCoverageApi } from '../../core/api/api.services';
 import { NetworkCoverage, PlaceDensity } from '../../core/models/models';
 import { area, density, int, percent } from '../../shared/format/number';
-import { errorMessage } from '../../store/paged';
 import { asOf } from './coverage-format';
 import { CoverageMap } from './coverage-map';
 import { DistrictMap } from './district-map';
 
-type Loaded =
-  | { state: 'loading' }
-  | { state: 'error'; error: string }
-  | { state: 'ready'; data: NetworkCoverage };
+type Loaded = { state: 'loading' } | { state: 'error' } | { state: 'ready'; data: NetworkCoverage };
 
 /**
  * Network coverage: how much of the city lies within each walking distance of the nearest stop, with and without its
@@ -32,19 +27,14 @@ export class NetworkCoveragePage {
       .coverage()
       .pipe(
         map((data): Loaded => ({ state: 'ready', data })),
-        catchError((err: HttpErrorResponse) =>
-          of<Loaded>({ state: 'error', error: errorMessage(err) }),
-        ),
+        // The error itself shows as a toast (core/api/error-toasts.ts).
+        catchError(() => of<Loaded>({ state: 'error' })),
         startWith<Loaded>({ state: 'loading' }),
       ),
     { requireSync: true },
   );
 
   protected readonly loading = computed(() => this.loaded().state === 'loading');
-  protected readonly error = computed(() => {
-    const l = this.loaded();
-    return l.state === 'error' ? l.error : null;
-  });
   protected readonly data = computed(() => {
     const l = this.loaded();
     return l.state === 'ready' ? l.data : null;
@@ -69,12 +59,14 @@ export class NetworkCoveragePage {
   protected readonly districts = computed(() =>
     [...(this.data()?.districts ?? [])].sort((a, b) => a.name.localeCompare(b.name, 'pl')),
   );
-  /** Districts with large woods, the most wooded share first. */
-  protected readonly wooded = computed(() =>
-    this.districts()
-      .filter((d) => d.largeForest)
-      .sort((a, b) => b.forestKm2 / b.areaKm2 - a.forestKm2 / a.areaKm2),
-  );
+  /** Districts with large woods or a large part of the Biała valley, the largest share without residents first. */
+  protected readonly wooded = computed(() => {
+    const share = this.data()?.forestShare ?? 1;
+    const empty = (d: PlaceDensity) => (d.areaKm2 ? (d.forestKm2 + d.valleyKm2) / d.areaKm2 : 0);
+    return this.districts()
+      .filter((d) => d.largeForest || empty(d) >= share)
+      .sort((a, b) => empty(b) - empty(a));
+  });
   protected readonly totals = computed(() => {
     const ds = this.districts();
     const people = ds.reduce((s, d) => s + (d.population ?? 0), 0);
@@ -116,7 +108,7 @@ export class NetworkCoveragePage {
     return percent(p.areaKm2 ? p.forestKm2 / p.areaKm2 : 0);
   }
 
-  /** "+38%": how much higher the density is without the woods. */
+  /** "+38%": how much higher the density is without the woods and the valley. */
   protected rise(p: PlaceDensity): string {
     return p.density && p.landDensity
       ? `+${Math.round((p.landDensity / p.density - 1) * 100)}%`

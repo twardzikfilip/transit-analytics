@@ -1,13 +1,27 @@
+/* BKM's colours (Białostocka Komunikacja Miejska): the timelines of buses and brigades. Also in shared/palette.ts. */
+$green_bkm: #4cb034;
+$lightblue_bkm: #2393ca;
+
 :root {
+  --green-bkm: #{$green_bkm};
+  --lightblue-bkm: #{$lightblue_bkm};
   /* Theme: light by default, dark when chosen in Settings (data-theme on <html>, see core/theme/theme.ts). Greys are
      Bootstrap's (gray-100 … gray-900); the primary colour is the teal of the Kamioni logo. */
   --primary: #00a9bc;
   /* The primary colour 20% darker: the chosen item in the sidebar. */
   --primary-dark: color-mix(in srgb, var(--primary) 80%, #000);
-  --bg: #f8f9fa;
+  /* Page background: Bootstrap's gray-200 (#e9ecef) 50% lighter, i.e. mixed half and half with white; the cards'
+     shadows show on it. */
+  --bg: #f4f6f7;
+  /* Tiles, tables and other boxes. */
   --surface: #ffffff;
+  /* Bootstrap's $dark. */
   --fg: #212529;
+  /* A shaded row inside a white table or box (detail rows). */
+  --subtle: #f8f9fa;
   --muted: #6c757d;
+  /* Bootstrap's $gray-500: the rest of a progress bar, beyond its filled part. */
+  --progress-rest: #adb5bd;
   --border: #dee2e6;
   --hover: #e9ecef;
   /* Focus rings, chosen buttons and other selected elements. */
@@ -19,7 +33,7 @@
   --sidebar-bg: var(--primary);
   --sidebar-fg: #ffffff;
   /* One radius and one shadow for cards, inputs, buttons, charts and maps. */
-  --radius: 4px;
+  --radius: 8px;
   --shadow: 0 1px 3px rgb(0 0 0 / 10%), 0 1px 2px rgb(0 0 0 / 6%);
   /* Floating panels (menus, dropdowns, popups). */
   --shadow-float: 0 4px 12px rgb(0 0 0 / 15%);
@@ -28,8 +42,8 @@
   /* More chart series (categorical slots 2 and 3), and line colours by subtype. */
   --chart-series-2: #eb6834;
   --chart-series-3: #1baf7a;
-  /* Bus lanes in charts (the map band is BUS_LANE_STYLE in palette.ts). */
-  --bus-lane: #6f42c1;
+  /* Bus lanes in charts: the primary colour, as the map band (BUS_LANE_STYLE in palette.ts). */
+  --bus-lane: var(--primary);
   --line-urban: #2a78d6;
   --line-suburban: #1baf7a;
   --line-night: #c8102e;
@@ -49,6 +63,7 @@
   --bg: #212529;
   --surface: #2b3035;
   --fg: #dee2e6;
+  --subtle: #212529;
   --muted: #adb5bd;
   --border: #495057;
   --hover: #343a40;
@@ -61,7 +76,7 @@
   --chart-line: #3d97e8;
   --chart-series-2: #d95926;
   --chart-series-3: #199e70;
-  --bus-lane: #9775fa;
+  --bus-lane: var(--primary);
   --line-urban: #3987e5;
   --line-suburban: #199e70;
   --line-night: #d81530;
@@ -597,4 +612,28 @@ app-time-window label {
   &[aria-expanded='false'] .chevron {
     transform: rotate(-90deg);
   }
+}
+
+/* Toasts (ngx-toastr; core/api/error-toasts.ts): the app's radius and shadow, Bootstrap's danger red for errors. */
+.toast-container .ngx-toastr {
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-float);
+  font-size: 0.9rem;
+
+  &:hover {
+    box-shadow: var(--shadow-float);
+  }
+}
+
+.toast-container .toast-error {
+  background-color: #b02a37;
+}
+
+.toast-title {
+  font-weight: 600;
+}
+
+/* Vehicles on the live map (Home): no outline, a soft shadow to lift them off the map and apart from each other. */
+.leaflet-interactive.live-vehicle {
+  filter: drop-shadow(0 1px 3px rgb(0 0 0 / 70%));
 }

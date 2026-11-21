@@ -14,6 +14,7 @@ import { provideState, provideStore } from '@ngrx/store';
 import { routes } from './app.routes';
 import { storeDevtools } from './store-devtools';
 import { authInterceptor } from './core/auth/auth.interceptor';
+import { errorToastInterceptor, provideErrorToasts } from './core/api/error-toasts';
 import { provideRouteTracing } from './core/telemetry/route-tracing';
 import { TelemetryErrorHandler } from './core/telemetry/telemetry-error-handler';
 import * as authEffects from './store/auth/auth.effects';
@@ -28,7 +29,9 @@ export const appConfig: ApplicationConfig = {
     // Applies the saved colour theme before the first page shows.
     provideAppInitializer(() => void inject(Theme)),
     provideRouteTracing(),
-    provideHttpClient(withInterceptors([authInterceptor])),
+    // Backend errors show as toasts (core/api/error-toasts.ts), never as text on a page.
+    provideHttpClient(withInterceptors([authInterceptor, errorToastInterceptor])),
+    provideErrorToasts(),
     provideStore(),
     provideState(authFeature),
     provideEffects(authEffects),

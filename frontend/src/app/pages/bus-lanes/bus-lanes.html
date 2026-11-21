@@ -12,10 +12,6 @@
   }
 </app-time-window>
 
-@if (error(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
-}
-
 @if (lanes(); as l) {
   <p class="summary">
     <strong>{{ l.laneKm | number: '1.1-1' }} km</strong> of bus lane on {{ l.sections }} street

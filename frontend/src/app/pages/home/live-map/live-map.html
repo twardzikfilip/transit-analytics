@@ -2,17 +2,12 @@
   <h2>Live map <span class="muted now">now</span></h2>
   <span class="muted status">
     @if (filtering()) {
-      {{ visible().length }} of {{ count() }} vehicles ({{ agency() ? agency() : ''
-      }}{{ agency() && minDelay() !== null ? ', ' : ''
-      }}{{ minDelay() !== null ? 'delayed over ' + minDelay() + ' min' : '' }})
+      {{ visible().length }} of {{ count() }} vehicles ({{ filterSummary() }})
     } @else {
       {{ count() }} vehicles
     }
     @if (lastUpdated(); as t) {
       · updated {{ t | date: 'mediumTime' }}
-    }
-    @if (error(); as message) {
-      · <span class="error">{{ message }}</span>
     }
   </span>
 </div>
@@ -23,6 +18,15 @@
       <option value="">All operators</option>
       @for (a of agencies(); track a) {
         <option [value]="a" [selected]="a === agency()">{{ a }}</option>
+      }
+    </select>
+  </label>
+  <label>
+    Lines
+    <select class="line-type" (change)="setLineType($any($event.target).value)">
+      <option value="" [selected]="lineType() === null">All lines</option>
+      @for (t of lineTypes; track t.key) {
+        <option [value]="t.key" [selected]="t.key === lineType()">{{ t.label }}</option>
       }
     </select>
   </label>
@@ -54,19 +58,11 @@
 <div #map class="map"></div>
 <div class="legend muted" aria-label="Map legend">
   <span class="group">
-    Fill: delay
+    Delay
     @for (s of delayStops; track s.seconds) {
       <span class="item"><span class="dot" [style.background]="s.color"></span>{{ s.label }}</span>
     }
     <span class="item"><span class="dot" [style.background]="noDelayColor"></span>unknown</span>
-  </span>
-  <span class="group">
-    Outline: line
-    @for (o of outlines; track o.subtype) {
-      <span class="item"
-        ><span class="dot ring" [style.border-color]="o.color"></span>{{ o.label }}</span
-      >
-    }
   </span>
   <span class="group">
     Lines on the map

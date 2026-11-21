@@ -1,4 +1,4 @@
-import { LivePosition } from '../../../core/models/models';
+import { LivePosition, RouteSubtype } from '../../../core/models/models';
 
 /** Reads the "minimum delay in minutes" filter from the URL; null when unset or not a number ≥ 0. */
 export function parseMinDelay(value: string | null): number | null {
@@ -27,4 +27,26 @@ export function agencies(positions: LivePosition[], selected = ''): string[] {
   const names = new Set(positions.map((p) => p.agency).filter((a): a is string => !!a));
   if (selected) names.add(selected);
   return [...names].sort((a, b) => a.localeCompare(b));
+}
+
+/** The kinds of line to filter by; urban takes in the night lines, which are urban too. */
+export const LINE_TYPES: { key: LineType; label: string; subtypes: RouteSubtype[] }[] = [
+  { key: 'urban', label: 'Urban', subtypes: ['urban', 'night_urban'] },
+  { key: 'suburban', label: 'Suburban', subtypes: ['suburban'] },
+  { key: 'regional', label: 'Regional (4xx)', subtypes: ['regional'] },
+];
+
+export type LineType = 'urban' | 'suburban' | 'regional';
+
+/** Reads the kind of line from the URL; null (all lines) when unset or unknown. */
+export function parseLineType(value: string | null): LineType | null {
+  return LINE_TYPES.find((t) => t.key === value)?.key ?? null;
+}
+
+/** Vehicles on lines of one kind; null = all. A vehicle whose line's kind isn't known is left out by a filter. */
+export function ofLineType(positions: LivePosition[], type: LineType | null): LivePosition[] {
+  const kind = LINE_TYPES.find((t) => t.key === type);
+  return kind
+    ? positions.filter((p) => p.subtype !== null && kind.subtypes.includes(p.subtype))
+    : positions;
 }

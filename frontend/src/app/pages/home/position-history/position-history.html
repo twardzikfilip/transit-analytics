@@ -32,10 +32,6 @@
   </label>
 </app-time-window>
 
-@if (error(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
-}
-
 @if (series()?.summary; as s) {
   <div class="figures" [class.loading]="loadingSeries()">
     <div class="card figure">

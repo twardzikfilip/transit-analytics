@@ -15,11 +15,14 @@ import { Store } from '@ngrx/store';
 import * as L from 'leaflet';
 import { LineDetail, LineVariant, RouteSubtype } from '../../core/models/models';
 import { escapeHtml } from '../../shared/format/html';
+import { LineStatsActions } from '../../store/line-stats/line-stats.actions';
+import { lineStatsFeature } from '../../store/line-stats/line-stats.reducer';
 import { RouteDetailActions } from '../../store/route-detail/route-detail.actions';
 import { routeDetailFeature } from '../../store/route-detail/route-detail.reducer';
 import { BrigadeTimeline } from './brigade-timeline';
 import { EndStops } from './end-stops';
 import { LineVehiclesSection } from './line-vehicles';
+import { LineRegularity } from './variant-tiles';
 import { clock, duration } from '../../shared/format/time';
 import { cssColor, INK, WHITE } from '../../shared/palette';
 import {
@@ -85,6 +88,23 @@ export class RoutesPage {
     routeDetailFeature.selectLoadingPerformance,
   );
   protected readonly error = this.store.selectSignal(routeDetailFeature.selectError);
+
+  /** Every line's weekday statistics (GET /api/lines/stats), for the chosen line's regularity tile. */
+  private readonly lineStats = this.store.selectSignal(lineStatsFeature.selectReport);
+  /** The chosen line's regularity in peak and off-peak hours, and when those are; null until known. */
+  protected readonly regularity = computed((): LineRegularity | null => {
+    const report = this.lineStats();
+    const id = this.detail()?.id;
+    const stats = report && id != null ? report.lines.find((l) => l.routeId === id) : undefined;
+    return stats && report
+      ? {
+          peakCv: stats.peakRegularityCv,
+          offPeakCv: stats.offPeakRegularityCv,
+          peak: report.peak,
+          offPeak: report.offPeak,
+        }
+      : null;
+  });
 
   /** The lines to pick: a row per kind of line, a column per geometry; the buttons show the capacity. */
   protected readonly table = computed(() => lineTable(this.lines()));
@@ -154,6 +174,7 @@ export class RoutesPage {
 
   constructor() {
     this.store.dispatch(RouteDetailActions.loadLines());
+    this.store.dispatch(LineStatsActions.load());
 
     // Load the selected line once per change.
     let loaded: string | null = null;

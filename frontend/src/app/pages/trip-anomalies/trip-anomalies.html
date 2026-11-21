@@ -16,10 +16,6 @@
   }
 </app-time-window>
 
-@if (error(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
-}
-
 @if (report(); as r) {
   <div class="cards" [class.loading]="loading()">
     <div class="card stat">

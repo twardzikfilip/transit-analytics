@@ -47,8 +47,20 @@ export function valueTicks(max: number, count = 4): number[] {
         (pointerleave)="hover.set(null)"
       >
         @for (t of ticks(); track t.value) {
-          <line class="grid" [attr.x1]="left" [attr.x2]="width() - right" [attr.y1]="t.y" [attr.y2]="t.y" />
-          <text class="axis-label" [attr.x]="left - 6" [attr.y]="t.y" text-anchor="end" dominant-baseline="middle">
+          <line
+            class="grid"
+            [attr.x1]="left"
+            [attr.x2]="width() - right"
+            [attr.y1]="t.y"
+            [attr.y2]="t.y"
+          />
+          <text
+            class="axis-label"
+            [attr.x]="left - 6"
+            [attr.y]="t.y"
+            text-anchor="end"
+            dominant-baseline="middle"
+          >
             {{ t.text }}
           </text>
         }
@@ -66,7 +78,12 @@ export function valueTicks(max: number, count = 4): number[] {
             <circle class="mark" [attr.cx]="b.x + b.w / 2" [attr.cy]="b.y - 6" r="3.5" />
           }
           @if (b.showLabel) {
-            <text class="axis-label" [attr.x]="b.x + b.w / 2" [attr.y]="height - 6" text-anchor="middle">
+            <text
+              class="axis-label"
+              [attr.x]="b.x + b.w / 2"
+              [attr.y]="height - 6"
+              text-anchor="middle"
+            >
               {{ b.bar.label }}
             </text>
           }

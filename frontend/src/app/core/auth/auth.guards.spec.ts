@@ -1,5 +1,11 @@
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRouteSnapshot, Router, RouterStateSnapshot, UrlTree, provideRouter } from '@angular/router';
+import {
+  ActivatedRouteSnapshot,
+  Router,
+  RouterStateSnapshot,
+  UrlTree,
+  provideRouter,
+} from '@angular/router';
 import { MockStore, provideMockStore } from '@ngrx/store/testing';
 import { authFeature } from '../../store/auth/auth.reducer';
 import { authGuard, roleGuard } from './auth.guards';
@@ -7,7 +13,8 @@ import { authGuard, roleGuard } from './auth.guards';
 describe('auth guards', () => {
   let store: MockStore;
   const state = {} as RouterStateSnapshot;
-  const route = (roles?: string[]) => ({ data: roles ? { roles } : {} }) as unknown as ActivatedRouteSnapshot;
+  const route = (roles?: string[]) =>
+    ({ data: roles ? { roles } : {} }) as unknown as ActivatedRouteSnapshot;
 
   beforeEach(() => {
     TestBed.configureTestingModule({ providers: [provideRouter([]), provideMockStore()] });
@@ -17,7 +24,8 @@ describe('auth guards', () => {
   // Overrides are set on the shared memoized selectors; spec files share them (the runner doesn't isolate files).
   afterEach(() => store.resetSelectors());
 
-  const run = (guard: typeof authGuard, r = route()) => TestBed.runInInjectionContext(() => guard(r, state));
+  const run = (guard: typeof authGuard, r = route()) =>
+    TestBed.runInInjectionContext(() => guard(r, state));
   const url = (result: unknown) => TestBed.inject(Router).serializeUrl(result as UrlTree);
 
   it('lets logged-in users through and sends others to the login page', () => {

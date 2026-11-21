@@ -9,11 +9,21 @@ export interface CoverageShare {
   share: number;
 }
 
-/** The city within `radiusMeters` of the nearest stop: all of it, and the part outside its woods. */
+/**
+ * The city within `radiusMeters` of the nearest stop: all of it, and the part where people can live (outside its
+ * woods and the Biała valley).
+ */
 export interface RadiusCoverage {
   radiusMeters: number;
   city: CoverageShare;
-  withoutForest: CoverageShare;
+  withoutWoodsAndValley: CoverageShare;
+}
+
+/** A stretch of the river Biała's valley where it is wide and nobody lives (outside the woods). */
+export interface ValleyStretch {
+  name: string;
+  areaKm2: number;
+  shape: AreaShape;
 }
 
 export interface Woodland {
@@ -43,7 +53,9 @@ export interface PlaceDensity {
   /** Residents per km²; null without a figure. */
   density: number | null;
   forestKm2: number;
-  /** It without its woods. */
+  /** The Biała valley in it, outside the woods. */
+  valleyKm2: number;
+  /** It without its woods and the valley. */
   landKm2: number;
   landDensity: number | null;
   /** Woods cover at least `forestShare` of it. */
@@ -74,6 +86,8 @@ export interface NetworkCoverage {
   coverages: RadiusCoverage[];
   forests: Woodland[];
   forestKm2: number;
+  valley: ValleyStretch[];
+  valleyKm2: number;
   districts: PlaceDensity[];
   forestShare: number;
   /** The city's population by Statistics Poland: everyone living here, registered or not. */

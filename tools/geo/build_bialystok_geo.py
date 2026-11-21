@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """
 Builds backend/src/main/resources/places/osm/bialystok.json: the city border, its districts (osiedla) and the woods
-within it, from OpenStreetMap (© OpenStreetMap contributors, ODbL), as fetched by fetch_osm.sh into raw/.
+within it, and the valley of the river Biała (see biala_valley.py), from OpenStreetMap (© OpenStreetMap contributors,
+ODbL), as fetched by fetch_osm.sh into raw/.
 
   tools/geo/fetch_osm.sh
   python3 tools/geo/build_bialystok_geo.py
 """
 import json
 import os
+
+import biala_valley
 
 CITY = 2910925  # Białystok, admin_level 8
 
@@ -52,7 +55,7 @@ def shape(element):
             "inner": stitch([m["geometry"] for m in members if m.get("role") == "inner"])}
 
 
-def main(admin_path, forest_path, out_path):
+def main(admin_path, forest_path, valley_path, out_path):
     admin = json.load(open(admin_path))["elements"]
     city = next(e for e in admin if e["id"] == CITY)
     districts = sorted((e for e in admin if e["tags"].get("admin_level") == "9"), key=lambda e: e["tags"]["name"])
@@ -70,10 +73,12 @@ def main(admin_path, forest_path, out_path):
         "city": {"name": city["tags"]["name"], **shape(city)},
         "districts": [{"osm": f'relation/{d["id"]}', "name": d["tags"]["name"], **shape(d)} for d in districts],
         "forests": forests,
+        "valley": biala_valley.valley(json.load(open(valley_path))["elements"], shape(city)["outer"], forests),
     }
     with open(out_path, "w") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
-    print(f'{len(out["districts"])} districts, {len(forests)} woods; city rings {len(out["city"]["outer"])}')
+    print(f'{len(out["districts"])} districts, {len(forests)} woods, {len(out["valley"])} valley stretches; '
+          f'city rings {len(out["city"]["outer"])}')
 
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -81,4 +86,4 @@ PLACES = os.path.join(HERE, "..", "..", "backend", "src", "main", "resources", "
 
 if __name__ == "__main__":
     main(os.path.join(HERE, "raw", "admin.json"), os.path.join(HERE, "raw", "forest.json"),
-         os.path.join(PLACES, "osm", "bialystok.json"))
+         os.path.join(HERE, "raw", "valley.json"), os.path.join(PLACES, "osm", "bialystok.json"))

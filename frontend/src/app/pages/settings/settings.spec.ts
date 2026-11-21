@@ -43,7 +43,7 @@ describe('Settings page', () => {
     expect(text(running.querySelector('button.primary'))).toBe('Importing…');
   });
 
-  it('shows the failure, and nothing of the import to guests', () => {
+  it('leaves a failed import to the toast: nothing of it on the page', () => {
     const failed = renderPage(Settings, {
       ...signedIn('ADMIN'),
       ...stateAfter(
@@ -51,7 +51,8 @@ describe('Settings page', () => {
         GtfsImportActions.importFailure({ error: 'Feed unavailable' }),
       ),
     }).el;
-    expect(text(failed.querySelector('.error'))).toBe('Import failed: Feed unavailable');
+    expect(text(failed)).not.toContain('Feed unavailable');
+    expect(failed.querySelector('.error')).toBeNull();
   });
 
   it('hides the import from guests', () => {

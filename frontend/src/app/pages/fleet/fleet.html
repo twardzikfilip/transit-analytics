@@ -1,8 +1,36 @@
-<div class="page-header">
-  @if (report(); as r) {
-    <span class="muted">
-      {{ r.from | date: 'd MMM y, HH:mm' }} – {{ r.to | date: 'd MMM y, HH:mm' }}
-    </span>
+<div class="search">
+  <label>
+    Find a bus
+    <input
+      type="search"
+      role="combobox"
+      aria-autocomplete="list"
+      aria-controls="vehicle-matches"
+      [attr.aria-expanded]="searchOpen() && matches().length > 0"
+      placeholder="Number or model, e.g. 230 or Urbino"
+      [value]="search()"
+      (input)="search.set($any($event.target).value); searchOpen.set(true)"
+      (focus)="searchOpen.set(true)"
+      (keydown.enter)="chooseFirst()"
+      (keydown.escape)="searchOpen.set(false)"
+    />
+  </label>
+  @if (searchOpen() && matches().length) {
+    <ul id="vehicle-matches" class="matches card" role="listbox">
+      @for (u of matches(); track trackUsage(u)) {
+        <li role="option" [attr.aria-selected]="false">
+          <button type="button" (click)="choose(u.vehicle.id)">
+            <strong>{{ u.vehicle.number }}</strong>
+            <span class="muted"
+              >{{ u.vehicle.model ?? 'model unknown' }} · {{ u.vehicle.agency ?? '—' }}</span
+            >
+            <span class="num">{{ u.hours.toFixed(1) }} h</span>
+          </button>
+        </li>
+      }
+    </ul>
+  } @else if (searchOpen() && search().trim()) {
+    <p class="muted">No bus matches “{{ search() }}”.</p>
   }
 </div>
 
@@ -12,11 +40,116 @@
   }
 </app-time-window>
 
-@if (error(); as message) {
-  <p class="error" role="alert">{{ message }}</p>
-}
+@if (selectedId()) {
+  <!-- One bus: all its details, in place of the overview. -->
+  <button type="button" class="back" (click)="clearVehicle()">‹ Fleet overview</button>
 
-@if (report(); as r) {
+  @if (detail(); as d) {
+    <section class="card detail" [class.loading]="loadingVehicle()">
+      <div class="detail-header">
+        <span class="badge">{{ d.vehicle.number }}</span>
+        <div>
+          <h3>{{ d.vehicle.model ?? 'Model unknown' }}</h3>
+          <span class="muted">
+            {{ d.vehicle.agency ?? '—' }} · {{ d.hours.toFixed(1) }} h in service on
+            {{ d.days.length }} {{ d.days.length === 1 ? 'day' : 'days' }}
+            @if (d.lines.length) {
+              · lines {{ d.lines.join(', ') }}
+            }
+            @if (d.lastSeen) {
+              · last in service {{ d.lastSeen | date: 'EEE d MMM, HH:mm' }}
+            }
+          </span>
+        </div>
+      </div>
+
+      @if (d.days.length) {
+        <h4>{{ perRun() ? 'Runs' : 'Runs per day' }}</h4>
+        <p class="muted">
+          {{
+            perRun()
+              ? 'Each run in this window on its own row: consecutive reports on one line, brigade and headsign.'
+              : 'One row per service day (03:00 to 03:00): its runs on lines, and breaks of 30 minutes or more.'
+          }}
+        </p>
+        <app-run-timeline [rows]="timeline()" />
+
+        <h4>Hours per day</h4>
+        <p class="muted">A red dot marks a day with an abnormal trip of this bus (listed below).</p>
+        <app-bar-chart [bars]="daily()" [format]="hoursAxis" label="Hours in service per day" />
+      } @else {
+        <p class="muted">This bus served no line in this window.</p>
+      }
+
+      <h4>Abnormal trips</h4>
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Day</th>
+              <th>Departure</th>
+              <th>Line</th>
+              <th>What</th>
+              <th>What was seen</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (i of d.incidents; track i.scheduledDeparture + i.kind) {
+              <tr>
+                <td class="nowrap">{{ dayLabel(i.day) }}</td>
+                <td>{{ time(i.scheduledDeparture) }}</td>
+                <td class="nowrap">
+                  {{ i.line }} <span class="muted">{{ i.brigade }}</span>
+                </td>
+                <td>
+                  <span
+                    class="tag"
+                    [class.danger]="i.kind === 'vehicle-changed'"
+                    [class.warning]="i.kind === 'missed'"
+                  >
+                    {{ i.kind === 'vehicle-changed' ? 'Broke down' : 'Missed' }}
+                  </span>
+                </td>
+                <td>
+                  {{ i.note }}
+                  @if (i.story.length) {
+                    <button
+                      type="button"
+                      class="story-toggle"
+                      [attr.aria-expanded]="storyOpen(i)"
+                      (click)="toggleStory(i)"
+                    >
+                      {{ storyOpen(i) ? '▾' : '▸' }} Step by step ({{ i.story.length }} steps)
+                    </button>
+                  }
+                </td>
+              </tr>
+              @if (storyOpen(i)) {
+                <tr class="story-row">
+                  <td colspan="5">
+                    <app-incident-story
+                      [story]="i.story"
+                      [timeline]="i.timeline"
+                      [paths]="i.paths"
+                    />
+                  </td>
+                </tr>
+              }
+            } @empty {
+              <tr>
+                <td colspan="5" class="muted">
+                  It broke down on no trip and missed none of its brigade's trips in this window.
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  } @else {
+    <p class="muted" role="status">Loading the bus…</p>
+  }
+} @else if (report(); as r) {
   <div class="tiles" [class.loading]="loading()">
     <section class="card tile in-use">
       <h2>In use</h2>
@@ -106,7 +239,7 @@
     <h2>Hours in service per bus</h2>
     <p class="muted">
       Every bus of the fleet, the most used first; buses not used are at the end with 0 h. Click a
-      bar to see the bus below.
+      bar to see that bus in detail.
     </p>
     @if (r.usage.length) {
       <app-bar-chart
@@ -119,161 +252,6 @@
       />
     } @else {
       <p class="muted">No buses.</p>
-    }
-  </section>
-
-  <section class="card section vehicle">
-    <h2>A bus in detail</h2>
-    <div class="search">
-      <label>
-        Find a bus
-        <input
-          type="search"
-          role="combobox"
-          aria-autocomplete="list"
-          aria-controls="vehicle-matches"
-          [attr.aria-expanded]="searchOpen() && matches().length > 0"
-          placeholder="Number or model, e.g. 230 or Urbino"
-          [value]="search()"
-          (input)="search.set($any($event.target).value); searchOpen.set(true)"
-          (focus)="searchOpen.set(true)"
-          (keydown.enter)="chooseFirst()"
-          (keydown.escape)="searchOpen.set(false)"
-        />
-      </label>
-      @if (searchOpen() && matches().length) {
-        <ul id="vehicle-matches" class="matches card" role="listbox">
-          @for (u of matches(); track trackUsage(u)) {
-            <li role="option" [attr.aria-selected]="false">
-              <button type="button" (click)="choose(u.vehicle.id)">
-                <strong>{{ u.vehicle.number }}</strong>
-                <span class="muted"
-                  >{{ u.vehicle.model ?? 'model unknown' }} · {{ u.vehicle.agency ?? '—' }}</span
-                >
-                <span class="num">{{ u.hours.toFixed(1) }} h</span>
-              </button>
-            </li>
-          }
-        </ul>
-      } @else if (searchOpen() && search().trim()) {
-        <p class="muted">No bus matches “{{ search() }}”.</p>
-      }
-    </div>
-
-    @if (vehicleError(); as message) {
-      <p class="error" role="alert">{{ message }}</p>
-    }
-    @if (detail(); as d) {
-      <div class="detail" [class.loading]="loadingVehicle()">
-        <div class="detail-header">
-          <span class="badge">{{ d.vehicle.number }}</span>
-          <div>
-            <h3>{{ d.vehicle.model ?? 'Model unknown' }}</h3>
-            <span class="muted">
-              {{ d.vehicle.agency ?? '—' }} · {{ d.hours.toFixed(1) }} h in service on
-              {{ d.days.length }} {{ d.days.length === 1 ? 'day' : 'days' }}
-              @if (d.lines.length) {
-                · lines {{ d.lines.join(', ') }}
-              }
-              @if (d.lastSeen) {
-                · last in service {{ d.lastSeen | date: 'EEE d MMM, HH:mm' }}
-              }
-            </span>
-          </div>
-          <button type="button" class="close" (click)="clearVehicle()" aria-label="Close the bus">
-            ✕
-          </button>
-        </div>
-
-        @if (d.days.length) {
-          <h4>{{ perRun() ? 'Runs' : 'Runs per day' }}</h4>
-          <p class="muted">
-            {{
-              perRun()
-                ? 'Each run in this window on its own row: consecutive reports on one line, brigade and headsign.'
-                : 'One row per service day (03:00 to 03:00): its runs on lines, and breaks of 30 minutes or more.'
-            }}
-          </p>
-          <app-run-timeline [rows]="timeline()" />
-
-          <h4>Hours per day</h4>
-          <p class="muted">
-            A red dot marks a day with an abnormal trip of this bus (listed below).
-          </p>
-          <app-bar-chart [bars]="daily()" [format]="hoursAxis" label="Hours in service per day" />
-        } @else {
-          <p class="muted">This bus served no line in this window.</p>
-        }
-
-        <h4>Abnormal trips</h4>
-        <div class="data-table-wrap">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Day</th>
-                <th>Departure</th>
-                <th>Line</th>
-                <th>What</th>
-                <th>What was seen</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (i of d.incidents; track i.scheduledDeparture + i.kind) {
-                <tr>
-                  <td class="nowrap">{{ dayLabel(i.day) }}</td>
-                  <td>{{ time(i.scheduledDeparture) }}</td>
-                  <td class="nowrap">
-                    {{ i.line }} <span class="muted">{{ i.brigade }}</span>
-                  </td>
-                  <td>
-                    <span
-                      class="tag"
-                      [class.danger]="i.kind === 'vehicle-changed'"
-                      [class.warning]="i.kind === 'missed'"
-                    >
-                      {{ i.kind === 'vehicle-changed' ? 'Broke down' : 'Missed' }}
-                    </span>
-                  </td>
-                  <td>
-                    {{ i.note }}
-                    @if (i.story.length) {
-                      <button
-                        type="button"
-                        class="story-toggle"
-                        [attr.aria-expanded]="storyOpen(i)"
-                        (click)="toggleStory(i)"
-                      >
-                        {{ storyOpen(i) ? '▾' : '▸' }} Step by step ({{ i.story.length }} steps)
-                      </button>
-                    }
-                  </td>
-                </tr>
-                @if (storyOpen(i)) {
-                  <tr class="story-row">
-                    <td colspan="5">
-                      <app-incident-story
-                        [story]="i.story"
-                        [timeline]="i.timeline"
-                        [paths]="i.paths"
-                      />
-                    </td>
-                  </tr>
-                }
-              } @empty {
-                <tr>
-                  <td colspan="5" class="muted">
-                    It broke down on no trip and missed none of its brigade's trips in this window.
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </div>
-    } @else if (loadingVehicle()) {
-      <p class="muted">Loading the bus…</p>
-    } @else {
-      <p class="muted">Search for a bus, or click one above, to see its runs day by day.</p>
     }
   </section>
 

@@ -2,8 +2,8 @@ import { Component, computed, input, signal } from '@angular/core';
 import { ModelCount } from '../../core/models/models';
 
 /**
- * Buses per kind (model, size class or make): a bar per kind, the fleet's buses in grey and those in use over them
- * in blue, with "in use/fleet" beside. Long lists show their first {@link CountBars.first} with a button for all.
+ * Buses per kind (model, size class or make): a bar per kind, the fleet's buses in Bootstrap's gray-500 and those in use over them
+ * in the primary colour, both fully rounded, with "in use/fleet" beside. Long lists show their first {@link CountBars.first} with a button for all.
  */
 @Component({
   selector: 'app-count-bars',
@@ -63,15 +63,15 @@ import { ModelCount } from '../../core/models/models';
         left: 0;
         top: 0;
         height: 100%;
-        border-radius: 0 4px 4px 0;
+        border-radius: 999px;
       }
 
       .fleet {
-        background: var(--hover);
+        background: var(--progress-rest);
       }
 
       .used {
-        background: var(--chart-line);
+        background: var(--primary);
       }
 
       .num {

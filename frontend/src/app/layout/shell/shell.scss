@@ -33,8 +33,9 @@ $header-height: 56px;
     border-bottom: 1px solid rgb(255 255 255 / 25%);
   }
 
+  /* No right padding: the items reach the sidebar's right edge. */
   nav {
-    padding: 0.5rem 0.5rem 1rem;
+    padding: 0.5rem 0 1rem 0.5rem;
   }
 
   .group {
@@ -61,7 +62,8 @@ $header-height: 56px;
     align-items: center;
     gap: 0.75rem;
     padding: 0.55rem 0.75rem;
-    border-radius: var(--radius);
+    /* Fully round on the left, square where it meets the sidebar's right edge. */
+    border-radius: 999px 0 0 999px;
     color: #fff;
     text-decoration: none;
 

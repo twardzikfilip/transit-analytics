@@ -47,10 +47,6 @@
   }
 </div>
 
-@if (error(); as message) {
-  <p class="error">{{ message }}</p>
-}
-
 <div class="card data-table-wrap">
   <table class="data-table" [class.loading]="loading()">
     <thead>

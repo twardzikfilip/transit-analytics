@@ -12,7 +12,10 @@ export class TelemetryErrorHandler extends ErrorHandler {
         attributes: { route: routeOf(window.location.pathname) },
       });
       span.recordException(error instanceof Error ? error : String(error));
-      span.setStatus({ code: SpanStatusCode.ERROR, message: error instanceof Error ? error.message : undefined });
+      span.setStatus({
+        code: SpanStatusCode.ERROR,
+        message: error instanceof Error ? error.message : undefined,
+      });
       span.end();
     } catch {
       /* telemetry must never break error handling */

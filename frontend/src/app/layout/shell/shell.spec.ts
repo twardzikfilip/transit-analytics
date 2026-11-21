@@ -41,12 +41,12 @@ describe('Shell', () => {
     expect(el.querySelector('.dropdown')).toBeNull();
   });
 
-  it('groups the pages into Operation and Network, each with an icon, and shows the page title in the header', () => {
+  it('puts Home first, then groups the pages into Operation and Network, each with an icon, and shows the page title in the header', () => {
     const { el, render } = renderPage(Shell, signedIn());
     expect([...el.querySelectorAll('aside nav h2')].map(text)).toEqual(['Operation', 'Network']);
-    const [operation, network] = [...el.querySelectorAll('aside nav ul')];
+    const [home, operation, network] = [...el.querySelectorAll('aside nav ul')];
+    expect([...home.querySelectorAll('a')].map(text)).toEqual(['Home']);
     expect([...operation.querySelectorAll('a')].map(text)).toEqual([
-      'Home',
       'Brigades',
       'Fleet',
       'Abnormal trips',
@@ -55,7 +55,8 @@ describe('Shell', () => {
     expect(hrefs).toContain('/network-coverage');
     expect(hrefs).toContain('/sources');
     const all = [...el.querySelectorAll('aside nav a')].map((a) => a.getAttribute('href'));
-    for (const gone of ['/delays', '/live-map', '/positions']) expect(all).not.toContain(gone);
+    for (const gone of ['/delays', '/live-map', '/positions', '/lines'])
+      expect(all).not.toContain(gone);
     expect(el.querySelectorAll('aside nav a app-icon svg path').length).toBeGreaterThan(0);
 
     TestBed.inject(PageTitle).current.set('Fleet');

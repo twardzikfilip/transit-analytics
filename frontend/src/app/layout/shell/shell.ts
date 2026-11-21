@@ -14,7 +14,8 @@ interface NavItem {
 }
 
 interface NavGroup {
-  label: string;
+  /** Its heading; null: no heading (Home, on its own at the top). */
+  label: string | null;
   items: NavItem[];
 }
 
@@ -39,12 +40,12 @@ export class Shell {
   /** The page's title, from its route, shown in the header bar. */
   protected readonly pageTitle = inject(PageTitle).current;
 
-  /** The sidebar: day-to-day operation first, then the network and its timetable. */
+  /** The sidebar: Home on its own, then day-to-day operation, then the network and its timetable. */
   protected readonly navGroups: NavGroup[] = [
+    { label: null, items: [{ path: '/home', label: 'Home', icon: 'home' }] },
     {
       label: 'Operation',
       items: [
-        { path: '/home', label: 'Home', icon: 'home' },
         { path: '/brigades', label: 'Brigades', icon: 'brigades' },
         { path: '/fleet', label: 'Fleet', icon: 'fleet' },
         { path: '/trip-anomalies', label: 'Abnormal trips', icon: 'tripAnomalies' },
@@ -57,7 +58,6 @@ export class Shell {
         { path: '/bus-lanes', label: 'Bus lanes', icon: 'busLanes' },
         { path: '/delay-generation', label: 'Delay generation', icon: 'delayGeneration' },
         { path: '/routes', label: 'Routes', icon: 'routes' },
-        { path: '/lines', label: 'Line statistics', icon: 'lines' },
         { path: '/corridors', label: 'Important corridors', icon: 'corridors' },
         { path: '/network-coverage', label: 'Network coverage', icon: 'networkCoverage' },
         { path: '/stops', label: 'Stops', icon: 'stops' },

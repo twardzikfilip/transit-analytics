@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { BrigadeDay, BrigadeDayList, BrigadeSchedule } from '../models/models';
+import { BrigadeDay, BrigadeList, BrigadeSchedule } from '../models/models';
 
 /**
  * Brigades (vehicle duties): one's runs on a day from the timetable, the ones running on a day, and one brigade's day
@@ -18,12 +18,11 @@ export class BrigadeApi {
     });
   }
 
-  /** The brigades of an agency (default: the city's) on a service day (default: today's), "YYYY-MM-DD". */
-  list(date: string | null, agency: string | null): Observable<BrigadeDayList> {
+  /** Every brigade of an agency (default: the city's, BKM), whatever day it runs. */
+  list(agency: string | null): Observable<BrigadeList> {
     const params: Record<string, string> = {};
-    if (date) params['date'] = date;
     if (agency) params['agency'] = agency;
-    return this.http.get<BrigadeDayList>('/api/brigades', { params });
+    return this.http.get<BrigadeList>('/api/brigades', { params });
   }
 
   day(brigade: string, date: string | null): Observable<BrigadeDay> {

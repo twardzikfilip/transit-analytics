@@ -39,7 +39,6 @@ export class Hotspots {
 
   protected readonly report = this.store.selectSignal(hotspotsFeature.selectReport);
   protected readonly loading = this.store.selectSignal(hotspotsFeature.selectLoading);
-  protected readonly error = this.store.selectSignal(hotspotsFeature.selectError);
 
   protected readonly defaultPreset = DEFAULT_PRESET;
   /** The window and line in the URL (?range=1mo&line=21); a change loads their report. */
