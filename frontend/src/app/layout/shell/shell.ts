@@ -39,6 +39,7 @@ export class Shell {
     { path: '/routes', label: 'Routes', icon: '〰' },
     { path: '/lines', label: 'Line statistics', icon: '📊' },
     { path: '/corridors', label: 'Important corridors', icon: '🛣' },
+    { path: '/network-coverage', label: 'Network coverage', icon: '◎' },
     { path: '/stops', label: 'Stops', icon: '🚏' },
     { path: '/trips', label: 'Trips', icon: '⇄' },
     { path: '/stop-times', label: 'Stop times', icon: '🕑' },

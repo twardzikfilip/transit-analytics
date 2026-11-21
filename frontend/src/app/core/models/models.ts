@@ -13,3 +13,4 @@ export * from './trip-anomalies';
 export * from './boundaries';
 export * from './bus-lanes';
 export * from './brigades';
+export * from './network-coverage';

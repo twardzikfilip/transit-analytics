@@ -1,6 +1,7 @@
 package com.transitanalytics.security;
 
 import com.transitanalytics.dto.BrigadeDto;
+import com.transitanalytics.dto.NetworkCoverageDto;
 import com.transitanalytics.dto.DelayGenerationDto;
 import com.transitanalytics.dto.HotspotDto;
 import com.transitanalytics.dto.LineStatsDto;
@@ -15,6 +16,7 @@ import com.transitanalytics.gtfs.GtfsImportInProgressException;
 import com.transitanalytics.gtfs.GtfsImportResult;
 import com.transitanalytics.recording.PositionHistoryService;
 import com.transitanalytics.service.BrigadeDayService;
+import com.transitanalytics.service.NetworkCoverageService;
 import com.transitanalytics.service.BrigadeScheduleService;
 import com.transitanalytics.domain.CityBoundaries;
 import com.transitanalytics.web.BoundaryController;
@@ -29,6 +31,7 @@ import com.transitanalytics.service.TripAnomalyService;
 import com.transitanalytics.service.VehicleService;
 
 import com.transitanalytics.web.BrigadeController;
+import com.transitanalytics.web.NetworkCoverageController;
 import com.transitanalytics.web.DelayGenerationController;
 import com.transitanalytics.web.GtfsController;
 import com.transitanalytics.web.HotspotController;
@@ -83,7 +86,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(controllers = {AuthController.class, VehicleController.class, ZbiorkomController.class,
         GtfsController.class, PositionHistoryController.class,
         LineStatsController.class, FleetController.class, BrigadeController.class, HotspotController.class,
-        DelayGenerationController.class, TripAnomalyController.class, BoundaryController.class})
+        DelayGenerationController.class, TripAnomalyController.class, BoundaryController.class,
+        NetworkCoverageController.class})
 @Import({SecurityConfig.class, JwtAuthFilter.class, JwtService.class, SecurityWebTest.Metrics.class})
 @TestPropertySource(properties = {
         "app.jwt.secret=test-secret-test-secret-test-secret-123456",
@@ -170,6 +174,9 @@ class SecurityWebTest {
 
     @MockitoBean
     TripAnomalyService tripAnomalyService;
+
+    @MockitoBean
+    NetworkCoverageService networkCoverageService;
 
     @Test
     void loginReturnsToken() throws Exception {
@@ -496,6 +503,19 @@ class SecurityWebTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.brigade").value("103-05"));
         mvc.perform(get("/api/brigades/103-05/day")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void guestCanReadTheNetworkCoverage() throws Exception {
+        given(networkCoverageService.coverage()).willReturn(new NetworkCoverageDto(400, List.of(), 10,
+                new NetworkCoverageDto.Place("Białystok", new NetworkCoverageDto.Shape(List.of(), List.of()), 102),
+                new NetworkCoverageDto.Coverage(102, 75, 0.74), new NetworkCoverageDto.Coverage(81, 66, 0.82),
+                List.of(), 21, List.of(), 0.1, 289_217, new NetworkCoverageDto.Sources("OSM", "2026-11-20", "city"),
+                new NetworkCoverageDto.Belt(5, 20, List.of(), List.of())));
+        mvc.perform(get("/api/network-coverage").header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.coverage.share").value(0.74));
+        mvc.perform(get("/api/network-coverage")).andExpect(status().isUnauthorized());
     }
 
     @Test

@@ -10,3 +10,4 @@ export * from './trip-anomalies.api';
 export * from './boundaries.api';
 export * from './bus-lanes.api';
 export * from './brigades.api';
+export * from './network-coverage.api';

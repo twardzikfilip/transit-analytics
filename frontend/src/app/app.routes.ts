@@ -45,6 +45,11 @@ export const routes: Routes = [
         path: 'bus-lanes',
         loadChildren: () => import('./pages/bus-lanes/bus-lanes.routes').then((m) => m.BUS_LANES_ROUTES),
       },
+      {
+        path: 'network-coverage',
+        loadChildren: () =>
+          import('./pages/network-coverage/network-coverage.routes').then((m) => m.NETWORK_COVERAGE_ROUTES),
+      },
       { path: 'routes', loadChildren: () => import('./pages/routes/routes.routes').then((m) => m.ROUTES_ROUTES) },
       { path: 'positions', loadChildren: () => import('./pages/positions/positions.routes').then((m) => m.POSITIONS_ROUTES) },
       { path: '', loadChildren: () => import('./pages/timetable.routes').then((m) => m.TIMETABLE_ROUTES) },
