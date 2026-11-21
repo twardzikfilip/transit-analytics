@@ -280,7 +280,7 @@ weeks at a time.
 
 ### Vehicle position history (time series)
 
-Every 10 seconds from 03:30 to 01:30 (Warsaw time), **transit-recorder** polls the zbiorkom.live Białystok feed and
+Every 10 seconds, all day and night (the night lines run 00:10–04:06 on weekend nights), **transit-recorder** polls the zbiorkom.live Białystok feed and
 stores every vehicle's position in `position_sample`, a TimescaleDB hypertable. It also keeps the raw response,
 gzipped, in the archive (`backend/data/raw/zbiorkom-bialystok/YYYY/MM/DD/<UTC time>.json.gz`).
 
@@ -310,7 +310,7 @@ deploying the backend loses nothing.
   during recording hours. Without Docker: `./gradlew :recorder:bootRun` in `backend/`.
 - **Upgrading without a gap:** the same script builds the new version, starts it next to the running one (port 8082),
   waits until it records, then replaces the old one. Both poll for a while; the duplicate reports are stored once. Or
-  upgrade between 01:30 and 03:30, when nothing is recorded.
+  upgrade between 01:30 and 03:30 on a weekday night, when no buses run.
 - **Monitoring:** the same metrics as before (`transit.recording.samples`, `.failures`, `.vehicles`, `.poll`), plus
   `transit.recording.spooled`; service name `transit-recorder` in Grafana.
 - **Excluded lines:** `app.zbiorkom.bialystok.excluded-lines` (a regular expression on the line name, in both apps'

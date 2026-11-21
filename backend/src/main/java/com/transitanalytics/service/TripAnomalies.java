@@ -1,6 +1,7 @@
 package com.transitanalytics.service;
 
 import com.transitanalytics.dto.TripAnomalyDto;
+import com.transitanalytics.geo.Geo;
 import com.transitanalytics.recording.DelayOutliers;
 
 import java.time.Duration;
@@ -107,7 +108,14 @@ final class TripAnomalies {
      * seconds after {@code departure}).
      */
     record ScheduledTrip(String tripId, String line, String brigade, String headsign, Instant departure,
-                         Instant arrival, int[] seqs, String[] stops, int[] offsets, String shapeId) {
+                         Instant arrival, int[] seqs, String[] stops, int[] offsets, String shapeId,
+                         double[] lastStop) {
+
+        /** A trip whose last stop's position ([latitude, longitude]) is unknown (layovers there aren't told apart). */
+        ScheduledTrip(String tripId, String line, String brigade, String headsign, Instant departure,
+                      Instant arrival, int[] seqs, String[] stops, int[] offsets, String shapeId) {
+            this(tripId, line, brigade, headsign, departure, arrival, seqs, stops, offsets, shapeId, null);
+        }
 
         int size() {
             return seqs.length;
@@ -594,7 +602,38 @@ final class TripAnomalies {
             previous = r;
             previousTrip = trip;
         }
+        matched.replaceAll(TripAnomalies::withoutLayover);
         return matched;
+    }
+
+    /** A bus heading to a trip's last stop this close to it has arrived. */
+    static final double AT_TERMINUS_METERS = 150;
+
+    /**
+     * A trip's reports up to each bus's arrival at its last stop: the first report heading there from within
+     * {@link #AT_TERMINUS_METERS}. The feed often keeps a bus waiting at the terminus on the trip it finished, its delay
+     * growing by the second until its next trip; those reports are the layover, not the trip running late.
+     *
+     * @param reports ordered by vehicle and time
+     */
+    static List<Report> withoutLayover(ScheduledTrip trip, List<Report> reports) {
+        if (trip.lastStop() == null) {
+            return reports;
+        }
+        int last = trip.seqs()[trip.size() - 1];
+        Set<Long> arrived = new HashSet<>();
+        List<Report> kept = new ArrayList<>(reports.size());
+        for (Report r : reports) {
+            if (arrived.contains(r.vehicleId())) {
+                continue;
+            }
+            kept.add(r);
+            if (r.nextSeq() != null && r.nextSeq() >= last
+                    && Geo.meters(new double[] {r.lat(), r.lon()}, trip.lastStop()) <= AT_TERMINUS_METERS) {
+                arrived.add(r.vehicleId());
+            }
+        }
+        return kept.size() == reports.size() ? reports : kept;
     }
 
     /** A report with an outlying delay stays on its bus's trip when this close after the bus's previous report. */

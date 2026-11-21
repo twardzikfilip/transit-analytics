@@ -27,4 +27,14 @@ class ServiceDayTest {
         // The clocks go back on 25 October 2026: GTFS times count from 01:00 local time (noon minus 12 hours).
         assertThat(ServiceDay.gtfsTimeZero(LocalDate.of(2026, 10, 25))).isEqualTo(Instant.parse("2026-10-24T23:00:00Z"));
     }
+
+    @Test
+    void tripsStartingBeforeThreeCountFromTheNextDatesTimeZero() {
+        LocalDate day = LocalDate.of(2026, 11, 20);
+        // N1 at 00:10 on Saturday's timetable runs the night after Friday.
+        assertThat(ServiceDay.tripTimeZero(day, 10 * 60)).isEqualTo(ServiceDay.gtfsTimeZero(day.plusDays(1)));
+        assertThat(ServiceDay.tripTimeZero(day, 3 * 3600)).isEqualTo(ServiceDay.gtfsTimeZero(day));
+        // 24:10 on Friday's timetable is the same night.
+        assertThat(ServiceDay.tripTimeZero(day, 24 * 3600 + 10 * 60)).isEqualTo(ServiceDay.gtfsTimeZero(day));
+    }
 }

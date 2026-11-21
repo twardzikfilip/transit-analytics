@@ -30,6 +30,35 @@ final class ServiceDay {
      */
     static final String BRIGADE_SQL = "coalesce(t.block_id, split_part(t.gtfs_id, '_', 1))";
 
+    /** GTFS times before this (03:00, in seconds) belong to the service day before the timetable's date. */
+    static final int DAY_START_SECONDS = DAY_START_HOUR * 3600;
+
+    private static final String RUNS_ON =
+            "t.service_id IN (SELECT service_id FROM calendar_date WHERE date = ? AND exception_type = 1)";
+    private static final String STARTS_BEFORE_DAY_START = "EXISTS (SELECT 1 FROM stop_time e WHERE e.trip_id = t.id"
+            + " AND e.departure_time::interval < interval '" + DAY_START_HOUR + " hours')";
+
+    /**
+     * The trips of a service day, in SQL on {@code trip t}; takes the parameters {@link #tripsOfDayArgs}. A timetable
+     * gives trips after midnight either as 24:10 on the day, or as 00:10 on the next date (as this one does for the
+     * night lines); both belong to the service day that started the evening before, as the hours after midnight do.
+     */
+    static final String TRIPS_OF_DAY_SQL = "(" + RUNS_ON + " AND NOT " + STARTS_BEFORE_DAY_START
+            + " OR " + RUNS_ON + " AND " + STARTS_BEFORE_DAY_START + ")";
+
+    /** The parameters of {@link #TRIPS_OF_DAY_SQL}: the day and the date after it. */
+    static Object[] tripsOfDayArgs(LocalDate day) {
+        return new Object[] {day, day.plusDays(1)};
+    }
+
+    /**
+     * What a trip of the service day counts its GTFS times from, given its first departure: trips starting before
+     * 03:00 are on the next date's timetable (see {@link #TRIPS_OF_DAY_SQL}).
+     */
+    static Instant tripTimeZero(LocalDate day, int firstDeparture) {
+        return gtfsTimeZero(firstDeparture < DAY_START_SECONDS ? day.plusDays(1) : day);
+    }
+
     static LocalDate serviceDay(double epochSeconds) {
         return ZonedDateTime.ofInstant(Instant.ofEpochSecond((long) epochSeconds), ZONE)
                 .minusHours(DAY_START_HOUR).toLocalDate();

@@ -1,6 +1,7 @@
 package com.transitanalytics.service;
 
 import com.transitanalytics.dto.TripAnomalyDto;
+import com.transitanalytics.geo.Geo;
 import com.transitanalytics.service.TripAnomalies.Outcome;
 import com.transitanalytics.service.TripAnomalies.Report;
 import com.transitanalytics.service.TripAnomalies.ScheduledTrip;
@@ -124,9 +125,24 @@ public class TripAnomalyService {
             return List.of();
         }
         Instant from = ServiceDay.start(day);
-        Instant to = ServiceDay.start(day.plusDays(1));
+        Instant to = reportsEnd(day, trips);
         List<Report> reports = reports(from, to.isAfter(now) ? now : to);
         return TripAnomalies.judge(trips, reports, TripAnomalies.Recording.of(reports), shapes().byId(), now);
+    }
+
+    /**
+     * Until when reports count for a service day's trips: the next day's start, or later when trips run past it (the
+     * night lines run until about 04:00), with time for late buses to finish.
+     */
+    static Instant reportsEnd(LocalDate day, List<ScheduledTrip> trips) {
+        Instant end = ServiceDay.start(day.plusDays(1));
+        for (ScheduledTrip trip : trips) {
+            Instant finished = trip.arrival().plus(TripAnomalies.MATCH_TOLERANCE);
+            if (finished.isAfter(end)) {
+                end = finished;
+            }
+        }
+        return end;
     }
 
     /** A service day's outcomes as worked out for the report, when they are kept and still current; else empty. */
@@ -143,7 +159,7 @@ public class TripAnomalyService {
      * the whole day.
      */
     List<Outcome> judge(List<ScheduledTrip> trips, List<Report> reports, LocalDate day, Instant now) {
-        Instant end = ServiceDay.start(day.plusDays(1));
+        Instant end = reportsEnd(day, trips);
         return TripAnomalies.judge(trips, reports, recording(ServiceDay.start(day), end.isAfter(now) ? now : end),
                 shapes().byId(), now);
     }
@@ -156,8 +172,11 @@ public class TripAnomalyService {
     }
 
     private boolean fresh(DayOutcomes cached, LocalDate day, Instant now) {
-        Instant settled = ServiceDay.start(day.plusDays(1)).plus(TripAnomalies.SETTLE)
-                .plus(TripAnomalies.LOST_AFTER);
+        // Night lines run past the next day's start: the day is settled once its last trip is.
+        Instant lastArrival = cached.outcomes().stream().map(Outcome::arrival).max(Comparator.naturalOrder())
+                .filter(a -> a.isAfter(ServiceDay.start(day.plusDays(1))))
+                .orElse(ServiceDay.start(day.plusDays(1)));
+        Instant settled = lastArrival.plus(TripAnomalies.SETTLE).plus(TripAnomalies.LOST_AFTER);
         return cached.computed().isAfter(settled) || cached.computed().plus(CACHE_FOR).isAfter(now);
     }
 
@@ -168,34 +187,37 @@ public class TripAnomalyService {
 
     /** As {@link #trips(LocalDate)}, of one brigade only (null: all). */
     List<ScheduledTrip> trips(LocalDate day, String brigade) {
-        Instant zero = ServiceDay.gtfsTimeZero(day);
         record Row(long trip, String tripId, String line, String brigade, String headsign, String shapeId, int seq,
-                   String stop, int departure, int arrival) {
+                   String stop, int departure, int arrival, double lat, double lon) {
         }
         List<Row> rows = jdbc.query("""
                 SELECT t.id, t.gtfs_id, r.gtfs_id AS line, %s AS brigade, t.headsign, t.shape_id, st.stop_sequence,
-                       s.name, extract(epoch FROM st.departure_time::interval)::int AS departure,
+                       s.name, s.latitude, s.longitude, extract(epoch FROM st.departure_time::interval)::int AS departure,
                        extract(epoch FROM st.arrival_time::interval)::int AS arrival
                 FROM trip t JOIN route r ON r.id = t.route_id
                      JOIN stop_time st ON st.trip_id = t.id JOIN stop s ON s.id = st.stop_id
-                WHERE t.service_id IN (SELECT service_id FROM calendar_date WHERE date = ? AND exception_type = 1)%s
-                ORDER BY t.id, st.stop_sequence""".formatted(ServiceDay.BRIGADE_SQL,
+                WHERE %s%s
+                ORDER BY t.id, st.stop_sequence""".formatted(ServiceDay.BRIGADE_SQL, ServiceDay.TRIPS_OF_DAY_SQL,
                         brigade == null ? "" : " AND " + ServiceDay.BRIGADE_SQL + " = ?"),
                 (rs, i) -> new Row(rs.getLong("id"), rs.getString("gtfs_id"), rs.getString("line"),
                         rs.getString("brigade"), rs.getString("headsign"), rs.getString("shape_id"),
                         rs.getInt("stop_sequence"), StopPlaces.stopName(rs.getString("name")),
-                        rs.getInt("departure"), rs.getInt("arrival")),
-                brigade == null ? new Object[] {day} : new Object[] {day, brigade});
+                        rs.getInt("departure"), rs.getInt("arrival"), rs.getDouble("latitude"),
+                        rs.getDouble("longitude")),
+                brigade == null ? ServiceDay.tripsOfDayArgs(day)
+                        : new Object[] {day, day.plusDays(1), brigade});
         Map<Long, List<Row>> byTrip = new LinkedHashMap<>();
         rows.forEach(r -> byTrip.computeIfAbsent(r.trip(), k -> new ArrayList<>()).add(r));
         List<ScheduledTrip> trips = new ArrayList<>();
         for (List<Row> stops : byTrip.values()) {
             Row first = stops.get(0);
             Row last = stops.get(stops.size() - 1);
+            Instant zero = ServiceDay.tripTimeZero(day, first.departure());
             trips.add(new ScheduledTrip(first.tripId(), first.line(), first.brigade(), first.headsign(),
                     zero.plusSeconds(first.departure()), zero.plusSeconds(last.arrival()),
                     stops.stream().mapToInt(Row::seq).toArray(), stops.stream().map(Row::stop).toArray(String[]::new),
-                    stops.stream().mapToInt(row -> row.departure() - first.departure()).toArray(), first.shapeId()));
+                    stops.stream().mapToInt(row -> row.departure() - first.departure()).toArray(), first.shapeId(),
+                    new double[] {last.lat(), last.lon()}));
         }
         return trips;
     }
