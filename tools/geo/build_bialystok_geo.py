@@ -1,22 +1,13 @@
 #!/usr/bin/env python3
 """
-Builds backend/src/main/resources/map/bialystok-areas.json, the shapes the Network coverage page uses: the city border,
-its districts (osiedla) and the woods within it, from OpenStreetMap (© OpenStreetMap contributors, ODbL).
+Builds backend/src/main/resources/places/osm/bialystok.json: the city border, its districts (osiedla) and the woods
+within it, from OpenStreetMap (© OpenStreetMap contributors, ODbL), as fetched by fetch_osm.sh into raw/.
 
-Get the two Overpass API answers first (https://overpass-api.de; be gentle, it's a shared server):
-
-  admin.json:  [out:json][timeout:120];rel(2910925);out geom;
-               area["name"="Białystok"]["boundary"="administrative"]["admin_level"="8"]->.c;
-               rel(area.c)["boundary"="administrative"]["admin_level"="9"];out geom;
-  forest.json: [out:json][timeout:150];rel(2910925);map_to_area->.c;
-               (way["landuse"="forest"](area.c);way["natural"="wood"](area.c);
-                rel["landuse"="forest"](area.c);rel["natural"="wood"](area.c););out geom;
-
-then: python3 tools/geo/build_bialystok_geo.py admin.json forest.json backend/src/main/resources/map/bialystok-areas.json
+  tools/geo/fetch_osm.sh
+  python3 tools/geo/build_bialystok_geo.py
 """
 import json
-import sys
-from datetime import date
+import os
 
 CITY = 2910925  # Białystok, admin_level 8
 
@@ -74,7 +65,8 @@ def main(admin_path, forest_path, out_path):
         forests.append({"osm": f'{e["type"]}/{e["id"]}', "name": tags.get("name"), **s})
     out = {
         "source": "© OpenStreetMap contributors (ODbL), via the Overpass API",
-        "fetched": date.today().isoformat(),
+        # When OpenStreetMap was in the state fetched (the Overpass answer's timestamp), not when this ran.
+        "fetched": json.load(open(admin_path)).get("osm3s", {}).get("timestamp_osm_base", "")[:10],
         "city": {"name": city["tags"]["name"], **shape(city)},
         "districts": [{"osm": f'relation/{d["id"]}', "name": d["tags"]["name"], **shape(d)} for d in districts],
         "forests": forests,
@@ -84,5 +76,9 @@ def main(admin_path, forest_path, out_path):
     print(f'{len(out["districts"])} districts, {len(forests)} woods; city rings {len(out["city"]["outer"])}')
 
 
+HERE = os.path.dirname(os.path.abspath(__file__))
+PLACES = os.path.join(HERE, "..", "..", "backend", "src", "main", "resources", "places")
+
 if __name__ == "__main__":
-    main(*sys.argv[1:4])
+    main(os.path.join(HERE, "raw", "admin.json"), os.path.join(HERE, "raw", "forest.json"),
+         os.path.join(PLACES, "osm", "bialystok.json"))

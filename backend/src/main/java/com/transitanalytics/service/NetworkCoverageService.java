@@ -2,21 +2,17 @@ package com.transitanalytics.service;
 
 import com.transitanalytics.dto.NetworkCoverageDto;
 import com.transitanalytics.dto.NetworkCoverageDto.Coverage;
-import com.transitanalytics.dto.NetworkCoverageDto.District;
 import com.transitanalytics.dto.NetworkCoverageDto.Forest;
+import com.transitanalytics.dto.NetworkCoverageDto.PlaceDensity;
+import com.transitanalytics.dto.NetworkCoverageDto.RadiusCoverage;
 import com.transitanalytics.dto.NetworkCoverageDto.Shape;
 import com.transitanalytics.geo.Geo;
-import org.springframework.core.io.ClassPathResource;
+import com.transitanalytics.service.PlaceReferenceData.Feature;
+import com.transitanalytics.service.PlaceReferenceData.Residents;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import tools.jackson.databind.json.JsonMapper;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Comparator;
@@ -24,125 +20,34 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.IntFunction;
 
 /**
- * Network coverage: the share of the city within {@link #RADIUS_METERS} of a stop of the city's lines, of all of it
- * and of the part outside its woods; the woods; and the districts' population densities, with and without their woods.
- * The city's border, districts and woods come from OpenStreetMap ({@value #AREAS}), the districts' residents from the
- * city's register ({@value #POPULATION}). Areas are measured on a grid of {@link #CELL_METERS} m cells.
+ * Network coverage: the share of the city within each walking distance of the nearest stop of the city's lines, of
+ * all of it and of the part outside its woods; the woods; and the population density of the city's districts and of
+ * the villages and towns around it, also without their woods. The places come from {@code places/} (see
+ * {@link PlaceReferenceData}), the settings from {@code map/network-coverage.yml}. Areas are measured on a grid.
  */
 @Service
 public class NetworkCoverageService {
 
-    static final String AREAS = "map/bialystok-areas.json";
-    static final String POPULATION = "map/bialystok-district-population.csv";
-    static final String BELT = "map/bialystok-belt.json";
-    static final String BELT_POPULATION = "map/belt-population.csv";
-    /** The belt: villages and towns reaching within this distance of the city limits. */
-    static final double BELT_KM = 5;
-    /** The belt is measured on a coarser grid: it is some 35 km across. */
-    static final double BELT_CELL_METERS = 20;
-    /** Woods in the belt smaller than this (km²) are counted but not drawn. */
-    static final double BELT_WOOD_DRAWN_KM2 = 0.002;
-    static final int RADIUS_METERS = 400;
-    static final double CELL_METERS = 10;
-    /** Districts with at least this share of woods get a density without them. */
-    static final double LARGE_FOREST_SHARE = 0.10;
-    /**
-     * The city's population at the end of 2025 by Statistics Poland (GUS), as the city's report gives it: everyone
-     * living here, registered or not; higher than the register the districts' figures come from.
-     */
-    static final int OFFICIAL_POPULATION = 289_217;
-    /** Unnamed woods at least this large are listed on their own; the smaller ones together. */
-    static final double LISTED_KM2 = 0.1;
-
-    /** A shape from {@value #AREAS}: points are [latitude, longitude]. */
-    record Feature(String osm, String name, List<List<double[]>> outer, List<List<double[]>> inner) {
-        Shape shape() {
-            return new Shape(outer, inner);
-        }
-
-        /** All rings in metres, for {@link AreaGrid#fill}. */
-        List<double[][]> rings() {
-            List<double[][]> rings = new ArrayList<>();
-            for (List<List<double[]>> group : List.of(outer, inner)) {
-                for (List<double[]> ring : group) {
-                    rings.add(ring.stream().map(p -> Geo.xy(p[0], p[1])).toArray(double[][]::new));
-                }
-            }
-            return rings;
-        }
-    }
-
-    record Areas(String source, String fetched, Feature city, List<Feature> districts, List<Feature> forests) {
-    }
-
-    /** A village or town of the belt from {@value #BELT}. */
-    record BeltFeature(String osm, String name, String gmina, String kind, List<List<double[]>> outer,
-                       List<List<double[]>> inner) {
-        Feature feature() {
-            return new Feature(osm, name, outer, inner);
-        }
-    }
-
-    record BeltAreas(String source, List<BeltFeature> villages, List<Feature> woods) {
-    }
-
-    private record BeltPopulation(Integer population, String date, String source) {
-    }
-
     private final JdbcTemplate jdbc;
-    private final Areas areas;
-    private final BeltAreas beltAreas;
-    private final Map<String, BeltPopulation> beltPopulation;
-    private final Map<String, Integer> population;
-    private final String populationSource;
+    private final NetworkCoverageProperties settings;
+    private final PlaceReferenceData places;
     private volatile Cached cached;
 
     private record Cached(String version, NetworkCoverageDto coverage) {
     }
 
-    public NetworkCoverageService(JdbcTemplate jdbc, JsonMapper json) {
+    @Autowired
+    public NetworkCoverageService(JdbcTemplate jdbc, NetworkCoverageProperties settings) {
+        this(jdbc, settings, PlaceReferenceData.load());
+    }
+
+    NetworkCoverageService(JdbcTemplate jdbc, NetworkCoverageProperties settings, PlaceReferenceData places) {
         this.jdbc = jdbc;
-        try (InputStream in = new ClassPathResource(AREAS).getInputStream()) {
-            this.areas = json.readValue(in, Areas.class);
-        } catch (IOException ex) {
-            throw new UncheckedIOException(ex);
-        }
-        this.population = new HashMap<>();
-        StringBuilder source = new StringBuilder();
-        try (BufferedReader in = new BufferedReader(new InputStreamReader(
-                new ClassPathResource(POPULATION).getInputStream(), StandardCharsets.UTF_8))) {
-            in.lines().forEach(line -> {
-                if (line.startsWith("#")) {
-                    source.append(line.substring(1).trim()).append(' ');
-                } else if (!line.startsWith("district,") && !line.isBlank()) {
-                    String[] f = line.split(",");
-                    population.put(f[0], Integer.parseInt(f[3]) + Integer.parseInt(f[4]));
-                }
-            });
-        } catch (IOException ex) {
-            throw new UncheckedIOException(ex);
-        }
-        this.populationSource = source.toString().trim();
-        try (InputStream in = new ClassPathResource(BELT).getInputStream()) {
-            this.beltAreas = json.readValue(in, BeltAreas.class);
-        } catch (IOException ex) {
-            throw new UncheckedIOException(ex);
-        }
-        this.beltPopulation = new HashMap<>();
-        try (BufferedReader in = new BufferedReader(new InputStreamReader(
-                new ClassPathResource(BELT_POPULATION).getInputStream(), StandardCharsets.UTF_8))) {
-            in.lines().filter(line -> !line.startsWith("#") && !line.startsWith("osm,") && !line.isBlank())
-                    .forEach(line -> {
-                        List<String> f = csv(line);
-                        beltPopulation.put(f.get(0), new BeltPopulation(
-                                f.get(3).isEmpty() ? null : Integer.valueOf(f.get(3)), blankToNull(f.get(4)),
-                                blankToNull(f.get(5))));
-                    });
-        } catch (IOException ex) {
-            throw new UncheckedIOException(ex);
-        }
+        this.settings = settings;
+        this.places = places;
     }
 
     /** Worked out again when the timetable changes (another import can move stops). */
@@ -169,50 +74,26 @@ public class NetworkCoverageService {
     }
 
     NetworkCoverageDto compute(List<double[]> stops) {
+        List<double[]> stopsXy = stops.stream().map(s -> Geo.xy(s[0], s[1])).toList();
+        PlaceReferenceData.Areas areas = places.city();
         List<double[][]> cityRings = areas.city().rings();
-        double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE, maxX = -Double.MAX_VALUE, maxY = -Double.MAX_VALUE;
-        for (double[][] ring : cityRings) {
-            for (double[] p : ring) {
-                minX = Math.min(minX, p[0]);
-                minY = Math.min(minY, p[1]);
-                maxX = Math.max(maxX, p[0]);
-                maxY = Math.max(maxY, p[1]);
-            }
-        }
-        AreaGrid grid = new AreaGrid(minX, minY, maxX, maxY, CELL_METERS);
+
+        AreaGrid grid = AreaGrid.around(cityRings, settings.cellMeters());
         BitSet city = new BitSet(grid.size());
         grid.fill(cityRings, city::set);
-
-        BitSet covered = new BitSet(grid.size());
-        for (double[] stop : stops) {
-            double[] p = Geo.xy(stop[0], stop[1]);
-            grid.disc(p[0], p[1], RADIUS_METERS, covered::set);
-        }
-        covered.and(city);
-
-        // Districts: each cell of the city in one (the first whose border takes it).
-        List<Feature> districtShapes = areas.districts();
-        byte[] districtOf = new byte[grid.size()];
-        for (int d = 0; d < districtShapes.size(); d++) {
-            byte id = (byte) (d + 1);
-            grid.fill(districtShapes.get(d).rings(), cell -> {
-                if (districtOf[cell] == 0 && city.get(cell)) {
-                    districtOf[cell] = id;
-                }
-            });
-        }
+        PlaceGrid districts = new PlaceGrid(grid, city, areas.districts().stream().map(Feature::rings).toList());
 
         // Woods: a cell counts once, for the first mapped wood that takes it.
         BitSet forest = new BitSet(grid.size());
         List<WoodPiece> pieces = new ArrayList<>();
         for (Feature f : areas.forests()) {
             int[] count = new int[1];
-            int[] byDistrict = new int[districtShapes.size() + 1];
+            int[] byDistrict = new int[districts.places + 1];
             grid.fill(f.rings(), cell -> {
                 if (city.get(cell) && !forest.get(cell)) {
                     forest.set(cell);
                     count[0]++;
-                    byDistrict[districtOf[cell]]++;
+                    byDistrict[districts.placeOf(cell)]++;
                 }
             });
             if (count[0] > 0) {
@@ -220,156 +101,100 @@ public class NetworkCoverageService {
             }
         }
 
+        List<BitSet> near = near(grid, stopsXy);
+        List<RadiusCoverage> coverages = new ArrayList<>();
         long cityCells = city.cardinality();
-        long coveredCells = covered.cardinality();
         long forestCells = forest.cardinality();
-        BitSet coveredForest = (BitSet) covered.clone();
-        coveredForest.and(forest);
-        long coveredLand = coveredCells - coveredForest.cardinality();
-
-        // The districts' cells, woods and covered cells.
-        long[] cells = new long[districtShapes.size() + 1];
-        long[] woods = new long[districtShapes.size() + 1];
-        long[] near = new long[districtShapes.size() + 1];
-        for (int cell = city.nextSetBit(0); cell >= 0; cell = city.nextSetBit(cell + 1)) {
-            int d = districtOf[cell];
-            cells[d]++;
-            if (forest.get(cell)) {
-                woods[d]++;
-            }
-            if (covered.get(cell)) {
-                near[d]++;
-            }
-        }
-        List<District> districts = new ArrayList<>();
-        for (int d = 0; d < districtShapes.size(); d++) {
-            Feature f = districtShapes.get(d);
-            double area = grid.km2(cells[d + 1]);
-            double wood = grid.km2(woods[d + 1]);
-            double land = area - wood;
-            int people = population.getOrDefault(f.name(), 0);
-            districts.add(new District(f.name(), f.shape(), round(area), people, ratio(people, area), round(wood),
-                    round(land), ratio(people, land), area > 0 && wood / area >= LARGE_FOREST_SHARE,
-                    cells[d + 1] == 0 ? 0 : (double) near[d + 1] / cells[d + 1]));
+        for (int r = 0; r < near.size(); r++) {
+            BitSet covered = (BitSet) near.get(r).clone();
+            covered.and(city);
+            BitSet coveredWoods = (BitSet) covered.clone();
+            coveredWoods.and(forest);
+            coverages.add(new RadiusCoverage(settings.radii().get(r), coverage(grid, cityCells, covered.cardinality()),
+                    coverage(grid, cityCells - forestCells, covered.cardinality() - coveredWoods.cardinality())));
         }
 
-        return new NetworkCoverageDto(RADIUS_METERS, stops, CELL_METERS,
+        List<Feature> districtShapes = areas.districts();
+        List<PlaceDensity> districtRows = measure(districts, forest, near, i -> {
+            Feature f = districtShapes.get(i);
+            return new Place(f, "district", null,
+                    places.districtPopulation().getOrDefault(f.name(), Residents.UNKNOWN));
+        });
+
+        return new NetworkCoverageDto(stops, settings.cellMeters(),
                 new NetworkCoverageDto.Place(areas.city().name(), areas.city().shape(), round(grid.km2(cityCells))),
-                coverage(grid, cityCells, coveredCells), coverage(grid, cityCells - forestCells, coveredLand),
-                forests(grid, pieces, districtShapes),
-                round(grid.km2(forestCells)), districts, LARGE_FOREST_SHARE, OFFICIAL_POPULATION,
-                new NetworkCoverageDto.Sources(areas.source(), areas.fetched(), populationSource),
-                belt(stops, cityRings));
+                coverages, forests(grid, pieces, districtShapes), round(grid.km2(forestCells)), districtRows,
+                settings.largeForestShare(), places.official(),
+                new NetworkCoverageDto.Sources(areas.source(), areas.fetched(), places.districtPopulationSource()),
+                belt(stopsXy, cityRings));
     }
 
     /**
-     * The villages and towns around the city: each one's area outside the city limits, its woods, its residents and
-     * densities (none without a figure), and how much of it is near a stop.
+     * The villages and towns around the city, measured like the districts, outside the city limits, on a coarser
+     * grid (the belt is some 35 km across).
      */
-    private NetworkCoverageDto.Belt belt(List<double[]> stops, List<double[][]> cityRings) {
-        double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE, maxX = -Double.MAX_VALUE, maxY = -Double.MAX_VALUE;
-        List<List<double[][]>> placeRings = new ArrayList<>();
-        for (BeltFeature v : beltAreas.villages()) {
-            List<double[][]> rings = v.feature().rings();
-            placeRings.add(rings);
-            for (double[][] ring : rings) {
-                for (double[] p : ring) {
-                    minX = Math.min(minX, p[0]);
-                    minY = Math.min(minY, p[1]);
-                    maxX = Math.max(maxX, p[0]);
-                    maxY = Math.max(maxY, p[1]);
-                }
-            }
-        }
-        if (placeRings.isEmpty()) {
-            return new NetworkCoverageDto.Belt(BELT_KM, BELT_CELL_METERS, List.of(), List.of());
-        }
-        AreaGrid grid = new AreaGrid(minX, minY, maxX, maxY, BELT_CELL_METERS);
-        BitSet city = new BitSet(grid.size());
-        grid.fill(cityRings, city::set);
-        // Each cell outside the city in one place (the first whose border takes it).
-        short[] placeOf = new short[grid.size()];
-        for (int i = 0; i < placeRings.size(); i++) {
-            short id = (short) (i + 1);
-            grid.fill(placeRings.get(i), cell -> {
-                if (placeOf[cell] == 0 && !city.get(cell)) {
-                    placeOf[cell] = id;
-                }
-            });
-        }
+    private NetworkCoverageDto.Belt belt(List<double[]> stopsXy, List<double[][]> cityRings) {
+        List<PlaceReferenceData.BeltFeature> villages = places.belt().villages();
+        List<List<double[][]>> placeRings = villages.stream().map(v -> v.feature().rings()).toList();
+        AreaGrid grid = AreaGrid.around(placeRings.stream().flatMap(List::stream).toList(), settings.beltCellMeters());
+        BitSet outsideCity = new BitSet(grid.size());
+        grid.fill(cityRings, outsideCity::set);
+        outsideCity.flip(0, grid.size());
+        PlaceGrid belt = new PlaceGrid(grid, outsideCity, placeRings);
+
         BitSet woods = new BitSet(grid.size());
         List<Shape> drawn = new ArrayList<>();
-        for (Feature f : beltAreas.woods()) {
+        for (Feature f : places.belt().woods()) {
             int[] count = new int[1];
             grid.fill(f.rings(), cell -> {
-                if (placeOf[cell] != 0) {
+                if (belt.placeOf(cell) != 0) {
                     woods.set(cell);
                     count[0]++;
                 }
             });
-            if (grid.km2(count[0]) >= BELT_WOOD_DRAWN_KM2) {
+            if (grid.km2(count[0]) >= settings.drawnWoodsKm2()) {
                 drawn.add(f.shape());
             }
         }
-        BitSet covered = new BitSet(grid.size());
-        for (double[] stop : stops) {
-            double[] p = Geo.xy(stop[0], stop[1]);
-            grid.disc(p[0], p[1], RADIUS_METERS, covered::set);
-        }
-        long[] cells = new long[placeRings.size() + 1];
-        long[] wood = new long[placeRings.size() + 1];
-        long[] near = new long[placeRings.size() + 1];
-        for (int cell = 0; cell < placeOf.length; cell++) {
-            int v = placeOf[cell];
-            if (v == 0) {
-                continue;
-            }
-            cells[v]++;
-            if (woods.get(cell)) {
-                wood[v]++;
-            }
-            if (covered.get(cell)) {
-                near[v]++;
-            }
-        }
-        List<NetworkCoverageDto.BeltPlace> places = new ArrayList<>();
-        for (int i = 0; i < placeRings.size(); i++) {
-            BeltFeature v = beltAreas.villages().get(i);
-            BeltPopulation people = beltPopulation.getOrDefault(v.osm(), new BeltPopulation(null, null, null));
-            double area = grid.km2(cells[i + 1]);
-            double forest = grid.km2(wood[i + 1]);
+        List<PlaceDensity> rows = measure(belt, woods, near(grid, stopsXy), i -> {
+            PlaceReferenceData.BeltFeature v = villages.get(i);
+            return new Place(v.feature(), v.kind(), v.gmina(),
+                    places.beltPopulation().getOrDefault(v.osm(), Residents.UNKNOWN));
+        });
+        return new NetworkCoverageDto.Belt(settings.beltKm(), settings.beltCellMeters(), rows, drawn);
+    }
+
+    /** A place to measure: its shape, what it is and its residents. */
+    private record Place(Feature feature, String kind, String gmina, Residents residents) {
+    }
+
+    /** The cells within each walking distance of a stop, as {@link NetworkCoverageProperties#radii()}. */
+    private List<BitSet> near(AreaGrid grid, List<double[]> stopsXy) {
+        return settings.radii().stream().map(radius -> grid.near(stopsXy, radius)).toList();
+    }
+
+    /** Each place's area, woods, densities and share near a stop (at each distance). */
+    private List<PlaceDensity> measure(PlaceGrid grid, BitSet woods, List<BitSet> near, IntFunction<Place> place) {
+        long[] cells = grid.count(null);
+        long[] wood = grid.count(woods);
+        List<long[]> covered = near.stream().map(grid::count).toList();
+        List<PlaceDensity> rows = new ArrayList<>();
+        for (int i = 0; i < grid.places; i++) {
+            Place p = place.apply(i);
+            long n = cells[i + 1];
+            double area = grid.grid.km2(n);
+            double forest = grid.grid.km2(wood[i + 1]);
             double land = area - forest;
-            Integer n = people.population();
-            places.add(new NetworkCoverageDto.BeltPlace(v.name(), v.gmina(), v.kind(), v.feature().shape(),
-                    round(area), n, people.date(), people.source(), n == null ? null : ratio(n, area),
-                    round(forest), round(land), n == null ? null : ratio(n, land),
-                    area > 0 && forest / area >= LARGE_FOREST_SHARE,
-                    cells[i + 1] == 0 ? 0 : (double) near[i + 1] / cells[i + 1]));
+            Integer people = p.residents().population();
+            int id = i + 1;
+            List<Double> shares = covered.stream().map(c -> n == 0 ? 0 : (double) c[id] / n).toList();
+            rows.add(new PlaceDensity(p.feature().name(), p.kind(), p.gmina(), p.feature().shape(), round(area),
+                    people, p.residents().date(), p.residents().source(),
+                    people == null ? null : ratio(people, area), round(forest), round(land),
+                    people == null ? null : ratio(people, land), area > 0 && forest / area >= settings.largeForestShare(),
+                    shares));
         }
-        return new NetworkCoverageDto.Belt(BELT_KM, BELT_CELL_METERS, places, drawn);
-    }
-
-    /** The fields of a CSV line, double quotes taken off. */
-    static List<String> csv(String line) {
-        List<String> fields = new ArrayList<>();
-        StringBuilder field = new StringBuilder();
-        boolean quoted = false;
-        for (char c : line.toCharArray()) {
-            if (c == '"') {
-                quoted = !quoted;
-            } else if (c == ',' && !quoted) {
-                fields.add(field.toString());
-                field.setLength(0);
-            } else {
-                field.append(c);
-            }
-        }
-        fields.add(field.toString());
-        return fields;
-    }
-
-    private static String blankToNull(String s) {
-        return s == null || s.isBlank() ? null : s;
+        return rows;
     }
 
     private record WoodPiece(Feature feature, int cells, int[] byDistrict) {
@@ -377,16 +202,17 @@ public class NetworkCoverageService {
 
     /**
      * The woods to list: the named ones (pieces with one name together), the unnamed ones of at least
-     * {@link #LISTED_KM2} on their own, named after their district, and the smaller ones together.
+     * {@link NetworkCoverageProperties#listedWoodsKm2()} on their own, named after their district, and the smaller
+     * ones together.
      */
-    private static List<Forest> forests(AreaGrid grid, List<WoodPiece> pieces, List<Feature> districtShapes) {
+    private List<Forest> forests(AreaGrid grid, List<WoodPiece> pieces, List<Feature> districtShapes) {
         Map<String, List<WoodPiece>> groups = new LinkedHashMap<>();
         List<WoodPiece> small = new ArrayList<>();
         for (WoodPiece p : pieces) {
             String name = p.feature().name();
             if (name != null && !name.isBlank()) {
                 groups.computeIfAbsent(name, k -> new ArrayList<>()).add(p);
-            } else if (grid.km2(p.cells()) >= LISTED_KM2) {
+            } else if (grid.km2(p.cells()) >= settings.listedWoodsKm2()) {
                 groups.put("\0" + p.feature().osm(), List.of(p));
             } else {
                 small.add(p);
@@ -419,6 +245,9 @@ public class NetworkCoverageService {
     }
 
     private static String mainDistrict(List<WoodPiece> group, List<Feature> districtShapes) {
+        if (districtShapes.isEmpty()) {
+            return null;
+        }
         int[] total = new int[districtShapes.size() + 1];
         group.forEach(p -> {
             for (int d = 0; d < total.length; d++) {
@@ -431,7 +260,7 @@ public class NetworkCoverageService {
                 best = d;
             }
         }
-        return districtShapes.isEmpty() ? null : districtShapes.get(best - 1).name();
+        return districtShapes.get(best - 1).name();
     }
 
     private static Coverage coverage(AreaGrid grid, long cells, long covered) {

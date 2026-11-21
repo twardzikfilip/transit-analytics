@@ -507,14 +507,16 @@ class SecurityWebTest {
 
     @Test
     void guestCanReadTheNetworkCoverage() throws Exception {
-        given(networkCoverageService.coverage()).willReturn(new NetworkCoverageDto(400, List.of(), 10,
+        given(networkCoverageService.coverage()).willReturn(new NetworkCoverageDto(List.of(), 10,
                 new NetworkCoverageDto.Place("Białystok", new NetworkCoverageDto.Shape(List.of(), List.of()), 102),
-                new NetworkCoverageDto.Coverage(102, 75, 0.74), new NetworkCoverageDto.Coverage(81, 66, 0.82),
-                List.of(), 21, List.of(), 0.1, 289_217, new NetworkCoverageDto.Sources("OSM", "2026-11-20", "city"),
+                List.of(new NetworkCoverageDto.RadiusCoverage(400, new NetworkCoverageDto.Coverage(102, 75, 0.74),
+                        new NetworkCoverageDto.Coverage(81, 66, 0.82))),
+                List.of(), 21, List.of(), 0.1, new NetworkCoverageDto.Population(289_217, "2025-12-31", "GUS"),
+                new NetworkCoverageDto.Sources("OSM", "2026-11-20", "city"),
                 new NetworkCoverageDto.Belt(5, 20, List.of(), List.of())));
         mvc.perform(get("/api/network-coverage").header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.coverage.share").value(0.74));
+                .andExpect(jsonPath("$.coverages[0].city.share").value(0.74));
         mvc.perform(get("/api/network-coverage")).andExpect(status().isUnauthorized());
     }
 

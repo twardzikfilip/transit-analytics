@@ -1,6 +1,7 @@
 package com.transitanalytics.service;
 
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.List;
 import java.util.function.IntConsumer;
 
@@ -23,6 +24,35 @@ final class AreaGrid {
         this.cell = cell;
         this.nx = Math.max(1, (int) Math.ceil((maxX - minX) / cell));
         this.ny = Math.max(1, (int) Math.ceil((maxY - minY) / cell));
+    }
+
+    /** A grid just covering the rings (each a list of {x, y}). */
+    static AreaGrid around(List<double[][]> rings, double cell) {
+        double minX = Double.MAX_VALUE;
+        double minY = Double.MAX_VALUE;
+        double maxX = -Double.MAX_VALUE;
+        double maxY = -Double.MAX_VALUE;
+        for (double[][] ring : rings) {
+            for (double[] p : ring) {
+                minX = Math.min(minX, p[0]);
+                minY = Math.min(minY, p[1]);
+                maxX = Math.max(maxX, p[0]);
+                maxY = Math.max(maxY, p[1]);
+            }
+        }
+        if (minX > maxX) {
+            return new AreaGrid(0, 0, cell, cell, cell);
+        }
+        return new AreaGrid(minX, minY, maxX, maxY, cell);
+    }
+
+    /** The cells within {@code radius} of any of the points ({x, y}). */
+    BitSet near(List<double[]> points, double radius) {
+        BitSet near = new BitSet(size());
+        for (double[] p : points) {
+            disc(p[0], p[1], radius, near::set);
+        }
+        return near;
     }
 
     int size() {

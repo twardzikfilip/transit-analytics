@@ -10,100 +10,104 @@
 } @else if (loading()) {
   <p class="muted">Working out the coverage…</p>
 } @else if (data(); as d) {
-  <section aria-labelledby="coverage-title">
-    <h2 id="coverage-title">Stops within {{ d.radiusMeters }} m</h2>
-    <div class="tiles">
-      <div class="card tile">
-        <span class="muted">City area</span>
-        <strong>{{ area(d.city.areaKm2) }}</strong>
-        <span class="muted small">within the city limits</span>
-      </div>
-      <div class="card tile">
-        <span class="muted">Within {{ d.radiusMeters }} m of a stop</span>
-        <strong>{{ percent(d.coverage.share) }}</strong>
-        <span class="muted small">{{ area(d.coverage.coveredKm2) }} of the city</span>
-      </div>
-      <div class="card tile">
-        <span class="muted">Woods</span>
-        <strong>{{ area(d.forestKm2) }}</strong>
-        <span class="muted small">{{ percent(d.forestKm2 / d.city.areaKm2) }} of the city</span>
-      </div>
-      <div class="card tile">
-        <span class="muted">Without the woods: within {{ d.radiusMeters }} m</span>
-        <strong>{{ percent(d.withoutForest.share) }}</strong>
-        <span class="muted small"
-          >{{ area(d.withoutForest.coveredKm2) }} of {{ area(d.withoutForest.areaKm2) }}</span
-        >
-      </div>
-    </div>
-
-    <section class="card coverage-card" [class.collapsed]="!coverageOpen()">
-      <h3>
-        <button
-          type="button"
-          class="collapse-toggle"
-          [attr.aria-expanded]="coverageOpen()"
-          aria-controls="coverage-map-body"
-          (click)="coverageOpen.set(!coverageOpen())"
-        >
-          <span class="chevron" aria-hidden="true">▾</span>
-          Area near a stop and the woods
-        </button>
-      </h3>
-      @if (coverageOpen()) {
-        <div id="coverage-map-body">
-          <p class="muted">
-            A circle of {{ d.radiusMeters }} m (about a five-minute walk) around every stop of the
-            city's lines, including those just outside the city limits. Hover a wood for its name
-            and area.
-          </p>
-          <app-coverage-map [data]="d" />
+  @for (c of d.coverages; track c.radiusMeters) {
+    <section class="radius" [attr.aria-labelledby]="'coverage-' + c.radiusMeters">
+      <h2 [id]="'coverage-' + c.radiusMeters">Stops within {{ c.radiusMeters }} m</h2>
+      <div class="tiles">
+        <div class="card tile">
+          <span class="muted">City area</span>
+          <strong>{{ area(d.city.areaKm2) }}</strong>
+          <span class="muted small">within the city limits</span>
         </div>
-      }
-    </section>
-
-    <section class="card">
-      <h3>Woods in the city</h3>
-      <p class="muted">
-        Woods mapped in OpenStreetMap (forest and wood), the parts inside the city limits; unnamed
-        ones of at least 10 ha are named after their district, smaller ones are counted together.
-      </p>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Wood</th>
-              <th>District</th>
-              <th class="num">Area</th>
-              <th class="num">Share of the city</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (f of d.forests; track f.name) {
-              <tr [class.muted]="!f.named">
-                <td>
-                  {{ f.name }}
-                  @if (f.pieces > 1) {
-                    <span class="muted small">({{ f.pieces }} areas)</span>
-                  }
-                </td>
-                <td>{{ f.district ?? '–' }}</td>
-                <td class="num">{{ area(f.areaKm2) }}</td>
-                <td class="num">{{ percent(f.areaKm2 / d.city.areaKm2) }}</td>
-              </tr>
-            }
-          </tbody>
-          <tfoot>
-            <tr>
-              <th>All woods</th>
-              <td></td>
-              <td class="num">{{ area(d.forestKm2) }}</td>
-              <td class="num">{{ percent(d.forestKm2 / d.city.areaKm2) }}</td>
-            </tr>
-          </tfoot>
-        </table>
+        <div class="card tile">
+          <span class="muted">Within {{ c.radiusMeters }} m of the nearest bus stop</span>
+          <strong>{{ percent(c.city.share) }}</strong>
+          <span class="muted small">{{ area(c.city.coveredKm2) }} of the city</span>
+        </div>
+        <div class="card tile">
+          <span class="muted">Woods</span>
+          <strong>{{ area(d.forestKm2) }}</strong>
+          <span class="muted small">{{ percent(d.forestKm2 / d.city.areaKm2) }} of the city</span>
+        </div>
+        <div class="card tile">
+          <span class="muted"
+            >Without the woods: within {{ c.radiusMeters }} m of the nearest bus stop</span
+          >
+          <strong>{{ percent(c.withoutForest.share) }}</strong>
+          <span class="muted small"
+            >{{ area(c.withoutForest.coveredKm2) }} of {{ area(c.withoutForest.areaKm2) }}</span
+          >
+        </div>
       </div>
+
+      <section class="card coverage-card">
+        <h3>
+          <button
+            type="button"
+            class="collapse-toggle"
+            [attr.aria-expanded]="isOpen(c.radiusMeters)"
+            [attr.aria-controls]="'coverage-map-' + c.radiusMeters"
+            (click)="toggle(c.radiusMeters)"
+          >
+            <span class="chevron" aria-hidden="true">▾</span>
+            Area within {{ c.radiusMeters }} m of the nearest bus stop, and the woods
+          </button>
+        </h3>
+        @if (isOpen(c.radiusMeters)) {
+          <div [id]="'coverage-map-' + c.radiusMeters">
+            <p class="muted">
+              A circle of {{ c.radiusMeters }} m around every stop of the city's lines, including
+              those just outside the city limits: what is within {{ c.radiusMeters }} m of the
+              nearest stop, as the crow flies. Hover a wood for its name and area.
+            </p>
+            <app-coverage-map [data]="d" [radius]="c.radiusMeters" />
+          </div>
+        }
+      </section>
     </section>
+  }
+
+  <section class="card">
+    <h3>Woods in the city</h3>
+    <p class="muted">
+      Woods mapped in OpenStreetMap (forest and wood), the parts inside the city limits; unnamed
+      ones of at least 10 ha are named after their district, smaller ones are counted together.
+    </p>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Wood</th>
+            <th>District</th>
+            <th class="num">Area</th>
+            <th class="num">Share of the city</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (f of d.forests; track f.name) {
+            <tr [class.muted]="!f.named">
+              <td>
+                {{ f.name }}
+                @if (f.pieces > 1) {
+                  <span class="muted small">({{ f.pieces }} areas)</span>
+                }
+              </td>
+              <td>{{ f.district ?? '–' }}</td>
+              <td class="num">{{ area(f.areaKm2) }}</td>
+              <td class="num">{{ percent(f.areaKm2 / d.city.areaKm2) }}</td>
+            </tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr>
+            <th>All woods</th>
+            <td></td>
+            <td class="num">{{ area(d.forestKm2) }}</td>
+            <td class="num">{{ percent(d.forestKm2 / d.city.areaKm2) }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
   </section>
 
   <section aria-labelledby="density-title">
@@ -114,22 +118,24 @@
       <p class="muted">
         The {{ d.districts.length }} districts (osiedla) and the villages and towns around the city,
         coloured by how many people live per km² outside their woods; the woods themselves are on
-        the scale as places nobody lives. Hover a district for its figures.
+        the scale as places nobody lives. Hover a place for its figures.
       </p>
       <app-district-map [data]="d" />
     </section>
 
     <section class="card">
       <h3>Area, residents and density</h3>
-      <div class="table-wrap">
-        <table class="districts">
+      <div class="data-table-wrap">
+        <table class="data-table districts">
           <thead>
             <tr>
               <th>District</th>
               <th class="num">Area</th>
               <th class="num">Registered residents</th>
               <th class="num">Density</th>
-              <th class="num">Near a stop</th>
+              @for (c of d.coverages; track c.radiusMeters) {
+                <th class="num">Within {{ c.radiusMeters }} m</th>
+              }
             </tr>
           </thead>
           <tbody>
@@ -137,9 +143,11 @@
               <tr>
                 <td>{{ x.name }}</td>
                 <td class="num">{{ area(x.areaKm2) }}</td>
-                <td class="num">{{ people(x.population) }}</td>
-                <td class="num">{{ density(x.density) }}</td>
-                <td class="num">{{ percent(x.coveredShare) }}</td>
+                <td class="num">{{ x.population === null ? '–' : int(x.population) }}</td>
+                <td class="num">{{ x.density === null ? '–' : density(x.density) }}</td>
+                @for (s of x.coveredShares; track $index) {
+                  <td class="num">{{ percent(s) }}</td>
+                }
               </tr>
             }
           </tbody>
@@ -147,16 +155,20 @@
             <tr>
               <th>City</th>
               <td class="num">{{ area(totals().km2) }}</td>
-              <td class="num">{{ people(totals().people) }}</td>
+              <td class="num">{{ int(totals().people) }}</td>
               <td class="num">{{ density(totals().density) }}</td>
-              <td class="num">{{ percent(d.coverage.share) }}</td>
+              @for (c of d.coverages; track c.radiusMeters) {
+                <td class="num">{{ percent(c.city.share) }}</td>
+              }
             </tr>
             <tr class="official">
               <th>City, by Statistics Poland</th>
               <td class="num">{{ area(d.city.areaKm2) }}</td>
-              <td class="num">{{ people(d.officialPopulation) }}</td>
-              <td class="num">{{ density(d.officialPopulation / d.city.areaKm2) }}</td>
-              <td></td>
+              <td class="num">{{ int(d.official.population) }}</td>
+              <td class="num">{{ density(d.official.population / d.city.areaKm2) }}</td>
+              @for (c of d.coverages; track c.radiusMeters) {
+                <td></td>
+              }
             </tr>
           </tfoot>
         </table>
@@ -169,8 +181,8 @@
         Districts with woods on at least {{ percent(d.forestShare) }} of their area, with the woods
         taken out: how densely the rest is lived in.
       </p>
-      <div class="table-wrap">
-        <table class="wooded">
+      <div class="data-table-wrap">
+        <table class="data-table wooded">
           <thead>
             <tr>
               <th>District</th>
@@ -192,10 +204,10 @@
                   {{ area(x.forestKm2) }} <span class="muted small">{{ forestShare(x) }}</span>
                 </td>
                 <td class="num">{{ area(x.landKm2) }}</td>
-                <td class="num">{{ people(x.population) }}</td>
-                <td class="num">{{ density(x.density) }}</td>
+                <td class="num">{{ x.population === null ? '–' : int(x.population) }}</td>
+                <td class="num">{{ x.density === null ? '–' : density(x.density) }}</td>
                 <td class="num">
-                  <strong>{{ density(x.landDensity) }}</strong>
+                  <strong>{{ x.landDensity === null ? '–' : density(x.landDensity) }}</strong>
                 </td>
                 <td class="num">{{ rise(x) }}</td>
               </tr>
@@ -207,7 +219,7 @@
               <td class="num">{{ area(totals().km2) }}</td>
               <td class="num">{{ area(d.forestKm2) }}</td>
               <td class="num">{{ area(totals().land) }}</td>
-              <td class="num">{{ people(totals().people) }}</td>
+              <td class="num">{{ int(totals().people) }}</td>
               <td class="num">{{ density(totals().density) }}</td>
               <td class="num">
                 <strong>{{ density(totals().landDensity) }}</strong>
@@ -218,88 +230,90 @@
         </table>
       </div>
     </section>
-  </section>
 
-  <section class="card" aria-labelledby="belt-title">
-    <h3 id="belt-title">Villages and towns around the city</h3>
-    <p class="muted">
-      Every village (sołectwo) and town reaching within {{ d.belt.distanceKm }} km of the city
-      limits: {{ beltTotals().places }} places, {{ area(beltTotals().km2) }},
-      {{ people(beltTotals().people) }} residents in the {{ beltTotals().known }} with a figure. On
-      the map above with the districts, on the same scale. Densities outside the woods, as for the
-      districts.
-    </p>
-    <div class="table-wrap">
-      <table class="belt">
-        <thead>
-          <tr>
-            <th>Place</th>
-            <th>Gmina</th>
-            <th class="num">Area</th>
-            <th class="num">Residents</th>
-            <th>As of</th>
-            <th class="num">Density</th>
-            <th class="num">Without woods</th>
-            <th class="num">Near a stop</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (p of belt(); track p.name + p.gmina) {
-            <tr [class.muted]="p.population === null">
-              <td>
-                {{ p.name }}
-                @if (p.kind === 'town') {
-                  <span class="muted small">town</span>
-                }
-              </td>
-              <td>{{ p.gmina?.replace('gmina ', '') ?? '–' }}</td>
-              <td class="num">{{ area(p.areaKm2) }}</td>
-              <td class="num">{{ p.population === null ? 'no figure' : people(p.population) }}</td>
-              <td [title]="p.populationSource ?? ''">{{ when(p.populationDate) }}</td>
-              <td class="num">{{ p.density === null ? '–' : density(p.density) }}</td>
-              <td class="num">
-                @if (p.landDensity !== null && p.forestKm2 > 0) {
-                  {{ density(p.landDensity) }}
-                  <span class="muted small">{{ percent(p.forestKm2 / p.areaKm2) }} woods</span>
-                } @else {
-                  –
-                }
-              </td>
-              <td class="num">{{ percent(p.coveredShare) }}</td>
+    <section class="card" aria-labelledby="belt-title">
+      <h3 id="belt-title">Villages and towns around the city</h3>
+      <p class="muted">
+        Every village (sołectwo) and town reaching within {{ d.belt.distanceKm }} km of the city
+        limits: {{ beltTotals().places }} places, {{ area(beltTotals().km2) }},
+        {{ int(beltTotals().people) }} residents in the {{ beltTotals().known }} with a figure. On
+        the map above with the districts, on the same scale; densities outside the woods, as for the
+        districts.
+      </p>
+      <div class="data-table-wrap">
+        <table class="data-table belt">
+          <thead>
+            <tr>
+              <th>Place</th>
+              <th>Gmina</th>
+              <th class="num">Area</th>
+              <th class="num">Residents</th>
+              <th>As of</th>
+              <th class="num">Density</th>
+              <th class="num">Without woods</th>
+              @for (c of d.coverages; track c.radiusMeters) {
+                <th class="num">Within {{ c.radiusMeters }} m</th>
+              }
             </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            @for (p of belt(); track p.name + p.gmina) {
+              <tr [class.muted]="p.population === null">
+                <td>
+                  {{ p.name }}
+                  @if (p.kind === 'town') {
+                    <span class="muted small">town</span>
+                  }
+                </td>
+                <td>{{ p.gmina?.replace('gmina ', '') ?? '–' }}</td>
+                <td class="num">{{ area(p.areaKm2) }}</td>
+                <td class="num">{{ p.population === null ? 'no figure' : int(p.population) }}</td>
+                <td [title]="p.populationSource ?? ''">{{ asOf(p.populationDate) }}</td>
+                <td class="num">{{ p.density === null ? '–' : density(p.density) }}</td>
+                <td class="num">
+                  @if (p.landDensity !== null && p.forestKm2 > 0) {
+                    {{ density(p.landDensity) }}
+                    <span class="muted small">{{ forestShare(p) }} woods</span>
+                  } @else {
+                    –
+                  }
+                </td>
+                @for (s of p.coveredShares; track $index) {
+                  <td class="num">{{ percent(s) }}</td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
   </section>
 
   <section class="card how">
     <h3>How this is worked out</h3>
     <ul>
       <li>
-        The city limits, districts and woods come from OpenStreetMap ({{
+        The city limits, districts, villages and woods come from OpenStreetMap ({{
           d.sources.shapesFetched
-        }}). Areas are measured on a grid of {{ d.cellMeters }} m squares, so overlapping woods
-        count once.
+        }}). Areas are measured on a grid of {{ d.cellMeters }} m squares in the city and
+        {{ d.belt.cellMeters }} m squares around it, so overlapping woods count once.
       </li>
       <li>
-        Stops are those of the city's lines in the current timetable. One near the border also
-        covers the city side of it.
+        Stops are those of the city's lines in the current timetable; one near the border also
+        covers the city side of it. Distances are as the crow flies: walking along streets is
+        longer.
       </li>
       <li>
         Residents of each district are those on the city's register at the end of 2025, for
-        permanent or temporary stay, from the city's report (Raport o stanie Miasta Białegostoku za
-        2025 rok, table 4): {{ people(totals().people) }} together. Statistics Poland puts the city
-        at {{ people(d.officialPopulation) }}: it counts everyone living here, registered or not,
-        but has no figures by district. So the districts' densities are lower than the city's
+        permanent or temporary stay ({{ int(totals().people) }} together). Statistics Poland puts
+        the city at {{ int(d.official.population) }}: it counts everyone living here, registered or
+        not, but has no figures by district. So the districts' densities are lower than the city's
         official one.
       </li>
       <li>
         Around the city, residents come from the gmina office for gmina Juchnowiec Kościelny (end of
-        2023, from its revitalisation programme) and from the 2021 census elsewhere; a few from
-        Polish Wikipedia, with their year. Hover the date for the source. Places without a figure
-        are left white. Areas there are measured on {{ d.belt.cellMeters }} m squares, outside the
-        city limits.
+        2023) and from the 2021 census elsewhere; a few from Polish Wikipedia, with their year.
+        Hover the date for the source. Places without a figure are left white.
       </li>
     </ul>
   </section>

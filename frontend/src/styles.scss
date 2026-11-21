@@ -456,3 +456,103 @@ app-time-window label {
     outline-offset: -2px;
   }
 }
+
+/* Summary tiles: a row of cards, each a label, a big figure and a note. Pages set --tile-min for the narrowest. */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--tile-min, 12rem)), 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0;
+
+  > strong {
+    font-size: 1.6rem;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* The explanation under a card's title. */
+.card > p.muted {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+}
+
+.small {
+  font-size: 0.8rem;
+}
+
+/* Maps: a Leaflet map's box (pages set --map-height), and the grey base map that lets coloured data stand out. */
+.leaflet-map {
+  height: var(--map-height, 520px);
+}
+
+@media (max-width: 600px) {
+  .leaflet-map {
+    height: var(--map-height-mobile, 360px);
+  }
+}
+
+.grey-tiles {
+  filter: grayscale(1) contrast(0.85) brightness(1.05);
+}
+
+/* A legend under a chart or map: items in a row, each a swatch (colour set inline) and its label. */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 1rem;
+  margin: 0;
+  padding: 0.6rem 0 0;
+  list-style: none;
+  font-size: 0.85rem;
+
+  > li,
+  > .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+}
+
+.swatch {
+  display: inline-block;
+  flex: none;
+  width: 1rem;
+  height: 0.8rem;
+  border-radius: 2px;
+}
+
+/* A card that rolls up to its title: the title is a button with a chevron. */
+.collapse-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: none;
+    text-decoration: underline;
+  }
+
+  .chevron {
+    display: inline-block;
+    transition: transform 0.15s ease;
+  }
+
+  &[aria-expanded='false'] .chevron {
+    transform: rotate(-90deg);
+  }
+}

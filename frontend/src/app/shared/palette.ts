@@ -110,3 +110,31 @@ export const BUS_LANE_STYLE = {
   opacity: 0.45,
   label: 'Bus lane',
 } as const;
+
+/** Dark ink for outlines and dots on maps (chosen or highlighted marks, stops). */
+export const INK = '#1f2933';
+/** White, for outlines that separate neighbouring areas on maps. */
+export const WHITE = '#ffffff';
+
+/** Network coverage maps: the area near a stop (one see-through blue), and the woods (light green, lined). */
+export const COVERAGE_STYLE = {
+  covered: '#2a78d6',
+  forestFill: '#9fdc8f',
+  forestLine: '#4f9a45',
+} as const;
+
+/**
+ * Population density (residents per km²) on the density map: steps light → dark on the sequential blue scale; `max`
+ * is exclusive, null for the last step. The woods sit below the first step (nobody lives there): pale grey, lined.
+ * Places without a figure are white with a dashed grey outline.
+ */
+export const DENSITY_SCALE: { min: number; max: number | null; color: string }[] = [
+  { min: 0, max: 250, color: SEQUENTIAL_BLUE[0] },
+  { min: 250, max: 1000, color: SEQUENTIAL_BLUE[1] },
+  { min: 1000, max: 2500, color: SEQUENTIAL_BLUE[2] },
+  { min: 2500, max: 5000, color: SEQUENTIAL_BLUE[3] },
+  { min: 5000, max: 10000, color: SEQUENTIAL_BLUE[4] },
+  { min: 10000, max: null, color: SEQUENTIAL_BLUE[5] },
+];
+export const DENSITY_NONE = { fill: '#f1f3f5', line: '#9aa1a9' } as const;
+export const DENSITY_UNKNOWN = { fill: WHITE, line: '#8a8f98' } as const;

@@ -22,6 +22,8 @@ spring:
       - optional:file:./config/map/depots.yml
       - classpath:map/bus-lanes.yml
       - optional:file:./config/map/bus-lanes.yml
+      - classpath:map/network-coverage.yml
+      - optional:file:./config/map/network-coverage.yml
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/transit}
     username: ${DB_USER:transit}

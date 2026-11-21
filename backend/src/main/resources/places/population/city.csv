@@ -1,0 +1,5 @@
+# The city's population by Statistics Poland (GUS): everyone living here, registered or not. Shown next to the
+# districts' register figures, which add up to fewer. Source: Raport o stanie Miasta Białegostoku za 2025 rok,
+# table 2 (Urząd Statystyczny w Białymstoku), https://bip.bialystok.pl/resource/104575/Raport+za+2025+rok_do+BRM.pdf
+name,population,date,source
+"Białystok",289217,"2025-12-31","Statistics Poland (GUS), via Raport o stanie Miasta Białegostoku za 2025 rok, table 2"

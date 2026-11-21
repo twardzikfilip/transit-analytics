@@ -1,7 +1,7 @@
 # Bus lanes (buspasy), drawn on the maps, measured along each line's route and compared with the rest of the
 # streets on the Bus lanes page. The lanes come from OpenStreetMap (© OpenStreetMap contributors, ODbL): every way in
 # the city tagged with a lane for buses (busway=*, busway:left/right/both, bus:lanes*, psv:lanes*, lanes:bus,
-# highway=busway). The built-in copy is map/bus-lanes.json; a refresh (at `refresh-cron`, or POST
+# highway=busway). The built-in copy is places/osm/bus-lanes.json; a refresh (at `refresh-cron`, or POST
 # /api/bus-lanes/refresh as an admin) fetches them again from Overpass and saves them to `file`, which is used from
 # then on (also after a restart). Edit and restart; a copy in ./config/map/ overrides this one.
 app:

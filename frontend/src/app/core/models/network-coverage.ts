@@ -1,17 +1,19 @@
-/** Points are [latitude, longitude]; areas in km². From GET /api/network-coverage. */
-export type LatLon = [number, number];
+import { AreaShape, LatLon } from './geo';
 
-/** Outer rings and holes. */
-export interface AreaShape {
-  outer: LatLon[][];
-  inner: LatLon[][];
-}
+/** From GET /api/network-coverage. Areas in km². */
 
 export interface CoverageShare {
   areaKm2: number;
   coveredKm2: number;
   /** coveredKm2 / areaKm2, 0–1. */
   share: number;
+}
+
+/** The city within `radiusMeters` of the nearest stop: all of it, and the part outside its woods. */
+export interface RadiusCoverage {
+  radiusMeters: number;
+  city: CoverageShare;
+  withoutForest: CoverageShare;
 }
 
 export interface Woodland {
@@ -25,46 +27,12 @@ export interface Woodland {
   shapes: AreaShape[];
 }
 
-export interface DistrictDensity {
+/** A district of the city, or a village or town around it (areas outside the city limits). */
+export interface PlaceDensity {
   name: string;
-  shape: AreaShape;
-  areaKm2: number;
-  /** Residents on the city's register, for permanent or temporary stay. */
-  population: number;
-  /** Residents per km². */
-  density: number;
-  forestKm2: number;
-  /** The district without its woods. */
-  landKm2: number;
-  landDensity: number;
-  /** Woods cover at least `forestShare` of it. */
-  largeForest: boolean;
-  /** Share of it within walking distance of a stop, 0–1. */
-  coveredShare: number;
-}
-
-export interface NetworkCoverage {
-  radiusMeters: number;
-  stops: LatLon[];
-  cellMeters: number;
-  city: { name: string; shape: AreaShape; areaKm2: number };
-  coverage: CoverageShare;
-  withoutForest: CoverageShare;
-  forests: Woodland[];
-  forestKm2: number;
-  districts: DistrictDensity[];
-  forestShare: number;
-  /** The city's population by Statistics Poland (GUS): everyone living here, registered or not. */
-  officialPopulation: number;
-  sources: { shapes: string; shapesFetched: string; population: string };
-  belt: Belt;
-}
-
-/** A village (sołectwo) or town around the city; areas are outside the city limits. */
-export interface BeltPlace {
-  name: string;
+  kind: 'district' | 'village' | 'town';
+  /** The gmina of a village or town; null for a district. */
   gmina: string | null;
-  kind: 'village' | 'town';
   shape: AreaShape;
   areaKm2: number;
   /** Null: no figure found. */
@@ -72,18 +40,44 @@ export interface BeltPlace {
   /** When the figure is from, e.g. 2021-03-31 (the census). */
   populationDate: string | null;
   populationSource: string | null;
+  /** Residents per km²; null without a figure. */
   density: number | null;
   forestKm2: number;
+  /** It without its woods. */
   landKm2: number;
   landDensity: number | null;
+  /** Woods cover at least `forestShare` of it. */
   largeForest: boolean;
-  coveredShare: number;
+  /** Share of it within each walking distance of a stop, as `coverages`, 0–1. */
+  coveredShares: number[];
+}
+
+export interface Population {
+  population: number;
+  date: string;
+  source: string;
 }
 
 /** Every village and town reaching within `distanceKm` of the city limits, and the woods in them. */
 export interface Belt {
   distanceKm: number;
   cellMeters: number;
-  places: BeltPlace[];
+  places: PlaceDensity[];
   woods: AreaShape[];
+}
+
+export interface NetworkCoverage {
+  stops: LatLon[];
+  cellMeters: number;
+  city: { name: string; shape: AreaShape; areaKm2: number };
+  /** One per walking distance, shortest first. */
+  coverages: RadiusCoverage[];
+  forests: Woodland[];
+  forestKm2: number;
+  districts: PlaceDensity[];
+  forestShare: number;
+  /** The city's population by Statistics Poland: everyone living here, registered or not. */
+  official: Population;
+  sources: { shapes: string; shapesFetched: string; population: string };
+  belt: Belt;
 }

@@ -1,0 +1,36 @@
+# Residents of Białystok's districts (osiedla) registered at the end of 2025: permanent (pobyt stały) and temporary
+# (pobyt czasowy). Source: Raport o stanie Miasta Białegostoku za 2025 rok, Tabela 4 (Departament Obsługi Mieszkańców,
+# from the residents' register), https://bip.bialystok.pl/resource/104575/Raport+za+2025+rok_do+BRM.pdf
+# The page counts both: 259,778 permanent + 5,741 temporary = 265,519. Statistics Poland (GUS) puts the city at 289,217
+# (city.csv): it counts everyone living here, registered or not, but gives no figures by district.
+# Names must match the districts' names in osm/bialystok.json.
+name,men,women,permanent,temporary,date,source
+Centrum,4209,5376,9585,222,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Białostoczek,5332,6280,11612,143,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Sienkiewicza,2872,3489,6361,229,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Bojary,4014,4659,8673,508,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Piaski,3799,4921,8720,354,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Przydworcowe,3031,3772,6803,226,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Młodych,2025,2430,4455,98,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Antoniuk,5736,7371,13107,478,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Jaroszówka,4941,5198,10139,54,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Wygoda,7085,7972,15057,162,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Piasta I,5431,6745,12176,165,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Piasta II,2118,2748,4866,337,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Skorupy,4226,4443,8669,157,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Mickiewicza,3694,4593,8287,243,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Dojlidy,1494,1749,3243,280,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Bema,2721,3216,5937,297,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Kawaleryjskie,4028,4780,8808,243,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Nowe Miasto,6670,7659,14329,231,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Zielone Wzgórza,4285,4785,9070,64,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Starosielce,5091,5566,10657,454,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Słoneczny Stok,4201,4941,9142,74,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Leśna Dolina,5030,5787,10817,111,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Wysoki Stoczek,6156,7319,13475,226,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Dziesięciny I,3315,3919,7234,61,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Dziesięciny II,5320,6456,11776,125,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Bacieczki,6514,7371,13885,93,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Zawady,1703,1846,3549,39,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Dojlidy Górne,3164,3252,6416,42,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
+Bagnówka,1393,1537,2930,25,2025-12-31,"Raport o stanie Miasta Białegostoku za 2025 rok, table 4"
