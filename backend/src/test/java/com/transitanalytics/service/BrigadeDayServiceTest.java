@@ -67,6 +67,40 @@ class BrigadeDayServiceTest {
     }
 
     @Test
+    void endsTheTripWhenTheBusReachesItsLastStopNotWhenItLeavesForTheNextOne() {
+        // The last stop at 53.1, 23.1; the feed keeps the bus waiting there on the trip, its delay growing.
+        ScheduledTrip trip = new ScheduledTrip("T1", "22", "022-01", "Centrum", T, T.plusSeconds(600),
+                new int[] {1, 2, 3, 4, 5, 6}, new String[] {"A", "B", "C", "D", "E", "F"},
+                new int[] {0, 120, 240, 360, 480, 600}, null, new double[] {53.1, 23.1});
+        List<Report> reports = List.of(
+                at(1, 300, 10, 5, 53.11),
+                // Heading to the last stop, 400 m out: still running.
+                at(1, 540, -30, 6, 53.1036),
+                // 56 m from it: arrived, a minute early.
+                at(1, 570, -60, 6, 53.1005),
+                at(1, 900, 300, 6, 53.1004),
+                at(1, 1800, 1200, 6, 53.1004),
+                // Another bus on the same trip keeps its own reports.
+                at(2, 100, 0, 2, 53.15));
+
+        List<Report> kept = TripMatching.withoutLayover(trip, reports);
+        assertThat(kept).extracting(Report::time).containsExactly(T.plusSeconds(300), T.plusSeconds(540),
+                T.plusSeconds(570), T.plusSeconds(100));
+        BrigadeDto.ActualRun run = BrigadeDayService.runs(trip, kept).stream()
+                .filter(r -> r.bus().equals("B1")).findFirst().orElseThrow();
+        assertThat(run.endDelay()).isEqualTo(-60);
+        assertThat(run.arrival()).isEqualTo(T.plusSeconds(540));
+
+        // Without the last stop's position, nothing is left out.
+        assertThat(TripMatching.withoutLayover(TRIP, reports)).isSameAs(reports);
+    }
+
+    private static Report at(long bus, int secondsAfter, int delay, int nextSeq, double lat) {
+        return new Report(bus, "B" + bus, T.plusSeconds(secondsAfter), "22", "022-01", "Centrum", delay, nextSeq,
+                lat, 23.1);
+    }
+
+    @Test
     void marksThePartsNobodyRanOrNoBusWasSeenOn() {
         // Missed or cancelled: the whole trip.
         assertThat(BrigadeDayService.missing(TRIP, Kind.MISSED, List.of())).singleElement()

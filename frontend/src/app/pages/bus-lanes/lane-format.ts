@@ -1,5 +1,6 @@
 import { LaneFigures, LaneHeading } from '../../core/models/models';
 import { SEQUENTIAL_BLUE } from '../../shared/palette';
+import { kmh } from '../../shared/format/number';
 
 /** Speed classes on the map, km/h: the slowest darkest (most held up). */
 export const SPEED_SCALE: { below: number; color: string; label: string }[] = [
@@ -33,7 +34,7 @@ export function headingText(heading: LaneHeading): string {
 
 /** "17.6 km/h", or "–". */
 export function speedText(speed: number | null | undefined): string {
-  return speed === null || speed === undefined ? '–' : `${speed.toFixed(1)} km/h`;
+  return speed === null || speed === undefined ? '–' : kmh(speed);
 }
 
 /** "+17.6 s/km" (delay gained), "−4.0 s/km" (made up), or "–". */

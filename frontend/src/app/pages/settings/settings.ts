@@ -5,6 +5,7 @@ import { HasRoleDirective } from '../../core/auth/has-role.directive';
 import { authFeature } from '../../store/auth/auth.reducer';
 import { GtfsImportActions } from '../../store/gtfs-import/gtfs-import.actions';
 import { gtfsImportFeature } from '../../store/gtfs-import/gtfs-import.reducer';
+import { ThemeSwitch } from './theme-switch';
 
 /** Table names from the import result, as shown to people. */
 const TABLE_LABELS: Record<string, string> = {
@@ -19,24 +20,26 @@ const TABLE_LABELS: Record<string, string> = {
 
 @Component({
   selector: 'app-settings',
-  imports: [HasRoleDirective, DecimalPipe, DatePipe, KeyValuePipe],
+  imports: [HasRoleDirective, DecimalPipe, DatePipe, KeyValuePipe, ThemeSwitch],
   template: `
-    <h1>Settings</h1>
     <div class="card">
       <dl>
         <dt>Username</dt>
         <dd>{{ username() }}</dd>
         <dt>Role</dt>
         <dd>{{ role() }}</dd>
+        <dt>Theme</dt>
+        <dd><app-theme-switch /></dd>
       </dl>
-      <p class="muted">User preferences will live here.</p>
+      <p class="muted">The theme is remembered in this browser.</p>
     </div>
 
     <section *appHasRole="'ADMIN'" class="card gtfs">
       <h2>Timetable data (GTFS)</h2>
       <p class="muted">
-        Downloads Białystok's current timetable from komunikacja.bialystok.pl and replaces routes, stops, trips and stop
-        times with it. Takes about half a minute; the old timetable stays available until the new one is loaded.
+        Downloads Białystok's current timetable from komunikacja.bialystok.pl and replaces routes,
+        stops, trips and stop times with it. Takes about half a minute; the old timetable stays
+        available until the new one is loaded.
       </p>
       <button type="button" class="primary" [disabled]="running()" (click)="importBialystok()">
         {{ running() ? 'Importing…' : 'Import Białystok timetable' }}
@@ -49,8 +52,11 @@ const TABLE_LABELS: Record<string, string> = {
       @if (result(); as r) {
         <div class="result" role="status">
           <p>
-            Imported {{ r.importedAt | date: 'medium' }} in {{ r.durationMs / 1000 | number: '1.0-1' }} s
-            ({{ r.downloadedBytes / 1048576 | number: '1.1-1' }} MB download).
+            Imported {{ r.importedAt | date: 'medium' }} in
+            {{ r.durationMs / 1000 | number: '1.0-1' }} s ({{
+              r.downloadedBytes / 1048576 | number: '1.1-1'
+            }}
+            MB download).
           </p>
           <table class="data-table">
             <tbody>
@@ -63,7 +69,10 @@ const TABLE_LABELS: Record<string, string> = {
             </tbody>
           </table>
           @for (s of r.skipped | keyvalue; track s.key) {
-            <p class="muted">Skipped {{ s.value | number }} rows of {{ s.key }} that point at a missing route, trip or stop.</p>
+            <p class="muted">
+              Skipped {{ s.value | number }} rows of {{ s.key }} that point at a missing route, trip
+              or stop.
+            </p>
           }
           @if (r.ignoredFiles.length) {
             <p class="muted">Not loaded: {{ r.ignoredFiles.join(', ') }}</p>
@@ -77,6 +86,7 @@ const TABLE_LABELS: Record<string, string> = {
       display: grid;
       grid-template-columns: max-content 1fr;
       gap: 0.5rem 1.5rem;
+      align-items: center;
       margin: 0 0 1rem;
     }
     dt {

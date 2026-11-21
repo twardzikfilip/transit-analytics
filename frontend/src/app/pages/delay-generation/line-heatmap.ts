@@ -1,6 +1,7 @@
 import { Component, computed, input, output } from '@angular/core';
 import { DelayLineStretch } from '../../core/models/models';
 import { changeClass, delayText, signedChange } from './delay-scale';
+import { percent } from '../../shared/format/number';
 
 /** A heatmap cell: whole seconds with a sign, "+31", "−6", "0" (never "−0"). */
 export function cellText(seconds: number): string {
@@ -65,7 +66,7 @@ export function activeHours(stretches: DelayLineStretch[]): number[] {
                 >
               </td>
               <td class="num">{{ signed(s.p90Seconds) }}</td>
-              <td class="num">{{ (s.gainingShare * 100).toFixed(0) }}%</td>
+              <td class="num">{{ wholePercent(s.gainingShare) }}</td>
               @for (h of hours(); track h) {
                 @if (s.byHour[h]; as v) {
                   <td
@@ -156,6 +157,8 @@ export class LineHeatmap {
 
   protected readonly hours = computed(() => activeHours(this.stretches()));
   protected readonly signed = signedChange;
+  /** A share in whole percent, "42%". */
+  protected readonly wholePercent = (share: number) => percent(share, { digits: 0 });
   protected readonly delayText = delayText;
 
   /** Whole seconds with a sign: "+31", "−6", "0" (never "−0"). */

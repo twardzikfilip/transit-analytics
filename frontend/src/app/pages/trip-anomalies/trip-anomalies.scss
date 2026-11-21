@@ -64,11 +64,6 @@ h2 {
   font-size: 1.05rem;
 }
 
-.card > p.muted {
-  margin: 0 0 0.5rem;
-  font-size: 0.9rem;
-}
-
 .table-head {
   display: flex;
   flex-wrap: wrap;
@@ -175,10 +170,8 @@ td.bus {
   color: #a32626;
 }
 
-@media (prefers-color-scheme: dark) {
-  .fate-broken-down {
-    color: #ec948a;
-  }
+:host-context([data-theme='dark']) .fate-broken-down {
+  color: #ec948a;
 }
 
 .tag.kind-no-signal {

@@ -1,10 +1,10 @@
 package com.transitanalytics.service;
 
 import com.transitanalytics.domain.VehicleClass;
-import com.transitanalytics.dto.FleetDto;
 import com.transitanalytics.dto.FleetDto.Breakdown;
 import com.transitanalytics.dto.FleetDto.Usage;
 import com.transitanalytics.dto.FleetDto.Vehicle;
+import com.transitanalytics.dto.FleetDto;
 import com.transitanalytics.dto.TripAnomalyDto;
 import com.transitanalytics.service.TripAnomalies.Kind;
 import com.transitanalytics.service.TripAnomalies.Outcome;
@@ -237,7 +237,7 @@ public class FleetService {
     /** Whether an outcome is a breakdown: a change of bus whose replaced bus wasn't used again that day. */
     static boolean brokeDown(Outcome o) {
         return o.kind() == Kind.VEHICLE_CHANGED && o.trip() != null
-                && TripAnomalies.Fate.BROKEN_DOWN.key.equals(o.trip().changeFate()) && !o.vehicleIds().isEmpty();
+                && TripHandovers.Fate.BROKEN_DOWN.key.equals(o.trip().changeFate()) && !o.vehicleIds().isEmpty();
     }
 
     /** The buses that broke down, the latest first, with when they served a line again. */

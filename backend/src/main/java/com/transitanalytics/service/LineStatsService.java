@@ -8,14 +8,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import static com.transitanalytics.service.Periods.OFF_PEAK;
-import static com.transitanalytics.service.Periods.PEAK;
-import static com.transitanalytics.service.TimetableMath.LINE_ORDER;
-import static com.transitanalytics.service.TimetableMath.interval;
-import static com.transitanalytics.service.TimetableMath.mostFrequent;
-import static com.transitanalytics.service.TimetableMath.regularity;
-import static com.transitanalytics.service.TimetableMath.round;
-
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -27,6 +19,14 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import static com.transitanalytics.service.Periods.OFF_PEAK;
+import static com.transitanalytics.service.Periods.PEAK;
+import static com.transitanalytics.service.TimetableMath.LINE_ORDER;
+import static com.transitanalytics.service.TimetableMath.interval;
+import static com.transitanalytics.service.TimetableMath.mostFrequent;
+import static com.transitanalytics.service.TimetableMath.regularity;
+import static com.transitanalytics.service.TimetableMath.round;
 
 /**
  * Statistics per line from the regular weekday timetable: length, shortest and longest travel time, and average
@@ -66,7 +66,8 @@ public class LineStatsService {
         }
         var days = jdbc.queryForMap("""
                 SELECT count(*) AS days, min(date) AS first, max(date) AS last FROM calendar_date
-                WHERE service_id = ? AND exception_type = 1 AND extract(isodow FROM date) <= 5""", service);
+                WHERE service_id = ? AND exception_type = 1 AND %s""".formatted(ServiceDay.weekdaySql("date")),
+                service);
 
         // One row per trip: start/end in seconds (GTFS times can pass 24:00), distance along the shape and the vehicle
         // duty (brigade).

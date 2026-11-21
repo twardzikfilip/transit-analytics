@@ -1,5 +1,6 @@
 package com.transitanalytics.gtfs;
 
+import com.transitanalytics.domain.CityTime;
 import com.transitanalytics.service.NotFoundException;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationRegistry;
@@ -77,7 +78,7 @@ public class GtfsFeedService {
     }
 
     /** The other operators' feeds, imported again on schedule (they cover a couple of weeks at a time). */
-    @Scheduled(cron = "${app.gtfs.extra-refresh-cron:-}", zone = "Europe/Warsaw")
+    @Scheduled(cron = "${app.gtfs.extra-refresh-cron:-}", zone = CityTime.ZONE_ID)
     void refreshExtra() {
         for (String key : properties.extra().keySet()) {
             try {

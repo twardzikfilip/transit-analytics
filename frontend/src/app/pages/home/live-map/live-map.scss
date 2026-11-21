@@ -1,0 +1,87 @@
+:host {
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+
+  h2 {
+    margin: 0;
+    font-size: 1.15rem;
+  }
+
+  .now {
+    font-size: 0.85rem;
+    font-weight: normal;
+  }
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+
+  .delay {
+    margin-right: 0.5rem;
+  }
+
+  .input-with-unit {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  input {
+    width: 5.5rem;
+  }
+}
+
+.map {
+  height: 480px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+
+  .group,
+  .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .group {
+    flex-wrap: wrap;
+    gap: 0.35rem 0.75rem;
+  }
+
+  .dot {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 50%;
+  }
+
+  .dot.ring {
+    box-sizing: border-box;
+    border: 3px solid;
+  }
+}
+
+.source {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+}

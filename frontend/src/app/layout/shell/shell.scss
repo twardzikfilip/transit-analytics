@@ -3,42 +3,87 @@
   height: 100vh;
 }
 
+/* The header row: the sidebar's brand and the page's top bar have the same height and bottom border, so they line
+   up across the page. */
+$header-height: 56px;
+
 .sidebar {
-  width: 220px;
+  width: 232px;
   flex-shrink: 0;
   background: var(--sidebar-bg);
   color: var(--sidebar-fg);
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  box-shadow: 2px 0 6px rgb(0 0 0 / 12%);
+  /* Above the main column, so its shadow falls on it. */
+  position: relative;
+  z-index: 1;
 
   .brand {
+    flex-shrink: 0;
+    box-sizing: border-box;
+    height: $header-height;
+    display: flex;
+    align-items: center;
+    padding: 0 1.25rem;
     font-weight: 600;
     font-size: 1.1rem;
-    padding: 1rem 1.25rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border-bottom: 1px solid rgb(255 255 255 / 25%);
   }
 
   nav {
-    display: flex;
-    flex-direction: column;
-    padding: 0.5rem 0;
+    padding: 0.5rem 0.5rem 1rem;
   }
 
-  a {
-    color: inherit;
-    text-decoration: none;
-    padding: 0.7rem 1.25rem;
-    display: flex;
-    gap: 0.75rem;
-    align-items: center;
+  .group {
+    margin: 1rem 0.75rem 0.4rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgb(255 255 255 / 75%);
+  }
 
-    &:hover {
-      background: rgba(255, 255, 255, 0.08);
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  /* Every item: an icon of the same width, then the label, with the same gap, so icons and labels line up. */
+  a {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: var(--radius);
+    color: #fff;
+    text-decoration: none;
+
+    .icon {
+      width: 1.1rem;
+      height: 1.1rem;
+      font-size: 1.1rem;
     }
 
+    &:hover {
+      background: rgb(0 0 0 / 10%);
+    }
+
+    &:focus-visible {
+      outline: 2px solid #fff;
+      outline-offset: -2px;
+    }
+
+    /* The page shown: the sidebar colour 20% darker. */
     &.active {
-      background: var(--accent);
-      color: #fff;
+      background: var(--primary-dark);
+      font-weight: 600;
     }
   }
 }
@@ -51,21 +96,31 @@
 }
 
 .topbar {
-  height: 56px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  height: $header-height;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   gap: 1rem;
-  padding: 0 1rem;
+  padding: 0 1rem 0 1.5rem;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
+
+  .page-title {
+    margin: 0 auto 0 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
   .role {
     font-size: 0.75rem;
     padding: 0.1rem 0.4rem;
-    border-radius: 4px;
+    border-radius: var(--radius);
     background: var(--accent-soft);
-    color: var(--accent);
+    color: var(--link);
     margin-left: 0.25rem;
   }
 }
@@ -78,6 +133,7 @@
   width: 40px;
   height: 40px;
   border: none;
+  box-shadow: none;
   background: transparent;
   cursor: pointer;
   display: flex;
@@ -85,7 +141,7 @@
   justify-content: center;
   gap: 5px;
   padding: 0 9px;
-  border-radius: 6px;
+  border-radius: var(--radius);
 
   &:hover {
     background: var(--hover);
@@ -93,6 +149,7 @@
 
   span {
     display: block;
+    width: 100%;
     height: 2px;
     background: var(--fg);
     border-radius: 1px;
@@ -109,8 +166,8 @@
   padding: 0.25rem 0;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-float);
   z-index: 1000;
 
   a,
@@ -121,6 +178,7 @@
     padding: 0.55rem 1rem;
     background: none;
     border: none;
+    box-shadow: none;
     font: inherit;
     color: var(--fg);
     text-decoration: none;

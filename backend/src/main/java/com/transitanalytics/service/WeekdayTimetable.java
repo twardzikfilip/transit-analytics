@@ -22,10 +22,10 @@ public class WeekdayTimetable {
     public String serviceId() {
         List<String> services = jdbc.queryForList("""
                 SELECT service_id FROM calendar_date
-                WHERE exception_type = 1 AND extract(isodow FROM date) <= 5
+                WHERE exception_type = 1 AND %s
                 GROUP BY service_id
                 ORDER BY count(*) FILTER (WHERE date >= current_date) DESC, count(*) DESC, service_id
-                LIMIT 1""", String.class);
+                LIMIT 1""".formatted(ServiceDay.weekdaySql("date")), String.class);
         return services.isEmpty() ? null : services.get(0);
     }
 }

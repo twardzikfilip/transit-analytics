@@ -1,0 +1,135 @@
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 0 0 0.75rem;
+
+  h2 {
+    margin: 0;
+    font-size: 1.15rem;
+  }
+}
+
+.figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  transition: opacity 0.15s;
+
+  &.loading {
+    opacity: 0.55;
+  }
+}
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.9rem 1.1rem;
+
+  strong {
+    font-size: 1.6rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .small {
+    font-size: 0.8rem;
+  }
+}
+
+.chart-card {
+  margin-bottom: 1.5rem;
+}
+
+.chart-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+
+  h2 {
+    font-size: 1.05rem;
+    margin: 0 0 0.2rem;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.85rem;
+  }
+}
+
+.table-view {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.chart-card h3 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0.75rem 0 0.25rem;
+
+  .muted {
+    font-weight: normal;
+  }
+}
+
+.delays-card {
+  margin-bottom: 1.5rem;
+
+  h2 {
+    font-size: 1.05rem;
+    margin: 0 0 0.2rem;
+  }
+
+  > p {
+    margin: 0 0 0.75rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* Share of time: a thin bar (series colour on a lighter track of the same hue) with the value beside it in text colour. */
+table.bands .share {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 220px;
+
+  .bar {
+    flex: 1;
+    height: 8px;
+    border-radius: var(--radius);
+    background: color-mix(in srgb, var(--chart-line) 15%, transparent);
+    overflow: hidden;
+
+    span {
+      display: block;
+      height: 100%;
+      border-radius: var(--radius);
+      background: var(--chart-line);
+    }
+  }
+
+  .num {
+    width: 3.5rem;
+    text-align: right;
+  }
+}
+
+.delays-card h2 .coverage {
+  margin-left: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: normal;
+  color: var(--muted);
+}
+
+table.bands {
+  th.num,
+  td.num {
+    text-align: right;
+  }
+}

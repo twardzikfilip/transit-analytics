@@ -22,13 +22,18 @@ describe('CorridorTable', () => {
   it('lists the busiest first, sorts by a column and marks lines running only part of a corridor', () => {
     TestBed.configureTestingModule({ providers: [provideRouter([])] });
     const fixture = TestBed.createComponent(CorridorTable);
-    fixture.componentRef.setInput('corridors', [corridor('Short', 600, 1.3), corridor('Long', 300, 4.2, true)]);
+    fixture.componentRef.setInput('corridors', [
+      corridor('Short', 600, 1.3),
+      corridor('Long', 300, 4.2, true),
+    ]);
     fixture.detectChanges();
     const el: HTMLElement = fixture.nativeElement;
     const firstRow = () => el.querySelector('tbody tr')?.textContent?.replace(/\s+/g, ' ') ?? '';
 
     expect(firstRow()).toContain('Short ⇄ Z');
-    const length = [...el.querySelectorAll('button.sort')].find((b) => b.textContent?.trim() === 'Length');
+    const length = [...el.querySelectorAll('button.sort')].find(
+      (b) => b.textContent?.trim() === 'Length',
+    );
     (length as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(firstRow()).toContain('Long → Z');

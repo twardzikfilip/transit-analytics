@@ -37,7 +37,7 @@ export interface FleetSummary {
   last: string | null;
 }
 
-/** Vehicles and reports per minute of delay. fromMinutes null = under 1 min (incl. early); toMinutes null = 10+. */
+/** Vehicles and reports per delay band: on time (fromMinutes null: under 2 min, incl. early), 2–5, 5–10, 10+ (toMinutes null). */
 export interface DelayBand {
   fromMinutes: number | null;
   toMinutes: number | null;
@@ -49,38 +49,4 @@ export interface DelayBand {
 export interface RouteActivity {
   route: string;
   samples: number;
-}
-
-/**
- * Recorded positions as animation frames (GET /api/positions/replay). Positions are compact rows
- * [vehicleIndex, latitude, longitude, delaySeconds | null, lineIndex | null, brigadeIndex | null] into `vehicles`,
- * `lines` and `brigades`.
- */
-export interface ReplayResponse {
-  from: string;
-  to: string;
-  stepSeconds: number;
-  routes: string[];
-  vehicles: string[];
-  lines: string[];
-  brigades: string[];
-  frames: {
-    time: string;
-    positions: [number, number, number, number | null, number | null, number | null][];
-  }[];
-}
-
-/** One recorded position report. */
-export interface PositionSample {
-  observedAt: string;
-  vehicleId: number;
-  vehicleNumber: string;
-  routeName: string | null;
-  brigade: string | null;
-  headsign: string | null;
-  latitude: number;
-  longitude: number;
-  bearing: number | null;
-  delaySeconds: number | null;
-  nextStopName: string | null;
 }

@@ -1,12 +1,9 @@
 import { BrigadeTrip, BrigadeTripKind } from '../../core/models/models';
 import { formatDelay, localTime } from '../../shared/format/time';
+import { shareOf } from '../../shared/format/number';
 
-/** Consecutive trips alternate between these (checked with the dataviz palette validator, light surface). */
-export const TRIP_COLORS = ['#2a78d6', '#c2189b'];
-/** Not run (status: critical), not seen or no data (neutral), bus changed (status: warning). */
-export const NOT_RUN_COLOR = '#d7301f';
-export const NOT_SEEN_COLOR = '#8a8f98';
-export const CHANGE_COLOR = '#d48806';
+/** The brigade chart's colours (see shared/palette.ts). */
+export { CHANGE_COLOR, NOT_RUN_COLOR, NOT_SEEN_COLOR, TRIP_COLORS } from '../../shared/palette';
 
 export const KIND_LABELS: Record<BrigadeTripKind, string> = {
   completed: 'Run in full',
@@ -67,5 +64,5 @@ export function actualSpan(t: BrigadeTrip): string {
 
 /** Share as "90%", or "–" of nothing. */
 export function share(part: number, whole: number): string {
-  return whole ? `${Math.round((part / whole) * 100)}%` : '–';
+  return shareOf(part, whole, { digits: 0 });
 }

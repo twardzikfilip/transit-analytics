@@ -20,6 +20,7 @@ import { changeClass, delayText, minutesPerDay, signedChange } from './delay-sca
 import { LineHeatmap } from './line-heatmap';
 import { MIN_MAP_RUNS, StretchMap } from './stretch-map';
 import { TripProfile } from './trip-profile';
+import { percent } from '../../shared/format/number';
 
 /** Stretches listed where delay is created, and where it is recovered. */
 export const CREATED_ROWS = 15;
@@ -64,6 +65,8 @@ export class DelayGeneration {
   private readonly navigate = injectSetQuery();
 
   protected readonly report = this.store.selectSignal(delayGenerationFeature.selectReport);
+  /** A share in whole percent, "42%". */
+  protected readonly wholePercent = (share: number) => percent(share, { digits: 0 });
   protected readonly loading = this.store.selectSignal(delayGenerationFeature.selectLoading);
   protected readonly error = this.store.selectSignal(delayGenerationFeature.selectError);
   protected readonly lineReport = this.store.selectSignal(delayGenerationFeature.selectLine);

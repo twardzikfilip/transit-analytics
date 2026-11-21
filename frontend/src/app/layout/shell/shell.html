@@ -1,18 +1,28 @@
 <aside class="sidebar">
   <div class="brand">Transit Analytics</div>
-  <nav>
-    @for (item of navItems; track item.path) {
-      <a [routerLink]="item.path" routerLinkActive="active">
-        <span class="icon" aria-hidden="true">{{ item.icon }}</span>
-        {{ item.label }}
-      </a>
+  <nav aria-label="Pages">
+    @for (group of navGroups; track group.label) {
+      <h2 class="group">{{ group.label }}</h2>
+      <ul>
+        @for (item of group.items; track item.path) {
+          <li>
+            <a [routerLink]="item.path" routerLinkActive="active" ariaCurrentWhenActive="page">
+              <app-icon class="icon" [name]="item.icon" />
+              <span>{{ item.label }}</span>
+            </a>
+          </li>
+        }
+      </ul>
     }
   </nav>
 </aside>
 
 <div class="main">
   <header class="topbar">
-    <span class="user">{{ username() }} <span class="role">{{ role() }}</span></span>
+    <h1 class="page-title">{{ pageTitle() }}</h1>
+    <span class="user"
+      >{{ username() }} <span class="role">{{ role() }}</span></span
+    >
     <div class="menu">
       <button
         type="button"

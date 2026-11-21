@@ -1,0 +1,43 @@
+<p class="muted">
+  Average speed on each stretch between two stops, on full runs leaving 06:30–08:30 or 15:00–17:00.
+  Each bar is as wide as the stretch is long; the three slowest are numbered.
+</p>
+@for (s of segments(); track s.direction) {
+  <div class="chart">
+    <h3>
+      Towards {{ s.headsign }} <span class="muted">· {{ s.runs }} runs</span>
+    </h3>
+    @if (s.runs) {
+      <app-segment-chart [profile]="s" />
+      <details>
+        <summary>Show as a table</summary>
+        <table class="data-table compact">
+          <thead>
+            <tr>
+              <th>From</th>
+              <th>To</th>
+              <th class="num">Distance</th>
+              <th class="num">Speed</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (seg of s.segments; track $index) {
+              <tr>
+                <td>{{ seg.from }}</td>
+                <td>{{ seg.to }}</td>
+                <td class="num">{{ seg.toKm - seg.fromKm | number: '1.2-2' }} km</td>
+                <td class="num">{{ seg.kmh ?? '—' }} km/h</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </details>
+    } @else {
+      <p class="muted">No full peak-hour runs recorded in this direction yet.</p>
+    }
+  </div>
+} @empty {
+  <p class="muted">
+    {{ loading() ? 'Loading real-time data…' : 'No recorded runs.' }}
+  </p>
+}

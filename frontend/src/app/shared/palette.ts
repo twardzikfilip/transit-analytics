@@ -19,8 +19,11 @@ export const DELAY_STOPS: { seconds: number; color: string; label: string }[] = 
   { seconds: 600, color: '#d7301f', label: '10+ min' },
 ];
 
+/** Neutral grey: no data, not seen, no figure (always with a label). */
+export const NEUTRAL_GREY = '#8a8f98';
+
 /** A vehicle without a known delay. */
-export const NO_DELAY_COLOR = '#8a8f98';
+export const NO_DELAY_COLOR = NEUTRAL_GREY;
 
 /** The marker colour for a delay, blended between the stops. */
 export function delayColor(seconds: number | null): string {
@@ -110,3 +113,59 @@ export const BUS_LANE_STYLE = {
   opacity: 0.45,
   label: 'Bus lane',
 } as const;
+
+/** Dark ink for outlines and dots on maps (chosen or highlighted marks, stops). */
+export const INK = '#1f2933';
+/** White, for outlines that separate neighbouring areas on maps. */
+export const WHITE = '#ffffff';
+
+/** Network coverage maps: the area near a stop (one see-through blue), and the woods (light green, lined). */
+export const COVERAGE_STYLE = {
+  covered: '#2a78d6',
+  forestFill: '#9fdc8f',
+  forestLine: '#4f9a45',
+} as const;
+
+/**
+ * Population density (residents per km²) on the density map: steps light → dark on the sequential blue scale; `max`
+ * is exclusive, null for the last step. The woods sit below the first step (nobody lives there): pale grey, lined.
+ * Places without a figure are white with a dashed grey outline.
+ */
+export const DENSITY_SCALE: { min: number; max: number | null; color: string }[] = [
+  { min: 0, max: 250, color: SEQUENTIAL_BLUE[0] },
+  { min: 250, max: 1000, color: SEQUENTIAL_BLUE[1] },
+  { min: 1000, max: 2500, color: SEQUENTIAL_BLUE[2] },
+  { min: 2500, max: 5000, color: SEQUENTIAL_BLUE[3] },
+  { min: 5000, max: 10000, color: SEQUENTIAL_BLUE[4] },
+  { min: 10000, max: null, color: SEQUENTIAL_BLUE[5] },
+];
+export const DENSITY_NONE = { fill: '#f1f3f5', line: '#9aa1a9' } as const;
+export const DENSITY_UNKNOWN = { fill: WHITE, line: NEUTRAL_GREY } as const;
+
+/**
+ * Brigades: consecutive trips alternate between two colours (validated, light surface); a part not run (status:
+ * critical), not seen or without data (neutral), a change of bus (status: warning).
+ */
+export const TRIP_COLORS = ['#2a78d6', '#c2189b'];
+export const NOT_RUN_COLOR = '#d7301f';
+export const NOT_SEEN_COLOR = NEUTRAL_GREY;
+export const CHANGE_COLOR = '#d48806';
+
+/** Bus lanes by direction: one direction only, and both ways. */
+export const ONE_WAY_COLOR = '#6f42c1';
+export const BOTH_WAYS_COLOR = '#e8590c';
+
+/**
+ * The diverging scale for a change in delay (seconds per bus): blue where buses recover delay, red where they gain
+ * it, grey around zero. Each arm is a one-hue ramp validated light → dark; the ends are far apart for colour-blind
+ * readers too. Numbers are always shown beside the colour.
+ */
+export const DELAY_CHANGE_CLASSES: { to: number; color: string; label: string; dark: boolean }[] = [
+  { to: -60, color: '#104281', label: 'recovers 1 min or more', dark: true },
+  { to: -30, color: '#2a78d6', label: 'recovers 30–60 s', dark: true },
+  { to: -10, color: '#86b6ef', label: 'recovers 10–30 s', dark: false },
+  { to: 10, color: '#d4d3ce', label: 'within 10 s', dark: false },
+  { to: 30, color: '#ec948a', label: 'gains 10–30 s', dark: false },
+  { to: 60, color: '#e34948', label: 'gains 30–60 s', dark: true },
+  { to: Infinity, color: '#a32626', label: 'gains 1 min or more', dark: true },
+];

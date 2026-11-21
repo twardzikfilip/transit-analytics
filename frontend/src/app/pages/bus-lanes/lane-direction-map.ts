@@ -1,23 +1,14 @@
-import {
-  Component,
-  DestroyRef,
-  ElementRef,
-  afterNextRender,
-  effect,
-  inject,
-  input,
-  signal,
-  viewChild,
-} from '@angular/core';
+import { Component, ElementRef, effect, input, signal, viewChild } from '@angular/core';
 import * as L from 'leaflet';
 import { BusLane } from '../../core/models/models';
 import { escapeHtml } from '../../shared/format/html';
-import { createBaseMap } from '../../shared/map/base-map';
+import { leafletHost } from '../../shared/map/leaflet-host';
 import { injectCityBoundaries } from '../../shared/map/city-boundaries';
 
 /** One direction only, and both (one section with a lane each way, or both carriageways with one). */
-export const ONE_WAY_COLOR = '#6f42c1';
-export const BOTH_WAYS_COLOR = '#e8590c';
+import { BOTH_WAYS_COLOR, ONE_WAY_COLOR } from '../../shared/palette';
+
+export { BOTH_WAYS_COLOR, ONE_WAY_COLOR };
 /** Arrows from this zoom in; further out they would cover the lanes. */
 export const ARROW_ZOOM = 15;
 /** An arrow about every this many metres along a lane, at least one per section. */
@@ -73,8 +64,13 @@ export function arrowPoints(
 @Component({
   selector: 'app-lane-direction-map',
   template: `
-    <div #map class="map" role="region" aria-label="Map of bus lanes and their directions"></div>
-    <div class="legend">
+    <div
+      #map
+      class="leaflet-map"
+      role="region"
+      aria-label="Map of bus lanes and their directions"
+    ></div>
+    <div class="legend inset">
       <span class="item"
         ><span class="swatch" [style.background]="oneWay"></span>Bus lane one way</span
       >
@@ -91,35 +87,11 @@ export function arrowPoints(
   styles: `
     :host {
       display: block;
-    }
-
-    .map {
-      height: 560px;
+      --map-height: 560px;
+      --map-height-mobile: 380px;
     }
 
     @media (max-width: 600px) {
-      .map {
-        height: 380px;
-      }
-    }
-
-    .map ::ng-deep .grey-tiles {
-      filter: grayscale(1) contrast(0.85) brightness(1.05);
-    }
-
-    .legend {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.4rem 1rem;
-      padding: 0.6rem 1rem;
-      font-size: 0.85rem;
-    }
-
-    .item {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
     }
 
     .swatch {
@@ -151,30 +123,26 @@ export class LaneDirectionMap {
 
   private readonly mapEl = viewChild.required<ElementRef<HTMLDivElement>>('map');
   private readonly drawBoundaries = injectCityBoundaries();
-  private map?: L.Map;
-  private lines?: L.LayerGroup;
-  private arrows?: L.LayerGroup;
-  private readonly ready = signal(false);
+  private readonly host = leafletHost(() => this.mapEl().nativeElement, {
+    canvas: true,
+    grey: true,
+    setUp: (map) => {
+      this.drawBoundaries(map);
+      map.on('zoomend', () => this.showArrows());
+    },
+  });
+  private readonly arrows = L.layerGroup();
 
   constructor() {
-    afterNextRender(() => {
-      this.map = createBaseMap(this.mapEl().nativeElement, { canvas: true, grey: true });
-      this.drawBoundaries(this.map);
-      this.lines = L.layerGroup().addTo(this.map);
-      this.arrows = L.layerGroup();
-      this.map.on('zoomend', () => this.showArrows());
-      this.ready.set(true);
-    });
-    inject(DestroyRef).onDestroy(() => this.map?.remove());
     effect(() => {
       const lanes = this.lanes();
-      if (this.ready()) this.draw(lanes);
+      if (this.host.ready()) this.draw(lanes);
     });
   }
 
   private draw(lanes: BusLane[]): void {
-    this.lines!.clearLayers();
-    this.arrows!.clearLayers();
+    this.host.layer.clearLayers();
+    this.arrows.clearLayers();
     const bounds = L.latLngBounds([]);
     for (const lane of lanes) {
       const both = lane.bothWays || (lane.forward > 0 && lane.backward > 0);
@@ -193,7 +161,7 @@ export class LaneDirectionMap {
         .bindTooltip(`<strong>${escapeHtml(lane.name ?? 'Unnamed road')}</strong><br>${ways}`, {
           sticky: true,
         })
-        .addTo(this.lines!);
+        .addTo(this.host.layer);
       const directions: [number, number][][] = [];
       if (lane.forward > 0) directions.push(lane.points);
       if (lane.backward > 0) directions.push([...lane.points].reverse());
@@ -208,20 +176,20 @@ export class LaneDirectionMap {
               // ➤ points east (90°); turned to the lane's heading.
               html: `<span style="transform: rotate(${Math.round(a.heading - 90)}deg)">➤</span>`,
             }),
-          }).addTo(this.arrows!);
+          }).addTo(this.arrows);
         }
       }
       for (const p of lane.points) bounds.extend(p);
     }
-    if (bounds.isValid()) this.map!.fitBounds(bounds, { padding: [24, 24] });
+    if (bounds.isValid()) this.host.map.fitBounds(bounds, { padding: [24, 24] });
     this.showArrows();
   }
 
   /** Arrows only when zoomed in enough to tell them apart. */
   private showArrows(): void {
-    const show = (this.map?.getZoom() ?? 0) >= ARROW_ZOOM;
-    if (show && !this.map!.hasLayer(this.arrows!)) this.arrows!.addTo(this.map!);
-    if (!show && this.arrows && this.map?.hasLayer(this.arrows)) this.arrows.remove();
+    const show = this.host.map.getZoom() >= ARROW_ZOOM;
+    if (show && !this.host.map.hasLayer(this.arrows)) this.arrows.addTo(this.host.map);
+    if (!show && this.host.map.hasLayer(this.arrows)) this.arrows.remove();
     this.arrowsShown.set(show);
   }
 }

@@ -1,0 +1,46 @@
+h2 {
+  margin: 1.5rem 0 0.75rem;
+}
+
+h3 {
+  margin: 0 0 0.5rem;
+}
+
+.card {
+  margin-bottom: 1rem;
+}
+
+.coverage-card h3:has(.collapse-toggle[aria-expanded='false']) {
+  margin-bottom: 0;
+}
+
+tr.official th,
+tr.official td {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.how ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.data-table {
+  th.num,
+  td.num {
+    text-align: right;
+  }
+
+  tfoot th,
+  tfoot td {
+    font-weight: 600;
+    border-top: 2px solid var(--border);
+  }
+
+  td,
+  th {
+    padding: 0.4rem 0.7rem;
+  }
+}

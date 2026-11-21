@@ -1,6 +1,7 @@
 package com.transitanalytics.service;
 
 import com.transitanalytics.dto.HotspotDto;
+import com.transitanalytics.geo.Geo;
 import com.transitanalytics.service.StandstillHotspots.Standstill;
 import com.transitanalytics.service.StandstillHotspots.StopPoint;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -100,8 +101,8 @@ public class HotspotService {
                     SELECT *, CASE WHEN t = lag(nt) OVER (PARTITION BY vehicle_id ORDER BY t) THEN 0 ELSE 1 END AS starts
                     FROM r
                     WHERE nt - t BETWEEN interval '5 seconds' AND interval '90 seconds' AND nline = route_name
-                      AND sqrt(power((nlon - lon) * cos(radians(lat)) * 111320, 2)
-                               + power((nlat - lat) * 110540, 2)) < %d),
+                      AND sqrt(power((nlon - lon) * cos(radians(lat)) * %1$s, 2)
+                               + power((nlat - lat) * %1$s, 2)) < %2$d),
                 numbered AS (
                     SELECT *, sum(starts) OVER (PARTITION BY vehicle_id ORDER BY t) AS n FROM still)
                 SELECT vehicle_id, min(route_name) AS line, min(t) AS start,
@@ -110,7 +111,7 @@ public class HotspotService {
                        (array_agg(bearing ORDER BY t))[1] AS bearing
                 FROM numbered
                 GROUP BY vehicle_id, n
-                HAVING max(nt) - min(t) <= interval '%d seconds'""".formatted(STILL_METERS,
+                HAVING max(nt) - min(t) <= interval '%3$d seconds'""".formatted(Geo.M_PER_DEG, STILL_METERS,
                         MAX_STANDSTILL.toSeconds()),
                 (rs, i) -> new Standstill(rs.getLong("vehicle_id"), rs.getString("line"),
                         rs.getTimestamp("start").toInstant(), rs.getDouble("seconds"), rs.getDouble("lat"),

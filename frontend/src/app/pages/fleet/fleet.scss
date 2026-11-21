@@ -1,8 +1,6 @@
 .tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  --tile-min: 260px;
   gap: 1rem;
-  margin-bottom: 1rem;
 }
 
 .tile {
@@ -98,8 +96,9 @@
 button.link {
   padding: 0;
   border: none;
+  box-shadow: none;
   background: none;
-  color: var(--accent);
+  color: var(--link);
   font: inherit;
   font-weight: 600;
   text-align: left;
@@ -137,7 +136,7 @@ button.link {
   margin: 4px 0 0;
   padding: 0.25rem;
   list-style: none;
-  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+  box-shadow: var(--shadow-float);
 
   button {
     display: grid;
@@ -146,6 +145,7 @@ button.link {
     width: 100%;
     padding: 0.35rem 0.5rem;
     border: none;
+    box-shadow: none;
     background: none;
     text-align: left;
     font-size: 0.9rem;
@@ -182,7 +182,7 @@ button.link {
 .badge {
   min-width: 3rem;
   padding: 0.4rem 0.6rem;
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: var(--chart-line);
   color: #fff;
   font-weight: 700;

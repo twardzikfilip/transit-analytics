@@ -1,5 +1,7 @@
 package com.transitanalytics.service;
 
+import com.transitanalytics.geo.Geo;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -59,13 +61,9 @@ final class StopPlaces {
             FROM stop s LEFT JOIN terminals t ON t.stop_id = s.id
             WHERE s.latitude IS NOT NULL AND s.longitude IS NOT NULL""";
 
-    /** Great-circle distance in metres. */
+    /** Distance in metres (see {@link Geo#meters}). */
     static double meters(double lat1, double lon1, double lat2, double lon2) {
-        double dLat = Math.toRadians(lat2 - lat1);
-        double dLon = Math.toRadians(lon2 - lon1);
-        double h = Math.pow(Math.sin(dLat / 2), 2)
-                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) * Math.pow(Math.sin(dLon / 2), 2);
-        return 2 * 6_371_000 * Math.asin(Math.sqrt(h));
+        return Geo.meters(new double[] {lat1, lon1}, new double[] {lat2, lon2});
     }
 
     /**

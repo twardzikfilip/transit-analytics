@@ -1,21 +1,17 @@
 import {
   Component,
-  DestroyRef,
   ElementRef,
-  afterNextRender,
   computed,
   effect,
-  inject,
   input,
   output,
-  signal,
   untracked,
   viewChild,
 } from '@angular/core';
 import * as L from 'leaflet';
 import { BusLaneStretch, LaneStretchFigures } from '../../core/models/models';
 import { escapeHtml } from '../../shared/format/html';
-import { createBaseMap } from '../../shared/map/base-map';
+import { leafletHost } from '../../shared/map/leaflet-host';
 import { injectCityBoundaries } from '../../shared/map/city-boundaries';
 import {
   NO_SPEED_COLOR,
@@ -33,8 +29,8 @@ import {
 @Component({
   selector: 'app-bus-lane-map',
   template: `
-    <div #map class="map" role="region" aria-label="Map of bus lanes by speed"></div>
-    <div class="legend">
+    <div #map class="leaflet-map" role="region" aria-label="Map of bus lanes by speed"></div>
+    <div class="legend inset">
       <span class="muted">Average speed on the lane, km/h:</span>
       @for (s of scale; track s.label) {
         <span class="item"
@@ -49,35 +45,11 @@ import {
   styles: `
     :host {
       display: block;
-    }
-
-    .map {
-      height: 560px;
+      --map-height: 560px;
+      --map-height-mobile: 380px;
     }
 
     @media (max-width: 600px) {
-      .map {
-        height: 380px;
-      }
-    }
-
-    .map ::ng-deep .grey-tiles {
-      filter: grayscale(1) contrast(0.85) brightness(1.05);
-    }
-
-    .legend {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.4rem 1rem;
-      padding: 0.6rem 1rem;
-      font-size: 0.85rem;
-    }
-
-    .item {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
     }
 
     .swatch {
@@ -100,10 +72,12 @@ export class BusLaneMap {
 
   private readonly mapEl = viewChild.required<ElementRef<HTMLDivElement>>('map');
   private readonly drawBoundaries = injectCityBoundaries();
-  private map?: L.Map;
-  private layer?: L.LayerGroup;
+  private readonly host = leafletHost(() => this.mapEl().nativeElement, {
+    canvas: true,
+    grey: true,
+    setUp: (map) => this.drawBoundaries(map),
+  });
   private readonly lines = new Map<number, L.Polyline[]>();
-  private readonly ready = signal(false);
   private framed = false;
   private chosenOnMap: number | null = null;
 
@@ -113,28 +87,21 @@ export class BusLaneMap {
   }));
 
   constructor() {
-    afterNextRender(() => {
-      this.map = createBaseMap(this.mapEl().nativeElement, { canvas: true, grey: true });
-      this.drawBoundaries(this.map);
-      this.layer = L.layerGroup().addTo(this.map);
-      this.ready.set(true);
-    });
-    inject(DestroyRef).onDestroy(() => this.map?.remove());
     effect(() => {
       const { stretches, figures } = this.drawn();
-      if (this.ready()) {
+      if (this.host.ready()) {
         this.draw(stretches, figures);
         untracked(() => this.highlight(this.selected(), false));
       }
     });
     effect(() => {
       const id = this.selected();
-      if (this.ready()) untracked(() => this.highlight(id, true));
+      if (this.host.ready()) untracked(() => this.highlight(id, true));
     });
   }
 
   private draw(stretches: BusLaneStretch[], figures: Map<number, LaneStretchFigures>): void {
-    const layer = this.layer!;
+    const layer = this.host.layer;
     layer.clearLayers();
     this.lines.clear();
     const bounds = L.latLngBounds([]);
@@ -166,7 +133,7 @@ export class BusLaneMap {
       for (const path of s.paths) for (const p of path) bounds.extend(p);
     }
     if (!this.framed && bounds.isValid()) {
-      this.map!.fitBounds(bounds, { padding: [24, 24] });
+      this.host.map.fitBounds(bounds, { padding: [24, 24] });
       this.framed = true;
     }
   }
@@ -181,7 +148,7 @@ export class BusLaneMap {
     if (chosen && move && id !== this.chosenOnMap) {
       const bounds = L.latLngBounds([]);
       chosen.forEach((l) => bounds.extend(l.getBounds()));
-      this.map!.fitBounds(bounds, { padding: [60, 60], maxZoom: 17 });
+      this.host.map.fitBounds(bounds, { padding: [60, 60], maxZoom: 17 });
     }
     this.chosenOnMap = null;
   }

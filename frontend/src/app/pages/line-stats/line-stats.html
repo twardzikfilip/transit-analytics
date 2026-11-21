@@ -1,5 +1,4 @@
 <div class="page-header">
-  <h1>Line statistics</h1>
   @if (report(); as r) {
     @if (r.serviceId) {
       <span class="muted">
@@ -20,8 +19,7 @@
     <p class="muted">No timetable yet. An admin can import it under Settings.</p>
   } @else {
     <p class="muted intro">
-      Peak hours: {{ peakText() }}. Off-peak: {{ offPeakText() }}. Click a
-      column to sort.
+      Peak hours: {{ peakText() }}. Off-peak: {{ offPeakText() }}. Click a column to sort.
     </p>
 
     <app-line-stats-table
@@ -69,18 +67,18 @@
         </li>
         <li>
           <strong>Regularity:</strong> how evenly departures are spread, as the coefficient of
-          variation (CV) of the gaps between consecutive departures: standard deviation ÷ mean. It is
-          measured at the first stop of the main route, counting every trip of the line that departs
-          there, per direction and period (the break between the two peaks is not a gap), then
-          averaged weighted by the number of gaps. 0 means perfectly even. Grades follow TCQSM: A ≤
-          0.21, B ≤ 0.30, C ≤ 0.39, D ≤ 0.52, E ≤ 0.74, F above. For passengers arriving at random the
-          average wait is half the mean gap × (1 + CV²), so uneven spacing adds waiting even at the
-          same frequency. "—" means fewer than 4 departures in the period.
+          variation (CV) of the gaps between consecutive departures: standard deviation ÷ mean. It
+          is measured at the first stop of the main route, counting every trip of the line that
+          departs there, per direction and period (the break between the two peaks is not a gap),
+          then averaged weighted by the number of gaps. 0 means perfectly even. Grades follow TCQSM:
+          A ≤ 0.21, B ≤ 0.30, C ≤ 0.39, D ≤ 0.52, E ≤ 0.74, F above. For passengers arriving at
+          random the average wait is half the mean gap × (1 + CV²), so uneven spacing adds waiting
+          even at the same frequency. "—" means fewer than 4 departures in the period.
         </li>
         <li>
           <strong>Vehicles:</strong> buses (vehicle duties) with a trip running in the period. Each
-          period has two windows (morning and afternoon peak; late morning and evening off-peak): the
-          busier of the two counts.
+          period has two windows (morning and afternoon peak; late morning and evening off-peak):
+          the busier of the two counts.
         </li>
         <li>All figures are planned (from the timetable), for a regular weekday.</li>
       </ul>

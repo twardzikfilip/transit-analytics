@@ -1,27 +1,36 @@
 package com.transitanalytics.service;
 
+import com.transitanalytics.domain.CityTime;
 import com.transitanalytics.dto.LineStatsDto;
 
 import java.util.List;
 
 /**
- * The parts of a weekday the timetable figures are measured in, the same on every page: peak 06:30–08:30 and
- * 15:00–17:00, off-peak 08:30–15:00 and 17:00–20:00. Times are seconds after midnight.
+ * The parts of a weekday the timetable figures are measured in, the same on every page ({@link CityTime#PEAK},
+ * {@link CityTime#OFF_PEAK}). Times are seconds after midnight.
  */
 final class Periods {
 
-    /** Peak: 06:30–08:30 and 15:00–17:00. */
-    static final List<Window> PEAK = List.of(new Window(6 * 3600 + 1800, 8 * 3600 + 1800),
-            new Window(15 * 3600, 17 * 3600));
-    /** Off-peak: 08:30–15:00 and 17:00–20:00. */
-    static final List<Window> OFF_PEAK = List.of(new Window(8 * 3600 + 1800, 15 * 3600),
-            new Window(17 * 3600, 20 * 3600));
+    static final List<Window> PEAK = CityTime.PEAK.stream().map(Window::parse).toList();
+    static final List<Window> OFF_PEAK = CityTime.OFF_PEAK.stream().map(Window::parse).toList();
 
     private Periods() {
     }
 
     /** A part of the service day, in seconds after midnight; {@code to} is exclusive. */
     record Window(int from, int to) {
+
+        /** From "HH:MM-HH:MM". */
+        static Window parse(String window) {
+            String[] ends = window.trim().split("-");
+            return new Window(seconds(ends[0]), seconds(ends[1]));
+        }
+
+        private static int seconds(String hhmm) {
+            String[] parts = hhmm.trim().split(":");
+            return Integer.parseInt(parts[0]) * 3600 + Integer.parseInt(parts[1]) * 60;
+        }
+
         int minutes() {
             return (to - from) / 60;
         }
