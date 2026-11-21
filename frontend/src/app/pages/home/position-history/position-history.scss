@@ -19,6 +19,11 @@
   margin-bottom: 1rem;
   transition: opacity 0.15s;
 
+  /* A phone: two figures side by side. */
+  @media (max-width: 600px) {
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  }
+
   &.loading {
     opacity: 0.55;
   }

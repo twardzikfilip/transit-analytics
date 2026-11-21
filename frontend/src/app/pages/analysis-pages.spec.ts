@@ -350,7 +350,7 @@ describe('Position history controls', () => {
     agency.dispatchEvent(new Event('change'));
     expect(navigate).toHaveBeenLastCalledWith(...merge({ agency: 'all', route: null }));
 
-    const line = el.querySelectorAll('select')[1] as HTMLSelectElement;
+    const line = el.querySelectorAll('select:not(.window-preset)')[1] as HTMLSelectElement;
     line.value = '';
     line.dispatchEvent(new Event('change'));
     expect(navigate).toHaveBeenLastCalledWith(...merge({ route: null }));

@@ -1,6 +1,7 @@
 import { AuthActions } from '../../store/auth/auth.actions';
 import { renderPage, signedIn, text } from '../../testing/page-testing';
 import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { PageTitle } from '../../core/title/page-title';
 import { Shell } from './shell';
 
@@ -62,5 +63,46 @@ describe('Shell', () => {
     TestBed.inject(PageTitle).current.set('Fleet');
     render();
     expect(text(el.querySelector('.topbar h1'))).toBe('Fleet');
+  });
+
+  it('shows and hides the sidebar with the header button (a phone), and hides it on a link, a tap beside it or Escape', () => {
+    const { el, render } = renderPage(Shell, signedIn());
+    const aside = el.querySelector('aside') as HTMLElement;
+    const toggle = el.querySelector('button.nav-toggle') as HTMLButtonElement;
+    expect(toggle.getAttribute('aria-controls')).toBe(aside.id);
+    expect(aside.classList).not.toContain('open');
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+
+    toggle.click();
+    render();
+    expect(aside.classList).toContain('open');
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(toggle.getAttribute('aria-label')).toBe('Hide pages');
+
+    // Choosing a page hides it (the navigation itself isn't part of this test).
+    vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    (el.querySelector('aside nav a[href="/fleet"]') as HTMLElement).click();
+    render();
+    expect(aside.classList).not.toContain('open');
+
+    // So does a tap beside it.
+    toggle.click();
+    render();
+    (el.querySelector('.backdrop') as HTMLElement).click();
+    render();
+    expect(aside.classList).not.toContain('open');
+    expect(el.querySelector('.backdrop')).toBeNull();
+
+    // Its own close button, and Escape.
+    toggle.click();
+    render();
+    (el.querySelector('aside button.nav-close') as HTMLButtonElement).click();
+    render();
+    expect(aside.classList).not.toContain('open');
+    toggle.click();
+    render();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    render();
+    expect(aside.classList).not.toContain('open');
   });
 });

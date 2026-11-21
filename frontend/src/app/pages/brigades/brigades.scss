@@ -49,6 +49,10 @@
 
 .tiles {
   --tile-min: 11rem;
+
+  @media (max-width: 600px) {
+    --tile-min: 9rem;
+  }
 }
 
 .tile {

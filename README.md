@@ -417,7 +417,10 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
 - `core/api` — generic `CrudApiService` + one service per backend resource
 - `layout/shell` — the sidebar (pages grouped into *Operation* and *Network*, each with a filled Bootstrap icon from
   `shared/icons`) and the header bar with the page's title (from the route's `title`, see `core/title/page-title.ts`)
-  and the hamburger menu (Settings, Logout)
+  and the hamburger menu (Settings, Logout). Up to 768 px wide (phones, small tablets) the sidebar is hidden to the
+  left and shown over the page with the button at the left of the header bar; choosing a page, tapping beside it,
+  its ‹ button or Escape hides it again. Up to 600 px the time window's presets are a dropdown, the From/To fields
+  stack, and figure tiles sit two to a row.
 - Theme: light by default, dark when chosen in Settings (remembered in the browser; `core/theme/theme.ts` sets
   `data-theme` on `<html>`). The colour tokens are at the top of `styles.scss`: Bootstrap's greys, the primary teal
   `#00a9bc` (sidebar, focus, chosen buttons; the open page 20% darker), and one radius (8 px) and shadow for cards,

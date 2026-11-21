@@ -44,6 +44,18 @@ import {
       }
     </div>
     <div class="row">
+      <!-- On a phone the eleven buttons don't fit in a row: one dropdown instead. -->
+      <label class="preset-select">
+        Window
+        <select class="window-preset" (change)="setPreset($any($event.target).value)">
+          @if (!window().preset) {
+            <option value="" selected disabled>Custom</option>
+          }
+          @for (p of presets; track p.key) {
+            <option [value]="p.key" [selected]="window().preset === p.key">{{ p.label }}</option>
+          }
+        </select>
+      </label>
       <div class="presets" role="group" aria-label="Time window">
         @for (p of presets; track p.key) {
           <button
@@ -125,6 +137,34 @@ import {
 
     .all {
       font-size: 0.85rem;
+    }
+
+    .preset-select {
+      display: none;
+    }
+
+    /* A phone: From and To one under the other, as wide as the screen, their fields lined up; the window as a
+       dropdown. */
+    @media (max-width: 600px) {
+      /* Label text in one column, so the fields line up. */
+      .row label {
+        flex: 1 1 100%;
+        display: grid;
+        grid-template-columns: 4rem 1fr;
+      }
+
+      .row label > input,
+      .row label > select {
+        min-width: 0;
+      }
+
+      .presets {
+        display: none;
+      }
+
+      .row .preset-select {
+        display: grid;
+      }
     }
   `,
 })

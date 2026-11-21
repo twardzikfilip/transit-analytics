@@ -1,7 +1,12 @@
 :host {
   display: flex;
   height: 100vh;
+  /* On a phone: the visible height, without the browser's bars. */
+  height: 100dvh;
 }
+
+/* Up to this width (phones, small tablets) the sidebar is hidden to the left and shown over the page. */
+$phone: 768px;
 
 /* The header row: the sidebar's brand and the page's top bar have the same height and bottom border, so they line
    up across the page. */
@@ -31,6 +36,23 @@ $header-height: 56px;
     font-size: 1.1rem;
     color: #fff;
     border-bottom: 1px solid rgb(255 255 255 / 25%);
+  }
+
+  /* Hides the sidebar again; only on a phone. */
+  .nav-close {
+    display: none;
+    margin-left: auto;
+    margin-right: -0.5rem;
+    color: #fff;
+
+    &:hover {
+      background: rgb(0 0 0 / 10%);
+    }
+
+    &:focus-visible {
+      outline: 2px solid #fff;
+      outline-offset: -2px;
+    }
   }
 
   /* No right padding: the items reach the sidebar's right edge. */
@@ -127,6 +149,37 @@ $header-height: 56px;
   }
 }
 
+/* The icon buttons: the sidebar's toggle and close. */
+.nav-toggle,
+.nav-close {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  border-radius: var(--radius);
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.nav-toggle {
+  display: none;
+  margin-left: -0.5rem;
+  color: var(--fg);
+
+  &:hover {
+    background: var(--hover);
+  }
+}
+
+.backdrop {
+  display: none;
+}
+
 .menu {
   position: relative;
 }
@@ -196,4 +249,71 @@ $header-height: 56px;
   flex: 1;
   overflow: auto;
   padding: 1.5rem;
+}
+
+@media (max-width: $phone) {
+  /* Off the screen to the left until shown, then over the page. Hidden (not only moved) while closed, so its links
+     aren't reached with Tab. */
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 1100;
+    width: min(280px, 85vw);
+    transform: translateX(-100%);
+    visibility: hidden;
+    box-shadow: none;
+    transition:
+      transform 0.2s ease,
+      visibility 0s linear 0.2s;
+
+    &.open {
+      transform: none;
+      visibility: visible;
+      box-shadow: var(--shadow-float);
+      transition: transform 0.2s ease;
+    }
+
+    .nav-close {
+      display: inline-flex;
+    }
+  }
+
+  .backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1099;
+    background: rgb(0 0 0 / 40%);
+  }
+
+  .nav-toggle {
+    display: inline-flex;
+  }
+
+  .topbar {
+    gap: 0.5rem;
+    padding: 0 0.5rem 0 1rem;
+
+    .page-title {
+      font-size: 1.1rem;
+    }
+  }
+
+  .content {
+    padding: 1rem;
+  }
+}
+
+/* A phone held upright: the user's name doesn't fit beside the title. */
+@media (max-width: 480px) {
+  .topbar .user {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .sidebar.open {
+    transition: none;
+  }
 }

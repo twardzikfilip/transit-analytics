@@ -78,7 +78,9 @@ describe('Stop hotspots page', () => {
       'Buses stood still away from stops 4574 times, for 47.9 h (6.8 h a day over 7 days recorded). ' +
         '2 hotspots hold 92% of that time.',
     );
-    const select = el.querySelector('app-time-window select') as HTMLSelectElement;
+    const select = el.querySelector(
+      'app-time-window select:not(.window-preset)',
+    ) as HTMLSelectElement;
     expect([...select.options].map((o) => o.text)).toEqual(['All lines', 'Line 9', 'Line 21']);
     expect(select.value).toBe('21');
     const cells = [...el.querySelectorAll('table.hotspots tbody tr:first-child td')].map(text);
@@ -144,7 +146,9 @@ describe('Stop hotspots page', () => {
       queryParams: { range: '24h', from: null, to: null },
       queryParamsHandling: 'merge',
     });
-    const select = el.querySelector('app-time-window select') as HTMLSelectElement;
+    const select = el.querySelector(
+      'app-time-window select:not(.window-preset)',
+    ) as HTMLSelectElement;
     select.value = '9';
     select.dispatchEvent(new Event('change'));
     expect(navigate).toHaveBeenLastCalledWith([], {

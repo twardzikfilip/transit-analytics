@@ -256,6 +256,11 @@ button.active:hover {
   padding: 0;
 }
 
+/* A chart's "Show as a table": a table wider than a phone scrolls sideways, not the page. */
+details:has(> table.data-table) {
+  overflow-x: auto;
+}
+
 table.data-table {
   width: 100%;
   border-collapse: collapse;
@@ -546,6 +551,15 @@ app-time-window label {
 @media (max-width: 600px) {
   .leaflet-map {
     height: var(--map-height-mobile, 360px);
+  }
+
+  /* A phone: tighter cards, and two small figure tiles side by side rather than one per row. */
+  .card {
+    padding: 1rem;
+  }
+
+  .tiles {
+    --tile-min: 9rem;
   }
 }
 

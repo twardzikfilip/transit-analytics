@@ -208,7 +208,9 @@ describe('Delay generation page', () => {
       queryParams: { range: '1mo', from: null, to: null },
       queryParamsHandling: 'merge',
     });
-    const part = el.querySelector('app-time-window select') as HTMLSelectElement;
+    const part = el.querySelector(
+      'app-time-window select:not(.window-preset)',
+    ) as HTMLSelectElement;
     part.value = 'am-peak';
     part.dispatchEvent(new Event('change'));
     expect(navigate).toHaveBeenLastCalledWith([], {

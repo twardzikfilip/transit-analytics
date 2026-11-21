@@ -33,6 +33,12 @@ cd frontend && npx ng serve                     # :4200, proxies /api to :8080 (
 
 Dev users: `guest`/`guest`, `admin`/`admin`.
 
+**The recorder must keep running.** It stores the live positions all the time, and a gap is lost data. It runs in
+Docker (`restart: unless-stopped`; Docker starts at boot), separately from any dev session. Never stop it; upgrade it
+with `backend/recorder/upgrade.sh`, which leaves no gap. Check it with `curl -s localhost:8081/actuator/health`
+(`recording.lastStored` should be seconds old). Claude can't reach the Docker socket here (the user isn't in the
+`docker` group), so ask the user to run `docker` commands.
+
 Before calling a change done:
 - Backend: `cd backend && INTEGRATION_TESTS=true ./gradlew check` (needs the database up; coverage floor 90%).
   To run some tests: `./gradlew :test --tests '*Name*'` (`:test`, the root project; plain `test` also runs the

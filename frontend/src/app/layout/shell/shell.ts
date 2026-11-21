@@ -26,7 +26,7 @@ interface NavGroup {
   styleUrl: './shell.scss',
   host: {
     '(document:click)': 'onDocumentClick($event)',
-    '(document:keydown.escape)': 'menuOpen.set(false)',
+    '(document:keydown.escape)': 'menuOpen.set(false); navOpen.set(false)',
   },
 })
 export class Shell {
@@ -36,6 +36,8 @@ export class Shell {
   protected readonly username = this.store.selectSignal(authFeature.selectUsername);
   protected readonly role = this.store.selectSignal(authFeature.selectRole);
   protected readonly menuOpen = signal(false);
+  /** On a phone, the sidebar is hidden to the left until shown with the button in the header bar. */
+  protected readonly navOpen = signal(false);
 
   /** The page's title, from its route, shown in the header bar. */
   protected readonly pageTitle = inject(PageTitle).current;
@@ -71,6 +73,11 @@ export class Shell {
   protected toggleMenu(event: Event): void {
     event.stopPropagation();
     this.menuOpen.update((open) => !open);
+  }
+
+  protected toggleNav(event: Event): void {
+    event.stopPropagation();
+    this.navOpen.update((open) => !open);
   }
 
   protected logout(): void {
