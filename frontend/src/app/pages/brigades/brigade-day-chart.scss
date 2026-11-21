@@ -100,8 +100,8 @@ svg {
   font-size: 0.82rem;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-float);
   pointer-events: none;
 }
 

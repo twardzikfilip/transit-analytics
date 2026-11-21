@@ -25,9 +25,21 @@ export const TIMETABLE_ROUTES: Routes = [
       provideEffects(routesEffects, stopsEffects, tripsEffects, stopTimesEffects),
     ],
     children: [
-      { path: 'stops', loadComponent: () => import('./stops/stops').then((m) => m.Stops) },
-      { path: 'trips', loadComponent: () => import('./trips/trips').then((m) => m.Trips) },
-      { path: 'stop-times', loadComponent: () => import('./stop-times/stop-times').then((m) => m.StopTimes) },
+      {
+        path: 'stops',
+        title: 'Stops',
+        loadComponent: () => import('./stops/stops').then((m) => m.Stops),
+      },
+      {
+        path: 'trips',
+        title: 'Trips',
+        loadComponent: () => import('./trips/trips').then((m) => m.Trips),
+      },
+      {
+        path: 'stop-times',
+        title: 'Stop times',
+        loadComponent: () => import('./stop-times/stop-times').then((m) => m.StopTimes),
+      },
     ],
   },
 ];

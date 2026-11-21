@@ -1,17 +1,23 @@
-<div class="page-header">
-  <h1>Position history</h1>
+<header class="section-head">
+  <h2>Recorded positions</h2>
   @if (series()?.summary; as s) {
     @if (s.last) {
       <span class="muted">Last recorded {{ s.last | date: 'medium' }}</span>
     }
   }
-</div>
-<p class="muted scope">
-  City lines (BKM) only. Regional operators' lines (e.g. 400–476, 700) are not included.
-</p>
+</header>
 
-<!-- Filters scope everything below: chart, figures and the reports table. -->
-<app-time-window defaultPreset="24h" [reset]="['page']">
+<!-- These filters scope this section only (figures, charts, delay distribution), not the live map above. -->
+<app-time-window defaultPreset="24h">
+  <label>
+    Operator
+    <select class="agency" (change)="setAgency($any($event.target).value)">
+      <option [value]="allAgencies" [selected]="agency() === null">All operators</option>
+      @for (a of agencyOptions(); track a) {
+        <option [value]="a" [selected]="agency() === a">{{ a }}</option>
+      }
+    </select>
+  </label>
   <label>
     Line
     <select (change)="setRoute($any($event.target).value)">
@@ -66,8 +72,8 @@
     <div>
       <h2>Vehicles running and mean delay</h2>
       <p class="muted">
-        {{ route() ? 'Line ' + route() : 'All lines' }}, {{ stepLabel() }}. Breaks in a line are periods with no
-        recording.
+        {{ route() ? 'Line ' + route() : 'All lines' }}, {{ stepLabel() }}. Breaks in a line are
+        periods with no recording.
       </p>
     </div>
     <button type="button" (click)="showTable.set(!showTable())" [attr.aria-pressed]="showTable()">
@@ -98,7 +104,9 @@
                 <td class="num">{{ formatDelay(p.meanDelaySeconds) }}</td>
               </tr>
             } @empty {
-              <tr><td colspan="5" class="muted">Nothing was recorded in this time range.</td></tr>
+              <tr>
+                <td colspan="5" class="muted">Nothing was recorded in this time range.</td>
+              </tr>
             }
           </tbody>
         </table>
@@ -133,10 +141,14 @@
 </section>
 
 <section class="card delays-card">
-  <h2>Delay distribution <span class="coverage">{{ coverage() }}</span></h2>
+  <h2>
+    Delay distribution <span class="coverage">{{ coverage() }}</span>
+  </h2>
   <p class="muted">
-    How late vehicles were in the selected time window and line; it changes with the filters above. <em>Vehicles</em> counts each vehicle in every band it was in at some
-    point, so the column doesn't add up to the vehicles seen. <em>Share of time</em> is the share of all reports.
+    How late vehicles were in the selected time window, line and operator; it changes with the
+    filters above. <em>Vehicles</em> counts each vehicle in every band it was in at some point, so
+    the column doesn't add up to the vehicles seen. <em>Share of time</em> is the share of all
+    reports.
   </p>
   <div class="data-table-wrap">
     <table class="data-table bands" [class.loading]="loadingSeries()">
@@ -155,7 +167,9 @@
             <td class="num">{{ b.vehicles | number }}</td>
             <td class="num">{{ b.reports | number }}</td>
             <td class="share">
-              <span class="bar" aria-hidden="true"><span [style.width.%]="b.share * 100"></span></span>
+              <span class="bar" aria-hidden="true"
+                ><span [style.width.%]="b.share * 100"></span
+              ></span>
               <span class="num">{{ formatShare(b.share) }}</span>
             </td>
           </tr>
@@ -163,60 +177,4 @@
       </tbody>
     </table>
   </div>
-</section>
-
-<section class="reports">
-  <h2>Position reports</h2>
-  <div class="card data-table-wrap">
-    <table class="data-table" [class.loading]="loadingSamples()">
-      <thead>
-        <tr>
-          <th class="index">#</th>
-          @for (c of reportColumns; track c.key) {
-            <th [class.num]="c.key === 'delay'" [attr.aria-sort]="reportAriaSort(c.key)">
-              <button type="button" class="sort" (click)="sortReports(c.key)">{{ c.label }}</button>
-            </th>
-          }
-          <th>Location</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (s of samples()?.content ?? []; track s.observedAt + s.vehicleId; let i = $index) {
-          <tr [class.outlier]="isOutlier(s.delaySeconds)">
-            <td class="index">{{ index(i) }}</td>
-            <td class="time">{{ s.observedAt | date: 'd MMM, HH:mm:ss' }}</td>
-            <td class="num">{{ s.vehicleNumber }}</td>
-            <td>
-              @if (s.routeName) {
-                <a [routerLink]="[]" [queryParams]="{ route: s.routeName, page: null }" queryParamsHandling="merge">{{ s.routeName }}</a>
-              }
-            </td>
-            <td>{{ s.brigade ?? '—' }}</td>
-            <td>{{ s.headsign ?? '—' }}</td>
-            <td class="num">
-              @if (isOutlier(s.delaySeconds)) {
-                <span class="outlier-tag" title="Over 30 minutes late: an outlier, possibly a feed error">⚠ Outlier</span>
-              }
-              {{ formatDelay(s.delaySeconds) }}
-            </td>
-            <td>{{ s.nextStopName ?? '—' }}</td>
-            <td class="num">
-              <a [href]="'https://www.openstreetmap.org/?mlat=' + s.latitude + '&mlon=' + s.longitude + '#map=17/' + s.latitude + '/' + s.longitude" target="_blank" rel="noopener">map ↗</a>
-            </td>
-          </tr>
-        } @empty {
-          <tr>
-            <td colspan="9" class="muted">
-              {{ loadingSamples() ? 'Loading…' : hideOutliers() ? 'No position reports without outliers in this time range.' : 'No position reports in this time range.' }}
-            </td>
-          </tr>
-        }
-      </tbody>
-    </table>
-  </div>
-  <label class="checkbox hide-outliers">
-    <input type="checkbox" [checked]="hideOutliers()" (change)="setHideOutliers($any($event.target).checked)" />
-    Hide outliers (more than 30 min late, possibly feed errors)
-  </label>
-  <app-pager [page]="samples()?.page ?? null" noun="reports" (pageChange)="setPage($event)" />
 </section>

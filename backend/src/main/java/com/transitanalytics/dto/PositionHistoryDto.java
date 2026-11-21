@@ -44,9 +44,9 @@ public final class PositionHistoryDto {
     }
 
     /**
-     * Delay distribution: one band per minute of delay.
+     * Delay distribution: on time, 2–5, 5–10, and 10 minutes or more late.
      *
-     * @param fromMinutes lower bound, inclusive; null for the first band (under 1 minute, including early)
+     * @param fromMinutes lower bound, inclusive; null for the first band (under 2 minutes, including early)
      * @param toMinutes   upper bound, exclusive; null for the last band (10 minutes or more)
      * @param vehicles    different vehicles with at least one report in this band (one vehicle can be in several)
      * @param reports     position reports in this band
@@ -56,34 +56,5 @@ public final class PositionHistoryDto {
 
     /** A line with recordings in the window, for the line filter. */
     public record RouteActivity(String route, long samples) {
-    }
-
-    /**
-     * Recorded positions as animation frames.
-     *
-     * @param stepSeconds time between frames (one poll = 60 s for short windows, coarser for long ones)
-     * @param routes      the line filter, or empty for all lines
-     * @param vehicles    vehicle numbers; frame positions refer to them by index
-     * @param lines       line names; frame positions refer to them by index
-     * @param brigades    brigades (vehicle duties, e.g. 024-02); frame positions refer to them by index
-     * @param frames      only frames with data, in time order
-     */
-    public record Replay(Instant from, Instant to, long stepSeconds, List<String> routes, List<String> vehicles,
-                         List<String> lines, List<String> brigades, List<Frame> frames) {
-    }
-
-    /**
-     * The latest position of every vehicle in one step.
-     *
-     * @param positions compact rows {@code [vehicleIndex, latitude, longitude, delaySeconds or null,
-     *                  lineIndex or null, brigadeIndex or null]} to keep a day of frames small
-     */
-    public record Frame(Instant time, List<List<Object>> positions) {
-    }
-
-    /** One recorded position report. */
-    public record Sample(Instant observedAt, Long vehicleId, String vehicleNumber, String routeName, String brigade,
-                         String headsign, double latitude, double longitude, Integer bearing, Integer delaySeconds,
-                         String nextStopName) {
     }
 }

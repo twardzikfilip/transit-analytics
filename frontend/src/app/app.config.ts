@@ -1,10 +1,14 @@
 import {
   ApplicationConfig,
   ErrorHandler,
+  inject,
+  provideAppInitializer,
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { provideRouter } from '@angular/router';
+import { TitleStrategy, provideRouter } from '@angular/router';
+import { PageTitle } from './core/title/page-title';
+import { Theme } from './core/theme/theme';
 import { provideEffects } from '@ngrx/effects';
 import { provideState, provideStore } from '@ngrx/store';
 import { routes } from './app.routes';
@@ -20,6 +24,9 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     { provide: ErrorHandler, useClass: TelemetryErrorHandler },
     provideRouter(routes),
+    { provide: TitleStrategy, useExisting: PageTitle },
+    // Applies the saved colour theme before the first page shows.
+    provideAppInitializer(() => void inject(Theme)),
     provideRouteTracing(),
     provideHttpClient(withInterceptors([authInterceptor])),
     provideStore(),

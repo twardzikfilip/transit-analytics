@@ -1,15 +1,19 @@
-<div class="page-header">
-  <h1>Stops</h1>
-</div>
-
 <div class="list-filters">
   <label>
     Search
-    <input type="search" placeholder="Name or code" [value]="query.get('q')" (input)="onSearch($any($event.target).value)" />
+    <input
+      type="search"
+      placeholder="Name or code"
+      [value]="query.get('q')"
+      (input)="onSearch($any($event.target).value)"
+    />
   </label>
   <label>
     Zone
-    <select [value]="query.get('zoneId')" (change)="query.setFilters({ zoneId: $any($event.target).value })">
+    <select
+      [value]="query.get('zoneId')"
+      (change)="query.setFilters({ zoneId: $any($event.target).value })"
+    >
       <option value="">All zones</option>
       <option value="1">Zone 1</option>
       <option value="2">Zone 2</option>
@@ -43,7 +47,16 @@
           <td class="num">
             @if (stop.latitude !== null && stop.longitude !== null) {
               <a
-                [href]="'https://www.openstreetmap.org/?mlat=' + stop.latitude + '&mlon=' + stop.longitude + '#map=18/' + stop.latitude + '/' + stop.longitude"
+                [href]="
+                  'https://www.openstreetmap.org/?mlat=' +
+                  stop.latitude +
+                  '&mlon=' +
+                  stop.longitude +
+                  '#map=18/' +
+                  stop.latitude +
+                  '/' +
+                  stop.longitude
+                "
                 target="_blank"
                 rel="noopener"
                 >{{ stop.latitude | number: '1.5-5' }}, {{ stop.longitude | number: '1.5-5' }} ↗</a
@@ -52,12 +65,20 @@
               —
             }
           </td>
-          <td class="num"><a [routerLink]="['/stop-times']" [queryParams]="{ stopId: stop.id }">Departures</a></td>
+          <td class="num">
+            <a [routerLink]="['/stop-times']" [queryParams]="{ stopId: stop.id }">Departures</a>
+          </td>
         </tr>
       } @empty {
         <tr>
           <td colspan="6" class="muted">
-            {{ loading() ? 'Loading…' : query.get('q') || query.get('zoneId') ? 'No stops match.' : 'No stops yet. Import a timetable in Settings.' }}
+            {{
+              loading()
+                ? 'Loading…'
+                : query.get('q') || query.get('zoneId')
+                  ? 'No stops match.'
+                  : 'No stops yet. Import a timetable in Settings.'
+            }}
           </td>
         </tr>
       }

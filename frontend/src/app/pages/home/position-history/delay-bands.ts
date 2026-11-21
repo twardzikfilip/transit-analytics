@@ -1,5 +1,5 @@
-import { DelayBand } from '../../core/models/models';
-import { percent } from '../../shared/format/number';
+import { DelayBand } from '../../../core/models/models';
+import { percent } from '../../../shared/format/number';
 
 export interface DelayBandRow extends DelayBand {
   label: string;
@@ -7,11 +7,11 @@ export interface DelayBandRow extends DelayBand {
   share: number;
 }
 
-/** "Under 1 min (on time or early)", "1–2 min", …, "10 min or more". */
+/** "On time (under 2 min late, or early)", "More than 2 min (2–5)", "More than 5 min (5–10)", "More than 10 min". */
 export function bandLabel(band: DelayBand): string {
-  if (band.fromMinutes === null) return `Under ${band.toMinutes} min (on time or early)`;
-  if (band.toMinutes === null) return `${band.fromMinutes} min or more`;
-  return `${band.fromMinutes}–${band.toMinutes} min`;
+  if (band.fromMinutes === null) return `On time (under ${band.toMinutes} min late, or early)`;
+  if (band.toMinutes === null) return `More than ${band.fromMinutes} min`;
+  return `More than ${band.fromMinutes} min (${band.fromMinutes}–${band.toMinutes})`;
 }
 
 export function bandRows(bands: DelayBand[]): DelayBandRow[] {
@@ -41,11 +41,4 @@ export function windowLabel(from: string, to: string, locale?: string): string {
   return a.toDateString() === b.toDateString()
     ? `${start} – ${time.format(b)}`
     : `${start} – ${day.format(b)}, ${time.format(b)}`;
-}
-
-/** Reports more than this late are outliers, most likely feed errors (same 30 minutes as the backend). */
-export const OUTLIER_DELAY_SECONDS = 30 * 60;
-
-export function isOutlier(delaySeconds: number | null): boolean {
-  return delaySeconds !== null && delaySeconds > OUTLIER_DELAY_SECONDS;
 }

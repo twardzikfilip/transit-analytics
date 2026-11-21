@@ -1,4 +1,4 @@
-import { LivePosition } from '../../core/models/models';
+import { LivePosition } from '../../../core/models/models';
 
 /** Reads the "minimum delay in minutes" filter from the URL; null when unset or not a number ≥ 0. */
 export function parseMinDelay(value: string | null): number | null {

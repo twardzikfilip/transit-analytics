@@ -1,4 +1,4 @@
-import { LivePosition } from '../../core/models/models';
+import { LivePosition } from '../../../core/models/models';
 import { agencies, delayedOver, ofAgency, parseMinDelay } from './delay-filter';
 
 describe('live map delay filter', () => {

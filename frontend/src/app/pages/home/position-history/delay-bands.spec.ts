@@ -1,13 +1,15 @@
-import { bandLabel, bandRows, formatShare, isOutlier, windowLabel } from './delay-bands';
+import { bandLabel, bandRows, formatShare, windowLabel } from './delay-bands';
 
 describe('delay bands', () => {
-  it('labels the open-ended first and last bands', () => {
-    expect(bandLabel({ fromMinutes: null, toMinutes: 1, vehicles: 0, reports: 0 })).toBe(
-      'Under 1 min (on time or early)',
+  it('labels on time, the bands between, and the open-ended last band', () => {
+    expect(bandLabel({ fromMinutes: null, toMinutes: 2, vehicles: 0, reports: 0 })).toBe(
+      'On time (under 2 min late, or early)',
     );
-    expect(bandLabel({ fromMinutes: 3, toMinutes: 4, vehicles: 0, reports: 0 })).toBe('3–4 min');
+    expect(bandLabel({ fromMinutes: 2, toMinutes: 5, vehicles: 0, reports: 0 })).toBe(
+      'More than 2 min (2–5)',
+    );
     expect(bandLabel({ fromMinutes: 10, toMinutes: null, vehicles: 0, reports: 0 })).toBe(
-      '10 min or more',
+      'More than 10 min',
     );
   });
 
@@ -34,12 +36,5 @@ describe('delay bands', () => {
     expect(windowLabel(local(14, 14, 9), local(14, 14), 'en-GB')).toBe(
       'Mon 9 Nov, 14:14 – Mon 16 Nov, 14:14',
     );
-  });
-
-  it('treats delays over 30 minutes as outliers', () => {
-    expect(isOutlier(30 * 60)).toBe(false);
-    expect(isOutlier(30 * 60 + 1)).toBe(true);
-    expect(isOutlier(-45 * 60)).toBe(false);
-    expect(isOutlier(null)).toBe(false);
   });
 });

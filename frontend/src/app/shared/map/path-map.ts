@@ -55,7 +55,7 @@ export interface PathLine {
 
     .map {
       height: 280px;
-      border-radius: 6px;
+      border-radius: var(--radius);
       border: 1px solid var(--border);
     }
 

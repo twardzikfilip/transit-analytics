@@ -3,19 +3,30 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { AuthActions } from '../../store/auth/auth.actions';
 import { authFeature } from '../../store/auth/auth.reducer';
+import { PageTitle } from '../../core/title/page-title';
+import { Icon } from '../../shared/icons/icon';
+import { IconName } from '../../shared/icons/icons';
 
 interface NavItem {
   path: string;
   label: string;
-  icon: string;
+  icon: IconName;
+}
+
+interface NavGroup {
+  label: string;
+  items: NavItem[];
 }
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, Icon],
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
-  host: { '(document:click)': 'onDocumentClick($event)', '(document:keydown.escape)': 'menuOpen.set(false)' },
+  host: {
+    '(document:click)': 'onDocumentClick($event)',
+    '(document:keydown.escape)': 'menuOpen.set(false)',
+  },
 })
 export class Shell {
   private readonly store = inject(Store);
@@ -25,24 +36,36 @@ export class Shell {
   protected readonly role = this.store.selectSignal(authFeature.selectRole);
   protected readonly menuOpen = signal(false);
 
-  protected readonly navItems: NavItem[] = [
-    { path: '/home', label: 'Home', icon: '⌂' },
-    { path: '/fleet', label: 'Fleet', icon: '🚌' },
-    { path: '/live-map', label: 'Live map', icon: '🗺' },
-    { path: '/positions', label: 'Position history', icon: '📈' },
-    { path: '/delays', label: 'Delays', icon: '⏱' },
-    { path: '/hotspots', label: 'Stop hotspots', icon: '🚦' },
-    { path: '/bus-lanes', label: 'Bus lanes', icon: '🛤' },
-    { path: '/delay-generation', label: 'Delay generation', icon: '📉' },
-    { path: '/trip-anomalies', label: 'Abnormal trips', icon: '⚠' },
-    { path: '/brigades', label: 'Brigades', icon: '🗓' },
-    { path: '/routes', label: 'Routes', icon: '〰' },
-    { path: '/lines', label: 'Line statistics', icon: '📊' },
-    { path: '/corridors', label: 'Important corridors', icon: '🛣' },
-    { path: '/network-coverage', label: 'Network coverage', icon: '◎' },
-    { path: '/stops', label: 'Stops', icon: '🚏' },
-    { path: '/trips', label: 'Trips', icon: '⇄' },
-    { path: '/stop-times', label: 'Stop times', icon: '🕑' },
+  /** The page's title, from its route, shown in the header bar. */
+  protected readonly pageTitle = inject(PageTitle).current;
+
+  /** The sidebar: day-to-day operation first, then the network and its timetable. */
+  protected readonly navGroups: NavGroup[] = [
+    {
+      label: 'Operation',
+      items: [
+        { path: '/home', label: 'Home', icon: 'home' },
+        { path: '/brigades', label: 'Brigades', icon: 'brigades' },
+        { path: '/fleet', label: 'Fleet', icon: 'fleet' },
+        { path: '/trip-anomalies', label: 'Abnormal trips', icon: 'tripAnomalies' },
+      ],
+    },
+    {
+      label: 'Network',
+      items: [
+        { path: '/hotspots', label: 'Stop hotspots', icon: 'hotspots' },
+        { path: '/bus-lanes', label: 'Bus lanes', icon: 'busLanes' },
+        { path: '/delay-generation', label: 'Delay generation', icon: 'delayGeneration' },
+        { path: '/routes', label: 'Routes', icon: 'routes' },
+        { path: '/lines', label: 'Line statistics', icon: 'lines' },
+        { path: '/corridors', label: 'Important corridors', icon: 'corridors' },
+        { path: '/network-coverage', label: 'Network coverage', icon: 'networkCoverage' },
+        { path: '/stops', label: 'Stops', icon: 'stops' },
+        { path: '/trips', label: 'Trips', icon: 'trips' },
+        { path: '/stop-times', label: 'Stop times', icon: 'stopTimes' },
+        { path: '/sources', label: 'Sources', icon: 'sources' },
+      ],
+    },
   ];
 
   protected toggleMenu(event: Event): void {

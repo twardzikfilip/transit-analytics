@@ -62,23 +62,17 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   `/api/agencies`, `/api/routes`, `/api/stops`, `/api/trips`, `/api/stop-times`, `/api/calendar-dates`,
   `/api/shape-points`. Timetable lists take filters as query parameters, e.g. `/api/trips?routeId=17&direction=1`,
   `/api/stop-times?stopId=260&sort=departureTime&sort=id`, `/api/stops?q=dworzec` (Swagger lists them all).
-- Position history (recorded time series, city operator BKM's lines only; regional operators such as WSCHODEXPRESS
-  and TUROSN are left out), each with a window `from`/`to` (ISO-8601, `to` exclusive, at most a year; see
-  *Time windows* below) and an optional `route` (line):
+- Position history (recorded time series), each with a window `from`/`to` (ISO-8601, `to` exclusive, at most a year;
+  see *Time windows* below), an optional `route` (line) and an optional `agency` (operator, e.g. `BKM`; all operators
+  when left out — the Home page asks for BKM unless another operator is chosen):
   - `GET /api/positions/fleet` — per bucket of polls: vehicles running (average per poll), the most at once,
     reports and mean delay. Buckets are 1 minute (one poll) for windows up to 24 h and coarser beyond, keeping
     ≤ 1,500 points. The totals separate *running now* (latest poll) and *most at once* (peak poll) from *different
     vehicles seen*. The last is always larger, because vehicles start and end their runs during the window.
-  - `GET /api/positions/delays` — vehicles and reports per minute of delay: under 1 min (incl. early), 1–2, …,
-    9–10, 10 min or more. A vehicle counts in every band it was in.
+  - `GET /api/positions/delays` — vehicles and reports per delay band: on time (under 2 min late, or early), 2–5,
+    5–10, and 10 min or more. A vehicle counts in every band it was in.
   - `GET /api/positions/routes` — lines recorded in the window.
-  - `GET /api/positions/replay` — animation frames (latest position of every vehicle per step; 1 min for short
-    windows, coarser for longer ones up to 6 h, at most 360 frames, windows up to 92 days) as compact rows `[vehicle, lat, lon, delay, line, brigade]`.
-    Repeat `route` for several lines. Responses are gzipped.
-  - `GET /api/positions` — the raw position reports, paged (`page`, `size` ≤ 500; also `vehicle`), sorted by
-    `sort=time|vehicle|line|duty|towards|delay|nextStop,asc|desc` (default `time,desc`). `excludeOutliers=true`
-    leaves out reports more than 30 min late; those are outliers, most likely feed errors. The page highlights
-    them in red and has a checkbox to hide them.
+  - `GET /api/positions/agencies` — the operators on the feed, BKM first, for the operator filter.
 - `GET /api/lines/stats` — per line, from the regular weekday timetable: length (main route, km), shortest and
   longest end-to-end travel time, average speed, interval, regularity (coefficient of variation of the gaps between
   departures, graded A–F as in TCQSM) and vehicles in peak (06:30–08:30, 15:00–17:00) and off-peak
@@ -206,10 +200,10 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
 - `GET /api/brigades/{brigade}/schedule` — a brigade's runs on the service day (03:00–03:00 Warsaw time) that `at`
   falls in (ISO instant, default now) from the timetable: line, headsign, first and last stop, scheduled departure
   and arrival. Brigades are named as on the live feed (`103-05`); the timetable's is the trip id's prefix. Used by
-  the popups of the live map and the Delays replay.
+  the popups of the live map.
 - `GET /api/boundaries` — Białystok's city limits and city centre (Osiedle Centrum) as closed rings of
   `[lat, lon]`, read by `domain/CityBoundaries` from `places/osm/bialystok.json` (OpenStreetMap relations 2910925 and
-  4091287; © OpenStreetMap contributors, ODbL). Drawn on the live and Delays maps.
+  4091287; © OpenStreetMap contributors, ODbL). Drawn on the live map and the other maps.
 - `GET /api/network-coverage` — how much of the city lies within each walking distance of the nearest stop of the
   city's lines (400, 500 and 600 m, `map/network-coverage.yml`), of all of it and of the part outside its woods; the
   woods; and each district, and each village and town reaching within 5 km of the city limits, with its area,
@@ -419,7 +413,13 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
 
 - `core/auth` — `AuthService`, `authInterceptor` (Bearer token, logout on 401), `authGuard`, `roleGuard`, `*appHasRole`
 - `core/api` — generic `CrudApiService` + one service per backend resource
-- `layout/shell` — sidebar with every page + top-right hamburger menu (Settings, Logout)
+- `layout/shell` — the sidebar (pages grouped into *Operation* and *Network*, each with a filled Bootstrap icon from
+  `shared/icons`) and the header bar with the page's title (from the route's `title`, see `core/title/page-title.ts`)
+  and the hamburger menu (Settings, Logout)
+- Theme: light by default, dark when chosen in Settings (remembered in the browser; `core/theme/theme.ts` sets
+  `data-theme` on `<html>`). The colour tokens are at the top of `styles.scss`: Bootstrap's greys, the primary teal
+  `#00a9bc` (sidebar, focus, chosen buttons; the open page 20% darker), and one radius (4 px) and shadow for cards,
+  inputs, buttons, charts and maps.
 - `store` — NgRx slices with functional effects: `auth`, `livePositions`, `routes` (all routes), and
   `stops`, `trips`, `stopTimes`, which hold one server-side page each (shared helpers in `store/paged.ts`);
   `gtfsImport` tracks the import. Only `auth` is registered at startup; every other slice is registered by its
@@ -428,26 +428,25 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
   below), the time-series, hour-of-day and bar charts, the timeline styles, `createBaseMap` (Leaflet + OSM),
   `hostWidth` (chart width), `injectSetQuery` (merge changes into the URL's query parameters), time and delay
   formatting, and the colour palette (`cssColor` reads theme tokens).
-- Time window: every page over recorded positions (Fleet, Position history, Delays, Stop hotspots, Delay
+- Time window: every page over recorded positions (Fleet, Home's recorded positions, Stop hotspots, Delay
   generation, Abnormal trips) has the same control: from/to pickers in the first row, then buttons for the last
   1 min, 5 min, 30 min, 1 h, 2 h, 12 h, 24 h, 3 days, 1 week, 1 month and all time, a dropdown of checkboxes for the
   operators where the page can filter by them (Fleet), and the page's own filters. It is kept in the URL
   (`?range=1w`, or `?from=…&to=…` in local time, and `?agency=`).
 - Startup bundle: telemetry (the OpenTelemetry SDK) loads as its own chunk right after startup, and the NgRx
   devtools are only in development builds (`store-devtools.prod.ts` replaces them in production).
-- `pages` — login, home, live map (Białystok, Leaflet/OSM; dispatches a
-  `livePositions` load every 5 s and draws markers from the store; filled by delay as on the Delays map, outlined by
-  kind of line: urban blue, suburban black, regional magenta; filters by operator and delay in the URL, with a reset;
-  the popup shows the brigade and its remaining runs today; the city limits and centre are drawn under the buses),
-  settings (GTFS import for admins)
-- Position history: vehicles running and mean delay every 10 s (each poll) for windows up to an hour, else every
-  minute or coarser (SVG line charts with a hover/keyboard tooltip and
-  a table view), running now / most at once / different vehicles seen, the delay distribution, and the raw reports, filtered by time window and line, all kept in the URL.
-  Preset ranges refresh with each poll (up to 1 h) or every minute. Store slice `positionHistory`, registered by its lazy route.
-- Delays: an animated replay of recorded positions on a map, each bus coloured by delay (green on time → yellow →
-  orange → red at 10+ min). Filter by one, several or all lines and by time window. Play/pause, speed, loop and a timeline are at the top; the filters are kept in the URL.
-  Clicking a bus shows its brigade and that brigade's plan for the rest of the replayed day from the replay's
-  moment (the run under way in bold); the popup follows the replay. City limits and centre are drawn as on the live map.
+- `pages` — login, settings (theme; GTFS import for admins), sources (where the data comes from), and:
+- Home: the live map on top (Leaflet/OSM; a `livePositions` load every 5 s, markers drawn from the store; filled by
+  delay, outlined by kind of line: urban blue, suburban black, regional magenta; its own filters by operator and delay,
+  in the URL as `?mapAgency=` and `?mapMinDelay=`, with a reset; the popup shows the brigade and its remaining runs
+  today; the city limits and centre are drawn under the buses). It always shows now: no time window changes it.
+  Below it, the recorded positions with their own time window, operator (`?agency=`, BKM by default, `all` for every
+  operator) and line: vehicles running and mean delay every 10 s (each poll) for windows up to an hour, else every
+  minute or coarser (SVG line charts with a hover/keyboard tooltip and a table view), running now / most at once /
+  different vehicles seen, and the delay distribution in four bands (on time, more than 2, 5 and 10 min). Preset
+  ranges refresh with each poll (up to 1 h) or every minute; a change of window loads at once. Store slices
+  `livePositions` and `positionHistory`, registered by Home's lazy route. The former pages `/live-map`,
+  `/positions` and `/delays` lead to Home.
 - Line statistics: the figures above for every line in a sortable table (weekday timetable, planned values).
 - Routes: pick a line from a table of kinds of line (rows: urban, suburban, night, regional) by geometry (columns:
   radial, diameter, arcantial, tangential, feeder, and not classified for other operators' lines); a line's button
@@ -497,7 +496,7 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
   (speed, weekday peak and off-peak, delay change per km); a map of the lanes coloured by speed; speed and delay
   change by weekday hour; and a sortable table of each lane (street and direction) against the same street the
   other way. Store slice `busLanes`, registered by its lazy route. Bus lanes are also drawn (a translucent violet
-  band) on the Live, Delays and Routes maps, and Routes says how much of the line runs on them each way.
+  band) on the live map (Home) and the Routes map, and Routes says how much of the line runs on them each way.
 - Delay generation: a map of every stretch between stops coloured by the delay buses gain on it (red) or recover
   (blue), both directions side by side, for the whole day or a part of it; the stretches creating and recovering
   the most delay altogether; and each line's gain per run. Click a line for, per direction, a table of its stretches

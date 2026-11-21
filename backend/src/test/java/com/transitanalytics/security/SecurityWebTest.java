@@ -295,14 +295,14 @@ class SecurityWebTest {
     void guestCanReadPositionHistory() throws Exception {
         Instant from = Instant.parse("2026-11-16T10:00:00Z");
         Instant to = Instant.parse("2026-11-16T11:00:00Z");
-        given(positionHistoryService.fleet(from, to, "103")).willReturn(new PositionHistoryDto.FleetSeries(from, to, 60,
+        given(positionHistoryService.fleet(from, to, "103", "BKM")).willReturn(new PositionHistoryDto.FleetSeries(from, to, 60,
                 "103", List.of(new PositionHistoryDto.FleetPoint(from, 7.0, 7, 7, 30.0)),
                 new PositionHistoryDto.Summary(7, 8, 7, 7, from, 30.0, from, from)));
-        given(positionHistoryService.delays(from, to, null)).willReturn(List.of(
-                new PositionHistoryDto.DelayBand(null, 1, 5, 40), new PositionHistoryDto.DelayBand(10, null, 1, 2)));
+        given(positionHistoryService.delays(from, to, null, null)).willReturn(List.of(
+                new PositionHistoryDto.DelayBand(null, 2, 5, 40), new PositionHistoryDto.DelayBand(10, null, 1, 2)));
 
         mvc.perform(get("/api/positions/fleet").param("from", from.toString()).param("to", to.toString())
-                        .param("route", "103").header("Authorization", bearer("guest", "GUEST")))
+                        .param("route", "103").param("agency", "BKM").header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.points[0].vehicles").value(7))
                 .andExpect(jsonPath("$.stepSeconds").value(60))
@@ -310,7 +310,7 @@ class SecurityWebTest {
         mvc.perform(get("/api/positions/delays").param("from", from.toString()).param("to", to.toString())
                         .header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].toMinutes").value(1))
+                .andExpect(jsonPath("$[0].toMinutes").value(2))
                 .andExpect(jsonPath("$[1].fromMinutes").value(10));
         mvc.perform(get("/api/positions/fleet").param("from", from.toString()).param("to", to.toString()))
                 .andExpect(status().isUnauthorized());
@@ -318,7 +318,7 @@ class SecurityWebTest {
 
     @Test
     void positionHistoryRejectsBadWindows() throws Exception {
-        given(positionHistoryService.fleet(any(), any(), any()))
+        given(positionHistoryService.fleet(any(), any(), any(), any()))
                 .willThrow(new IllegalArgumentException("from must be before to"));
 
         mvc.perform(get("/api/positions/fleet").param("from", "2026-11-16T11:00:00Z").param("to", "2026-11-16T10:00:00Z")

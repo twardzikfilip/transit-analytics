@@ -1,24 +1,39 @@
-<div class="page-header">
-  <h1>{{ title() }}</h1>
-</div>
+@if (title() !== 'Stop times') {
+  <h2 class="subtitle">{{ title() }}</h2>
+}
 
 @if (query.get('tripId') || query.get('stopId')) {
   <div class="list-filters">
     @if (query.get('tripId')) {
       <span class="chip">
         Trip {{ first()?.tripGtfsId ?? query.get('tripId') }}
-        <button type="button" (click)="query.setFilters({ tripId: null })" aria-label="Clear trip filter">×</button>
+        <button
+          type="button"
+          (click)="query.setFilters({ tripId: null })"
+          aria-label="Clear trip filter"
+        >
+          ×
+        </button>
       </span>
     }
     @if (query.get('stopId')) {
       <span class="chip">
         Stop {{ first()?.stopName ?? query.get('stopId') }}
-        <button type="button" (click)="query.setFilters({ stopId: null })" aria-label="Clear stop filter">×</button>
+        <button
+          type="button"
+          (click)="query.setFilters({ stopId: null })"
+          aria-label="Clear stop filter"
+        >
+          ×
+        </button>
       </span>
     }
   </div>
 } @else {
-  <p class="muted">All stop times of all trips. Open them for one trip from <a routerLink="/trips">Trips</a>, or as a departure board from <a routerLink="/stops">Stops</a>.</p>
+  <p class="muted">
+    All stop times of all trips. Open them for one trip from <a routerLink="/trips">Trips</a>, or as
+    a departure board from <a routerLink="/stops">Stops</a>.
+  </p>
 }
 
 @if (error(); as message) {
@@ -50,17 +65,29 @@
           <td class="time">{{ formatTime(st.departureTime) }}</td>
           @if (!query.get('stopId')) {
             <td>
-              <a [routerLink]="[]" [queryParams]="{ stopId: st.stopId, tripId: null, page: null }">{{ st.stopName }}</a>
+              <a
+                [routerLink]="[]"
+                [queryParams]="{ stopId: st.stopId, tripId: null, page: null }"
+                >{{ st.stopName }}</a
+              >
             </td>
           }
           <td>
-            <span class="route-badge" [style.--route-color]="routeColor(st.routeColor)">{{ st.routeName }}</span>
+            <span class="route-badge" [style.--route-color]="routeColor(st.routeColor)">{{
+              st.routeName
+            }}</span>
           </td>
           <td>
-            <a [routerLink]="[]" [queryParams]="{ tripId: st.tripId, stopId: null, page: null }">{{ st.stopHeadsign ?? st.tripHeadsign ?? '—' }}</a>
+            <a [routerLink]="[]" [queryParams]="{ tripId: st.tripId, stopId: null, page: null }">{{
+              st.stopHeadsign ?? st.tripHeadsign ?? '—'
+            }}</a>
           </td>
           <td class="num">
-            <a [routerLink]="['/trips']" [queryParams]="{ serviceId: st.serviceId, routeId: st.routeId }">{{ st.serviceId }}</a>
+            <a
+              [routerLink]="['/trips']"
+              [queryParams]="{ serviceId: st.serviceId, routeId: st.routeId }"
+              >{{ st.serviceId }}</a
+            >
           </td>
           <td class="num">{{ st.stopSequence }}</td>
           <td class="muted">{{ boarding(st) ?? '' }}</td>

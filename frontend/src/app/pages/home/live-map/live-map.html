@@ -1,6 +1,6 @@
 <div class="header">
-  <h1>Live map · Białystok</h1>
-  <span class="muted">
+  <h2>Live map <span class="muted now">now</span></h2>
+  <span class="muted status">
     @if (filtering()) {
       {{ visible().length }} of {{ count() }} vehicles ({{ agency() ? agency() : ''
       }}{{ agency() && minDelay() !== null ? ', ' : ''

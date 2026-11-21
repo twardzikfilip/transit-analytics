@@ -22,7 +22,9 @@ describe('API clients', () => {
   let http: HttpTestingController;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
     http = TestBed.inject(HttpTestingController);
   });
 
@@ -49,34 +51,34 @@ describe('API clients', () => {
     api.delete(7).subscribe();
 
     expect(http.expectOne({ method: 'GET', url: '/api/routes/7' })).toBeTruthy();
-    expect(http.expectOne({ method: 'POST', url: '/api/routes' }).request.body).toEqual({ number: '230' });
-    expect(http.expectOne({ method: 'PUT', url: '/api/routes/7' }).request.body).toEqual({ number: '231' });
+    expect(http.expectOne({ method: 'POST', url: '/api/routes' }).request.body).toEqual({
+      number: '230',
+    });
+    expect(http.expectOne({ method: 'PUT', url: '/api/routes/7' }).request.body).toEqual({
+      number: '231',
+    });
     expect(http.expectOne({ method: 'DELETE', url: '/api/routes/7' })).toBeTruthy();
   });
 
-  it('asks for position history with an optional line, and the replay with several', () => {
+  it('asks for position history with an optional line and operator', () => {
     const api = TestBed.inject(PositionHistoryApi);
-    api.fleet({ from: 'A', to: 'B' }, null).subscribe();
-    api.delays({ from: 'A', to: 'B' }, '103').subscribe();
-    api.replay({ from: null, to: 'B' }, ['103', '5']).subscribe();
-    api.samples({ from: 'A', to: 'B' }, null, 1, 50, 'delay,desc', true).subscribe();
-    api.routes({ from: null, to: 'B' }).subscribe();
+    api.fleet({ from: 'A', to: 'B' }, { route: null, agency: null }).subscribe();
+    api.delays({ from: 'A', to: 'B' }, { route: '103', agency: 'BKM' }).subscribe();
+    api.routes({ from: null, to: 'B' }, 'TUROSN').subscribe();
+    api.agencies().subscribe();
 
-    const fleet = http.expectOne((r) => r.url === '/api/positions/fleet');
-    expect(fleet.request.params.has('route')).toBe(false);
-    expect(fleet.request.params.get('from')).toBe('A');
+    const fleet = http.expectOne((r) => r.url === '/api/positions/fleet').request.params;
+    expect(fleet.has('route')).toBe(false);
+    expect(fleet.has('agency')).toBe(false);
+    expect(fleet.get('from')).toBe('A');
     // All time: no from.
-    expect(http.expectOne((r) => r.url === '/api/positions/routes').request.params.has('from')).toBe(
-      false,
-    );
-    const replay = http.expectOne((r) => r.url === '/api/positions/replay').request.params;
-    expect(replay.has('from')).toBe(false);
-    expect(replay.getAll('route')).toEqual(['103', '5']);
-    expect(http.expectOne((r) => r.url === '/api/positions/delays').request.params.get('route')).toBe('103');
-    const samples = http.expectOne((r) => r.url === '/api/positions').request.params;
-    expect(samples.get('sort')).toBe('delay,desc');
-    expect(samples.get('excludeOutliers')).toBe('true');
-    expect(samples.get('page')).toBe('1');
+    const routes = http.expectOne((r) => r.url === '/api/positions/routes').request.params;
+    expect(routes.has('from')).toBe(false);
+    expect(routes.get('agency')).toBe('TUROSN');
+    const delays = http.expectOne((r) => r.url === '/api/positions/delays').request.params;
+    expect(delays.get('route')).toBe('103');
+    expect(delays.get('agency')).toBe('BKM');
+    expect(http.expectOne('/api/positions/agencies')).toBeTruthy();
   });
 
   it('calls the line, corridor and import endpoints, escaping the line id', () => {
@@ -87,7 +89,12 @@ describe('API clients', () => {
     TestBed.inject(CorridorApi).report().subscribe();
     TestBed.inject(GtfsApi).importBialystok().subscribe();
 
-    for (const url of ['/api/lines/stats', '/api/lines', '/api/lines/103/performance', '/api/corridors']) {
+    for (const url of [
+      '/api/lines/stats',
+      '/api/lines',
+      '/api/lines/103/performance',
+      '/api/corridors',
+    ]) {
       http.expectOne(url);
     }
     http.expectOne('/api/lines/N%201%2Fx/detail');
