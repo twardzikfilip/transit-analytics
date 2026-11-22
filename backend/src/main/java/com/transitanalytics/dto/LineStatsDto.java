@@ -14,9 +14,10 @@ public final class LineStatsDto {
      * @param validDays weekdays this service runs on
      * @param firstDate first of those days
      * @param lastDate  last of those days
+     * @param delayDays the recorded weekdays the lines' delays are averaged over: the last this many days
      */
     public record Report(String serviceId, int validDays, LocalDate firstDate, LocalDate lastDate,
-                         List<Period> peak, List<Period> offPeak, List<Line> lines) {
+                         List<Period> peak, List<Period> offPeak, int delayDays, List<Line> lines) {
     }
 
     /** A time period of the day, e.g. 06:30–08:30. */
@@ -39,11 +40,22 @@ public final class LineStatsDto {
      * @param peakVehicles           buses needed at peak: duties running in the busier of the two peak periods
      * @param offPeakVehicles        duties running in the off-peak period
      * @param trips                  weekday trips of the line (all variants)
+     * @param peakDelaySeconds       recorded: the line's buses' mean delay in peak hours on weekdays of the last
+     *                               {@link Report#delayDays()} days (negative: early); null without recordings
+     * @param offPeakDelaySeconds    the same for off-peak hours
      */
     public record Line(Long routeId, String route, String color, String textColor, Double lengthKm,
                        Integer shortestTravelSeconds, Integer longestTravelSeconds, Double peakSpeedKmh,
                        Double offPeakSpeedKmh, Double peakIntervalMinutes,
                        Double offPeakIntervalMinutes, Double peakRegularityCv, Double offPeakRegularityCv,
-                       int peakVehicles, int offPeakVehicles, int trips) {
+                       int peakVehicles, int offPeakVehicles, int trips, Double peakDelaySeconds,
+                       Double offPeakDelaySeconds) {
+
+        /** This line with its recorded delays. */
+        public Line withDelays(Double peak, Double offPeak) {
+            return new Line(routeId, route, color, textColor, lengthKm, shortestTravelSeconds, longestTravelSeconds,
+                    peakSpeedKmh, offPeakSpeedKmh, peakIntervalMinutes, offPeakIntervalMinutes, peakRegularityCv,
+                    offPeakRegularityCv, peakVehicles, offPeakVehicles, trips, peak, offPeak);
+        }
     }
 }

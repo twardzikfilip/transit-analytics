@@ -5,112 +5,12 @@
   height: 100dvh;
 }
 
-/* Up to this width (phones, small tablets) the sidebar is hidden to the left and shown over the page. */
+/* Up to this width (phones, small tablets) the sidebar is hidden (sidebar.scss) and shown with the header's button. */
 $phone: 768px;
 
 /* The header row: the sidebar's brand and the page's top bar have the same height and bottom border, so they line
    up across the page. */
 $header-height: 56px;
-
-.sidebar {
-  width: 232px;
-  flex-shrink: 0;
-  background: var(--sidebar-bg);
-  color: var(--sidebar-fg);
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  box-shadow: 2px 0 6px rgb(0 0 0 / 12%);
-  /* Above the main column, so its shadow falls on it. */
-  position: relative;
-  z-index: 1;
-
-  .brand {
-    flex-shrink: 0;
-    box-sizing: border-box;
-    height: $header-height;
-    display: flex;
-    align-items: center;
-    padding: 0 1.25rem;
-    font-weight: 600;
-    font-size: 1.1rem;
-    color: #fff;
-    border-bottom: 1px solid rgb(255 255 255 / 25%);
-  }
-
-  /* Hides the sidebar again; only on a phone. */
-  .nav-close {
-    display: none;
-    margin-left: auto;
-    margin-right: -0.5rem;
-    color: #fff;
-
-    &:hover {
-      background: rgb(0 0 0 / 10%);
-    }
-
-    &:focus-visible {
-      outline: 2px solid #fff;
-      outline-offset: -2px;
-    }
-  }
-
-  /* No right padding: the items reach the sidebar's right edge. */
-  nav {
-    padding: 0.5rem 0 1rem 0.5rem;
-  }
-
-  .group {
-    margin: 1rem 0.75rem 0.4rem;
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: rgb(255 255 255 / 75%);
-  }
-
-  ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  /* Every item: an icon of the same width, then the label, with the same gap, so icons and labels line up. */
-  a {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.55rem 0.75rem;
-    /* Fully round on the left, square where it meets the sidebar's right edge. */
-    border-radius: 999px 0 0 999px;
-    color: #fff;
-    text-decoration: none;
-
-    .icon {
-      width: 1.1rem;
-      height: 1.1rem;
-      font-size: 1.1rem;
-    }
-
-    &:hover {
-      background: rgb(0 0 0 / 10%);
-    }
-
-    &:focus-visible {
-      outline: 2px solid #fff;
-      outline-offset: -2px;
-    }
-
-    /* The page shown: the sidebar colour 20% darker. */
-    &.active {
-      background: var(--primary-dark);
-      font-weight: 600;
-    }
-  }
-}
 
 .main {
   flex: 1;
@@ -149,9 +49,9 @@ $header-height: 56px;
   }
 }
 
-/* The icon buttons: the sidebar's toggle and close. */
-.nav-toggle,
-.nav-close {
+/* The page's way back, an icon at the very left; and the sidebar's toggle (a phone). */
+.back,
+.nav-toggle {
   width: 40px;
   height: 40px;
   flex-shrink: 0;
@@ -164,9 +64,6 @@ $header-height: 56px;
   border-radius: var(--radius);
   font-size: 1.2rem;
   cursor: pointer;
-}
-
-.nav-toggle {
   display: none;
   margin-left: -0.5rem;
   color: var(--fg);
@@ -174,6 +71,10 @@ $header-height: 56px;
   &:hover {
     background: var(--hover);
   }
+}
+
+.back {
+  display: inline-flex;
 }
 
 .backdrop {
@@ -252,32 +153,6 @@ $header-height: 56px;
 }
 
 @media (max-width: $phone) {
-  /* Off the screen to the left until shown, then over the page. Hidden (not only moved) while closed, so its links
-     aren't reached with Tab. */
-  .sidebar {
-    position: fixed;
-    inset: 0 auto 0 0;
-    z-index: 1100;
-    width: min(280px, 85vw);
-    transform: translateX(-100%);
-    visibility: hidden;
-    box-shadow: none;
-    transition:
-      transform 0.2s ease,
-      visibility 0s linear 0.2s;
-
-    &.open {
-      transform: none;
-      visibility: visible;
-      box-shadow: var(--shadow-float);
-      transition: transform 0.2s ease;
-    }
-
-    .nav-close {
-      display: inline-flex;
-    }
-  }
-
   .backdrop {
     display: block;
     position: fixed;
@@ -308,12 +183,5 @@ $header-height: 56px;
 @media (max-width: 480px) {
   .topbar .user {
     display: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sidebar,
-  .sidebar.open {
-    transition: none;
   }
 }

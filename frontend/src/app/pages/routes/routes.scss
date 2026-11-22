@@ -222,3 +222,8 @@ details:not(.how) {
   border-top-width: 4px;
   margin-right: 0.35rem;
 }
+
+/* The way back to every route, first on the page. */
+.back {
+  align-self: flex-start;
+}

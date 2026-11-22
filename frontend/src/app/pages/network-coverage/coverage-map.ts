@@ -7,6 +7,7 @@ import { defineHatch, hatchFill, hatchSwatch, uniqueId } from '../../shared/map/
 import { leafletHost, paneRenderer } from '../../shared/map/leaflet-host';
 import { rings } from '../../shared/map/shapes';
 import { BOUNDARY_STYLES, COVERAGE_STYLE, INK } from '../../shared/palette';
+import { t, tn } from '../../core/i18n/t';
 
 /**
  * Panes, bottom to top: the covered area (one see-through layer, so overlaps don't darken), woods, the Biała valley,
@@ -26,26 +27,23 @@ const PANES = { covered: 410, woods: 420, valley: 425, border: 430, stops: 440 }
       #map
       class="leaflet-map"
       role="region"
-      [attr.aria-label]="
-        'Map of the area within ' +
-        radius() +
-        ' m of the nearest stop, the woods and the Biała valley'
-      "
+      [attr.aria-label]="t('coverage.mapLabel', { m: radius() })"
     ></div>
     <ul class="legend">
-      <li><span class="swatch covered"></span>Within {{ radius() }} m of the nearest bus stop</li>
+      <li><span class="swatch covered"></span>{{ t('coverage.legendWithin', { m: radius() }) }}</li>
       <li>
         <span class="swatch" [style.background]="forestSwatch" [style.border]="forestBorder"></span
-        >Woods
+        >{{ t('coverage.woods') }}
       </li>
       <li>
         <span class="swatch" [style.background]="valleySwatch" [style.border]="valleyBorder"></span
-        >Biała valley
+        >{{ t('coverage.valley') }}
       </li>
       <li>
-        <span class="line-swatch" [style.border-top-color]="border.color"></span>{{ border.label }}
+        <span class="line-swatch" [style.border-top-color]="border.color"></span
+        >{{ t(border.label) }}
       </li>
-      <li><span class="dot"></span>Stop</li>
+      <li><span class="dot"></span>{{ t('coverage.stop') }}</li>
     </ul>
   `,
   styles: `
@@ -69,6 +67,7 @@ const PANES = { covered: 410, woods: 420, valley: 425, border: 430, stops: 440 }
   `,
 })
 export class CoverageMap {
+  protected readonly t = t;
   readonly data = input.required<NetworkCoverage>();
   /** Walking distance to the nearest stop, in metres. */
   readonly radius = input.required<number>();
@@ -135,8 +134,8 @@ export class CoverageMap {
     if (svg) defineHatch(svg, this.hatchId, COVERAGE_STYLE.forestFill, COVERAGE_STYLE.forestLine);
     for (const stretch of data.valley) {
       const tip =
-        `<strong>Biała valley: ${escapeHtml(stretch.name)}</strong><br>` +
-        `${area(stretch.areaKm2)}, nobody lives here`;
+        `<strong>${escapeHtml(t('coverage.valleyTip', { name: stretch.name }))}</strong><br>` +
+        escapeHtml(t('coverage.nobody', { area: area(stretch.areaKm2) }));
       L.polygon(rings(stretch.shape), {
         pane: 'valley',
         color: COVERAGE_STYLE.valleyLine,

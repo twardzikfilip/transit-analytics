@@ -1,11 +1,10 @@
 import { Component } from '@angular/core';
+import { t, tn } from '../../core/i18n/t';
 
+/** A source: its id (its texts are `sources.<id>.name`, `.gives`, `.usedOn`, `.refreshed`) and its address. */
 interface Source {
-  name: string;
+  id: string;
   url: string | null;
-  gives: string;
-  usedOn: string;
-  refreshed: string;
 }
 
 /** Where the app's data comes from, one line each. */
@@ -16,36 +15,33 @@ interface Source {
       <table class="data-table">
         <thead>
           <tr>
-            <th>Source</th>
-            <th>What it gives</th>
-            <th>Used on</th>
-            <th>Updated</th>
+            <th>{{ t('sources.col.source') }}</th>
+            <th>{{ t('sources.col.gives') }}</th>
+            <th>{{ t('sources.col.usedOn') }}</th>
+            <th>{{ t('sources.col.updated') }}</th>
           </tr>
         </thead>
         <tbody>
-          @for (s of sources; track s.name) {
+          @for (s of sources; track s.id) {
             <tr>
               <td class="name">
                 @if (s.url) {
-                  <a [href]="s.url" target="_blank" rel="noopener">{{ s.name }}</a>
+                  <a [href]="s.url" target="_blank" rel="noopener">{{
+                    t('sources.' + s.id + '.name')
+                  }}</a>
                 } @else {
-                  {{ s.name }}
+                  {{ t('sources.' + s.id + '.name') }}
                 }
               </td>
-              <td>{{ s.gives }}</td>
-              <td>{{ s.usedOn }}</td>
-              <td class="muted">{{ s.refreshed }}</td>
+              <td>{{ t('sources.' + s.id + '.gives') }}</td>
+              <td>{{ t('sources.' + s.id + '.usedOn') }}</td>
+              <td class="muted">{{ t('sources.' + s.id + '.refreshed') }}</td>
             </tr>
           }
         </tbody>
       </table>
     </section>
-    <p class="muted note">
-      Map data © OpenStreetMap contributors (ODbL). Settings and hand-kept figures live in the
-      backend's
-      <code>resources/map</code>, <code>classification</code> and <code>places</code> folders; each
-      file names its source.
-    </p>
+    <p class="muted note" [innerHTML]="t('sources.note')"></p>
   `,
   styles: `
     .name {
@@ -59,72 +55,16 @@ interface Source {
   `,
 })
 export class Sources {
+  protected readonly t = t;
   protected readonly sources: Source[] = [
-    {
-      name: 'zbiorkom.live',
-      url: 'https://zbiorkom.live',
-      gives:
-        'Live vehicle positions, delays, brigades and models, every 10 s; recorded into the database.',
-      usedOn:
-        'Home, Fleet, Brigades, Abnormal trips, Stop hotspots, Bus lanes, Delay generation, Routes',
-      refreshed: 'Continuously',
-    },
-    {
-      name: 'BKM timetable (GTFS)',
-      url: 'https://komunikacja.bialystok.pl',
-      gives: 'City lines, stops, trips, stop times and route shapes.',
-      usedOn: 'Routes, Corridors, Stops, Trips, Stop times; schedules everywhere',
-      refreshed: 'Import in Settings',
-    },
-    {
-      name: 'PKS Nova line 500 (GTFS)',
-      url: 'https://files.girlc.at/gtfs/pks_nova_suprasl.zip',
-      gives: 'Timetable of the Białystok – Supraśl line (unofficial feed, CC0).',
-      usedOn: 'Routes, Brigades',
-      refreshed: 'Nightly',
-    },
-    {
-      name: 'OpenStreetMap',
-      url: 'https://www.openstreetmap.org',
-      gives:
-        'Base map; city border, districts, woods, nearby villages, bus lanes and depot outlines (via Overpass).',
-      usedOn: 'All maps, Network coverage, Bus lanes, line classes',
-      refreshed: 'Bus lanes monthly; the rest by hand',
-    },
-    {
-      name: 'OSRM demo server',
-      url: 'https://router.project-osrm.org',
-      gives: 'Likely driving routes between depots and the first or last stop.',
-      usedOn: 'Routes (depot runs)',
-      refreshed: 'On demand',
-    },
-    {
-      name: 'Białystok city report 2025',
-      url: null,
-      gives: 'Residents per district (permanent and temporary) and the GUS city total.',
-      usedOn: 'Network coverage',
-      refreshed: 'Yearly, by hand',
-    },
-    {
-      name: 'Census 2021, gminas, Wikipedia',
-      url: null,
-      gives: 'Residents of the villages within 5 km of the city.',
-      usedOn: 'Network coverage',
-      refreshed: 'By hand',
-    },
-    {
-      name: 'BKM operators and EU funds page',
-      url: 'https://komunikacja.bialystok.pl/pl/informacje/kontakt/',
-      gives: 'Which company runs which buses; the official length of bus lanes (24 km).',
-      usedOn: 'Fleet, Bus lanes',
-      refreshed: 'By hand',
-    },
-    {
-      name: 'Vehicle models (own list)',
-      url: null,
-      gives: 'Length, class and capacity of each bus model.',
-      usedOn: 'Fleet, Corridors',
-      refreshed: 'By hand',
-    },
+    { id: 'zbiorkom', url: 'https://zbiorkom.live' },
+    { id: 'bkm', url: 'https://komunikacja.bialystok.pl' },
+    { id: 'pks', url: 'https://files.girlc.at/gtfs/pks_nova_suprasl.zip' },
+    { id: 'osm', url: 'https://www.openstreetmap.org' },
+    { id: 'osrm', url: 'https://router.project-osrm.org' },
+    { id: 'city', url: null },
+    { id: 'census', url: null },
+    { id: 'operators', url: 'https://komunikacja.bialystok.pl/pl/informacje/kontakt/' },
+    { id: 'models', url: null },
   ];
 }

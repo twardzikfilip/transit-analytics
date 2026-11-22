@@ -7,6 +7,7 @@ import { provideEffects } from '@ngrx/effects';
 import { provideStore } from '@ngrx/store';
 import { ToastrService } from 'ngx-toastr';
 import { routes } from './app.routes';
+import { provideTestI18n } from './testing/i18n-testing';
 import { errorToastInterceptor, provideErrorToasts } from './core/api/error-toasts';
 import { authInterceptor } from './core/auth/auth.interceptor';
 import * as authEffects from './store/auth/auth.effects';
@@ -25,16 +26,16 @@ const BACKEND_SAYS = 'Backend explanation 7f3a: nothing to see here';
 const PAGES = [
   '/home',
   '/brigades',
-  '/brigades?brigade=103-05&date=2026-11-20',
-  '/fleet',
-  '/fleet?vehicle=7',
+  '/brigades/103-05?date=2026-11-20',
+  '/vehicles',
+  '/vehicles/7',
   '/trip-anomalies',
   '/hotspots',
   '/bus-lanes',
   '/delay-generation',
   '/delay-generation?line=103',
   '/routes',
-  '/routes?line=103',
+  '/routes/route/103',
   '/corridors',
   '/network-coverage',
   '/stops',
@@ -59,6 +60,7 @@ function setUp(session: typeof ADMIN | null) {
       provideHttpClient(withInterceptors([authInterceptor, errorToastInterceptor])),
       provideHttpClientTesting(),
       provideErrorToasts(),
+      provideTestI18n(),
     ],
   });
   return TestBed.inject(HttpTestingController);
@@ -96,7 +98,10 @@ describe('Backend errors show as toasts, never on the page', () => {
       it(`${url}: a ${status} answer is a toast only`, async () => {
         const backend = setUp(ADMIN);
         const harness = await RouterTestingHarness.create();
-        await harness.navigateByUrl(url);
+        // Not awaited: a page's title can wait for the backend (a bus's number), answered below.
+        const navigated = harness.navigateByUrl(url);
+        await answerAllWith(harness, backend, status);
+        await navigated;
         if (url === '/settings') {
           // The timetable import fails too.
           (harness.fixture.nativeElement as HTMLElement)

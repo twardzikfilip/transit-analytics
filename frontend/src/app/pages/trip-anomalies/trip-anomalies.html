@@ -1,37 +1,46 @@
 <div class="page-header">
   @if (report(); as r) {
     <span class="muted">
-      Trips scheduled to run {{ r.from | date: 'd MMM, HH:mm' }} –
-      {{ r.to | date: 'd MMM, HH:mm' }}
+      {{
+        t('anomalies.scheduledWindow', {
+          from: r.from | date: 'd MMM, HH:mm',
+          to: r.to | date: 'd MMM, HH:mm',
+        })
+      }}
     </span>
   }
 </div>
 
 <app-time-window [defaultPreset]="defaultPreset">
   @if (refreshing()) {
-    <span class="muted">Refreshes every minute</span>
+    <span class="muted">{{ t('anomalies.refreshes') }}</span>
   }
   @if (loading()) {
-    <span class="muted" role="status">Loading…</span>
+    <span class="muted" role="status">{{ t('common.loading') }}</span>
   }
 </app-time-window>
 
 @if (report(); as r) {
   <div class="cards" [class.loading]="loading()">
     <div class="card stat">
-      <span class="label">Scheduled</span>
+      <span class="label">{{ t('anomalies.scheduled') }}</span>
       <strong class="value">{{ r.summary.scheduled }}</strong>
       <span class="muted small">
-        {{ r.summary.judged }} judged · {{ r.summary.notRecorded }} not recorded ·
-        {{ r.summary.pending }} under way
+        {{
+          t('anomalies.summaryLine', {
+            judged: r.summary.judged,
+            notRecorded: r.summary.notRecorded,
+            pending: r.summary.pending,
+          })
+        }}
       </span>
     </div>
     <div class="card stat">
-      <span class="label">Run in full</span>
+      <span class="label">{{ t('anomalies.runInFull') }}</span>
       <strong class="value">{{ r.summary.completed }}</strong>
-      <span class="muted small"
-        >{{ percent(r.summary.completed, r.summary.judged) }} of judged</span
-      >
+      <span class="muted small">{{
+        t('anomalies.ofJudged', { share: percent(r.summary.completed, r.summary.judged) })
+      }}</span>
     </div>
     @for (k of kinds; track k.key) {
       <button
@@ -39,21 +48,23 @@
         class="card stat kind-card"
         [class.chosen]="shownKinds().includes(k.key)"
         [attr.aria-pressed]="shownKinds().includes(k.key)"
-        [title]="k.description"
+        [title]="t(k.description)"
         (click)="toggleKind(k.key)"
       >
         <span class="label"
-          ><span class="tag" [class]="'kind-' + k.key">{{ k.label }}</span></span
+          ><span class="tag" [class]="'kind-' + k.key">{{ t(k.label) }}</span></span
         >
         <strong class="value">{{ r.summary[k.count] }}</strong>
-        <span class="muted small"
-          >{{ percent(r.summary[k.count], r.summary.judged) }} of judged</span
-        >
+        <span class="muted small">{{
+          t('anomalies.ofJudged', { share: percent(r.summary[k.count], r.summary.judged) })
+        }}</span>
         @if (k.key === 'vehicle-changed' && r.summary.vehicleChanged) {
-          <span class="muted small changes"
-            >{{ r.summary.changedBrokenDown }} possibly broken down ·
-            {{ r.summary.changedReassigned }} reassigned</span
-          >
+          <span class="muted small changes">{{
+            t('anomalies.changes', {
+              brokenDown: r.summary.changedBrokenDown,
+              reassigned: r.summary.changedReassigned,
+            })
+          }}</span>
         }
       </button>
     }
@@ -61,19 +72,17 @@
 
   @if (abnormalLines().length) {
     <section class="card" [class.loading]="loading()">
-      <h2>By line</h2>
-      <p class="muted">
-        Lines with abnormal trips, the most first. Click a line to list its trips.
-      </p>
+      <h2>{{ t('anomalies.byLine') }}</h2>
+      <p class="muted">{{ t('anomalies.byLineIntro') }}</p>
       <div class="data-table-wrap">
         <table class="data-table clickable by-line">
           <thead>
             <tr>
-              <th>Line</th>
-              <th class="num">Judged</th>
-              <th class="num">Run in full</th>
+              <th>{{ t('anomalies.line') }}</th>
+              <th class="num">{{ t('anomalies.judged') }}</th>
+              <th class="num">{{ t('anomalies.runInFull') }}</th>
               @for (k of kinds; track k.key) {
-                <th class="num">{{ k.label }}</th>
+                <th class="num">{{ t(k.label) }}</th>
               }
             </tr>
           </thead>
@@ -103,8 +112,8 @@
         <button type="button" class="more" (click)="allLines.set(!allLines())">
           {{
             allLines()
-              ? 'Show the first ' + firstLines
-              : 'Show all ' + abnormalLines().length + ' lines'
+              ? t('anomalies.showFirst', { n: firstLines })
+              : t('anomalies.showAllLines', { n: abnormalLines().length })
           }}
         </button>
       }
@@ -113,24 +122,26 @@
 
   <section class="card" [class.loading]="loading()">
     <div class="table-head">
-      <h2>Trips</h2>
+      <h2>{{ t('anomalies.tripsTitle') }}</h2>
       <div class="filters">
         <label>
-          <span class="sr-only">Line</span>
+          <span class="sr-only">{{ t('anomalies.line') }}</span>
           <select (change)="setLine($any($event.target).value)">
-            <option value="" [selected]="!line()">All lines</option>
+            <option value="" [selected]="!line()">{{ t('anomalies.allLines') }}</option>
             @for (l of lineOptions(); track l) {
-              <option [value]="l" [selected]="line() === l">Line {{ l }}</option>
+              <option [value]="l" [selected]="line() === l">
+                {{ t('anomalies.lineX', { line: l }) }}
+              </option>
             }
           </select>
         </label>
         <label>
-          <span class="sr-only">Bus</span>
+          <span class="sr-only">{{ t('anomalies.bus') }}</span>
           <input
             class="bus-filter"
             type="search"
             list="trip-anomaly-buses"
-            placeholder="Bus number"
+            [placeholder]="t('anomalies.busNumber')"
             inputmode="numeric"
             [value]="bus() ?? ''"
             (change)="setBus($any($event.target).value)"
@@ -142,137 +153,152 @@
           </datalist>
         </label>
         @if (shownKinds().length || line() || bus()) {
-          <button type="button" (click)="clearFilters()">Show all</button>
+          <button type="button" (click)="clearFilters()">{{ t('anomalies.showAll') }}</button>
         }
       </div>
     </div>
     <p class="muted">
-      {{ filtered().length }} {{ filtered().length === 1 ? 'trip' : 'trips' }}
+      {{ tn('anomalies.trips', filtered().length) }}
       @if (shownKinds().length) {
-        · {{ kindLabel(shownKinds()[0]) }} only
+        {{ t('anomalies.kindOnly', { kind: kindLabel(shownKinds()[0]) }) }}
       }
       @if (line()) {
-        · line {{ line() }}
+        {{ t('anomalies.lineFilter', { line: line() }) }}
       }
       @if (bus()) {
-        · bus {{ bus() }}
+        {{ t('anomalies.busFilter', { bus: bus() }) }}
       }
       @if (r.tripsTotal > r.trips.length) {
-        · the latest {{ r.trips.length }} of {{ r.tripsTotal }} abnormal trips are listed
+        {{ t('anomalies.latest', { n: r.trips.length, total: r.tripsTotal }) }}
       }
     </p>
     <div class="data-table-wrap">
       <table class="data-table trips">
         <thead>
           <tr>
-            <th>Kind, scheduled</th>
-            <th>Line</th>
-            <th>Trip</th>
-            <th>Bus</th>
-            <th>Seen</th>
-            <th class="num" title="The feed's delay: at the first report, the most, at the last">
-              Delay
-              <div class="small">first · most · last</div>
+            <th>{{ t('anomalies.col.kind') }}</th>
+            <th>{{ t('anomalies.line') }}</th>
+            <th>{{ t('anomalies.col.trip') }}</th>
+            <th>{{ t('anomalies.bus') }}</th>
+            <th>{{ t('anomalies.col.seen') }}</th>
+            <th class="num" [title]="t('anomalies.col.delayTitle')">
+              {{ t('anomalies.col.delay') }}
+              <div class="small">{{ t('anomalies.col.firstMostLast') }}</div>
             </th>
-            <th>What happened</th>
+            <th>{{ t('anomalies.col.what') }}</th>
           </tr>
         </thead>
         <tbody>
-          @for (t of rows(); track t.tripId + t.scheduledDeparture) {
+          @for (trip of rows(); track trip.tripId + trip.scheduledDeparture) {
             <tr>
               <td class="nowrap">
-                <span class="tag" [class]="'kind-' + t.kind">{{ kindLabel(t.kind) }}</span>
-                @if (t.changeFate) {
-                  <div class="fate small" [class]="'fate-' + t.changeFate">
-                    {{ changeFateLabel(t.changeFate) }}
+                <span class="tag" [class]="'kind-' + trip.kind">{{ kindLabel(trip.kind) }}</span>
+                @if (trip.changeFate) {
+                  <div class="fate small" [class]="'fate-' + trip.changeFate">
+                    {{ changeFateLabel(trip.changeFate) }}
                   </div>
                 }
-                <div>{{ t.scheduledDeparture | date: 'EEE d MMM' }}</div>
+                <div>{{ trip.scheduledDeparture | date: 'EEE d MMM' }}</div>
                 <div class="time">
-                  {{ time(t.scheduledDeparture) }}–{{ time(t.scheduledArrival) }}
+                  {{ time(trip.scheduledDeparture) }}–{{ time(trip.scheduledArrival) }}
                 </div>
               </td>
               <td class="nowrap">
-                <strong>{{ t.line }}</strong>
-                <div class="muted small">{{ t.brigade ?? '—' }}</div>
+                <strong>{{ trip.line }}</strong>
+                <div class="muted small">{{ trip.brigade ?? '—' }}</div>
               </td>
-              <td class="trip" [title]="'Trip ' + t.tripId">
-                {{ t.firstStop }} <span class="muted">→</span> {{ t.lastStop }}
-                <div class="muted small">{{ t.stops }} stops</div>
+              <td class="trip" [title]="t('anomalies.tripId', { id: trip.tripId })">
+                {{ trip.firstStop }} <span class="muted">→</span> {{ trip.lastStop }}
+                <div class="muted small">{{ tn('anomalies.stops', trip.stops) }}</div>
               </td>
               <td class="bus">
-                {{ t.vehicles.length ? t.vehicles.join(' → ') : '—' }}
-                @if (t.changeFate) {
-                  <div class="muted small">{{ replacementFrom(t) }}</div>
+                {{ trip.vehicles.length ? trip.vehicles.join(' → ') : '—' }}
+                @if (trip.changeFate) {
+                  <div class="muted small">{{ replacementFrom(trip) }}</div>
                 }
               </td>
               <td
                 class="nowrap"
-                [title]="t.coveredFrom ? 'Heading to ' + t.coveredFrom + ' … ' + t.coveredTo : ''"
+                [title]="
+                  trip.coveredFrom
+                    ? t('anomalies.headingTo', { from: trip.coveredFrom, to: trip.coveredTo })
+                    : ''
+                "
               >
-                {{ coverage(t) }}
-                @if (t.coveredFrom) {
+                {{ coverage(trip) }}
+                @if (trip.coveredFrom) {
                   <div class="muted small time">
-                    {{ time(t.firstSeen!) }}–{{ time(t.lastSeen!) }}
+                    {{ time(trip.firstSeen!) }}–{{ time(trip.lastSeen!) }}
                   </div>
                 }
               </td>
               <td class="num nowrap">
-                {{ signedDelay(t.startDelay) }} · {{ signedDelay(t.maxDelay) }} ·
-                {{ signedDelay(t.endDelay) }}
+                {{ signedDelay(trip.startDelay) }} · {{ signedDelay(trip.maxDelay) }} ·
+                {{ signedDelay(trip.endDelay) }}
               </td>
               <td class="note">
-                {{ t.note }}
-                @if (t.changeMinutes !== null) {
+                {{ trip.note }}
+                @if (trip.changeMinutes !== null) {
                   <div class="changeover">
-                    <span class="chip" [class.long]="t.changeMinutes >= 10"
-                      >No bus for {{ t.changeMinutes }} min</span
-                    >
-                    <span class="chip"
-                      >Delay {{ signedDelay(t.delayBeforeChange) }} →
-                      {{ signedDelay(t.delayAfterChange) }}</span
-                    >
+                    <span class="chip" [class.long]="trip.changeMinutes >= 10">{{
+                      t('anomalies.noBusFor', { n: trip.changeMinutes })
+                    }}</span>
+                    <span class="chip">{{
+                      t('anomalies.delayChange', {
+                        before: signedDelay(trip.delayBeforeChange),
+                        after: signedDelay(trip.delayAfterChange),
+                      })
+                    }}</span>
                     <span
                       class="chip"
-                      [class.skipped]="!!t.skippedStops"
-                      [title]="'Old bus heading to ' + t.changeStop + '; new bus to ' + t.joinStop"
-                      >{{ joinedAt(t) }}</span
+                      [class.skipped]="!!trip.skippedStops"
+                      [title]="
+                        t('anomalies.oldNewHeading', { old: trip.changeStop, new: trip.joinStop })
+                      "
+                      >{{ joinedAt(trip) }}</span
                     >
-                    @if (stoodLabel(t); as stood) {
+                    @if (stoodLabel(trip); as stood) {
                       <span
                         class="chip"
-                        [class.long]="t.stoodThen === 'still-there' || (t.stoodMinutes ?? 0) >= 10"
+                        [class.long]="
+                          trip.stoodThen === 'still-there' || (trip.stoodMinutes ?? 0) >= 10
+                        "
                         [title]="
-                          t.stoodLastSeen ? 'Old bus last seen ' + time(t.stoodLastSeen) : ''
+                          trip.stoodLastSeen
+                            ? t('anomalies.oldLastSeen', { time: time(trip.stoodLastSeen) })
+                            : ''
                         "
                         >{{ stood }}</span
                       >
                     }
                   </div>
                 }
-                @if (t.detourMeters !== null) {
+                @if (trip.detourMeters !== null) {
                   <div class="muted small">
-                    Detour: {{ t.detourMeters }} m off the route for {{ t.detourMinutes }} min,
-                    {{ t.detourFrom }} → {{ t.detourTo }}
+                    {{
+                      t('anomalies.detourNote', {
+                        m: trip.detourMeters,
+                        min: trip.detourMinutes,
+                        from: trip.detourFrom,
+                        to: trip.detourTo,
+                      })
+                    }}
                   </div>
                 }
               </td>
             </tr>
-            @if (t.detourPath.length) {
+            @if (trip.detourPath.length) {
               <tr class="detour-row">
                 <td colspan="7">
                   <app-path-map
-                    [lines]="detourLines(t)"
+                    [lines]="detourLines(trip)"
                     [label]="
-                      'Line ' +
-                      t.line +
-                      ': detour ' +
-                      t.detourFrom +
-                      ' → ' +
-                      t.detourTo +
-                      ', ' +
-                      t.detourMeters +
-                      ' m off the route'
+                      t('anomalies.detourMap', {
+                        line: trip.line,
+                        from: trip.detourFrom,
+                        to: trip.detourTo,
+                        m: trip.detourMeters,
+                      })
                     "
                   />
                 </td>
@@ -280,7 +306,7 @@
             }
           } @empty {
             <tr>
-              <td colspan="7" class="muted">No abnormal trips here.</td>
+              <td colspan="7" class="muted">{{ t('anomalies.none') }}</td>
             </tr>
           }
         </tbody>
@@ -288,50 +314,26 @@
     </div>
     @if (filtered().length > rows().length) {
       <button type="button" class="more" (click)="showMore()">
-        Show more ({{ filtered().length - rows().length }} left)
+        {{ t('anomalies.showMore', { n: filtered().length - rows().length }) }}
       </button>
     }
   </section>
+} @else if (loading()) {
+  <app-skeleton kind="tiles" [count]="8" [label]="t('anomalies.loading')" />
+  <app-skeleton kind="table" [count]="8" />
 }
 
 <details class="card how">
-  <summary>How trips are judged</summary>
+  <summary>{{ t('anomalies.how') }}</summary>
   <ul>
-    <li>
-      <strong>Every trip of the timetable</strong> scheduled to run in the window (for any part of
-      it) is matched to the recorded positions: a report belongs to the trip of its brigade and line
-      scheduled to leave its next stop closest to the report's time minus its delay (the headsign
-      helps, but the feed's don't always read as the timetable's).
-    </li>
-    <li>
-      <strong>Seen</strong> is the stretch of the trip the bus reported heading to. A trip counts as
-      run in full when first seen heading to one of its first 3 stops and last to one of its last 2
-      (reports come every 10 seconds).
-    </li>
+    <li [innerHTML]="t('anomalies.how1')"></li>
+    <li [innerHTML]="t('anomalies.how2')"></li>
     @for (k of kinds; track k.key) {
       <li>
-        <span class="tag" [class]="'kind-' + k.key">{{ k.label }}</span> {{ k.description }}
+        <span class="tag" [class]="'kind-' + k.key">{{ t(k.label) }}</span> {{ t(k.description) }}
       </li>
     }
-    <li>
-      Only a bus reporting all along (reports at most 90 s apart) shows that it short-turned; when
-      its reports stop and it comes back for its brigade's next trip, it's a gap in tracking (no
-      signal). A <strong>detour</strong> is 3 reports in a row more than 150 m from the trip's route
-      shape, between its first and last stops. A <strong>bus change</strong> needs both buses to
-      report at least 3 times on the trip under its brigade, one after the other, the first past the
-      trip's first 3 stops and the second going further than the first got. A change on a trip run
-      only partly is described in its note. The replaced bus is
-      <strong>possibly broken down</strong> when it isn't used again that day: it doesn't move 500 m
-      away and keep reporting a brigade for 10 minutes (a broken bus keeps reporting where it
-      stands, sometimes under its brigade's other trips); otherwise it was reassigned to another
-      line or brigade, or came back to the same brigade later.
-    </li>
-    <li>
-      A trip is judged as soon as it's clear what the bus did; until then it's under way. Trips
-      during a <strong>gap in recording</strong> (3 minutes or more without any report) aren't
-      judged. A trip not seen 10 minutes after it was due is listed as missing "so far" until 15
-      minutes after its scheduled arrival; a bus is lost after 15 minutes without reports. Only
-      lines in the city timetable count.
-    </li>
+    <li [innerHTML]="t('anomalies.how3')"></li>
+    <li [innerHTML]="t('anomalies.how4')"></li>
   </ul>
 </details>

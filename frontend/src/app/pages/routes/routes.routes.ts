@@ -6,8 +6,12 @@ import { lineStatsFeature } from '../../store/line-stats/line-stats.reducer';
 import * as routeDetailEffects from '../../store/route-detail/route-detail.effects';
 import { routeDetailFeature } from '../../store/route-detail/route-detail.reducer';
 import { RoutesPage } from './routes';
+import { RoutesOverview } from './routes-overview';
 
-/** Routes, with its store slices (the lines, and every line's weekday statistics), loaded on first visit. */
+/**
+ * Routes (every line, ranked) and one route's page, with their store slices (the lines, and every line's weekday
+ * statistics) loaded on first visit.
+ */
 export const ROUTES_ROUTES: Routes = [
   {
     path: '',
@@ -17,6 +21,13 @@ export const ROUTES_ROUTES: Routes = [
       provideState(lineStatsFeature),
       provideEffects(lineStatsEffects),
     ],
-    component: RoutesPage,
+    children: [
+      { path: '', component: RoutesOverview },
+      {
+        path: 'route/:line',
+        title: (route) => `titles.route:${route.paramMap.get('line')}`,
+        component: RoutesPage,
+      },
+    ],
   },
 ];

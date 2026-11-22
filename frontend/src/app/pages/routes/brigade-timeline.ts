@@ -3,6 +3,7 @@ import { hostWidth } from '../../shared/host-width';
 import { Brigade, LineVariant } from '../../core/models/models';
 import { clock, duration, hourTickStep } from '../../shared/format/time';
 import { hourRange } from './format';
+import { t as tr } from '../../core/i18n/t';
 
 const ROW = 26;
 const BAR = 12;
@@ -33,6 +34,7 @@ interface Hover {
   styleUrl: '../../shared/timeline/timeline.scss',
 })
 export class BrigadeTimeline {
+  protected readonly tr = tr;
   readonly brigades = input.required<Brigade[]>();
   /** Base routes of the directions, for the legend. */
   readonly mains = input<LineVariant[]>([]);
@@ -93,16 +95,16 @@ export class BrigadeTimeline {
   protected showRun(b: Brigade, r: Brigade['runs'][number], x: number, y: number): void {
     const kind = r.depot
       ? r.depot === 'pull_out'
-        ? ' · depot run: from the depot into service'
-        : ' · depot run: back to the depot'
+        ? tr('depot.tl.pullOut')
+        : tr('depot.tl.pullIn')
       : r.kind === 'main'
         ? ''
-        : ` · ${r.kind} variant`;
+        : tr('depot.tl.variant', { kind: tr(`depot.kind.${r.kind}`) });
     this.hover.set({
       x,
       y,
       title: `${b.name}: ${clock(r.from)}–${clock(r.to)} (${duration((r.to - r.from) / 60)})`,
-      detail: `towards ${r.headsign ?? '—'}${kind}`,
+      detail: tr('depot.tl.towards', { to: r.headsign ?? '—' }) + kind,
       left: x > this.width() * 0.6,
     });
   }
@@ -111,8 +113,8 @@ export class BrigadeTimeline {
     this.hover.set({
       x,
       y,
-      title: `${b.name}: break ${duration((k.to - k.from) / 60)}`,
-      detail: `${clock(k.from)}–${clock(k.to)}, likely back at the depot`,
+      title: tr('depot.tl.breakTitle', { brigade: b.name, time: duration((k.to - k.from) / 60) }),
+      detail: tr('depot.tl.breakDetail', { from: clock(k.from), to: clock(k.to) }),
       left: x > this.width() * 0.6,
     });
   }
@@ -121,8 +123,12 @@ export class BrigadeTimeline {
     this.hover.set({
       x,
       y,
-      title: `${b.name}: ${b.runs.length} runs, ${duration((b.end - b.start) / 60)} in service`,
-      detail: `leaves the depot ${clock(b.start)}, returns ${clock(b.end)}`,
+      title: tr('depot.tl.brigadeTitle', {
+        brigade: b.name,
+        runs: b.runs.length,
+        time: duration((b.end - b.start) / 60),
+      }),
+      detail: tr('depot.tl.brigadeDetail', { start: clock(b.start), end: clock(b.end) }),
       left: x > this.width() * 0.6,
     });
   }

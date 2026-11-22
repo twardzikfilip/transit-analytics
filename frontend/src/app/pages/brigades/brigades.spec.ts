@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { Actions } from '@ngrx/effects';
 import { Subject, of, throwError } from 'rxjs';
 import { BrigadeApi } from '../../core/api/api.services';
@@ -16,6 +17,9 @@ import { brigadesFeature } from '../../store/brigades/brigades.reducer';
 import { renderPage, stateAfter, text } from '../../testing/page-testing';
 import { BrigadeDayChart, fit } from './brigade-day-chart';
 import { TRIP_COLORS, actualSpan, busesText, delayText, share, shortStop } from './brigade-format';
+import { t } from '../../core/i18n/t';
+import { PageBack } from '../../core/title/page-back';
+import { BrigadePage } from './brigade';
 import { BrigadesPage, groupByLine } from './brigades';
 
 const at = (hhmm: string) => `2026-11-18T${hhmm}:00Z`;
@@ -108,12 +112,24 @@ function day(): BrigadeDay {
 }
 
 describe('Brigades page', () => {
-  it("loads every brigade of the URL's agency, and the chosen brigade on the URL's day", () => {
-    const { store } = renderPage(BrigadesPage, {}, { date: '2026-11-18', brigade: '103-05' });
-    expect(store.dispatch).toHaveBeenCalledWith(BrigadesActions.loadList({ agency: null }));
-    expect(store.dispatch).toHaveBeenCalledWith(
-      BrigadesActions.loadDay({ brigade: '103-05', date: '2026-11-18' }),
+  it("loads every brigade of the URL's agency", () => {
+    const { store } = renderPage(BrigadesPage, {}, { agency: 'X' });
+    expect(store.dispatch).toHaveBeenCalledWith(BrigadesActions.loadList({ agency: 'X' }));
+  });
+
+  it("opens a brigade's own page, keeping the agency for the way back", () => {
+    const { el, fixture } = renderPage(
+      BrigadesPage,
+      stateAfter(brigadesFeature, BrigadesActions.listLoaded({ list: LIST })),
+      { agency: 'BKM' },
     );
+    const navigate = vi
+      .spyOn(fixture.debugElement.injector.get(Router), 'navigate')
+      .mockResolvedValue(true);
+    (el.querySelectorAll('.brigade-chips button')[1] as HTMLButtonElement).click();
+    expect(navigate).toHaveBeenCalledWith(['/brigades', '103-05'], {
+      queryParams: { agency: 'BKM' },
+    });
   });
 
   it('groups brigades by their own line, in natural order', () => {
@@ -138,7 +154,9 @@ describe('Brigades page', () => {
       BrigadesPage,
       stateAfter(brigadesFeature, BrigadesActions.listLoaded({ list: LIST })),
     );
-    expect(store.dispatch).toHaveBeenCalledWith(BrigadesActions.clearDay());
+    expect(store.dispatch).not.toHaveBeenCalledWith(
+      expect.objectContaining({ brigade: expect.anything() }),
+    );
     // One row per line, lines in natural order; every brigade shown.
     expect([...el.querySelectorAll('.brigade-lines dt')].map(text)).toEqual([
       'Line 16',
@@ -156,25 +174,45 @@ describe('Brigades page', () => {
     expect(el.querySelector('.controls input[type=search]')).not.toBeNull();
     expect(text(el.querySelector('.pick'))).not.toContain('Pick a brigade');
   });
+});
+
+describe('Brigade page', () => {
+  it("loads the brigade in the path on the URL's day", () => {
+    const { store } = renderPage(BrigadePage, {}, { date: '2026-11-18' }, [], {
+      brigade: '103-05',
+    });
+    expect(store.dispatch).toHaveBeenCalledWith(
+      BrigadesActions.loadDay({ brigade: '103-05', date: '2026-11-18' }),
+    );
+  });
 
   it("shows the brigade's day: tiles, the timeline and every trip", () => {
-    const { el } = renderPage(
-      BrigadesPage,
-      stateAfter(
-        brigadesFeature,
-        BrigadesActions.listLoaded({ list: LIST }),
-        BrigadesActions.dayLoaded({ day: day() }),
-      ),
-      { date: '2026-11-18', brigade: '103-05' },
+    const { el, fixture } = renderPage(
+      BrigadePage,
+      stateAfter(brigadesFeature, BrigadesActions.dayLoaded({ day: day() })),
+      { date: '2026-11-18', agency: 'BKM' },
+      [],
+      { brigade: '103-05' },
     );
-    // The day picker belongs to one brigade's view, with the way back to every brigade.
-    expect((el.querySelector('.day-controls input[type=date]') as HTMLInputElement).value).toBe(
+    // At the top only the day; the way back is in the header, and the title (there too) names the brigade.
+    const controls = el.querySelector('.day-controls')!;
+    expect((controls.querySelector('input[type=date]') as HTMLInputElement).value).toBe(
       '2026-11-18',
     );
-    expect(text(el.querySelector('.day-controls button'))).toContain('All brigades');
-    // Only the way back and the day: searching and the agency belong to the list of every brigade.
+    expect(controls.querySelector('button')).toBeNull();
+    expect(text(el)).not.toContain('service day 2026-11-18');
     expect(el.querySelector('input[type=search]')).toBeNull();
     expect(el.querySelector('select')).toBeNull();
+    const navigate = vi
+      .spyOn(fixture.debugElement.injector.get(Router), 'navigate')
+      .mockResolvedValue(true);
+    const back = TestBed.inject(PageBack).link()!;
+    expect(t(back.label)).toBe('Back to all brigades');
+    back.go();
+    expect(navigate).toHaveBeenCalledWith(['/brigades'], { queryParams: { agency: 'BKM' } });
+    // Gone with the page.
+    fixture.destroy();
+    expect(TestBed.inject(PageBack).link()).toBeNull();
     expect(text(el.querySelector('.tile.alert strong'))).toBe('2');
     expect(text(el.querySelector('.tiles'))).toContain('209, 486');
     expect(text(el.querySelector('.tiles'))).toContain('the bus changed during the day');
@@ -189,8 +227,10 @@ describe('Brigades page', () => {
 
   it("doesn't show a previous brigade's day while another loads", () => {
     const { el } = renderPage(
-      BrigadesPage,
+      BrigadePage,
       stateAfter(brigadesFeature, BrigadesActions.dayLoaded({ day: day() })),
+      {},
+      [],
       { brigade: '016-02' },
     );
     expect(el.querySelector('app-brigade-day-chart')).toBeNull();

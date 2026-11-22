@@ -9,26 +9,24 @@
 <app-time-window [defaultPreset]="defaultPreset">
   @if (report(); as r) {
     <label class="part">
-      <span class="sr-only">Part of the day</span>
+      <span class="sr-only">{{ t('delayGen.partOfDay') }}</span>
       <select (change)="setBand($any($event.target).value)">
         @for (b of r.bands; track b.key; let i = $index) {
-          <option [value]="b.key" [selected]="i === band()">{{ b.label }}</option>
+          <option [value]="b.key" [selected]="i === band()">{{ bandLabel(b) }}</option>
         }
       </select>
     </label>
   }
   @if (loading()) {
-    <span class="muted" role="status">Loading…</span>
+    <span class="muted" role="status">{{ t('common.loading') }}</span>
   }
 </app-time-window>
 
 @if (report(); as r) {
-  <p class="summary">
-    <strong>{{ r.runs }}</strong> runs measured over {{ r.days }}
-    {{ r.days === 1 ? 'day' : 'days' }} recorded. Each stretch shows how the delay changes from
-    leaving one stop to leaving the next: <span class="gain">red</span> where buses gain delay,
-    <span class="recover">blue</span> where they make it up.
-  </p>
+  <p
+    class="summary"
+    [innerHTML]="t('delayGen.summary', { runs: r.runs, days: tn('common.days', r.days) })"
+  ></p>
 
   <section class="card map-card" [class.loading]="loading()">
     <app-stretch-map [stretches]="r.stretches" [band]="band()" [days]="r.days" />
@@ -36,18 +34,20 @@
 
   <div class="pairs" [class.loading]="loading()">
     <section class="card">
-      <h2>Where delay is created</h2>
-      <p class="muted">The stretches adding the most delay altogether: per bus × buses.</p>
+      <h2>{{ t('delayGen.created') }}</h2>
+      <p class="muted">{{ t('delayGen.createdIntro') }}</p>
       <div class="data-table-wrap">
         <table class="data-table stretches created">
           <thead>
             <tr>
               <th class="index">#</th>
-              <th>Stretch</th>
-              <th class="num">Per bus</th>
-              <th class="num">Buses a day</th>
-              <th class="num" title="Bus-minutes of delay per day">Per day</th>
-              <th>Lines</th>
+              <th>{{ t('delayGen.col.stretch') }}</th>
+              <th class="num">{{ t('delayGen.col.perBus') }}</th>
+              <th class="num">{{ t('delayGen.col.busesDay') }}</th>
+              <th class="num" [title]="t('delayGen.col.perDayTitle')">
+                {{ t('delayGen.col.perDay') }}
+              </th>
+              <th>{{ t('delayGen.col.lines') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -64,12 +64,12 @@
                   >
                 </td>
                 <td class="num">{{ (s.runs / r.days).toFixed(0) }}</td>
-                <td class="num">{{ s.minutesPerDay.toFixed(0) }} min</td>
+                <td class="num">{{ t('delayGen.minutes', { n: s.minutesPerDay.toFixed(0) }) }}</td>
                 <td class="lines">{{ s.stretch.lines.join(', ') }}</td>
               </tr>
             } @empty {
               <tr>
-                <td colspan="6" class="muted">No stretch gains delay in this part of the day.</td>
+                <td colspan="6" class="muted">{{ t('delayGen.noneCreated') }}</td>
               </tr>
             }
           </tbody>
@@ -78,20 +78,18 @@
     </section>
 
     <section class="card">
-      <h2>Where delay is recovered</h2>
-      <p class="muted">
-        The stretches where buses make up the most time: often slack in the timetable.
-      </p>
+      <h2>{{ t('delayGen.recovered') }}</h2>
+      <p class="muted">{{ t('delayGen.recoveredIntro') }}</p>
       <div class="data-table-wrap">
         <table class="data-table stretches recovered">
           <thead>
             <tr>
               <th class="index">#</th>
-              <th>Stretch</th>
-              <th class="num">Per bus</th>
-              <th class="num">Buses a day</th>
-              <th class="num">Per day</th>
-              <th>Lines</th>
+              <th>{{ t('delayGen.col.stretch') }}</th>
+              <th class="num">{{ t('delayGen.col.perBus') }}</th>
+              <th class="num">{{ t('delayGen.col.busesDay') }}</th>
+              <th class="num">{{ t('delayGen.col.perDay') }}</th>
+              <th>{{ t('delayGen.col.lines') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -108,13 +106,13 @@
                   >
                 </td>
                 <td class="num">{{ (s.runs / r.days).toFixed(0) }}</td>
-                <td class="num">{{ s.minutesPerDay.toFixed(0) }} min</td>
+                <td class="num">{{ t('delayGen.minutes', { n: s.minutesPerDay.toFixed(0) }) }}</td>
                 <td class="lines">{{ s.stretch.lines.join(', ') }}</td>
               </tr>
             } @empty {
               <tr>
                 <td colspan="6" class="muted">
-                  No stretch recovers delay in this part of the day.
+                  {{ t('delayGen.noneRecovered') }}
                 </td>
               </tr>
             }
@@ -125,22 +123,23 @@
   </div>
 
   <section class="card" [class.loading]="loading()">
-    <h2>Lines</h2>
-    <p class="muted">
-      How much delay each line's buses gain from their first stop to their last (whole day). Click a
-      line to see where and when.
-    </p>
+    <h2>{{ t('delayGen.lines') }}</h2>
+    <p class="muted">{{ t('delayGen.linesIntro') }}</p>
     <div class="data-table-wrap">
       <table class="data-table clickable lines-table">
         <thead>
           <tr>
-            <th>Line</th>
-            <th class="num">Runs</th>
-            <th class="num">Per run</th>
-            <th class="num">Median</th>
-            <th class="num" title="Share of runs gaining 3 minutes or more">≥ 3 min</th>
-            <th class="num" title="Delay gained by all its runs, per day">Per day</th>
-            <th>Worst stretch</th>
+            <th>{{ t('delayGen.col.line') }}</th>
+            <th class="num">{{ t('delayGen.col.runs') }}</th>
+            <th class="num">{{ t('delayGen.col.perRun') }}</th>
+            <th class="num">{{ t('delayGen.col.median') }}</th>
+            <th class="num" [title]="t('delayGen.col.over3Title')">
+              {{ t('delayGen.col.over3') }}
+            </th>
+            <th class="num" [title]="t('delayGen.col.lineDayTitle')">
+              {{ t('delayGen.col.perDay') }}
+            </th>
+            <th>{{ t('delayGen.col.worst') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -166,7 +165,9 @@
               </td>
               <td class="num">{{ signed(l.medianGainSeconds) }}</td>
               <td class="num">{{ wholePercent(l.gainingShare) }}</td>
-              <td class="num">{{ l.generatedMinutesPerDay.toFixed(0) }} min</td>
+              <td class="num">
+                {{ t('delayGen.minutes', { n: l.generatedMinutesPerDay.toFixed(0) }) }}
+              </td>
               <td>
                 {{ worst(l) }}
                 @if (l.worstMeanSeconds !== null) {
@@ -179,22 +180,25 @@
       </table>
     </div>
   </section>
+} @else if (loading()) {
+  <app-skeleton kind="map" height="480px" [label]="t('delayGen.loading')" />
+  <app-skeleton kind="chart" />
 }
 
 @if (line(); as chosen) {
   <section class="card line-detail" [class.loading]="lineLoading()" id="line-detail">
     <div class="line-head">
-      <h2>Line {{ chosen }}</h2>
-      <button type="button" (click)="chooseLine(null)">Close</button>
+      <h2>{{ t('delayGen.lineX', { line: chosen }) }}</h2>
+      <button type="button" (click)="chooseLine(null)">{{ t('delayGen.close') }}</button>
     </div>
     @if (lineLoading() && !lineReport()) {
-      <p class="muted" role="status">Loading line {{ chosen }}…</p>
+      <p class="muted" role="status">{{ t('delayGen.loadingLine', { line: chosen }) }}</p>
     }
     @if (lineReport(); as lr) {
       @if (lr.directions.length === 0) {
-        <p class="muted">No runs of this line were measured in this window.</p>
+        <p class="muted">{{ t('delayGen.noRuns') }}</p>
       } @else {
-        <div class="directions" role="group" aria-label="Direction">
+        <div class="directions" role="group" [attr.aria-label]="t('delayGen.direction')">
           @for (d of lr.directions; track d.headsign; let i = $index) {
             <button
               type="button"
@@ -202,20 +206,18 @@
               [attr.aria-pressed]="directionIndex() === i"
               (click)="chooseDirection(i)"
             >
-              Towards {{ d.headsign || '—' }}
-              <span class="muted">{{ d.runs }} runs, {{ signed(d.meanGainSeconds) }}</span>
+              {{ t('delayGen.towards', { to: d.headsign || '—' }) }}
+              <span class="muted"
+                >{{ tn('delayGen.runs', d.runs) }}, {{ signed(d.meanGainSeconds) }}</span
+              >
             </button>
           }
         </div>
       }
 
       @if (direction(); as d) {
-        <h3>Where and when, stop by stop</h3>
-        <p class="muted">
-          Each stretch in route order: the change in delay per bus, and by hour of the day (local
-          time; blank with fewer than 3 buses). Click a stretch for the runs that gained the most
-          there.
-        </p>
+        <h3>{{ t('delayGen.whereWhen') }}</h3>
+        <p class="muted">{{ t('delayGen.whereWhenIntro') }}</p>
         <app-line-heatmap
           [stretches]="d.stretches"
           [selected]="stretchIndex()"
@@ -226,20 +228,20 @@
           <div>
             <h3>
               @if (stretch(); as s) {
-                Runs that gained the most on {{ s.from }} → {{ s.to }}
+                {{ t('delayGen.mostOn', { from: s.from, to: s.to }) }}
               } @else {
-                Runs that gained the most delay
+                {{ t('delayGen.most') }}
               }
             </h3>
             <div class="data-table-wrap">
               <table class="data-table clickable examples">
                 <thead>
                   <tr>
-                    <th>Day</th>
-                    <th>Left</th>
-                    <th>Brigade</th>
-                    <th>Bus</th>
-                    <th class="num">Gained</th>
+                    <th>{{ t('delayGen.col.day') }}</th>
+                    <th>{{ t('delayGen.col.left') }}</th>
+                    <th>{{ t('delayGen.col.brigade') }}</th>
+                    <th>{{ t('delayGen.col.bus') }}</th>
+                    <th class="num">{{ t('delayGen.col.gained') }}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -260,7 +262,7 @@
                   } @empty {
                     <tr>
                       <td colspan="5" class="muted">
-                        No run gained a minute or more {{ stretch() ? 'here' : '' }}.
+                        {{ t(stretch() ? 'delayGen.noneGainedHere' : 'delayGen.noneGained') }}
                       </td>
                     </tr>
                   }
@@ -276,15 +278,15 @@
           </div>
         </div>
 
-        <h3>Brigades</h3>
+        <h3>{{ t('delayGen.brigades') }}</h3>
         <div class="data-table-wrap">
           <table class="data-table brigades">
             <thead>
               <tr>
-                <th>Brigade</th>
-                <th class="num">Runs</th>
-                <th class="num">Per run</th>
-                <th class="num">Most</th>
+                <th>{{ t('delayGen.col.brigade') }}</th>
+                <th class="num">{{ t('delayGen.col.runs') }}</th>
+                <th class="num">{{ t('delayGen.col.perRun') }}</th>
+                <th class="num">{{ t('delayGen.col.most') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -305,28 +307,10 @@
 }
 
 <details class="card how">
-  <summary>How delay generation is measured</summary>
+  <summary>{{ t('delayGen.how') }}</summary>
   <ul>
-    <li>
-      <strong>Delay</strong> is the feed's (the operator's figure against the timetable), taken from
-      the first report after a bus leaves each stop: the next stop it reports moves on by one.
-      Reports come every 10 seconds, so one bus's figure is good to about ±10 seconds; averages over
-      many buses are much closer.
-    </li>
-    <li>
-      <strong>A stretch's change</strong> is the delay on leaving the next stop minus the delay on
-      leaving this one: the drive between them and the time standing at the next stop. Stretches
-      where a report skipped a stop aren't measured, nor are delays over 30 minutes (feed errors).
-      The last stretch of a run (arriving at the terminus) can't be measured.
-    </li>
-    <li>
-      <strong>Per day</strong> figures are over the days with recordings, and a stretch is shown
-      once it was measured 5 times in the chosen part of the day. Only lines in the city timetable
-      count.
-    </li>
-    <li>
-      <strong>Gained per run</strong> is the change from a run's first measured stop to its last
-      (runs of 5 stops or more).
-    </li>
+    @for (i of [1, 2, 3, 4]; track i) {
+      <li [innerHTML]="t('delayGen.how' + i)"></li>
+    }
   </ul>
 </details>

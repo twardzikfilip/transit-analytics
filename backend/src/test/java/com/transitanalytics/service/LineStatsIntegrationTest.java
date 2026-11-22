@@ -7,12 +7,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 /** Line statistics from a small weekday timetable of 2099; the test data is rolled back. */
 @DbIntegrationTest
 @Transactional
 class LineStatsIntegrationTest {
+
+    private static final ZoneId ZONE = ZoneId.of("Europe/Warsaw");
 
     @Autowired
     LineStatsService lineStats;
@@ -51,6 +58,48 @@ class LineStatsIntegrationTest {
             assertThat(line.peakVehicles()).isEqualTo(1);
             assertThat(line.offPeakVehicles()).isZero();
             assertThat(line.trips()).isEqualTo(3);
+            // No recordings of line 55.
+            assertThat(line.peakDelaySeconds()).isNull();
         });
+    }
+
+    @Test
+    void averagesEachLinesRecordedDelayInPeakAndOffPeakHoursOnWeekdays() {
+        // A weekday after the aggregate's materialised part, so the rows just added are read as they are.
+        LocalDate weekday = LocalDate.now(ZONE).plusDays(2);
+        while (weekday.getDayOfWeek().getValue() > 5) weekday = weekday.plusDays(1);
+        LocalDate weekend = weekday.with(java.time.temporal.TemporalAdjusters.next(java.time.DayOfWeek.SATURDAY));
+        bus = jdbc.queryForObject(
+                "INSERT INTO vehicle (vehicle_number, type, agency) VALUES ('IT-D1', 'BUS', 'BKM') RETURNING id",
+                Long.class);
+        sample(weekday, "07:10", 120);
+        sample(weekday, "07:40", 180);
+        sample(weekday, "16:20", 150);
+        sample(weekday, "10:05", -30);
+        sample(weekday, "18:30", 30);
+        // Not counted: a weekend, and the night.
+        sample(weekend, "07:10", 900);
+        sample(weekday, "23:10", 900);
+
+        Double[] delays = lineStats.recordedDelays().get("IT-D1");
+
+        assertThat(delays).containsExactly(150.0, 0.0);
+    }
+
+    @Test
+    void anHourBelongsToThePartOfTheDayItsMiddleFallsIn() {
+        assertThat(LineStatsService.hours(Periods.PEAK)).isEqualTo("6, 7, 15, 16");
+        assertThat(LineStatsService.hours(Periods.OFF_PEAK)).isEqualTo("8, 9, 10, 11, 12, 13, 14, 17, 18, 19");
+        assertThat(LineStatsService.hours(java.util.List.of())).isEqualTo("-1");
+    }
+
+    private long bus;
+
+    private void sample(LocalDate day, String time, int delay) {
+        var at = LocalDateTime.of(day, LocalTime.parse(time)).atZone(ZONE).toOffsetDateTime();
+        jdbc.update("""
+                INSERT INTO position_sample (observed_at, vehicle_id, route_name, brigade, latitude, longitude,
+                                             delay_seconds)
+                VALUES (?, ?, 'IT-D1', 'IT-D1-01', 53.1, 23.1, ?)""", at, bus, delay);
     }
 }

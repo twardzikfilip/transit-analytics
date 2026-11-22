@@ -2,6 +2,7 @@ import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { EnvironmentProviders, inject } from '@angular/core';
 import { ToastrService, provideToastr } from 'ngx-toastr';
 import { catchError, throwError } from 'rxjs';
+import { t } from '../i18n/t';
 
 /**
  * How the backend's errors reach the user: as a toast in the corner, never as text on a page. Every API answer of
@@ -43,25 +44,22 @@ export function errorToast(
   url: string,
 ): { title: string; message: string } {
   if (error.status === 0) {
-    return {
-      title: 'No connection',
-      message: "The server can't be reached. Try again in a moment.",
-    };
+    return { title: t('errors.noConnection'), message: t('errors.unreachable') };
   }
   if (error.status === 401 && url.endsWith('/api/auth/login')) {
-    return { title: 'Not signed in', message: 'Invalid username or password.' };
+    return { title: t('errors.notSignedIn'), message: t('errors.badLogin') };
   }
-  const title =
+  const kind =
     error.status === 401
-      ? 'Signed out'
+      ? 'signedOut'
       : error.status === 403
-        ? 'Not allowed'
+        ? 'notAllowed'
         : error.status === 404
-          ? 'Not found'
+          ? 'notFound'
           : error.status < 500
-            ? 'Request refused'
-            : 'Server error';
-  return { title: `${title} (${error.status})`, message: backendMessage(error) };
+            ? 'refused'
+            : 'serverError';
+  return { title: t(`errors.${kind}`, { status: error.status }), message: backendMessage(error) };
 }
 
 /** The backend's own explanation (problem details: `detail`, else `message` or `error`), else the HTTP status text. */

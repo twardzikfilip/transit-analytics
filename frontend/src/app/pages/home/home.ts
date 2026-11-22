@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { LiveMap } from './live-map/live-map';
 import { PositionHistory } from './position-history/position-history';
+import { t, tn } from '../../core/i18n/t';
 
 /**
  * Home: the live map (vehicles now, with their delays) and, below it, the recorded positions over a chosen time
@@ -10,10 +11,10 @@ import { PositionHistory } from './position-history/position-history';
   selector: 'app-home',
   imports: [LiveMap, PositionHistory],
   template: `
-    <section class="card live" aria-label="Live map">
+    <section class="card live" [attr.aria-label]="t('live.title')">
       <app-live-map />
     </section>
-    <section class="history" aria-label="Recorded positions">
+    <section class="history" [attr.aria-label]="t('history.title')">
       <app-position-history />
     </section>
   `,
@@ -23,4 +24,6 @@ import { PositionHistory } from './position-history/position-history';
     }
   `,
 })
-export class Home {}
+export class Home {
+  protected readonly t = t;
+}

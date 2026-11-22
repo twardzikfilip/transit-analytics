@@ -3,6 +3,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Store } from '@ngrx/store';
 import { AuthActions } from '../../store/auth/auth.actions';
 import { authFeature } from '../../store/auth/auth.reducer';
+import { t } from '../../core/i18n/t';
 
 @Component({
   selector: 'app-login',
@@ -11,6 +12,7 @@ import { authFeature } from '../../store/auth/auth.reducer';
   styleUrl: './login.scss',
 })
 export class Login {
+  protected readonly t = t;
   private readonly store = inject(Store);
 
   protected readonly loading = this.store.selectSignal(authFeature.selectLoading);

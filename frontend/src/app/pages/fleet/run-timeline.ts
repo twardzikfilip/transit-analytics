@@ -3,6 +3,7 @@ import { clock, duration, hourTickStep } from '../../shared/format/time';
 import { hostWidth } from '../../shared/host-width';
 import { hourRange } from '../routes/format';
 import { TimelineRow } from './fleet-format';
+import { t as tr } from '../../core/i18n/t';
 
 const ROW = 26;
 const BAR = 12;
@@ -26,8 +27,11 @@ interface Hover {
   selector: 'app-run-timeline',
   template: `
     <ul class="legend">
-      <li><span class="swatch" style="background: var(--lightblue-bkm)"></span>run (on a line)</li>
-      <li><span class="swatch dashed"></span>break of 30 min or more</li>
+      <li>
+        <span class="swatch" style="background: var(--lightblue-bkm)"></span
+        >{{ tr('fleet.legendRun') }}
+      </li>
+      <li><span class="swatch dashed"></span>{{ tr('fleet.legendBreak') }}</li>
     </ul>
     <div class="plot">
       <svg
@@ -35,7 +39,7 @@ interface Hover {
         [attr.width]="width()"
         [attr.height]="height()"
         role="img"
-        [attr.aria-label]="'Timeline of ' + rows().length + ' rows of runs'"
+        [attr.aria-label]="tr('fleet.timelineLabel', { n: rows().length })"
         (pointerleave)="hover.set(null)"
       >
         @for (t of ticks(); track t.x) {
@@ -121,6 +125,8 @@ interface Hover {
   `,
 })
 export class RunTimeline {
+  /** Translates (`t` is a loop variable in the template). */
+  protected readonly tr = tr;
   readonly rows = input.required<TimelineRow[]>();
 
   protected readonly width = hostWidth(800, 320);

@@ -1,0 +1,109 @@
+/* Two rows of four tiles on a wide screen; two, then one, on narrower ones. */
+.rankings {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+  transition: opacity 0.15s;
+
+  &.loading {
+    opacity: 0.55;
+  }
+
+  @media (max-width: 1100px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 600px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.ranking {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+
+  h2 {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  /* Two lines for every tile's note, so the toggles line up across a row. */
+  .note {
+    margin: 0;
+    font-size: 0.8rem;
+    line-height: 1.35;
+    min-height: calc(2 * 1.35em);
+  }
+}
+
+/* The two ends of the ranking: one segmented bar, as the time window's presets. */
+.sides {
+  display: flex;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+
+  button {
+    flex: 1;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  button + button {
+    margin-left: -1px;
+  }
+
+  button:first-child {
+    border-radius: var(--radius) 0 0 var(--radius);
+  }
+
+  button:last-child {
+    border-radius: 0 var(--radius) var(--radius) 0;
+  }
+
+  button.active,
+  button:focus-visible {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+.ranked {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: rank;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.9rem;
+
+  li {
+    counter-increment: rank;
+    display: grid;
+    grid-template-columns: 1.5rem auto 1fr;
+    align-items: center;
+    gap: 0.5rem;
+
+    /* The rank, from the tile's left padding, in line with the title above. */
+    &::before {
+      content: counter(rank) '.';
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    &.muted::before {
+      content: none;
+    }
+  }
+
+  .value {
+    justify-self: end;
+    font-variant-numeric: tabular-nums;
+  }
+}

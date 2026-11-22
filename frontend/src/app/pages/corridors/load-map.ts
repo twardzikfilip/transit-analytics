@@ -4,6 +4,7 @@ import { SegmentLoad } from '../../core/models/models';
 import { SEQUENTIAL_BLUE } from '../../shared/palette';
 import { MAX_WIDTH, colorClasses, colorFor, widthFor } from './load-scale';
 import { leafletHost } from '../../shared/map/leaflet-host';
+import { t, tn } from '../../core/i18n/t';
 
 /**
  * Every stretch between two stops on a map (grey base map), drawn by its peak-hour buses: as line width in proportion
@@ -15,6 +16,7 @@ import { leafletHost } from '../../shared/map/leaflet-host';
   styleUrl: './load-map.scss',
 })
 export class LoadMap {
+  protected readonly t = t;
   readonly segments = input.required<SegmentLoad[]>();
   readonly mode = input.required<'width' | 'color'>();
   /** e.g. "06:30–08:30 and 15:00–17:00", for tooltips. */
@@ -64,9 +66,10 @@ export class LoadMap {
           : { color: colorFor(s.peakBuses, classes), weight: 4, opacity: 1 };
       L.polyline(s.points, style)
         .bindTooltip(
-          `<strong>${escape(s.from)} – ${escape(s.to)}</strong><br>${s.peakBuses} buses in peak hours` +
-            (this.peakLabel() ? ` (${this.peakLabel()})` : '') +
-            `<br>${s.buses} a weekday, both directions`,
+          `<strong>${escape(s.from)} – ${escape(s.to)}</strong><br>` +
+            escape(t('corridors.tipPeak', { n: s.peakBuses })) +
+            (this.peakLabel() ? ` (${escape(this.peakLabel())})` : '') +
+            `<br>${escape(t('corridors.tipDay', { n: s.buses }))}`,
           { sticky: true },
         )
         .addTo(layer);

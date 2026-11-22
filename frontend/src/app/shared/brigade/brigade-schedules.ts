@@ -4,6 +4,7 @@ import { BrigadeApi } from '../../core/api/api.services';
 import { BrigadeSchedule, ScheduledRun } from '../../core/models/models';
 import { escapeHtml } from '../format/html';
 import { localTime } from '../format/time';
+import { t, tn } from '../../core/i18n/t';
 
 /** Today's schedule is fetched again after this long (timetable changes during the day are rare but happen). */
 const TODAY_MAX_AGE_MS = 10 * 60_000;
@@ -96,15 +97,15 @@ export function brigadeSection(
   today: boolean,
 ): string {
   if (!brigade) return '';
-  const day = today ? 'today' : 'that day';
-  const title = `<div class="brigade"><strong>Brigade ${escapeHtml(brigade)}</strong>`;
-  if (!state || (!state.schedule && !state.failed))
-    return `${title}<br><span class="muted">Loading schedule…</span></div>`;
-  if (!state.schedule) return `${title}<br><span class="muted">Schedule unavailable</span></div>`;
+  const title = `<div class="brigade"><strong>${escapeHtml(t('brigadeTip.brigade', { brigade }))}</strong>`;
+  const note = (key: string) =>
+    `${title}<br><span class="muted">${escapeHtml(t(key))}</span></div>`;
+  if (!state || (!state.schedule && !state.failed)) return note('brigadeTip.loading');
+  if (!state.schedule) return note('brigadeTip.unavailable');
   if (!state.schedule.runs.length)
-    return `${title}<br><span class="muted">Not in ${today ? "today's" : "that day's"} timetable</span></div>`;
+    return note(today ? 'brigadeTip.notToday' : 'brigadeTip.notThatDay');
   const runs = remainingRuns(state.schedule.runs, at);
-  if (!runs.length) return `${title}<br><span class="muted">No more runs ${day}</span></div>`;
+  if (!runs.length) return note(today ? 'brigadeTip.noMoreToday' : 'brigadeTip.noMoreThatDay');
   const rows = runs
     .map(
       ({ run, now }) =>
@@ -112,5 +113,6 @@ export function brigadeSection(
         `<strong>${escapeHtml(run.line)}</strong> ${escapeHtml(run.from)} → ${escapeHtml(run.to)}</li>`,
     )
     .join('');
-  return `${title} <span class="muted">· rest of ${day}</span><ol class="runs">${rows}</ol></div>`;
+  const rest = escapeHtml(t(today ? 'brigadeTip.restOfToday' : 'brigadeTip.restOfThatDay'));
+  return `${title} <span class="muted">· ${rest}</span><ol class="runs">${rows}</ol></div>`;
 }

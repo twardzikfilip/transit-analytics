@@ -1,16 +1,10 @@
+<button type="button" class="back" (click)="back()">{{ t('routes.allRoutes') }}</button>
+
 <div class="page-header">
   @if (detail()?.serviceId; as service) {
-    <span class="muted">Weekday timetable {{ service }}</span>
+    <span class="muted">{{ t('routes.timetable', { service }) }}</span>
   }
 </div>
-
-<!-- Lines to pick: a row per kind of line, a column per geometry; thicker and darker buttons carry more. -->
-<app-line-chooser
-  [table]="table()"
-  [selected]="selected()"
-  [message]="error() ? '' : 'Loading lines…'"
-  (choose)="select($event)"
-/>
 
 @if (detail(); as d) {
   <div class="line-title" [class.loading]="loadingDetail()">
@@ -18,27 +12,27 @@
       d.name
     }}</span>
     <div>
-      <h2>{{ termini() || 'Line ' + d.name }}</h2>
-      <span class="muted">{{ subtypeLabel(d.subtype) }} line</span>
+      <h2>{{ termini() || t('routes.lineX', { line: d.name }) }}</h2>
+      <span class="muted">{{ t('routes.lineKind.' + d.subtype) }}</span>
       @if (d.operator; as o) {
         <p class="operator">
           @if (o.code) {
-            Organised by {{ o.organiser }}; operated by <strong>{{ o.code }}</strong>
+            {{ t('routes.organised', { organiser: o.organiser }) }} <strong>{{ o.code }}</strong>
             {{
               '(' +
                 o.name +
                 ')' +
-                (o.depot ? ', from ' + o.depot : '') +
+                (o.depot ? t('routes.fromDepot', { depot: o.depot }) : '') +
                 (o.depotAddress ? ', ' + o.depotAddress : '') +
                 '.'
             }}
           } @else {
-            Run by <strong>{{ o.name }}</strong>, from its own timetable.
+            {{ t('routes.runBy') }} <strong>{{ o.name }}</strong>{{ t('routes.ownTimetable') }}
           }
           @if (o.website) {
-            <a [href]="o.website" target="_blank" rel="noopener"
-              >{{ o.code ?? o.name }} website ↗</a
-            >
+            <a [href]="o.website" target="_blank" rel="noopener">{{
+              t('routes.website', { name: o.code ?? o.name })
+            }}</a>
           }
         </p>
       }
@@ -49,22 +43,18 @@
             [style.border-top-color]="busLaneStyle.color"
             aria-hidden="true"
           ></span>
-          On bus lanes:
+          {{ t('routes.onBusLanes') }}
           @for (b of d.busLanes; track b.direction; let last = $last) {
             <span class="share">{{
-              'to ' +
-                b.to +
-                ' ' +
-                b.laneKm.toFixed(1) +
-                ' of ' +
-                b.km.toFixed(1) +
-                ' km (' +
-                b.percent.toFixed(0) +
-                '%)' +
-                (last ? '' : ';')
+              t('routes.laneShare', {
+                to: b.to,
+                lane: b.laneKm.toFixed(1),
+                km: b.km.toFixed(1),
+                pct: b.percent.toFixed(0),
+              }) + (last ? '' : ';')
             }}</span>{{ ' ' }}
           }
-          <a routerLink="/bus-lanes">Bus lanes ↗</a>
+          <a routerLink="/bus-lanes">{{ t('routes.busLanesLink') }}</a>
         </p>
       }
       @if (classes(); as c) {
@@ -78,7 +68,7 @@
             }
             @if (c.capacity; as k) {
               <div>
-                <dt>{{ k.label }} capacity</dt>
+                <dt>{{ k.label }}</dt>
                 <dd>{{ k.description }}</dd>
               </div>
             }
@@ -86,12 +76,12 @@
         }
       }
     </div>
-    <nav class="line-links" aria-label="More about the line">
+    <nav class="line-links" [attr.aria-label]="t('routes.more')">
       @if (d.id !== null) {
-        <a [routerLink]="['/trips']" [queryParams]="{ routeId: d.id }">Trips</a>
+        <a [routerLink]="['/trips']" [queryParams]="{ routeId: d.id }">{{ t('routes.trips') }}</a>
       }
       @if (d.url) {
-        <a [href]="d.url" target="_blank" rel="noopener">Timetable on the website ↗</a>
+        <a [href]="d.url" target="_blank" rel="noopener">{{ t('routes.onWebsite') }}</a>
       }
     </nav>
   </div>
@@ -103,83 +93,84 @@
       [class.loading]="loadingDetail()"
     />
   }
+} @else if (loadingDetail()) {
+  <app-skeleton kind="lines" [count]="3" [label]="t('routes.loadingRoute')" />
 }
 
 <!-- Kept in the page (Leaflet needs its element); hidden for a line with neither a timetable nor recordings. -->
 <section class="card map-card" [hidden]="!hasMap()">
-  <div #map class="leaflet-map" role="region" aria-label="Map of the line"></div>
+  <div #map class="leaflet-map" role="region" [attr.aria-label]="t('routes.mapLabel')"></div>
   @if (recorded(); as r) {
     <ul class="map-legend">
-      <li>Each colour a variant, as listed below; thin and dashed: driven rarely</li>
-      <li><span class="key stop"></span>Where runs start</li>
-      <li><span class="key stop end"></span>Where runs end</li>
+      <li>{{ t('routes.legend.variantColours') }}</li>
+      <li><span class="key stop"></span>{{ t('routes.legend.runsStart') }}</li>
+      <li><span class="key stop end"></span>{{ t('routes.legend.runsEnd') }}</li>
       <li>
         <span
           class="line-swatch"
           [style.border-top-color]="boundaryStyles.city.color"
           style="border-top-style: dashed"
         ></span>
-        City limits
+        {{ t('palette.cityLimits') }}
       </li>
       <li>
         <span class="line-swatch bus-lane" [style.border-top-color]="busLaneStyle.color"></span>
-        Bus lane
+        {{ t('palette.busLane') }}
       </li>
     </ul>
   } @else {
     <ul class="map-legend">
-      <li><span class="key thick"></span>Base route</li>
-      <li><span class="key thin"></span>Other variants (thinner, dashed)</li>
-      <li><span class="key depot"></span>Depot runs (yellow, dotted)</li>
-      <li><span class="key depot-site"></span>Depot (the line operator's darker and named)</li>
-      <li>
-        <span class="key depot-link"></span>Depot to where buses start or end their day (dashed)
-      </li>
+      <li><span class="key thick"></span>{{ t('routes.legend.base') }}</li>
+      <li><span class="key thin"></span>{{ t('routes.legend.other') }}</li>
+      <li><span class="key depot"></span>{{ t('routes.legend.depotRuns') }}</li>
+      <li><span class="key depot-site"></span>{{ t('routes.legend.depot') }}</li>
+      <li><span class="key depot-link"></span>{{ t('routes.legend.depotLink') }}</li>
       <li>
         <span
           class="line-swatch"
           [style.border-top-color]="boundaryStyles.city.color"
           style="border-top-style: dashed"
         ></span>
-        City limits
+        {{ t('palette.cityLimits') }}
       </li>
       <li>
         <span class="line-swatch" [style.border-top-color]="boundaryStyles.centre.color"></span>
-        City centre (for line classes)
+        {{ t('routes.legend.centre') }}
       </li>
       <li>
         <span class="line-swatch bus-lane" [style.border-top-color]="busLaneStyle.color"></span>
-        Bus lane
+        {{ t('palette.busLane') }}
       </li>
-      <li><span class="key stop"></span>Stop</li>
-      <li><span class="key stop zone2"></span>Stop in zone 2</li>
+      <li><span class="key stop"></span>{{ t('routes.legend.stop') }}</li>
+      <li><span class="key stop zone2"></span>{{ t('routes.legend.zone2') }}</li>
     </ul>
   }
 </section>
 
 @if (detail(); as d) {
   @if (d.id === null) {
-    <p class="muted">
-      Line {{ d.name }} isn't in the city timetable: it is run by another operator. Below is only
-      what was recorded on the live feed, on all days.
-    </p>
+    <p class="muted">{{ t('routes.notInTimetable', { line: d.name }) }}</p>
     @if (recorded(); as r) {
       <section class="card section recorded">
-        <h2>Where the buses went</h2>
+        <h2>{{ t('routes.whereWent') }}</h2>
         <p class="muted">
-          From every recorded position: {{ r.runs }} runs (a bus's reports in a row towards one
-          destination) between {{ r.first | date: 'd MMM' }} and {{ r.last | date: 'd MMM y' }},
-          grouped by destination and the streets they took. Click a variant to show it on the map.
+          {{
+            t('routes.recordedIntro', {
+              runs: r.runs,
+              first: r.first | date: 'd MMM',
+              last: r.last | date: 'd MMM y',
+            })
+          }}
         </p>
         <div class="data-table-wrap">
           <table class="data-table clickable recorded-variants">
             <thead>
               <tr>
-                <th>Towards</th>
-                <th>From → to (stops reported)</th>
-                <th class="num">Driven</th>
-                <th class="num">Length</th>
-                <th>Last driven</th>
+                <th>{{ t('routes.col.towards') }}</th>
+                <th>{{ t('routes.col.fromTo') }}</th>
+                <th class="num">{{ t('routes.col.driven') }}</th>
+                <th class="num">{{ t('routes.col.length') }}</th>
+                <th>{{ t('routes.col.lastDriven') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -201,10 +192,10 @@
                   </td>
                   <td>{{ v.from ?? '?' }} → {{ v.to ?? '?' }}</td>
                   <td class="num">
-                    {{ v.runs }} {{ v.runs === 1 ? 'time' : 'times' }}
+                    {{ tn('routes.times', v.runs) }}
                     <span class="muted">({{ (v.runs / r.runs) * 100 | number: '1.0-0' }}%)</span>
                   </td>
-                  <td class="num">{{ v.km | number: '1.1-1' }} km</td>
+                  <td class="num">{{ t('routes.km', { n: v.km | number: '1.1-1' }) }}</td>
                   <td>{{ v.lastSeen | date: 'd MMM, HH:mm' }}</td>
                 </tr>
               }
@@ -217,19 +208,19 @@
       <app-travel-charts [performance]="performance()" [loading]="loadingPerformance()" />
     </section>
     <section class="card section">
-      <h2>Vehicles</h2>
+      <h2>{{ t('routes.vehicles') }}</h2>
       <app-line-vehicles
         [vehicles]="performance()?.vehicles ?? null"
         [loading]="loadingPerformance()"
       />
     </section>
   } @else if (!d.serviceId) {
-    <p class="muted">No timetable yet. An admin can import it under Settings.</p>
+    <p class="muted">{{ t('routes.noTimetable') }}</p>
   } @else {
     <app-variant-tiles [detail]="d" [regularity]="regularity()" [class.loading]="loadingDetail()" />
 
     <section class="card section">
-      <h2>Variants</h2>
+      <h2>{{ t('routes.variants') }}</h2>
       <app-variant-table [variants]="d.variants" />
     </section>
 
@@ -244,7 +235,7 @@
     </section>
 
     <section class="card section">
-      <h2>Speed between stops in peak hours</h2>
+      <h2>{{ t('routes.speedBetween') }}</h2>
       <app-speed-profiles
         [segments]="performance()?.segments ?? []"
         [loading]="loadingPerformance()"
@@ -253,24 +244,20 @@
 
     @if (d.brigadesKnown) {
       <section class="card section">
-        <h2>Brigades</h2>
-        <p class="muted">
-          Each bus's duty on a weekday, from the timetable: it leaves the depot for its first run
-          and returns after its last. Short gaps are layovers at the terminus; gaps of 30 minutes or
-          more are marked as breaks.
-        </p>
+        <h2>{{ t('routes.brigades') }}</h2>
+        <p class="muted">{{ t('routes.brigadesIntro') }}</p>
         <app-brigade-timeline [brigades]="d.brigades" [mains]="mains()" />
         <details>
-          <summary>Show as a table</summary>
+          <summary>{{ t('routes.asTable') }}</summary>
           <table class="data-table compact">
             <thead>
               <tr>
-                <th>Brigade</th>
-                <th class="num">Leaves depot</th>
-                <th class="num">Returns</th>
-                <th class="num">Runs</th>
-                <th class="num">In service</th>
-                <th>Breaks</th>
+                <th>{{ t('routes.col.brigade') }}</th>
+                <th class="num">{{ t('routes.col.leaves') }}</th>
+                <th class="num">{{ t('routes.col.returns') }}</th>
+                <th class="num">{{ t('routes.col.runs') }}</th>
+                <th class="num">{{ t('routes.col.inService') }}</th>
+                <th>{{ t('routes.col.breaks') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -299,7 +286,7 @@
     }
 
     <section class="card section">
-      <h2>Vehicles</h2>
+      <h2>{{ t('routes.vehicles') }}</h2>
       <app-line-vehicles
         [vehicles]="performance()?.vehicles ?? null"
         [loading]="loadingPerformance()"
@@ -307,78 +294,15 @@
     </section>
 
     <details class="card how">
-      <summary>How these are calculated</summary>
+      <summary>{{ t('routes.how') }}</summary>
       <ul>
-        <li>
-          <strong>Timetable figures</strong> use the regular weekday timetable. The
-          <strong>base route</strong> of each direction is its most frequent variant; other variants
-          are longer or shorter than it, or depot runs.
-        </li>
-        <li>
-          <strong>Scheduled average speed:</strong> distance divided by travel time of the base
-          route's slowest and fastest scheduled run. Time at stops counts.
-        </li>
-        <li>
-          <strong>Regularity:</strong> how evenly departures are spread, as the coefficient of
-          variation (CV) of the gaps between consecutive departures: standard deviation ÷ mean. It
-          is measured at the first stop of the base route, counting every trip of the line that
-          departs there, per direction and period (the break between the two peaks is not a gap),
-          then averaged weighted by the number of gaps. 0 means perfectly even. Grades follow TCQSM:
-          A ≤ 0.21, B ≤ 0.30, C ≤ 0.39, D ≤ 0.52, E ≤ 0.74, F above. For passengers arriving at
-          random the average wait is half the mean gap × (1 + CV²), so uneven spacing adds waiting
-          even at the same frequency. "—" means fewer than 4 departures in the period.
-        </li>
-        <li>
-          <strong>Standard end stops</strong> are where buses turn round in service: a brigade ends
-          a run there and starts its next one within 30 minutes. <strong>Depot runs</strong> start
-          or end away from them, as a brigade's first or last run or next to a break of 30 minutes
-          or more. A variant is shown as a depot run when most of its trips are. A bus waiting
-          longer at a standard end stop is on a break, not at the depot.
-        </li>
-        <li>
-          <strong>Nearby end stops:</strong> end stops less than 500 m apart, such as the arrival
-          and departure platforms of a terminus, are shown as one, named after the stop where runs
-          end. Every stop of such a group is within 500 m of all the others. This is a rule of
-          thumb: a depot run's last stop can be close to a terminus (e.g. Branickiego/Świętojańska,
-          480 m from Piastowska/Pętla on line 103) and is still a depot stop, because no run turns
-          round there. Depot-run stops are grouped the same way.
-        </li>
-        <li>
-          <strong>Zone 2:</strong> stops in fare zone 2 (outside Białystok). The zone border isn't
-          in the timetable, so the stretch between the last city stop and the first zone-2 stop
-          counts half.
-        </li>
-        <li>
-          <strong>Brigades</strong> come from the trip ids. The times at the row ends are the first
-          departure and last arrival in the timetable; the drive between the depot and that stop
-          isn't in it.
-        </li>
-        <li>
-          <strong>Full runs</strong> are runs of the base route or a longer variant recorded from
-          the first stop to the terminus, on weekdays only, charted per route pattern (both
-          directions together). Positions arrive about once a minute with the next stop, so the bus
-          passed a stop between two reports: the midpoint is used (about ±30 s for a single run,
-          rounded to minutes). Runs more than twice as long or half as short as the timetable are
-          left out as faulty.
-        </li>
-        <li>
-          <strong>Average delay</strong> per 15 minutes, from every position report of the line on
-          weekdays, except buses waiting at the first stop and reports over 30 minutes late (likely
-          errors). Negative means early.
-        </li>
-        <li>
-          <strong>Vehicles</strong> come from every recorded day, weekends too. A bus seen for fewer
-          than 5 reports on a brigade in a day is left out as a feed glitch, so it doesn't count as
-          a vehicle change.
-        </li>
-        <li>
-          <strong>Speed between stops:</strong> total distance over total time of all peak-hour full
-          runs on that stretch, so the timing error of single reports averages out. It includes time
-          spent at the stop.
-        </li>
+        @for (i of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]; track i) {
+          <li [innerHTML]="t('routes.how' + i)"></li>
+        }
       </ul>
     </details>
   }
 } @else if (loadingDetail()) {
-  <p class="muted">Loading…</p>
+  <app-skeleton kind="tiles" [count]="6" />
+  <app-skeleton kind="chart" />
 }

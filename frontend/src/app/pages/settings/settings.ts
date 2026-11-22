@@ -1,4 +1,4 @@
-import { DatePipe, DecimalPipe, KeyValuePipe } from '@angular/common';
+import { KeyValuePipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { HasRoleDirective } from '../../core/auth/has-role.directive';
@@ -6,53 +6,52 @@ import { authFeature } from '../../store/auth/auth.reducer';
 import { GtfsImportActions } from '../../store/gtfs-import/gtfs-import.actions';
 import { gtfsImportFeature } from '../../store/gtfs-import/gtfs-import.reducer';
 import { ThemeSwitch } from './theme-switch';
-
-/** Table names from the import result, as shown to people. */
-const TABLE_LABELS: Record<string, string> = {
-  agency: 'Agencies',
-  route: 'Routes',
-  stop: 'Stops',
-  trip: 'Trips',
-  stop_time: 'Stop times',
-  calendar_date: 'Calendar dates',
-  shape_point: 'Shape points',
-};
+import { t } from '../../core/i18n/t';
+import { LocalDatePipe, LocalNumberPipe } from '../../shared/i18n/locale-pipes';
+import { LanguagePicker } from './language-picker';
 
 @Component({
   selector: 'app-settings',
-  imports: [HasRoleDirective, DecimalPipe, DatePipe, KeyValuePipe, ThemeSwitch],
+  imports: [
+    HasRoleDirective,
+    LocalNumberPipe,
+    LocalDatePipe,
+    KeyValuePipe,
+    ThemeSwitch,
+    LanguagePicker,
+  ],
   template: `
     <div class="card">
       <dl>
-        <dt>Username</dt>
+        <dt>{{ t('settings.username') }}</dt>
         <dd>{{ username() }}</dd>
-        <dt>Role</dt>
+        <dt>{{ t('settings.role') }}</dt>
         <dd>{{ role() }}</dd>
-        <dt>Theme</dt>
+        <dt>{{ t('settings.theme') }}</dt>
         <dd><app-theme-switch /></dd>
+        <dt id="language-label">{{ t('settings.language') }}</dt>
+        <dd><app-language-picker /></dd>
       </dl>
-      <p class="muted">The theme is remembered in this browser.</p>
+      <p class="muted">{{ t('settings.remembered') }}</p>
     </div>
 
     <section *appHasRole="'ADMIN'" class="card gtfs">
-      <h2>Timetable data (GTFS)</h2>
-      <p class="muted">
-        Downloads Białystok's current timetable from komunikacja.bialystok.pl and replaces routes,
-        stops, trips and stop times with it. Takes about half a minute; the old timetable stays
-        available until the new one is loaded.
-      </p>
+      <h2>{{ t('settings.gtfsTitle') }}</h2>
+      <p class="muted">{{ t('settings.gtfsIntro') }}</p>
       <button type="button" class="primary" [disabled]="running()" (click)="importBialystok()">
-        {{ running() ? 'Importing…' : 'Import Białystok timetable' }}
+        {{ t(running() ? 'settings.importing' : 'settings.import') }}
       </button>
 
       @if (result(); as r) {
         <div class="result" role="status">
           <p>
-            Imported {{ r.importedAt | date: 'medium' }} in
-            {{ r.durationMs / 1000 | number: '1.0-1' }} s ({{
-              r.downloadedBytes / 1048576 | number: '1.1-1'
+            {{
+              t('settings.imported', {
+                when: r.importedAt | date: 'medium',
+                seconds: r.durationMs / 1000 | number: '1.0-1',
+                mb: r.downloadedBytes / 1048576 | number: '1.1-1',
+              })
             }}
-            MB download).
           </p>
           <table class="data-table">
             <tbody>
@@ -66,12 +65,11 @@ const TABLE_LABELS: Record<string, string> = {
           </table>
           @for (s of r.skipped | keyvalue; track s.key) {
             <p class="muted">
-              Skipped {{ s.value | number }} rows of {{ s.key }} that point at a missing route, trip
-              or stop.
+              {{ t('settings.skipped', { count: s.value | number, table: s.key }) }}
             </p>
           }
           @if (r.ignoredFiles.length) {
-            <p class="muted">Not loaded: {{ r.ignoredFiles.join(', ') }}</p>
+            <p class="muted">{{ t('settings.notLoaded', { files: r.ignoredFiles.join(', ') }) }}</p>
           }
         </div>
       }
@@ -114,6 +112,7 @@ const TABLE_LABELS: Record<string, string> = {
 })
 export class Settings {
   private readonly store = inject(Store);
+  protected readonly t = t;
   protected readonly username = this.store.selectSignal(authFeature.selectUsername);
   protected readonly role = this.store.selectSignal(authFeature.selectRole);
 
@@ -127,7 +126,9 @@ export class Settings {
     this.store.dispatch(GtfsImportActions.importBialystok());
   }
 
+  /** A table's name, as shown to people; as the server names it when not known. */
   protected label(table: string): string {
-    return TABLE_LABELS[table] ?? table;
+    const name = t(`settings.tables.${table}`);
+    return name === `settings.tables.${table}` ? table : name;
   }
 }

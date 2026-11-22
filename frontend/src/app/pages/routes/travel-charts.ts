@@ -1,8 +1,9 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, input } from '@angular/core';
 import { HourStat, LinePerformance } from '../../core/models/models';
 import { clock, formatDelay } from '../../shared/format/time';
 import { HourBand, HourChart, HourSeries, RefLine } from '../../shared/hour-chart/hour-chart';
+import { LocalDatePipe, LocalNumberPipe } from '../../shared/i18n/locale-pipes';
+import { t as tr, tn } from '../../core/i18n/t';
 
 /** A chart's data: series, band and reference lines for the hour chart. */
 interface HourChartData {
@@ -17,11 +18,13 @@ interface HourChartData {
  */
 @Component({
   selector: 'app-travel-charts',
-  imports: [DatePipe, DecimalPipe, HourChart],
+  imports: [LocalDatePipe, LocalNumberPipe, HourChart],
   templateUrl: './travel-charts.html',
   styleUrl: './travel-charts.scss',
 })
 export class TravelCharts {
+  protected readonly tr = tr;
+  protected readonly tn = tn;
   readonly performance = input<LinePerformance | null>(null);
   readonly loading = input(false);
 
@@ -43,30 +46,30 @@ export class TravelCharts {
     (this.performance()?.travelTimes ?? []).map((t) => {
       const timeRefs: RefLine[] = [];
       if (t.scheduledShortestMin != null) {
-        timeRefs.push({ label: 'Scheduled shortest', value: t.scheduledShortestMin });
+        timeRefs.push({ label: tr('travel.schedShortest'), value: t.scheduledShortestMin });
       }
       if (t.scheduledLongestMin != null && t.scheduledLongestMin !== t.scheduledShortestMin) {
-        timeRefs.push({ label: 'Scheduled longest', value: t.scheduledLongestMin });
+        timeRefs.push({ label: tr('travel.schedLongest'), value: t.scheduledLongestMin });
       }
       const speedRefs: RefLine[] = [];
       if (t.scheduledMaxSpeedKmh != null) {
-        speedRefs.push({ label: 'Scheduled fastest', value: t.scheduledMaxSpeedKmh });
+        speedRefs.push({ label: tr('travel.schedFastest'), value: t.scheduledMaxSpeedKmh });
       }
       if (t.scheduledMinSpeedKmh != null && t.scheduledMinSpeedKmh !== t.scheduledMaxSpeedKmh) {
-        speedRefs.push({ label: 'Scheduled slowest', value: t.scheduledMinSpeedKmh });
+        speedRefs.push({ label: tr('travel.schedSlowest'), value: t.scheduledMinSpeedKmh });
       }
       return {
         t,
-        title: `${t.kind === 'main' ? 'Base route' : 'Longer variant'}: ${t.label}`,
-        duration: statChart(t.durations, 'Shortest–longest run', timeRefs, true),
-        speed: statChart(t.speeds, 'Slowest–fastest run', speedRefs, false),
+        title: tr(t.kind === 'main' ? 'travel.base' : 'travel.longer', { label: t.label }),
+        duration: statChart(t.durations, tr('travel.timeBand'), timeRefs, true),
+        speed: statChart(t.speeds, tr('travel.speedBand'), speedRefs, false),
       };
     }),
   );
   protected readonly delayChart = computed<HourChartData>(() => ({
     series: [
       {
-        label: 'Average delay',
+        label: tr('travel.avgDelay'),
         color: 'var(--chart-line)',
         area: true,
         points: (this.performance()?.delays ?? []).map((d) => ({
@@ -93,14 +96,14 @@ function statChart(
 ): HourChartData {
   const series: HourSeries[] = [
     {
-      label: 'Average',
+      label: tr('travel.average'),
       color: 'var(--chart-line)',
       points: stats.map((s) => ({ x: s.hour + 0.5, y: s.avg })),
     },
   ];
   if (withMedian) {
     series.push({
-      label: 'Median',
+      label: tr('travel.median'),
       color: 'var(--chart-series-2)',
       points: stats.map((s) => ({ x: s.hour + 0.5, y: s.median })),
     });

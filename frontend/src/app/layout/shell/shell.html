@@ -1,33 +1,4 @@
-<aside id="sidebar" class="sidebar" [class.open]="navOpen()">
-  <div class="brand">
-    <span>Transit Analytics</span>
-    <button type="button" class="nav-close" aria-label="Hide pages" (click)="navOpen.set(false)">
-      <app-icon name="chevronLeft" />
-    </button>
-  </div>
-  <nav aria-label="Pages">
-    @for (group of navGroups; track $index) {
-      @if (group.label) {
-        <h2 class="group">{{ group.label }}</h2>
-      }
-      <ul>
-        @for (item of group.items; track item.path) {
-          <li>
-            <a
-              [routerLink]="item.path"
-              routerLinkActive="active"
-              ariaCurrentWhenActive="page"
-              (click)="navOpen.set(false)"
-            >
-              <app-icon class="icon" [name]="item.icon" />
-              <span>{{ item.label }}</span>
-            </a>
-          </li>
-        }
-      </ul>
-    }
-  </nav>
-</aside>
+<app-sidebar [open]="navOpen()" (close)="navOpen.set(false)" />
 
 <!-- On a phone, the open sidebar covers the page; a tap beside it hides it. -->
 @if (navOpen()) {
@@ -36,12 +7,23 @@
 
 <div class="main">
   <header class="topbar">
+    @if (back(); as b) {
+      <button
+        type="button"
+        class="back"
+        [attr.aria-label]="t(b.label)"
+        [title]="t(b.label)"
+        (click)="b.go()"
+      >
+        <app-icon name="chevronLeft" />
+      </button>
+    }
     <button
       type="button"
       class="nav-toggle"
       aria-controls="sidebar"
       [attr.aria-expanded]="navOpen()"
-      [attr.aria-label]="navOpen() ? 'Hide pages' : 'Show pages'"
+      [attr.aria-label]="t(navOpen() ? 'nav.hidePages' : 'nav.showPages')"
       (click)="toggleNav($event)"
     >
       <app-icon name="sidebar" />
@@ -54,7 +36,7 @@
       <button
         type="button"
         class="hamburger"
-        aria-label="Open menu"
+        [attr.aria-label]="t('nav.openMenu')"
         [attr.aria-expanded]="menuOpen()"
         (click)="toggleMenu($event)"
       >
@@ -63,15 +45,23 @@
       @if (menuOpen()) {
         <ul class="dropdown" role="menu">
           <li role="none">
-            <a role="menuitem" routerLink="/settings" (click)="menuOpen.set(false)">Settings</a>
+            <a role="menuitem" routerLink="/settings" (click)="menuOpen.set(false)">{{
+              t('nav.settings')
+            }}</a>
           </li>
           <li role="none">
-            <button role="menuitem" type="button" (click)="logout()">Logout</button>
+            <button role="menuitem" type="button" (click)="logout()">{{ t('nav.logout') }}</button>
           </li>
         </ul>
       }
     </div>
   </header>
+
+  <!-- Waiting for the backend: a thin bar under the header (shown only if the wait lasts, so quick answers don't
+       flicker). -->
+  @if (busy()) {
+    <app-activity-bar />
+  }
 
   <main class="content">
     <router-outlet />

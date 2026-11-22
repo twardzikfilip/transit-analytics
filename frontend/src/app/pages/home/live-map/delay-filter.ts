@@ -31,9 +31,9 @@ export function agencies(positions: LivePosition[], selected = ''): string[] {
 
 /** The kinds of line to filter by; urban takes in the night lines, which are urban too. */
 export const LINE_TYPES: { key: LineType; label: string; subtypes: RouteSubtype[] }[] = [
-  { key: 'urban', label: 'Urban', subtypes: ['urban', 'night_urban'] },
-  { key: 'suburban', label: 'Suburban', subtypes: ['suburban'] },
-  { key: 'regional', label: 'Regional (4xx)', subtypes: ['regional'] },
+  { key: 'urban', label: 'live.types.urban', subtypes: ['urban', 'night_urban'] },
+  { key: 'suburban', label: 'live.types.suburban', subtypes: ['suburban'] },
+  { key: 'regional', label: 'live.types.regional', subtypes: ['regional'] },
 ];
 
 export type LineType = 'urban' | 'suburban' | 'regional';

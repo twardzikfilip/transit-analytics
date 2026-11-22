@@ -1,9 +1,11 @@
 import { GtfsImportActions } from '../../store/gtfs-import/gtfs-import.actions';
 import { gtfsImportFeature } from '../../store/gtfs-import/gtfs-import.reducer';
+import { TestBed } from '@angular/core/testing';
+import { Language } from '../../core/i18n/language';
 import { renderPage, signedIn, stateAfter, text } from '../../testing/page-testing';
+import { Settings } from './settings';
 
 const cells = (row: Element) => [...row.children].map(text);
-import { Settings } from './settings';
 
 describe('Settings page', () => {
   const result = {
@@ -61,7 +63,52 @@ describe('Settings page', () => {
       ...stateAfter(gtfsImportFeature),
     }).el;
     expect(guest.querySelector('.gtfs')).toBeNull();
-    expect([...guest.querySelectorAll('dd')].map(text)).toEqual(['ann', 'GUEST', 'Light Dark']);
+    expect([...guest.querySelectorAll('dd')].map(text)).toEqual([
+      'ann',
+      'GUEST',
+      'Light Dark',
+      'English▾',
+    ]);
+  });
+
+  it('switches the language in a dropdown of flags and native names, at once and remembered', async () => {
+    localStorage.removeItem('language');
+    const { el, render } = renderPage(Settings, {
+      ...signedIn('GUEST'),
+      ...stateAfter(gtfsImportFeature),
+    });
+    const button = el.querySelector('app-language-picker button.current') as HTMLButtonElement;
+    expect(button.getAttribute('aria-haspopup')).toBe('listbox');
+    button.click();
+    render();
+    const options = [...el.querySelectorAll('[role=option]')] as HTMLElement[];
+    expect(options.map(text)).toEqual(['English✓', 'Polski', 'Deutsch']);
+    expect(options.map((o) => o.querySelector('app-flag svg') !== null)).toEqual([
+      true,
+      true,
+      true,
+    ]);
+    expect(options[1].getAttribute('lang')).toBe('pl');
+
+    options[1].click();
+    await TestBed.inject(Language).ready();
+    render();
+    expect(el.querySelector('[role=listbox]')).toBeNull();
+    expect(text(el.querySelector('dt'))).toBe('Nazwa użytkownika');
+    expect(text(button)).toBe('Polski▾');
+    expect(document.documentElement.lang).toBe('pl');
+    expect(localStorage.getItem('language')).toBe('pl');
+
+    // With the keyboard: down to Deutsch, Enter.
+    button.click();
+    render();
+    const list = el.querySelector('[role=listbox]') as HTMLElement;
+    list.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    list.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    await TestBed.inject(Language).ready();
+    render();
+    expect(text(el.querySelector('dt'))).toBe('Benutzername');
+    localStorage.removeItem('language');
   });
 
   it('switches between the light and dark theme, light by default', () => {

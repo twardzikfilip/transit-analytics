@@ -76,8 +76,11 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
 - `GET /api/lines/stats` — per line, from the regular weekday timetable: length (main route, km), shortest and
   longest end-to-end travel time, average speed, interval, regularity (coefficient of variation of the gaps between
   departures, graded A–F as in TCQSM) and vehicles in peak (06:30–08:30, 15:00–17:00) and off-peak
-  (08:30–15:00, 17:00–20:00) hours, the same periods as on every timetable page. Routes shows the chosen line's
-  regularity from it; the definitions are on the Routes page.
+  (08:30–15:00, 17:00–20:00) hours, the same periods as on every timetable page; and, recorded, each line's mean
+  delay in peak and off-peak hours on weekdays of the last `delayDays` (28) days (`peakDelaySeconds`,
+  `offPeakDelaySeconds`; from the hourly `route_delay_hourly` aggregate, an hour counting in the part of the day its
+  middle falls in). Routes ranks the lines by these and shows each line's regularity; the definitions are on the
+  Routes page.
 - **Time windows.** Every report over recorded positions (position history, Fleet, hotspots, delay generation,
   abnormal trips) takes `from` and `to` (ISO-8601 instants, `to` exclusive). Both are optional: `to` defaults to now,
   and without `from` the window starts at the first recorded position (*all time*). `from` after `to` is a 400.
@@ -417,7 +420,8 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
 - `core/api` — generic `CrudApiService` + one service per backend resource
 - `layout/shell` — the sidebar (pages grouped into *Operation* and *Network*, each with a filled Bootstrap icon from
   `shared/icons`) and the header bar with the page's title (from the route's `title`, see `core/title/page-title.ts`)
-  and the hamburger menu (Settings, Logout). Up to 768 px wide (phones, small tablets) the sidebar is hidden to the
+  and the hamburger menu (Settings, Logout). On a desktop the icon at the right of the sidebar's header narrows it to its
+  icons (names as tooltips; remembered in the browser; `layout/shell/sidebar.ts`). Up to 768 px wide (phones, small tablets) the sidebar is hidden to the
   left and shown over the page with the button at the left of the header bar; choosing a page, tapping beside it,
   its ‹ button or Escape hides it again. Up to 600 px the time window's presets are a dropdown, the From/To fields
   stack, and figure tiles sit two to a row.
@@ -429,6 +433,17 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
   right corner, with the backend's message (`core/api/error-toasts.ts`, ngx-toastr); pages never show the error text
   themselves. `errors-as-toasts.spec.ts` opens every page with the API failing to check that. ngx-toastr 20 declares
   Angular 21; `overrides` in `package.json` lets it run on Angular 22 until a release supports it.
+- Languages: English (default), Polish and German, chosen in Settings from a dropdown of flags and native names,
+  remembered in the browser and applied at once (Transloco). The texts are in `src/i18n/{en,pl,de}.json`; English is
+  built in, the others load from `/i18n/` when chosen. Templates and code translate with `t('key', params)` and
+  counts with `tn('key', n)` (`core/i18n/t.ts`, plural forms per language); the `date` and `number` pipes follow the
+  language (`shared/i18n/locale-pipes.ts`). `translations.spec.ts` checks every language has every text, the same
+  placeholders and all its plural forms. Texts from the backend (breakdown stories, trip notes, error details) and
+  data names stay as they are.
+- Loading: while a page waits for its data it shows skeletons shaped like what is coming (tiles, charts, maps,
+  tables; `shared/skeleton`, ngx-skeleton-loader, in the theme's colours), and a thin bar runs under the header while
+  any API request is in flight (`core/api/activity.ts`; after 300 ms, so quick answers don't flicker; the live map's
+  polling doesn't count).
 - `store` — NgRx slices with functional effects: `auth`, `livePositions`, `routes` (all routes), and
   `stops`, `trips`, `stopTimes`, which hold one server-side page each (shared helpers in `store/paged.ts`);
   `gtfsImport` tracks the import. Only `auth` is registered at startup; every other slice is registered by its
@@ -457,10 +472,13 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
   `livePositions` and `positionHistory`, registered by Home's lazy route. The former pages `/live-map`,
   `/positions` and `/delays` lead to Home. The former Line statistics page (`/lines`) leads to Routes, where each
   line's regularity is a tile.
-- Routes: pick a line from a table of kinds of line (rows: urban, suburban, night, regional) by geometry (columns:
+- Routes: every line in a table of kinds of line (rows: urban, suburban, night, regional) by geometry (columns:
   radial, diameter, arcantial, tangential, feeder, and not classified for other operators' lines); a line's button
   shows its capacity class by its border's thickness and its fill (strongest for main lines, dashed for irregular
-  ones), with a legend. The selected line is kept in the URL as `?line=`; its title says what its geometry and
+  ones), with a legend. Under it, eight tiles in two rows rank the lines, a top 10 from either end: length, speed in
+  peak and off-peak hours, regularity in peak hours, delay (recorded, last 28 days) and frequency in peak and
+  off-peak hours. Choosing a line opens its page, `/routes/route/103` (title "Route 103", a way back at the top;
+  Corridors links there too); its title says what its geometry and
   capacity class mean and links to its trips and its timetable on the operator's website. Regional lines of other
   operators aren't in the timetable: for them the map shows where their buses actually went, from every recorded
   position (each bus's reports split into runs towards one destination, and runs along the same streets grouped
@@ -483,11 +501,12 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
 - Important corridors: two maps of every stretch between stops by its buses in peak hours (one by line width, one
   by colour in equal classes of a sequential blue), then the corridors above in a sortable table (busiest first), with each corridor's stops in an
   expandable list and its lines linking to Routes. Store slice `corridors`, registered by its lazy route.
-- Fleet: tiles with the buses in use, the fleet by model, by size class (smallest first) and by make (the model
+- Fleet (`/vehicles`; `/fleet` leads there): tiles with the buses in use, the fleet by model, by size class (smallest first) and by make (the model
   name's first word) — bars of in use / in the fleet, the 10 most and least used
   buses and the buses that broke down (when, and how many days until they were back, or that they aren't yet); a
-  bar chart of every bus's hours, the most used first; and a search by number or model. A chosen bus (`?vehicle=`)
-  shows its runs and breaks as a timeline (a row per day, or per run for a window of a day or less), its hours per
+  bar chart of every bus's hours, the most used first; and a search by number or model (title "Fleet Overview"). A
+  chosen bus opens its page, `/vehicles/7` (its id; title "Vehicle 230", its number; the time window kept; the way
+  back is a chevron at the left of the header), with its runs and breaks as a timeline (a row per day, or per run for a window of a day or less), its hours per
   day (days with an abnormal trip marked) and the abnormal trips it broke down on or missed. Each breakdown is told
   step by step (open at first, folds away): a time line of the bus and its replacement (a lane per bus: on the trip,
   standing still, moving off or on its way without a brigade, on the brigade; the steps numbered on its axis), then
@@ -513,8 +532,10 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
   the most (overall or on a chosen stretch) with a chart and table of how their delay built up stop by stop, and
   its brigades. Window, part of the day and line are kept in the URL (`?part=`, `?line=`). Store slice
   `delayGeneration`, registered by its lazy route.
-- Brigades: pick a day, an agency (BKM by default) and a brigade (search by name or line; all in the URL). Tiles sum the
-  day up; a timeline shows every scheduled trip in turn (consecutive trips alternate blue and magenta, labelled with
+- Brigades: every brigade of an agency (BKM by default; `?agency=`) in rows by line, with a search by name or line.
+  Choosing one opens its page, `/brigades/103-05` (title "Brigade 103-05"; the way back is a chevron at the
+  left of the header), with only the day (`?date=`, today's service day by default) at the top. Tiles sum the
+  day up; a timeline shows every scheduled trip in turn (consecutive trips alternate BKM light blue and green, labelled with
   time, line and destination) and, under each, what actually ran: a bar per bus labelled with the bus and how late it
   set off, a dashed line from the scheduled to the actual start, parts not run hatched red, parts the bus wasn't seen on
   hatched grey, markers for a bus change, a lost trip and a detour, and outlines for trips without data or still to

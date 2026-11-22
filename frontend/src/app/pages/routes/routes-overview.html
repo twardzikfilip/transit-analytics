@@ -1,0 +1,51 @@
+<!-- Lines to pick: a row per kind of line, a column per geometry; thicker and darker buttons carry more. -->
+@if (!lines().length && !error()) {
+  <app-skeleton kind="chips" [count]="48" [label]="t('routes.loadingLines')" />
+} @else {
+  <app-line-chooser [table]="table()" (choose)="open($event)" />
+}
+
+<!-- The lines ranked: two rows of four tiles, each a top 10 from either end. -->
+@if (!stats() && loadingStats()) {
+  <div class="rankings">
+    @for (i of [1, 2, 3, 4, 5, 6, 7, 8]; track i) {
+      <app-skeleton kind="card" [count]="6" height="0px" [label]="t('routes.loadingRankings')" />
+    }
+  </div>
+}
+<div class="rankings" [class.loading]="loadingStats()">
+  @for (tile of tiles(); track tile.key) {
+    <section class="card ranking" [attr.data-key]="tile.key">
+      <h2>{{ tile.title }}</h2>
+      <p class="muted note">{{ tile.note }}</p>
+      <div class="sides" role="group" [attr.aria-label]="tile.title">
+        @for (s of tile.sides; track s.label; let i = $index) {
+          <button
+            type="button"
+            [class.active]="tile.side === i"
+            [attr.aria-pressed]="tile.side === i"
+            (click)="setSide(tile.key, i)"
+          >
+            {{ s.label }}
+          </button>
+        }
+      </div>
+      <ol class="ranked">
+        @for (l of tile.lines; track l.line) {
+          <li>
+            <a
+              class="route-badge"
+              [routerLink]="['/routes/route', l.line]"
+              [style.--route-color]="l.color ? '#' + l.color : null"
+              [style.--route-text-color]="l.textColor ? '#' + l.textColor : null"
+              >{{ l.line }}</a
+            >
+            <span class="value">{{ l.value }}</span>
+          </li>
+        } @empty {
+          <li class="muted">{{ t('routes.rank.none') }}</li>
+        }
+      </ol>
+    </section>
+  }
+</div>

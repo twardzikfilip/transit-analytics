@@ -21,6 +21,7 @@ import {
   speedColor,
   speedText,
 } from './lane-format';
+import { t, tn } from '../../core/i18n/t';
 
 /**
  * Every bus lane on a grey map, coloured by the average speed of buses on it in the window (darker: slower); lanes
@@ -29,16 +30,18 @@ import {
 @Component({
   selector: 'app-bus-lane-map',
   template: `
-    <div #map class="leaflet-map" role="region" aria-label="Map of bus lanes by speed"></div>
+    <div #map class="leaflet-map" role="region" [attr.aria-label]="t('busLanes.speedMap')"></div>
     <div class="legend inset">
-      <span class="muted">Average speed on the lane, km/h:</span>
+      <span class="muted">{{ t('busLanes.speedLegend') }}</span>
       @for (s of scale; track s.label) {
         <span class="item"
-          ><span class="swatch" [style.background]="s.color"></span>{{ s.label }}</span
+          ><span class="swatch" [style.background]="s.color"></span
+          >{{ s.label.startsWith('busLanes.') ? t(s.label) : s.label }}</span
         >
       }
       <span class="item"
-        ><span class="swatch" [style.background]="noSpeed"></span>not recorded</span
+        ><span class="swatch" [style.background]="noSpeed"></span
+        >{{ t('busLanes.notRecorded') }}</span
       >
     </div>
   `,
@@ -61,6 +64,7 @@ import {
   `,
 })
 export class BusLaneMap {
+  protected readonly t = t;
   readonly stretches = input.required<BusLaneStretch[]>();
   /** Figures per stretch id; stretches missing from it weren't recorded. */
   readonly figures = input<Map<number, LaneStretchFigures>>(new Map());
@@ -114,12 +118,22 @@ export class BusLaneMap {
       const color = speedColor(f?.figures.speed);
       const tip =
         `<strong>${escapeHtml(s.name)}</strong> ${headingText(s.heading)}<br>` +
-        `${s.km.toFixed(2)} km of bus lane<br>` +
+        `${escapeHtml(t('busLanes.tip.km', { km: s.km.toFixed(2) }))}<br>` +
+        escapeHtml(
+          f
+            ? t('busLanes.tip.average', {
+                speed: speedText(f.figures.speed),
+                peak: speedText(f.figures.peakSpeed),
+                off: speedText(f.figures.offPeakSpeed),
+              })
+            : t('busLanes.tip.noBuses'),
+        ) +
         (f
-          ? `${speedText(f.figures.speed)} on average (peak ${speedText(f.figures.peakSpeed)}, ` +
-            `off-peak ${speedText(f.figures.offPeakSpeed)})<br>delay ${delayText(f.figures.delayPerKm)}` +
-            (f.opposite ? `<br>other way, no lane: ${speedText(f.opposite.speed)}` : '')
-          : 'no buses recorded on it in this window');
+          ? `<br>${escapeHtml(t('busLanes.tip.delay', { delay: delayText(f.figures.delayPerKm) }))}` +
+            (f.opposite
+              ? `<br>${escapeHtml(t('busLanes.tip.otherWay', { speed: speedText(f.opposite.speed) }))}`
+              : '')
+          : '');
       const polylines = s.paths.map((path) =>
         L.polyline(path, { color, weight: 6, opacity: 0.9, lineCap: 'butt' })
           .bindTooltip(tip, { sticky: true })

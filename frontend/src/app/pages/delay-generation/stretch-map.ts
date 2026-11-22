@@ -4,6 +4,7 @@ import { DelayStretch } from '../../core/models/models';
 import { escapeHtml } from '../../shared/format/html';
 import { leafletHost } from '../../shared/map/leaflet-host';
 import { DELAY_CHANGE_CLASSES, changeClass, signedChange } from './delay-scale';
+import { t, tn } from '../../core/i18n/t';
 
 /** Stretches measured fewer times in the chosen part of the day aren't drawn. */
 export const MIN_MAP_RUNS = 5;
@@ -41,17 +42,12 @@ export function offsetLine(
 @Component({
   selector: 'app-stretch-map',
   template: `
-    <div
-      #map
-      class="leaflet-map"
-      role="region"
-      aria-label="Map of delay generated between stops"
-    ></div>
+    <div #map class="leaflet-map" role="region" [attr.aria-label]="t('delayGen.mapLabel')"></div>
     <div class="legend inset">
-      <span class="muted">Change in delay per bus:</span>
+      <span class="muted">{{ t('delayGen.changePerBus') }}</span>
       @for (c of classes; track c.to) {
         <span class="item"
-          ><span class="swatch" [style.background]="c.color"></span>{{ c.label }}</span
+          ><span class="swatch" [style.background]="c.color"></span>{{ t(c.label) }}</span
         >
       }
     </div>
@@ -75,6 +71,7 @@ export function offsetLine(
   `,
 })
 export class StretchMap {
+  protected readonly t = t;
   readonly stretches = input.required<DelayStretch[]>();
   /** Index of the part of the day (in each stretch's per-band figures). */
   readonly band = input(0);
@@ -122,9 +119,14 @@ export class StretchMap {
       })
         .bindTooltip(
           `<strong>${escapeHtml(s.from)} → ${escapeHtml(s.to)}</strong><br>` +
-            `${signedChange(mean)} min per bus, ${s.runs[band]} buses ` +
-            `(${Math.round(s.runs[band] / Math.max(1, this.days()))} a day)<br>` +
-            `Lines ${escapeHtml(s.lines.join(', '))}`,
+            escapeHtml(
+              t('delayGen.tip', {
+                change: signedChange(mean),
+                buses: s.runs[band],
+                perDay: Math.round(s.runs[band] / Math.max(1, this.days())),
+              }),
+            ) +
+            `<br>${escapeHtml(t('delayGen.tipLines', { lines: s.lines.join(', ') }))}`,
           { sticky: true },
         )
         .addTo(layer);

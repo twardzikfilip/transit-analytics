@@ -1,9 +1,10 @@
-import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Corridor } from '../../core/models/models';
 import { regularityGrade, regularityMeaning } from '../../shared/regularity';
 import { CorridorSortKey, DEFAULT_SORT, nextCorridorSort, sortCorridors } from './sort';
+import { LocalNumberPipe } from '../../shared/i18n/locale-pipes';
+import { t, tn } from '../../core/i18n/t';
 
 /**
  * The corridors in a sortable table (busiest first): stops (expandable), lines (outlined when running only part of
@@ -11,11 +12,12 @@ import { CorridorSortKey, DEFAULT_SORT, nextCorridorSort, sortCorridors } from '
  */
 @Component({
   selector: 'app-corridor-table',
-  imports: [DecimalPipe, RouterLink],
+  imports: [LocalNumberPipe, RouterLink],
   templateUrl: './corridor-table.html',
   styleUrl: './corridor-table.scss',
 })
 export class CorridorTable {
+  protected readonly t = t;
   readonly corridors = input.required<Corridor[]>();
   readonly loading = input(false);
 

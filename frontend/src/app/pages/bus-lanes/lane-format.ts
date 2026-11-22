@@ -1,10 +1,11 @@
 import { LaneFigures, LaneHeading } from '../../core/models/models';
 import { SEQUENTIAL_BLUE } from '../../shared/palette';
 import { kmh } from '../../shared/format/number';
+import { t, tn } from '../../core/i18n/t';
 
 /** Speed classes on the map, km/h: the slowest darkest (most held up). */
 export const SPEED_SCALE: { below: number; color: string; label: string }[] = [
-  { below: 12, color: SEQUENTIAL_BLUE[5], label: 'under 12' },
+  { below: 12, color: SEQUENTIAL_BLUE[5], label: 'busLanes.speed.under12' },
   { below: 15, color: SEQUENTIAL_BLUE[4], label: '12–15' },
   { below: 18, color: SEQUENTIAL_BLUE[3], label: '15–18' },
   { below: 21, color: SEQUENTIAL_BLUE[2], label: '18–21' },
@@ -29,7 +30,7 @@ const ARROWS: Record<LaneHeading, string> = {
 
 /** "→ eastbound". */
 export function headingText(heading: LaneHeading): string {
-  return `${ARROWS[heading]} ${heading}`;
+  return `${ARROWS[heading]} ${t(`busLanes.heading.${heading}`)}`;
 }
 
 /** "17.6 km/h", or "–". */
@@ -41,15 +42,17 @@ export function speedText(speed: number | null | undefined): string {
 export function delayText(perKm: number | null | undefined): string {
   if (perKm === null || perKm === undefined) return '–';
   const sign = perKm > 0 ? '+' : perKm < 0 ? '−' : '';
-  return `${sign}${Math.abs(perKm).toFixed(1)} s/km`;
+  return t('busLanes.perKm', { sign, n: Math.abs(perKm).toFixed(1) });
 }
 
 /** "7% slower", "3% faster", or "–". */
 export function slowdownText(f: LaneFigures | null | undefined): string {
   const s = f?.peakSlowdown;
   if (s === null || s === undefined) return '–';
-  if (Math.abs(s) < 0.5) return 'no slower';
-  return s > 0 ? `${s.toFixed(0)}% slower` : `${(-s).toFixed(0)}% faster`;
+  if (Math.abs(s) < 0.5) return t('busLanes.noSlower');
+  return s > 0
+    ? t('busLanes.slower', { n: s.toFixed(0) })
+    : t('busLanes.faster', { n: (-s).toFixed(0) });
 }
 
 /** Lines as text, the first few then "+n". */

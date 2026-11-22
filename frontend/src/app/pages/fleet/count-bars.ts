@@ -1,15 +1,15 @@
-import { Component, computed, input, signal } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 import { ModelCount } from '../../core/models/models';
 
 /**
  * Buses per kind (model, size class or make): a bar per kind, the fleet's buses in Bootstrap's gray-500 and those in use over them
- * in the primary colour, both fully rounded, with "in use/fleet" beside. Long lists show their first {@link CountBars.first} with a button for all.
+ * in the primary colour, both fully rounded, with "in use/fleet" beside. Every kind is listed; the tile scrolls.
  */
 @Component({
   selector: 'app-count-bars',
   template: `
     <ul class="model-bars">
-      @for (m of shown(); track m.model) {
+      @for (m of counts(); track m.model) {
         <li [title]="label()(m.model) + ': ' + m.inUse + ' of ' + m.fleet + ' in use'">
           <span class="name">{{ label()(m.model) }}</span>
           <span class="track">
@@ -20,11 +20,6 @@ import { ModelCount } from '../../core/models/models';
         </li>
       }
     </ul>
-    @if (counts().length > first()) {
-      <button type="button" class="more" (click)="all.set(!all())">
-        {{ all() ? 'Show fewer' : 'Show all ' + counts().length }}
-      </button>
-    }
   `,
   styles: `
     .model-bars {
@@ -79,24 +74,11 @@ import { ModelCount } from '../../core/models/models';
         text-align: right;
       }
     }
-
-    .more {
-      margin-top: 0.5rem;
-      padding: 0.2rem 0.6rem;
-      font-size: 0.85rem;
-    }
   `,
 })
 export class CountBars {
   readonly counts = input.required<ModelCount[]>();
   /** How a kind is named; as given by default. */
   readonly label = input<(kind: string) => string>((kind) => kind);
-  /** Shown before "Show all". */
-  readonly first = input(8);
-
-  protected readonly all = signal(false);
   protected readonly max = computed(() => Math.max(1, ...this.counts().map((m) => m.fleet)));
-  protected readonly shown = computed(() =>
-    this.all() ? this.counts() : this.counts().slice(0, this.first()),
-  );
 }

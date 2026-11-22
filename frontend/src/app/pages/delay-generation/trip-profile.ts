@@ -1,10 +1,12 @@
 import { Component, computed, input } from '@angular/core';
-import { DatePipe } from '@angular/common';
+
 import { DelayExample } from '../../core/models/models';
 import { hostWidth } from '../../shared/host-width';
 import { localTime } from '../../shared/format/time';
 import { niceTicks } from '../../shared/time-series-chart/chart-geometry';
 import { changeClass, delayText, signedChange } from './delay-scale';
+import { LocalDatePipe } from '../../shared/i18n/locale-pipes';
+import { t as tr } from '../../core/i18n/t';
 
 const HEIGHT = 230;
 const MARGIN = { top: 12, right: 16, bottom: 12, left: 52 };
@@ -20,26 +22,38 @@ export function scheduledTime(left: string, delaySeconds: number): string {
  */
 @Component({
   selector: 'app-trip-profile',
-  imports: [DatePipe],
+  imports: [LocalDatePipe],
   template: `
     <h3>
-      {{ run().day | date: 'EEE d MMM' }} · brigade {{ run().brigade ?? '—' }} · bus
-      {{ run().vehicle }} · towards {{ run().headsign ?? '—' }}
+      {{
+        tr('delayGen.profile.head', {
+          day: run().day | date: 'EEE d MMM',
+          brigade: run().brigade ?? '—',
+          bus: run().vehicle,
+          to: run().headsign ?? '—',
+        })
+      }}
     </h3>
     <p class="muted">
-      Left {{ run().stops[0].stop }} at {{ time(run().stops[0].left) }}
-      {{ delayText(run().stops[0].delaySeconds) }}; {{ signed(run().gainSeconds) }} min by
-      {{ run().stops[run().stops.length - 1].stop }}.
+      {{
+        tr('delayGen.profile.left', {
+          stop: run().stops[0].stop,
+          time: time(run().stops[0].left),
+          delay: delayText(run().stops[0].delaySeconds),
+          gain: signed(run().gainSeconds),
+          last: run().stops[run().stops.length - 1].stop,
+        })
+      }}
     </p>
     <svg
       [attr.width]="width()"
       [attr.height]="height"
       role="img"
       [attr.aria-label]="
-        'Delay on leaving each stop, from ' +
-        delayText(run().stops[0].delaySeconds) +
-        ' to ' +
-        delayText(run().stops[run().stops.length - 1].delaySeconds)
+        tr('delayGen.profile.label', {
+          from: delayText(run().stops[0].delaySeconds),
+          to: delayText(run().stops[run().stops.length - 1].delaySeconds),
+        })
       "
     >
       @for (t of ticks(); track t) {
@@ -52,7 +66,7 @@ export function scheduledTime(left: string, delaySeconds: number): string {
           [attr.y2]="y(t * 60)"
         />
         <text class="tick" [attr.x]="margin.left - 6" [attr.y]="y(t * 60) + 4">
-          {{ t > 0 ? '+' : '' }}{{ t }} min
+          {{ tr('delayGen.profile.tick', { n: (t > 0 ? '+' : '') + t }) }}
         </text>
       }
       <path class="line" [attr.d]="path()" />
@@ -75,11 +89,11 @@ export function scheduledTime(left: string, delaySeconds: number): string {
       <table class="data-table">
         <thead>
           <tr>
-            <th>Stop left</th>
-            <th class="num">At</th>
-            <th class="num">Scheduled</th>
-            <th class="num">Delay</th>
-            <th class="num">Change</th>
+            <th>{{ tr('delayGen.profile.stopLeft') }}</th>
+            <th class="num">{{ tr('delayGen.profile.at') }}</th>
+            <th class="num">{{ tr('delayGen.profile.scheduled') }}</th>
+            <th class="num">{{ tr('delayGen.profile.delay') }}</th>
+            <th class="num">{{ tr('delayGen.profile.change') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -98,7 +112,7 @@ export function scheduledTime(left: string, delaySeconds: number): string {
                     >{{ signed(p.delaySeconds - run().stops[i - 1].delaySeconds) }}</span
                   >
                 } @else if (i > 0) {
-                  <span class="muted" title="A stop between them wasn't seen being passed">—</span>
+                  <span class="muted" [title]="tr('delayGen.profile.unseen')">—</span>
                 }
               </td>
             </tr>
@@ -180,6 +194,8 @@ export function scheduledTime(left: string, delaySeconds: number): string {
   `,
 })
 export class TripProfile {
+  /** Translates (`t` is a loop variable in the template). */
+  protected readonly tr = tr;
   readonly run = input.required<DelayExample>();
   /** The stretch to draw bold, by stop names. */
   readonly stretch = input<{ from: string; to: string } | null>(null);

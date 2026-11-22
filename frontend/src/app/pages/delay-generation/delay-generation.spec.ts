@@ -20,6 +20,7 @@ import { changeClass, delayText, minutesPerDay, signedChange } from './delay-sca
 import { activeHours, cellText } from './line-heatmap';
 import { offsetLine } from './stretch-map';
 import { scheduledTime } from './trip-profile';
+import { t } from '../../core/i18n/t';
 
 const BANDS = [
   { key: 'all', label: 'All day' },
@@ -319,7 +320,7 @@ describe('delay generation helpers', () => {
     expect(changeClass(-10).color).toBe('#d4d3ce');
     expect(changeClass(9.9).color).toBe('#d4d3ce');
     expect(changeClass(45).dark).toBe(true);
-    expect(changeClass(600).label).toBe('gains 1 min or more');
+    expect(t(changeClass(600).label)).toBe('gains 1 min or more');
     expect(signedChange(35)).toBe('+0:35');
     expect(signedChange(-65)).toBe('−1:05');
     expect(signedChange(0.4)).toBe('0:00');

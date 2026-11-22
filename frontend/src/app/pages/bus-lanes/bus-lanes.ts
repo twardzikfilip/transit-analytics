@@ -1,4 +1,3 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, ElementRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
@@ -20,6 +19,9 @@ import { BusLaneMap } from './bus-lane-map';
 import { LaneDirectionMap } from './lane-direction-map';
 import { delayText, headingText, linesText, slowdownText, speedText } from './lane-format';
 import { kmh } from '../../shared/format/number';
+import { Skeleton } from '../../shared/skeleton/skeleton';
+import { LocalDatePipe, LocalNumberPipe } from '../../shared/i18n/locale-pipes';
+import { t, tn } from '../../core/i18n/t';
 
 export const DEFAULT_PRESET = '1w';
 
@@ -41,11 +43,21 @@ const SORTS: Record<StretchSort, (a: LaneStretchFigures, b: LaneStretchFigures) 
  */
 @Component({
   selector: 'app-bus-lanes',
-  imports: [DatePipe, DecimalPipe, BusLaneMap, HourChart, LaneDirectionMap, TimeWindowPicker],
+  imports: [
+    Skeleton,
+    LocalDatePipe,
+    LocalNumberPipe,
+    BusLaneMap,
+    HourChart,
+    LaneDirectionMap,
+    TimeWindowPicker,
+  ],
   templateUrl: './bus-lanes.html',
   styleUrl: './bus-lanes.scss',
 })
 export class BusLanesPage {
+  protected readonly t = t;
+  protected readonly tn = tn;
   private readonly store = inject(Store);
   private readonly host = inject(ElementRef<HTMLElement>);
 
@@ -86,13 +98,17 @@ export class BusLanesPage {
     const r = this.report();
     if (!r) return [];
     return [
-      { label: 'On bus lanes', note: 'buses on a bus lane', f: r.onLanes },
+      { label: t('busLanes.group.onLanes'), note: t('busLanes.group.onLanesNote'), f: r.onLanes },
       {
-        label: 'Same streets, other way',
-        note: 'the streets with bus lanes, in the direction without one',
+        label: t('busLanes.group.otherWay'),
+        note: t('busLanes.group.otherWayNote'),
         f: r.sameStreetsWithoutLane,
       },
-      { label: 'Elsewhere in the city', note: 'every other street', f: r.elsewhere },
+      {
+        label: t('busLanes.group.elsewhere'),
+        note: t('busLanes.group.elsewhereNote'),
+        f: r.elsewhere,
+      },
     ];
   });
 
@@ -107,14 +123,14 @@ export class BusLanesPage {
     const hours = this.report()?.hours ?? [];
     return [
       {
-        label: 'On bus lanes',
+        label: t('busLanes.series.onLanes'),
         color: 'var(--bus-lane)',
         points: hours
           .filter((h) => h.laneSpeed !== null)
           .map((h) => ({ x: h.hour + 0.5, y: h.laneSpeed! })),
       },
       {
-        label: 'Elsewhere',
+        label: t('busLanes.series.elsewhere'),
         color: 'var(--chart-line)',
         points: hours
           .filter((h) => h.otherSpeed !== null)
@@ -127,14 +143,14 @@ export class BusLanesPage {
     const hours = this.report()?.hours ?? [];
     return [
       {
-        label: 'On bus lanes',
+        label: t('busLanes.series.onLanes'),
         color: 'var(--bus-lane)',
         points: hours
           .filter((h) => h.laneDelayPerKm !== null)
           .map((h) => ({ x: h.hour + 0.5, y: h.laneDelayPerKm! })),
       },
       {
-        label: 'Elsewhere',
+        label: t('busLanes.series.elsewhere'),
         color: 'var(--chart-line)',
         points: hours
           .filter((h) => h.otherDelayPerKm !== null)

@@ -7,6 +7,7 @@ import { injectCityBoundaries } from '../../shared/map/city-boundaries';
 
 /** One direction only, and both (one section with a lane each way, or both carriageways with one). */
 import { BOTH_WAYS_COLOR, ONE_WAY_COLOR } from '../../shared/palette';
+import { t, tn } from '../../core/i18n/t';
 
 export { BOTH_WAYS_COLOR, ONE_WAY_COLOR };
 /** Arrows from this zoom in; further out they would cover the lanes. */
@@ -64,23 +65,20 @@ export function arrowPoints(
 @Component({
   selector: 'app-lane-direction-map',
   template: `
-    <div
-      #map
-      class="leaflet-map"
-      role="region"
-      aria-label="Map of bus lanes and their directions"
-    ></div>
+    <div #map class="leaflet-map" role="region" [attr.aria-label]="t('busLanes.dirMap')"></div>
     <div class="legend inset">
       <span class="item"
-        ><span class="swatch" [style.background]="oneWay"></span>Bus lane one way</span
+        ><span class="swatch" [style.background]="oneWay"></span>{{ t('busLanes.oneWay') }}</span
       >
       <span class="item"
-        ><span class="swatch" [style.background]="bothWays"></span>Bus lanes both ways (on one
-        section, or on both carriageways)</span
+        ><span class="swatch" [style.background]="bothWays"></span
+        >{{ t('busLanes.bothWaysLegend') }}</span
       >
-      <span class="item"><span class="arrow" aria-hidden="true">➤</span>the way the lane runs</span>
+      <span class="item"
+        ><span class="arrow" aria-hidden="true">➤</span>{{ t('busLanes.arrow') }}</span
+      >
       @if (!arrowsShown()) {
-        <span class="muted">Zoom in to see the arrows.</span>
+        <span class="muted">{{ t('busLanes.zoomIn') }}</span>
       }
     </div>
   `,
@@ -115,6 +113,7 @@ export function arrowPoints(
   `,
 })
 export class LaneDirectionMap {
+  protected readonly t = t;
   readonly lanes = input.required<BusLane[]>();
 
   protected readonly oneWay = ONE_WAY_COLOR;
@@ -148,19 +147,22 @@ export class LaneDirectionMap {
       const both = lane.bothWays || (lane.forward > 0 && lane.backward > 0);
       const ways =
         lane.forward > 0 && lane.backward > 0
-          ? 'a bus lane each way on this section'
+          ? t('busLanes.eachWay')
           : both
-            ? 'a bus lane this way; the other carriageway has one the other way'
-            : 'a bus lane one way only';
+            ? t('busLanes.otherCarriageway')
+            : t('busLanes.oneWayOnly');
       L.polyline(lane.points, {
         color: both ? BOTH_WAYS_COLOR : ONE_WAY_COLOR,
         weight: 6,
         opacity: 0.85,
         lineCap: 'butt',
       })
-        .bindTooltip(`<strong>${escapeHtml(lane.name ?? 'Unnamed road')}</strong><br>${ways}`, {
-          sticky: true,
-        })
+        .bindTooltip(
+          `<strong>${escapeHtml(lane.name ?? t('busLanes.unnamed'))}</strong><br>${escapeHtml(ways)}`,
+          {
+            sticky: true,
+          },
+        )
         .addTo(this.host.layer);
       const directions: [number, number][][] = [];
       if (lane.forward > 0) directions.push(lane.points);

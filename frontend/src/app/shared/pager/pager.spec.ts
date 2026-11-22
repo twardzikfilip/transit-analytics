@@ -10,7 +10,7 @@ describe('Pager', () => {
       totalElements: 1083,
       totalPages: 22,
     });
-    fixture.componentRef.setInput('noun', 'stops');
+    fixture.componentRef.setInput('noun', 'pager.stops');
     fixture.detectChanges();
     const el: HTMLElement = fixture.nativeElement;
     const pages: number[] = [];

@@ -3,7 +3,7 @@
     [attr.width]="width()"
     [attr.height]="height"
     role="img"
-    [attr.aria-label]="'Brigade timeline: ' + trips().length + ' trips, scheduled and actual'"
+    [attr.aria-label]="tr('brigades.chart.label', { n: trips().length })"
     (mouseleave)="hovered.set(null)"
   >
     <defs>
@@ -38,8 +38,8 @@
       />
       <text class="tick" [attr.x]="t.x" [attr.y]="AXIS_Y">{{ t.label }}</text>
     }
-    <text class="lane" x="4" [attr.y]="SCHED_Y + 13">Scheduled</text>
-    <text class="lane" x="4" [attr.y]="ACTUAL_Y[0] + 22">Actual</text>
+    <text class="lane" x="4" [attr.y]="SCHED_Y + 13">{{ tr('brigades.chart.scheduled') }}</text>
+    <text class="lane" x="4" [attr.y]="ACTUAL_Y[0] + 22">{{ tr('brigades.chart.actual') }}</text>
 
     @for (row of rows(); track row.trip.tripId; let i = $index) {
       <g
@@ -148,9 +148,12 @@
 @if (tip(); as t) {
   <div class="tooltip" role="status" [style.left.px]="t.left">
     <strong>{{ t.title }}</strong>
-    <span>Scheduled {{ t.scheduled }}</span>
-    <span>Ran {{ t.actual }}{{ t.buses ? ' · bus ' + t.buses : '' }}</span>
-    <span>Set off {{ t.start }} · last seen {{ t.end }}</span>
+    <span>{{ tr('brigades.chart.scheduledAt', { when: t.scheduled }) }}</span>
+    <span
+      >{{ tr('brigades.chart.ran', { when: t.actual })
+      }}{{ t.buses ? tr('brigades.chart.bus', { buses: t.buses }) : '' }}</span
+    >
+    <span>{{ tr('brigades.chart.setOff', { start: t.start, end: t.end }) }}</span>
     <span class="kind">{{ t.kind }}</span>
     @if (t.note) {
       <span class="note">{{ t.note }}</span>

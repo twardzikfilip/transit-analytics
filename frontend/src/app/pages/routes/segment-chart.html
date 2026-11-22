@@ -77,8 +77,8 @@
     >
       <span class="muted">{{ h.s.from }} → {{ h.s.to }}</span>
       <span>
-        <strong>{{ h.s.kmh === null ? '—' : h.s.kmh + ' km/h' }}</strong>
-        <span class="muted"> · {{ h.km }} km, from km {{ h.s.fromKm }}</span>
+        <strong>{{ h.s.kmh === null ? '—' : tr('tiles.kmh', { n: h.s.kmh }) }}</strong>
+        <span class="muted">{{ tr('speed.kmFrom', { km: h.km, from: h.s.fromKm }) }}</span>
       </span>
     </div>
   }
@@ -89,7 +89,7 @@
     @for (i of slowest(); track i) {
       <li>
         {{ profile().segments[i].from }} → {{ profile().segments[i].to }}
-        <strong>{{ profile().segments[i].kmh }} km/h</strong>
+        <strong>{{ tr('tiles.kmh', { n: profile().segments[i].kmh }) }}</strong>
       </li>
     }
   </ol>

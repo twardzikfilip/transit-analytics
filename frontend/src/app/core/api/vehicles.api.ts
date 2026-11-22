@@ -1,7 +1,8 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { FleetReport, LivePosition, VehicleDetail, WindowQuery } from '../models/models';
+import { BACKGROUND } from './activity';
 import { windowParams } from './window-params';
 
 /** Live data from zbiorkom.live, passed through by the backend. */
@@ -10,7 +11,10 @@ export class ZbiorkomApi {
   private readonly http = inject(HttpClient);
 
   bialystokPositions(): Observable<LivePosition[]> {
-    return this.http.get<LivePosition[]>('/api/zbiorkom/bialystok/positions');
+    // Polled every few seconds: in the background, without the progress bar.
+    return this.http.get<LivePosition[]>('/api/zbiorkom/bialystok/positions', {
+      context: new HttpContext().set(BACKGROUND, true),
+    });
   }
 }
 
@@ -24,6 +28,13 @@ export class FleetApi {
     return this.http.get<FleetReport>('/api/fleet', {
       params: { ...windowParams(window), agency: agencies },
     });
+  }
+
+  /** One bus's number, e.g. "230" (for its page's title). */
+  number(id: number): Observable<string> {
+    return this.http
+      .get<{ vehicleNumber: string }>(`/api/vehicles/${id}`)
+      .pipe(map((v) => v.vehicleNumber));
   }
 
   /** One bus in a window: its runs per day and the abnormal trips it was involved in. */

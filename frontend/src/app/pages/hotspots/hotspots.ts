@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, ElementRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
@@ -16,6 +15,9 @@ import {
 } from '../../shared/time-window/time-window';
 import { approachText, hourText, linesText, lostTime, nearText, waitText } from './hotspot-format';
 import { HotspotMap } from './hotspot-map';
+import { Skeleton } from '../../shared/skeleton/skeleton';
+import { LocalDatePipe } from '../../shared/i18n/locale-pipes';
+import { t, tn } from '../../core/i18n/t';
 
 export const DEFAULT_PRESET = '1w';
 
@@ -28,11 +30,13 @@ export const FIRST_ROWS = 25;
  */
 @Component({
   selector: 'app-hotspots',
-  imports: [DatePipe, HotspotMap, TimeWindowPicker],
+  imports: [Skeleton, LocalDatePipe, HotspotMap, TimeWindowPicker],
   templateUrl: './hotspots.html',
   styleUrl: './hotspots.scss',
 })
 export class Hotspots {
+  protected readonly t = t;
+  protected readonly tn = tn;
   private readonly store = inject(Store);
   private readonly navigate = injectSetQuery();
   private readonly host = inject(ElementRef<HTMLElement>);

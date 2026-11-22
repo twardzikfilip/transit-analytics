@@ -1,0 +1,157 @@
+<div class="controls day-controls">
+  <input
+    type="date"
+    [attr.aria-label]="t('brigades.serviceDay')"
+    [value]="date()"
+    (change)="setDate($any($event.target).value)"
+  />
+  @if (loadingDay()) {
+    <span class="muted" role="status">{{ t('common.loading') }}</span>
+  }
+</div>
+
+@if (shown(); as d) {
+  @if (!d.trips.length) {
+    <p class="muted">{{ t('brigades.notRunning', { brigade: d.brigade, day: d.serviceDay }) }}</p>
+  } @else {
+    <div class="tiles">
+      <div class="card tile">
+        <span class="muted">{{ t('brigades.trips') }}</span>
+        <strong>{{ d.summary.trips }}</strong>
+        <span class="muted small">{{
+          t('brigades.overAndRecorded', { n: d.summary.judged })
+        }}</span>
+      </div>
+      <div class="card tile">
+        <span class="muted">{{ t('brigades.runInFull') }}</span>
+        <strong>{{ d.summary.completed }}</strong>
+        <span class="muted small">{{
+          t('brigades.ofThose', { share: share(d.summary.completed, d.summary.judged) })
+        }}</span>
+      </div>
+      <div class="card tile" [class.alert]="d.summary.abnormal > 0">
+        <span class="muted">{{ t('brigades.notAsScheduled') }}</span>
+        <strong>{{ d.summary.abnormal }}</strong>
+        <span class="muted small">{{ t('brigades.problemsList') }}</span>
+      </div>
+      <div class="card tile">
+        <span class="muted">{{ t('brigades.leftOnTime') }}</span>
+        <strong>{{ share(d.summary.onTime, d.summary.withStartDelay) }}</strong>
+        <span class="muted small">{{
+          t('brigades.onTimeRange', { n: d.summary.onTime, total: d.summary.withStartDelay })
+        }}</span>
+      </div>
+      <div class="card tile">
+        <span class="muted">{{ t('brigades.typicalDelay') }}</span>
+        <strong>{{ delayText(d.summary.medianStartDelay) }}</strong>
+        <span class="muted small">{{
+          t('brigades.most', { delay: delayText(d.summary.maxDelay) })
+        }}</span>
+      </div>
+      <div class="card tile">
+        <span class="muted">{{ t('brigades.buses') }}</span>
+        <strong>{{ d.summary.buses.length ? d.summary.buses.join(', ') : '–' }}</strong>
+        <span class="muted small">{{
+          t(d.summary.buses.length > 1 ? 'brigades.busChanged' : 'brigades.oneBus')
+        }}</span>
+      </div>
+    </div>
+
+    <section class="card chart-card" [class.loading]="loadingDay()">
+      <h2>{{ t('brigades.scheduledAndActual') }}</h2>
+      <p class="muted">{{ t('brigades.chartIntro') }}</p>
+      <app-brigade-day-chart
+        [trips]="d.trips"
+        [selected]="selected()"
+        (choose)="chooseTrip($event)"
+      />
+      <ul class="legend">
+        <li>
+          <span class="swatch a"></span><span class="swatch b"></span
+          >{{ t('brigades.legend.scheduled') }}
+        </li>
+        <li><span class="swatch actual"></span>{{ t('brigades.legend.actual') }}</li>
+        <li><span class="swatch not-run"></span>{{ t('brigades.legend.notRun') }}</li>
+        <li><span class="swatch not-seen"></span>{{ t('brigades.legend.notSeen') }}</li>
+        <li><span class="swatch no-data"></span>{{ t('brigades.legend.noData') }}</li>
+        <li><span class="mark change">⇄</span>{{ t('brigades.legend.busChanged') }}</li>
+        <li><span class="mark lost">✕</span>{{ t('brigades.legend.lost') }}</li>
+        <li><span class="mark change">↷</span>{{ t('brigades.legend.detour') }}</li>
+        <li><span class="slant"></span>{{ t('brigades.legend.slant') }}</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>{{ t('brigades.everyTrip') }}</h2>
+      <div class="data-table-wrap">
+        <table class="data-table clickable trips">
+          <thead>
+            <tr>
+              <th class="num">#</th>
+              <th>{{ t('brigades.col.scheduled') }}</th>
+              <th>{{ t('brigades.col.towards') }}</th>
+              <th>{{ t('brigades.col.ran') }}</th>
+              <th class="num">{{ t('brigades.col.setOff') }}</th>
+              <th class="num">{{ t('brigades.col.lastSeen') }}</th>
+              <th>{{ t('brigades.col.bus') }}</th>
+              <th>{{ t('brigades.col.outcome') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (trip of d.trips; track trip.tripId; let i = $index) {
+              <tr
+                [attr.data-index]="i"
+                [class.selected]="selected() === i"
+                [attr.aria-selected]="selected() === i"
+                tabindex="0"
+                (click)="selected.set(selected() === i ? null : i)"
+                (keydown.enter)="selected.set(selected() === i ? null : i)"
+              >
+                <td class="num">{{ i + 1 }}</td>
+                <td class="time">{{ span(trip.departure, trip.arrival) }}</td>
+                <td>{{ tripLabel(trip) }}</td>
+                <td class="time">{{ actualSpan(trip) }}</td>
+                <td class="num">{{ delayText(trip.runs[0]?.startDelay) }}</td>
+                <td class="num">{{ delayText(trip.runs[trip.runs.length - 1]?.endDelay) }}</td>
+                <td>{{ busesText(trip) }}</td>
+                <td>
+                  <span class="outcome" [class.problem]="problems.includes(trip.kind)">{{
+                    kindLabel(trip.kind)
+                  }}</span>
+                  @if (trip.note) {
+                    <div class="muted note">{{ trip.note }}</div>
+                  }
+                  @for (m of trip.missing; track $index) {
+                    <div class="muted note">
+                      {{
+                        t(m.why === 'not-run' ? 'brigades.notRunPart' : 'brigades.notSeenPart', {
+                          from: m.fromStop,
+                          to: m.toStop,
+                          when: span(m.from, m.to),
+                        })
+                      }}
+                    </div>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <details class="card how">
+      <summary>{{ t('brigades.how') }}</summary>
+      <ul>
+        <li [innerHTML]="t('brigades.howScheduled')"></li>
+        <li [innerHTML]="t('brigades.howActual')"></li>
+        <li [innerHTML]="t('brigades.howOutcome')"></li>
+        <li [innerHTML]="t('brigades.howOnTime')"></li>
+      </ul>
+    </details>
+  }
+} @else if (loadingDay()) {
+  <app-skeleton kind="tiles" [count]="6" [label]="t('brigades.loadingDay')" />
+  <app-skeleton kind="chart" height="160px" />
+  <app-skeleton kind="table" [count]="10" />
+}

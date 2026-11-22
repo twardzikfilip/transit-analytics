@@ -35,6 +35,9 @@ import static com.transitanalytics.service.TimetableMath.round;
 @Service
 public class LineStatsService {
 
+    /** Recorded delays are averaged over the weekdays of this many last days. */
+    static final int DELAY_DAYS = 28;
+
     /**
      * One timetable trip, reduced to what the statistics need.
      *
@@ -62,7 +65,7 @@ public class LineStatsService {
         if (service == null) {
             // No timetable imported yet.
             return new LineStatsDto.Report(null, 0, null, null, Periods.toDto(PEAK),
-                    Periods.toDto(OFF_PEAK), List.of());
+                    Periods.toDto(OFF_PEAK), DELAY_DAYS, List.of());
         }
         var days = jdbc.queryForMap("""
                 SELECT count(*) AS days, min(date) AS first, max(date) AS last FROM calendar_date
@@ -123,10 +126,55 @@ public class LineStatsService {
                         departures.getOrDefault(e.getKey(), Map.of())))
                 .sorted(Comparator.comparing(LineStatsDto.Line::route, LINE_ORDER))
                 .toList();
+        Map<String, Double[]> delays = recordedDelays();
+        lines = lines.stream().map(l -> {
+            Double[] d = delays.getOrDefault(l.route(), new Double[2]);
+            return l.withDelays(d[0], d[1]);
+        }).toList();
 
         return new LineStatsDto.Report(service, ((Number) days.get("days")).intValue(),
                 toLocalDate(days.get("first")), toLocalDate(days.get("last")),
-                Periods.toDto(PEAK), Periods.toDto(OFF_PEAK), lines);
+                Periods.toDto(PEAK), Periods.toDto(OFF_PEAK), DELAY_DAYS, lines);
+    }
+
+    /**
+     * Each line's mean recorded delay in peak and off-peak hours (seconds, [peak, off-peak]) on weekdays of the last
+     * {@link #DELAY_DAYS} days, from the hourly delay aggregate. An hour counts in the part of the day its middle falls
+     * in (07:00–08:00 is peak when peak starts at 06:30): the aggregate has whole hours only.
+     */
+    Map<String, Double[]> recordedDelays() {
+        Map<String, Double[]> delays = new HashMap<>();
+        // The hours are worked out from constants, so they can go into the SQL as they are.
+        jdbc.query("""
+                WITH local AS (
+                    SELECT route_name, delay_stats,
+                           extract(hour FROM bucket AT TIME ZONE '%1$s')::int AS hour
+                    FROM route_delay_hourly
+                    WHERE bucket >= now() - make_interval(days => ?)
+                      AND extract(isodow FROM bucket AT TIME ZONE '%1$s') <= 5)
+                SELECT route_name,
+                       average(rollup(delay_stats) FILTER (WHERE hour IN (%2$s))) AS peak,
+                       average(rollup(delay_stats) FILTER (WHERE hour IN (%3$s))) AS off_peak
+                FROM local GROUP BY route_name""".formatted(ServiceDay.ZONE.getId(), hours(PEAK), hours(OFF_PEAK)),
+                rs -> {
+                    delays.put(rs.getString("route_name"),
+                            new Double[] {rounded(rs.getObject("peak")), rounded(rs.getObject("off_peak"))});
+                },
+                DELAY_DAYS);
+        return delays;
+    }
+
+    /** The hours of the day whose middle falls in the windows, e.g. "6, 7, 15, 16"; "-1" (no hour) for none. */
+    static String hours(List<Window> windows) {
+        List<String> hours = new ArrayList<>();
+        for (int h = 0; h < 24; h++) {
+            if (Periods.in(windows, h * 3600 + 1800)) hours.add(String.valueOf(h));
+        }
+        return hours.isEmpty() ? "-1" : String.join(", ", hours);
+    }
+
+    private static Double rounded(Object value) {
+        return value == null ? null : (double) Math.round(((Number) value).doubleValue());
     }
 
     static LineStatsDto.Line lineStats(Route route, long routeId, List<TripTimes> trips) {
@@ -160,7 +208,7 @@ public class LineStatsService {
                 shortest, longest, speed(mainTrips, PEAK), speed(mainTrips, OFF_PEAK),
                 interval(starts, PEAK), interval(starts, OFF_PEAK),
                 regularity(departures, PEAK), regularity(departures, OFF_PEAK),
-                duties(trips, PEAK), duties(trips, OFF_PEAK), trips.size());
+                duties(trips, PEAK), duties(trips, OFF_PEAK), trips.size(), null, null);
     }
 
     /**

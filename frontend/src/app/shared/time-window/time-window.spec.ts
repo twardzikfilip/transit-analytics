@@ -13,6 +13,7 @@ import {
   windowLength,
   windowQuery,
 } from './time-window';
+import { t } from '../../core/i18n/t';
 
 describe('time window', () => {
   const now = new Date(2026, 10, 16, 14, 2, 41);
@@ -20,7 +21,7 @@ describe('time window', () => {
     resolveWindow({ range, from: null, to: null }, now, '24h');
 
   it('offers the presets from a minute to a month, and all time', () => {
-    expect(WINDOW_PRESETS.map((p) => p.label)).toEqual([
+    expect(WINDOW_PRESETS.map((p) => t(p.label))).toEqual([
       '1 min',
       '5 min',
       '30 min',

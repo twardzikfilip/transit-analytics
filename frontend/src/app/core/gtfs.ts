@@ -1,3 +1,4 @@
+import { t } from './i18n/t';
 /** Display helpers for GTFS values. */
 
 const ROUTE_TYPES: Record<number, string> = {
@@ -34,11 +35,9 @@ export function formatGtfsTime(time: string | null): string {
 export function boardingRule(type: number | null): string | null {
   switch (type) {
     case 1:
-      return 'none';
     case 2:
-      return 'phone the agency';
     case 3:
-      return 'on request';
+      return t(`timetable.rule.${type}`);
     default:
       return null;
   }

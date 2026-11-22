@@ -7,81 +7,55 @@ import {
   VariantKind,
 } from '../../core/models/models';
 import { localTime } from '../../shared/format/time';
+import { t, tn } from '../../core/i18n/t';
 
 /** Subtypes in display order, with their label and line colour (a CSS custom property from styles.scss). */
-export const SUBTYPES: { subtype: RouteSubtype; label: string; color: string }[] = [
-  { subtype: 'urban', label: 'Urban', color: '--line-urban' },
-  { subtype: 'suburban', label: 'Suburban', color: '--line-suburban' },
-  { subtype: 'night_urban', label: 'Night', color: '--line-night' },
-  { subtype: 'regional', label: 'Regional', color: '--line-regional' },
+export const SUBTYPES: { subtype: RouteSubtype; color: string }[] = [
+  { subtype: 'urban', color: '--line-urban' },
+  { subtype: 'suburban', color: '--line-suburban' },
+  { subtype: 'night_urban', color: '--line-night' },
+  { subtype: 'regional', color: '--line-regional' },
 ];
 
+/** "Urban", "Night", … in the language shown. */
 export function subtypeLabel(subtype: RouteSubtype): string {
-  return SUBTYPES.find((s) => s.subtype === subtype)?.label ?? subtype;
+  return SUBTYPES.some((s) => s.subtype === subtype) ? t(`routes.subtype.${subtype}`) : subtype;
 }
 
-/** Geometries in display order (the table's columns), with what each means. */
-export const GEOMETRIES: { geometry: RouteGeometry; label: string; description: string }[] = [
-  { geometry: 'radial', label: 'Radial', description: 'Links the city centre with the periphery.' },
-  {
-    geometry: 'diameter',
-    label: 'Diameter',
-    description: 'Links one side of the city with the opposite side through the centre.',
-  },
-  {
-    geometry: 'arcantial',
-    label: 'Arcantial',
-    description:
-      'Two radial legs at an angle to each other (30°–160°), joined through or by the centre.',
-  },
-  {
-    geometry: 'tangential',
-    label: 'Tangential',
-    description: 'Links outer parts of the city in an arc around the centre, without serving it.',
-  },
-  {
-    geometry: 'feeder',
-    label: 'Feeder',
-    description: 'Like radial, but ends in the city short of the centre; mostly from the suburbs.',
-  },
+/** Geometries in display order (the table's columns); their names and meanings are routes.geometry(Desc).<key>. */
+export const GEOMETRIES: { geometry: RouteGeometry }[] = [
+  { geometry: 'radial' },
+  { geometry: 'diameter' },
+  { geometry: 'arcantial' },
+  { geometry: 'tangential' },
+  { geometry: 'feeder' },
 ];
 
-/** Capacity classes, strongest first, with what each means (the rules are configured in the backend). */
-export const CAPACITIES: { capacity: RouteCapacity; label: string; description: string }[] = [
-  {
-    capacity: 'main',
-    label: 'Main',
-    description:
-      'Articulated (MEGA) buses every day of the week, more often than every 15 min at peak.',
-  },
-  {
-    capacity: 'primary',
-    label: 'Primary',
-    description: 'Partly articulated buses, more often than every 20 min at peak.',
-  },
-  {
-    capacity: 'secondary',
-    label: 'Secondary',
-    description: 'More often than once an hour on average.',
-  },
-  {
-    capacity: 'tertiary',
-    label: 'Tertiary',
-    description: 'Once an hour or less, but regular.',
-  },
-  {
-    capacity: 'irregular',
-    label: 'Irregular',
-    description: 'A few trips a day, with large, uneven gaps.',
-  },
+/** Capacity classes, strongest first (the rules are configured in the backend); names in routes.capacity(Desc). */
+export const CAPACITIES: { capacity: RouteCapacity }[] = [
+  { capacity: 'main' },
+  { capacity: 'primary' },
+  { capacity: 'secondary' },
+  { capacity: 'tertiary' },
+  { capacity: 'irregular' },
 ];
 
 export function geometryLabel(geometry: RouteGeometry | null): string {
-  return GEOMETRIES.find((g) => g.geometry === geometry)?.label ?? 'Not classified';
+  return geometry ? t(`routes.geometry.${geometry}`) : t('routes.notClassified');
+}
+
+/** What a geometry means, in a sentence. */
+export function geometryDescription(geometry: RouteGeometry | null): string {
+  return t(`routes.geometryDesc.${geometry ?? 'none'}`);
 }
 
 export function capacityLabel(capacity: RouteCapacity | null): string {
-  return CAPACITIES.find((c) => c.capacity === capacity)?.label ?? 'Not classified';
+  return capacity ? t(`routes.capacity.${capacity}`) : t('routes.notClassified');
+}
+
+/** What a capacity class means, in a sentence. */
+export function capacityDescription(capacity: RouteCapacity): string {
+  return t(`routes.capacityDesc.${capacity}`);
 }
 
 /** A cell of the line table: one kind of line (a row) run in one geometry (a column). */
@@ -109,12 +83,10 @@ export function lineTable(lines: LineRef[]): LineTable {
   return {
     columns: geometries.map((g) => ({
       label: geometryLabel(g),
-      description:
-        GEOMETRIES.find((x) => x.geometry === g)?.description ??
-        "Other operators' lines: not classified.",
+      description: geometryDescription(g),
     })),
     rows: SUBTYPES.map((s) => ({
-      label: s.label,
+      label: subtypeLabel(s.subtype),
       color: s.color,
       cells: geometries.map((g) =>
         lines.filter((l) => l.subtype === s.subtype && l.geometry === g),
@@ -144,7 +116,7 @@ export function hourRange(times: number[]): { from: number; to: number } {
 
 /** What a variant is, in words. */
 export function variantKindLabel(kind: VariantKind): string {
-  return { main: 'Base route', longer: 'Longer', shorter: 'Shorter', depot: 'Depot run' }[kind];
+  return t(`routes.variant.${kind}`);
 }
 
 /**
@@ -154,8 +126,9 @@ export function variantKindLabel(kind: VariantKind): string {
 export function spellsText(spells: { number: string; from: string; to: string }[]): string {
   return spells
     .map((s, i) => {
-      if (i === 0) return `${s.number} until ${localTime(s.to)}`;
-      if (i === spells.length - 1) return `${s.number} from ${localTime(s.from)}`;
+      if (i === 0) return t('routes.spell.until', { bus: s.number, time: localTime(s.to) });
+      if (i === spells.length - 1)
+        return t('routes.spell.from', { bus: s.number, time: localTime(s.from) });
       return `${s.number} ${localTime(s.from)}–${localTime(s.to)}`;
     })
     .join(' → ');

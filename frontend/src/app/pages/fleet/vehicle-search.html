@@ -1,0 +1,36 @@
+<div class="search">
+  <label>
+    {{ t('fleet.findBus') }}
+    <input
+      type="search"
+      role="combobox"
+      aria-autocomplete="list"
+      aria-controls="vehicle-matches"
+      [attr.aria-expanded]="searchOpen() && matches().length > 0"
+      [placeholder]="t('fleet.searchPlaceholder')"
+      [value]="search()"
+      (input)="search.set($any($event.target).value); searchOpen.set(true)"
+      (focus)="searchOpen.set(true)"
+      (keydown.enter)="chooseFirst()"
+      (keydown.escape)="searchOpen.set(false)"
+    />
+  </label>
+  @if (searchOpen() && matches().length) {
+    <ul id="vehicle-matches" class="matches card" role="listbox">
+      @for (u of matches(); track trackUsage(u)) {
+        <li role="option" [attr.aria-selected]="false">
+          <button type="button" (click)="pick(u.vehicle.id)">
+            <strong>{{ u.vehicle.number }}</strong>
+            <span class="muted"
+              >{{ u.vehicle.model ?? t('fleet.modelUnknownLower') }} ·
+              {{ u.vehicle.agency ?? '—' }}</span
+            >
+            <span class="num">{{ t('fleet.hours', { n: u.hours.toFixed(1) }) }}</span>
+          </button>
+        </li>
+      }
+    </ul>
+  } @else if (searchOpen() && search().trim()) {
+    <p class="muted">{{ t('fleet.noMatch', { q: search() }) }}</p>
+  }
+</div>

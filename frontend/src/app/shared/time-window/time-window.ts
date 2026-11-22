@@ -19,18 +19,19 @@ const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
+/** The presets; `label` is a translation key. */
 export const WINDOW_PRESETS: readonly WindowPreset[] = [
-  { key: '1m', label: '1 min', ms: MINUTE },
-  { key: '5m', label: '5 min', ms: 5 * MINUTE },
-  { key: '30m', label: '30 min', ms: 30 * MINUTE },
-  { key: '1h', label: '1 h', ms: HOUR },
-  { key: '2h', label: '2 h', ms: 2 * HOUR },
-  { key: '12h', label: '12 h', ms: 12 * HOUR },
-  { key: '24h', label: '24 h', ms: DAY },
-  { key: '3d', label: '3 days', ms: 3 * DAY },
-  { key: '1w', label: '1 week', ms: 7 * DAY },
-  { key: '1mo', label: '1 month', ms: 30 * DAY },
-  { key: 'all', label: 'All time', ms: null },
+  { key: '1m', label: 'time.presets.1m', ms: MINUTE },
+  { key: '5m', label: 'time.presets.5m', ms: 5 * MINUTE },
+  { key: '30m', label: 'time.presets.30m', ms: 30 * MINUTE },
+  { key: '1h', label: 'time.presets.1h', ms: HOUR },
+  { key: '2h', label: 'time.presets.2h', ms: 2 * HOUR },
+  { key: '12h', label: 'time.presets.12h', ms: 12 * HOUR },
+  { key: '24h', label: 'time.presets.24h', ms: DAY },
+  { key: '3d', label: 'time.presets.3d', ms: 3 * DAY },
+  { key: '1w', label: 'time.presets.1w', ms: 7 * DAY },
+  { key: '1mo', label: 'time.presets.1mo', ms: 30 * DAY },
+  { key: 'all', label: 'time.presets.all', ms: null },
 ];
 
 /** Positions are recorded every 10 seconds; windows up to an hour end at the next poll, longer ones each minute. */

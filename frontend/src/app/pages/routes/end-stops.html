@@ -1,11 +1,11 @@
 <div class="row">
-  <span class="label">Standard end stops</span>
+  <span class="label">{{ t('depot.endStops') }}</span>
   <ul>
     @for (stop of endStops(); track stop.name) {
       <li class="stop-chip">
         {{ stop.name }}
         @if (stop.alsoNames.length) {
-          <span class="also">also {{ stop.alsoNames.join(', ') }}</span>
+          <span class="also">{{ t('depot.also', { names: stop.alsoNames.join(', ') }) }}</span>
         }
       </li>
     }
@@ -13,17 +13,17 @@
 </div>
 @if (brigadesKnown()) {
   <div class="row">
-    <span class="label">Depot-run stops</span>
+    <span class="label">{{ t('depot.depotStops') }}</span>
     <ul>
       @for (stop of depotStops(); track stop.name) {
         <li class="stop-chip depot">
-          <span class="tag">depot</span>{{ stop.name }}
+          <span class="tag">{{ t('depot.depotTag') }}</span>{{ stop.name }}
           @if (stop.alsoNames.length) {
-            <span class="also">also {{ stop.alsoNames.join(', ') }}</span>
+            <span class="also">{{ t('depot.also', { names: stop.alsoNames.join(', ') }) }}</span>
           }
         </li>
       } @empty {
-        <li class="muted">None: depot runs start and end at the standard end stops.</li>
+        <li class="muted">{{ t('depot.noDepotStops') }}</li>
       }
     </ul>
   </div>

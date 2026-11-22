@@ -54,6 +54,9 @@ $lightblue_bkm: #2393ca;
   /* The strongest fill of a coloured label (main lines on Routes): its colour mixed towards this, with this text. */
   --strong-mix: #000;
   --strong-text: #fff;
+  /* Skeletons while a page loads (shared/skeleton, ngx-skeleton-loader): Bootstrap's gray-200, shimmering lighter. */
+  --ngx-skeleton-loader-color-scheme: light;
+  --ngx-skeleton-loader-base-color: #e9ecef;
   color-scheme: light;
 }
 
@@ -85,6 +88,8 @@ $lightblue_bkm: #2393ca;
   --depot-soft: #3a2f14;
   --strong-mix: #fff;
   --strong-text: #111;
+  --ngx-skeleton-loader-color-scheme: dark;
+  --ngx-skeleton-loader-base-color: #343a40;
   color-scheme: dark;
 }
 

@@ -1,22 +1,22 @@
 <div class="list-filters">
   <label>
-    Search
+    {{ t('timetable.search') }}
     <input
       type="search"
-      placeholder="Name or code"
+      [placeholder]="t('timetable.nameOrCode')"
       [value]="query.get('q')"
       (input)="onSearch($any($event.target).value)"
     />
   </label>
   <label>
-    Zone
+    {{ t('timetable.zone') }}
     <select
       [value]="query.get('zoneId')"
       (change)="query.setFilters({ zoneId: $any($event.target).value })"
     >
-      <option value="">All zones</option>
-      <option value="1">Zone 1</option>
-      <option value="2">Zone 2</option>
+      <option value="">{{ t('timetable.allZones') }}</option>
+      <option value="1">{{ t('timetable.zoneX', { n: 1 }) }}</option>
+      <option value="2">{{ t('timetable.zoneX', { n: 2 }) }}</option>
     </select>
   </label>
 </div>
@@ -26,10 +26,10 @@
     <thead>
       <tr>
         <th class="index">#</th>
-        <th>Code</th>
-        <th>Name</th>
-        <th>Zone</th>
-        <th>Location</th>
+        <th>{{ t('timetable.code') }}</th>
+        <th>{{ t('timetable.name') }}</th>
+        <th>{{ t('timetable.zone') }}</th>
+        <th>{{ t('timetable.location') }}</th>
         <th></th>
       </tr>
     </thead>
@@ -62,23 +62,29 @@
             }
           </td>
           <td class="num">
-            <a [routerLink]="['/stop-times']" [queryParams]="{ stopId: stop.id }">Departures</a>
+            <a [routerLink]="['/stop-times']" [queryParams]="{ stopId: stop.id }">{{
+              t('timetable.departures')
+            }}</a>
           </td>
         </tr>
       } @empty {
         <tr>
           <td colspan="6" class="muted">
-            {{
-              loading()
-                ? 'Loading…'
-                : query.get('q') || query.get('zoneId')
-                  ? 'No stops match.'
-                  : 'No stops yet. Import a timetable in Settings.'
-            }}
+            @if (loading()) {
+              <app-skeleton [count]="10" [label]="t('timetable.loadingStops')" />
+            } @else {
+              {{
+                t(
+                  query.get('q') || query.get('zoneId')
+                    ? 'timetable.noStopsMatch'
+                    : 'timetable.noStopsYet'
+                )
+              }}
+            }
           </td>
         </tr>
       }
     </tbody>
   </table>
 </div>
-<app-pager [page]="page()" noun="stops" (pageChange)="query.setPage($event)" />
+<app-pager [page]="page()" noun="pager.stops" (pageChange)="query.setPage($event)" />

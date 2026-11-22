@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
@@ -35,6 +34,8 @@ import {
 } from '../../../shared/brigade/brigade-schedules';
 import { injectBusLanes } from '../../../shared/map/bus-lanes';
 import { injectCityBoundaries } from '../../../shared/map/city-boundaries';
+import { LocalDatePipe } from '../../../shared/i18n/locale-pipes';
+import { t, tn } from '../../../core/i18n/t';
 
 const REFRESH_MS = 5000;
 /**
@@ -43,11 +44,13 @@ const REFRESH_MS = 5000;
  */
 @Component({
   selector: 'app-live-map',
-  imports: [DatePipe],
+  imports: [LocalDatePipe],
   templateUrl: './live-map.html',
   styleUrl: './live-map.scss',
 })
 export class LiveMap {
+  protected readonly t = t;
+  protected readonly tn = tn;
   private readonly store = inject(Store);
   private readonly mapEl = viewChild.required<ElementRef<HTMLDivElement>>('map');
 
@@ -82,8 +85,8 @@ export class LiveMap {
   protected readonly filterSummary = computed(() =>
     [
       this.agency(),
-      this.lineType() && `${this.lineType()} lines`,
-      this.minDelay() !== null && `delayed over ${this.minDelay()} min`,
+      this.lineType() && t('live.typeLines', { type: t(`live.typesLower.${this.lineType()}`) }),
+      this.minDelay() !== null && t('live.delayedOver', { n: this.minDelay() }),
     ]
       .filter(Boolean)
       .join(', '),
@@ -207,9 +210,11 @@ function popup(p: LivePosition, schedule: ScheduleState | undefined): string {
     .join(' · ');
   const next = p.upcomingStops[0];
   const nextStop = next
-    ? `<br>Next: ${escapeHtml(next.name)}${next.scheduledArrival ? ` (${localTime(next.scheduledArrival)})` : ''}`
+    ? `<br>${escapeHtml(t('live.next', { stop: next.name }))}${next.scheduledArrival ? ` (${localTime(next.scheduledArrival)})` : ''}`
     : '';
-  const seen = p.timestamp ? `<br><span class="muted">as of ${localTime(p.timestamp)}</span>` : '';
+  const seen = p.timestamp
+    ? `<br><span class="muted">${escapeHtml(t('live.asOf', { time: localTime(p.timestamp) }))}</span>`
+    : '';
   return (
     `<strong>${line || escapeHtml(p.vehicleNumber)}</strong><br>${vehicle}<br>${delay(p.delaySeconds)}${nextStop}${seen}` +
     brigadeSection(p.brigade, schedule, new Date(), true)
@@ -217,7 +222,7 @@ function popup(p: LivePosition, schedule: ScheduleState | undefined): string {
 }
 
 function delay(seconds: number | null): string {
-  if (seconds === null) return 'Delay unknown';
-  if (Math.abs(seconds) < 30) return 'On time';
-  return `${formatDelay(Math.abs(seconds))} ${seconds > 0 ? 'late' : 'early'}`;
+  if (seconds === null) return t('live.delayUnknown');
+  if (Math.abs(seconds) < 30) return t('live.onTime');
+  return t(seconds > 0 ? 'live.late' : 'live.early', { delay: formatDelay(Math.abs(seconds)) });
 }
