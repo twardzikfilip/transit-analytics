@@ -16,44 +16,56 @@
       <tr class="groups">
         <th rowspan="2" class="num">#</th>
         <th rowspan="2" [attr.aria-sort]="ariaSort('from')">
-          <button type="button" class="sort" (click)="sortBy('from')">Corridor</button>
+          <button type="button" class="sort" (click)="sortBy('from')">
+            {{ t('corridors.col.corridor') }}
+          </button>
         </th>
         <th rowspan="2" class="num sep" [attr.aria-sort]="ariaSort('stops')">
-          <button type="button" class="sort" (click)="sortBy('stops')">Stops</button>
+          <button type="button" class="sort" (click)="sortBy('stops')">
+            {{ t('corridors.col.stops') }}
+          </button>
         </th>
-        <th rowspan="2" class="sep">Lines</th>
+        <th rowspan="2" class="sep">{{ t('corridors.col.lines') }}</th>
         <th rowspan="2" class="num sep" [attr.aria-sort]="ariaSort('km')">
-          <button type="button" class="sort" (click)="sortBy('km')">Length</button>
+          <button type="button" class="sort" (click)="sortBy('km')">
+            {{ t('corridors.col.length') }}
+          </button>
         </th>
         <th rowspan="2" class="num sep" [attr.aria-sort]="ariaSort('buses')">
           <button
             type="button"
             class="sort"
             (click)="sortBy('buses')"
-            title="Weekday trips running all of it, both directions"
+            [title]="t('corridors.col.busesTitle')"
           >
-            Buses a day
+            {{ t('corridors.col.buses') }}
           </button>
         </th>
-        <th colspan="2" class="group sep">Interval</th>
-        <th colspan="2" class="group sep" title="How evenly buses are spread: 0 = perfectly even">
-          Regularity
+        <th colspan="2" class="group sep">{{ t('corridors.col.interval') }}</th>
+        <th colspan="2" class="group sep" [title]="t('corridors.col.regularityTitle')">
+          {{ t('corridors.col.regularity') }}
         </th>
       </tr>
       <tr>
         <th class="num sep" [attr.aria-sort]="ariaSort('peakIntervalMin')">
-          <button type="button" class="sort" (click)="sortBy('peakIntervalMin')">Peak</button>
+          <button type="button" class="sort" (click)="sortBy('peakIntervalMin')">
+            {{ t('corridors.col.peak') }}
+          </button>
         </th>
         <th class="num" [attr.aria-sort]="ariaSort('offPeakIntervalMin')">
           <button type="button" class="sort" (click)="sortBy('offPeakIntervalMin')">
-            Off-peak
+            {{ t('corridors.col.offPeak') }}
           </button>
         </th>
         <th class="num sep" [attr.aria-sort]="ariaSort('peakCv')">
-          <button type="button" class="sort" (click)="sortBy('peakCv')">Peak</button>
+          <button type="button" class="sort" (click)="sortBy('peakCv')">
+            {{ t('corridors.col.peak') }}
+          </button>
         </th>
         <th class="num" [attr.aria-sort]="ariaSort('offPeakCv')">
-          <button type="button" class="sort" (click)="sortBy('offPeakCv')">Off-peak</button>
+          <button type="button" class="sort" (click)="sortBy('offPeakCv')">
+            {{ t('corridors.col.offPeak') }}
+          </button>
         </th>
       </tr>
     </thead>
@@ -66,7 +78,7 @@
               <summary>
                 {{ c.from }} {{ c.oneWay ? '→' : '⇄' }} {{ c.to }}
                 @if (c.oneWay) {
-                  <span class="one-way">one way</span>
+                  <span class="one-way">{{ t('corridors.oneWay') }}</span>
                 }
               </summary>
               <ol>
@@ -83,9 +95,8 @@
                 <a
                   class="route-badge"
                   [class.partial]="!c.throughLines.includes(l)"
-                  [attr.title]="c.throughLines.includes(l) ? 'Runs all of it' : 'Runs part of it'"
-                  [routerLink]="['/routes']"
-                  [queryParams]="{ line: l }"
+                  [attr.title]="t(c.throughLines.includes(l) ? 'corridors.all' : 'corridors.part')"
+                  [routerLink]="['/routes/route', l]"
                   >{{ l }}</a
                 >
               }
@@ -93,7 +104,7 @@
           </td>
           <td class="num sep">
             @if (c.km !== null) {
-              {{ c.km | number: '1.1-1' }} <span class="unit">km</span>
+              {{ c.km | number: '1.1-1' }} <span class="unit">{{ t('corridors.km') }}</span>
             } @else {
               —
             }
@@ -102,7 +113,7 @@
           @for (v of [c.peakIntervalMin, c.offPeakIntervalMin]; track $index) {
             <td class="num" [class.sep]="$first">
               @if (v !== null) {
-                {{ v | number: '1.1-1' }} <span class="unit">min</span>
+                {{ v | number: '1.1-1' }} <span class="unit">{{ t('corridors.min') }}</span>
               } @else {
                 —
               }
@@ -124,11 +135,7 @@
       } @empty {
         <tr>
           <td colspan="10" class="muted">
-            {{
-              loading()
-                ? 'Finding corridors…'
-                : 'No corridors. An admin can import the timetable under Settings.'
-            }}
+            {{ t(loading() ? 'corridors.finding' : 'corridors.none') }}
           </td>
         </tr>
       }

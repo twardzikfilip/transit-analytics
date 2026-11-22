@@ -1,4 +1,4 @@
-@if (title() !== 'Stop times') {
+@if (title() !== t('timetable.stopTimes')) {
   <h2 class="subtitle">{{ title() }}</h2>
 }
 
@@ -6,11 +6,11 @@
   <div class="list-filters">
     @if (query.get('tripId')) {
       <span class="chip">
-        Trip {{ first()?.tripGtfsId ?? query.get('tripId') }}
+        {{ t('timetable.tripX', { trip: first()?.tripGtfsId ?? query.get('tripId') }) }}
         <button
           type="button"
           (click)="query.setFilters({ tripId: null })"
-          aria-label="Clear trip filter"
+          [attr.aria-label]="t('timetable.clearTrip')"
         >
           ×
         </button>
@@ -18,11 +18,11 @@
     }
     @if (query.get('stopId')) {
       <span class="chip">
-        Stop {{ first()?.stopName ?? query.get('stopId') }}
+        {{ t('timetable.stopX', { stop: first()?.stopName ?? query.get('stopId') }) }}
         <button
           type="button"
           (click)="query.setFilters({ stopId: null })"
-          aria-label="Clear stop filter"
+          [attr.aria-label]="t('timetable.clearStop')"
         >
           ×
         </button>
@@ -31,8 +31,10 @@
   </div>
 } @else {
   <p class="muted">
-    All stop times of all trips. Open them for one trip from <a routerLink="/trips">Trips</a>, or as
-    a departure board from <a routerLink="/stops">Stops</a>.
+    {{ t('timetable.allStopTimes1') }} <a routerLink="/trips">{{ t('nav.trips') }}</a>{{
+      t('timetable.allStopTimes2')
+    }}
+    <a routerLink="/stops">{{ t('nav.stops') }}</a>.
   </p>
 }
 
@@ -41,16 +43,16 @@
     <thead>
       <tr>
         <th class="index">#</th>
-        <th>Arrival</th>
-        <th>Departure</th>
+        <th>{{ t('timetable.arrival') }}</th>
+        <th>{{ t('timetable.departure') }}</th>
         @if (!query.get('stopId')) {
-          <th>Stop</th>
+          <th>{{ t('timetable.stop') }}</th>
         }
-        <th>Route</th>
-        <th>Towards</th>
-        <th>Service</th>
-        <th>Seq.</th>
-        <th>Notes</th>
+        <th>{{ t('timetable.route') }}</th>
+        <th>{{ t('timetable.towards') }}</th>
+        <th>{{ t('timetable.service') }}</th>
+        <th>{{ t('timetable.seq') }}</th>
+        <th>{{ t('timetable.notes') }}</th>
       </tr>
     </thead>
     <tbody>
@@ -90,10 +92,16 @@
         </tr>
       } @empty {
         <tr>
-          <td colspan="9" class="muted">{{ loading() ? 'Loading…' : 'No stop times.' }}</td>
+          <td colspan="9" class="muted">
+            @if (loading()) {
+              <app-skeleton [count]="10" [label]="t('timetable.loadingStopTimes')" />
+            } @else {
+              {{ t('timetable.noStopTimes') }}
+            }
+          </td>
         </tr>
       }
     </tbody>
   </table>
 </div>
-<app-pager [page]="page()" noun="stop times" (pageChange)="query.setPage($event)" />
+<app-pager [page]="page()" noun="pager.stopTimes" (pageChange)="query.setPage($event)" />

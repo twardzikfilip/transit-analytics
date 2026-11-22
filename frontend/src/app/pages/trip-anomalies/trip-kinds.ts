@@ -7,57 +7,56 @@ import {
 } from '../../core/models/models';
 import { duration, formatDelay } from '../../shared/format/time';
 import { shareOf } from '../../shared/format/number';
+import { t, tn } from '../../core/i18n/t';
 
 /** Kinds of abnormal trip, the most serious first, with where their count is in the summary and per line. */
 export const KINDS: {
   key: TripAnomalyKind;
+  /** Translation keys of its name and its explanation. */
   label: string;
   description: string;
   count: keyof TripAnomalySummary & keyof TripAnomalyLine;
 }[] = [
   {
     key: 'cancelled',
-    label: 'Cancelled',
-    description: 'Not run: no bus ran the brigade at all that day.',
+    label: 'anomalies.kinds.cancelled',
+    description: 'anomalies.desc.cancelled',
     count: 'cancelled',
   },
   {
     key: 'missed',
-    label: 'Missed',
-    description: "Not run, while the brigade's bus ran other trips that day.",
+    label: 'anomalies.kinds.missed',
+    description: 'anomalies.desc.missed',
     count: 'missed',
   },
   {
     key: 'lost',
-    label: 'Lost',
-    description: "The bus stopped reporting midway and didn't come back to its brigade.",
+    label: 'anomalies.kinds.lost',
+    description: 'anomalies.desc.lost',
     count: 'lost',
   },
   {
     key: 'short-turned',
-    label: 'Short-turned',
-    description:
-      'Run only partly: the bus, reporting all along, joined midway or left before the end.',
+    label: 'anomalies.kinds.short-turned',
+    description: 'anomalies.desc.short-turned',
     count: 'shortTurned',
   },
   {
     key: 'detour',
-    label: 'Detour',
-    description: 'Run in full, but off its route (over 150 m away) for a while.',
+    label: 'anomalies.kinds.detour',
+    description: 'anomalies.desc.detour',
     count: 'detours',
   },
   {
     key: 'vehicle-changed',
-    label: 'Bus changed',
-    description:
-      'Run in full, but by two buses: one ran part of it and another bus of the brigade took over midway (a breakdown, typically).',
+    label: 'anomalies.kinds.vehicle-changed',
+    description: 'anomalies.desc.vehicle-changed',
     count: 'vehicleChanged',
   },
   {
     key: 'no-signal',
-    label: 'No signal',
-    description:
-      'The bus stopped reporting partway (or started late) but was back for its next trip: most likely run, unseen.',
+    label: 'anomalies.kinds.no-signal',
+    description: 'anomalies.desc.no-signal',
     count: 'noSignal',
   },
 ];
@@ -66,25 +65,23 @@ export const KINDS: {
 export function changeFateLabel(fate: ChangeFate): string {
   switch (fate) {
     case 'broken-down':
-      return 'Possibly broken down';
     case 'reassigned':
-      return 'Old bus reassigned';
     case 'returned':
-      return 'Old bus back later';
+      return t(`anomalies.fate.${fate}`);
   }
 }
 
 /** Where the replacement bus came from: "from line 29 (029-05)", "from the depot". */
 export function replacementFrom(trip: AbnormalTrip): string {
   return trip.replacementLine
-    ? `New bus from line ${trip.replacementLine} (${trip.replacementBrigade})`
-    : 'New bus from the depot';
+    ? t('anomalies.fromLine', { line: trip.replacementLine, brigade: trip.replacementBrigade })
+    : t('anomalies.fromDepot');
 }
 
 /** Where the new bus joined: "Same place" or "Joined 3 stops further on". */
 export function joinedAt(trip: AbnormalTrip): string {
-  if (!trip.skippedStops) return 'Took over at the same place';
-  return `Joined ${trip.skippedStops} ${trip.skippedStops === 1 ? 'stop' : 'stops'} further on`;
+  if (!trip.skippedStops) return t('anomalies.samePlace');
+  return t('anomalies.joined', { stops: tn('anomalies.stops', trip.skippedStops) });
 }
 
 /**
@@ -93,22 +90,25 @@ export function joinedAt(trip: AbnormalTrip): string {
  */
 export function stoodLabel(trip: AbnormalTrip): string | null {
   if (trip.stoodThen === null || trip.stoodMinutes === null) return null;
-  const stood = trip.stoodMinutes ? `Old bus stood ${duration(trip.stoodMinutes)}` : 'Old bus';
+  const stood = t('anomalies.oldBusStood', { time: duration(trip.stoodMinutes) });
   switch (trip.stoodThen) {
     case 'still-there':
-      return `Old bus still standing there (${duration(trip.stoodMinutes)})`;
+      return t('anomalies.stillThere', { time: duration(trip.stoodMinutes) });
     case 'vanished':
-      return trip.stoodMinutes ? `${stood}, then went silent` : 'Old bus went silent right away';
+      return trip.stoodMinutes ? t('anomalies.thenSilent', { stood }) : t('anomalies.silentAtOnce');
     case 'drove-off': {
       const m = trip.stoodLastSeenMeters ?? 0;
       const away = m < 1000 ? `${Math.round(m / 50) * 50} m` : `${(m / 1000).toFixed(1)} km`;
-      return `${trip.stoodMinutes ? `${stood}, then` : 'Old bus'} moved off ${away}`;
+      return trip.stoodMinutes
+        ? t('anomalies.movedOff', { stood, away })
+        : t('anomalies.oldMovedOff', { away });
     }
   }
 }
 
 export function kindLabel(kind: TripAnomalyKind): string {
-  return KINDS.find((k) => k.key === kind)?.label ?? kind;
+  const key = KINDS.find((k) => k.key === kind)?.label;
+  return key ? t(key) : kind;
 }
 
 /** A share as a percentage: "4.2%", "0%"; "—" without a total. */
@@ -124,8 +124,8 @@ export function signedDelay(seconds: number | null): string {
 
 /** "Stops 3–14 of 25" or "Not run". */
 export function coverage(trip: AbnormalTrip): string {
-  if (trip.fromStop === null || trip.toStop === null) return 'Not run';
-  return `Stops ${trip.fromStop}–${trip.toStop} of ${trip.stops}`;
+  if (trip.fromStop === null || trip.toStop === null) return t('anomalies.notRun');
+  return t('anomalies.stopsOf', { from: trip.fromStop, to: trip.toStop, total: trip.stops });
 }
 
 /** Abnormal trips per line, all kinds together. */

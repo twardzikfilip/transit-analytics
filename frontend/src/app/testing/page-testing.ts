@@ -7,6 +7,7 @@ import { MockStore, provideMockStore } from '@ngrx/store/testing';
 import { BehaviorSubject, of } from 'rxjs';
 import { BoundaryApi, BusLaneApi } from '../core/api/api.services';
 import { BusLanes, CityBoundaries, Session } from '../core/models/models';
+import { provideTestI18n } from './i18n-testing';
 
 /** A small square city around a smaller centre, served to every page by default. */
 export const TEST_BOUNDARIES: CityBoundaries = {
@@ -116,19 +117,22 @@ export interface PageSetup<T> {
 }
 
 /**
- * Renders a page with a mock store holding `state` and a URL with `query`; every dispatch is recorded by a spy on
- * `store.dispatch`.
+ * Renders a page with a mock store holding `state` and a URL with `query` (and route parameters `path`, e.g.
+ * `{ brigade: '103-05' }`); every dispatch is recorded by a spy on `store.dispatch`.
  */
 export function renderPage<T>(
   page: Type<T>,
   state: Record<string, unknown>,
   query: Record<string, string | string[]> = {},
   providers: Provider[] = [],
+  path: Record<string, string> = {},
 ): PageSetup<T> {
   const params = new BehaviorSubject(convertToParamMap(query));
+  const pathParams = convertToParamMap(path);
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
+      provideTestI18n(),
       provideMockStore({ initialState: state }),
       { provide: BoundaryApi, useValue: { boundaries: () => of(TEST_BOUNDARIES) } },
       { provide: BusLaneApi, useValue: { lanes: () => of(TEST_BUS_LANES), report: () => of() } },
@@ -136,7 +140,8 @@ export function renderPage<T>(
         provide: ActivatedRoute,
         useValue: {
           queryParamMap: params.asObservable(),
-          snapshot: { queryParamMap: params.value },
+          paramMap: of(pathParams),
+          snapshot: { queryParamMap: params.value, paramMap: pathParams },
         },
       },
       ...providers,

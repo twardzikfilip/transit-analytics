@@ -14,6 +14,7 @@ import { escapeHtml } from '../../shared/format/html';
 import { leafletHost } from '../../shared/map/leaflet-host';
 import { cssColor, INK } from '../../shared/palette';
 import { lostTime, nearText, waitText } from './hotspot-format';
+import { t } from '../../core/i18n/t';
 
 /** Marker radius in px of the hotspot with the most time lost; the others are smaller, by area. */
 export const MAX_RADIUS = 22;
@@ -32,14 +33,9 @@ export function radiusFor(hours: number, maxHours: number): number {
 @Component({
   selector: 'app-hotspot-map',
   template: `
-    <div
-      #map
-      class="leaflet-map"
-      role="region"
-      aria-label="Map of stop hotspots by time lost"
-    ></div>
+    <div #map class="leaflet-map" role="region" [attr.aria-label]="t('hotspots.mapLabel')"></div>
     <div class="legend inset">
-      <span class="muted">Time lost:</span>
+      <span class="muted">{{ t('hotspots.timeLost') }}</span>
       @for (s of samples(); track s.hours) {
         <span class="item">
           <svg
@@ -71,6 +67,7 @@ export function radiusFor(hours: number, maxHours: number): number {
   `,
 })
 export class HotspotMap {
+  protected readonly t = t;
   readonly hotspots = input.required<Hotspot[]>();
   /** The chosen hotspot's id, or null. */
   readonly selected = input<number | null>(null);
@@ -132,8 +129,10 @@ export class HotspotMap {
       })
         .bindTooltip(
           `<strong>#${h.id} ${escapeHtml(nearText(h))}</strong><br>` +
-            `${lostTime(h.hours)} lost, ${h.minutesPerDay.toFixed(1)} min a day<br>` +
-            `${h.standstills} standstills, typically ${waitText(h.medianSeconds)}`,
+            `${escapeHtml(t('hotspots.tipLost', { lost: lostTime(h.hours), perDay: h.minutesPerDay.toFixed(1) }))}<br>` +
+            escapeHtml(
+              t('hotspots.tipStandstills', { n: h.standstills, wait: waitText(h.medianSeconds) }),
+            ),
         )
         .on('click', () => {
           this.chosenOnMap = h.id;

@@ -2,12 +2,12 @@
   <table class="data-table">
     <thead>
       <tr>
-        <th>Variant</th>
-        <th>From → to</th>
-        <th class="num">Length</th>
-        <th class="num">Trips a weekday</th>
-        <th class="num">Scheduled travel time</th>
-        <th class="num">Scheduled speed</th>
+        <th>{{ t('speed.col.variant') }}</th>
+        <th>{{ t('speed.col.fromTo') }}</th>
+        <th class="num">{{ t('speed.col.length') }}</th>
+        <th class="num">{{ t('speed.col.trips') }}</th>
+        <th class="num">{{ t('speed.col.time') }}</th>
+        <th class="num">{{ t('speed.col.speed') }}</th>
       </tr>
     </thead>
     <tbody>
@@ -15,25 +15,33 @@
         <tr [class.main]="v.kind === 'main'" [class.depot-row]="v.kind === 'depot'">
           <td>
             @if (v.kind === 'depot') {
-              <span class="tag depot">Depot run</span>
+              <span class="tag depot">{{ t('speed.depotRun') }}</span>
             } @else {
               {{ kindLabel(v.kind) }}
             }
           </td>
           <td>{{ v.firstStop }} → {{ v.lastStop }}</td>
-          <td class="num">{{ v.km | number: '1.1-1' }} km</td>
+          <td class="num">{{ t('tiles.km', { n: v.km | number: '1.1-1' }) }}</td>
           <td class="num">{{ v.tripsPerDay }}</td>
           <td class="num">
             {{
-              v.shortestMin === v.longestMin ? v.shortestMin : v.shortestMin + '–' + v.longestMin
+              t('tiles.min', {
+                n:
+                  v.shortestMin === v.longestMin
+                    ? v.shortestMin
+                    : v.shortestMin + '–' + v.longestMin,
+              })
             }}
-            min
           </td>
           <td class="num">
             {{
-              v.minSpeedKmh === v.maxSpeedKmh ? v.minSpeedKmh : v.minSpeedKmh + '–' + v.maxSpeedKmh
+              t('tiles.kmh', {
+                n:
+                  v.minSpeedKmh === v.maxSpeedKmh
+                    ? v.minSpeedKmh
+                    : v.minSpeedKmh + '–' + v.maxSpeedKmh,
+              })
             }}
-            km/h
           </td>
         </tr>
       }

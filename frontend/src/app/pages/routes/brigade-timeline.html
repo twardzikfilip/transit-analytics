@@ -1,14 +1,14 @@
 <ul class="legend">
   @for (m of mains(); track m.direction) {
     <li>
-      <span class="swatch" [style.background]="colors[m.direction % 2]"></span>towards
-      {{ m.headsign }}
+      <span class="swatch" [style.background]="colors[m.direction % 2]"></span
+      >{{ tr('depot.tl.towards', { to: m.headsign }) }}
     </li>
   }
-  <li><span class="swatch depot"></span>depot run</li>
-  <li><span class="swatch hatched"></span>other variant</li>
-  <li><span class="swatch dashed"></span>break of 30 min or more</li>
-  <li class="muted">Times at the row ends: leaves and returns to the depot.</li>
+  <li><span class="swatch depot"></span>{{ tr('depot.tl.depotRun') }}</li>
+  <li><span class="swatch hatched"></span>{{ tr('depot.tl.otherVariant') }}</li>
+  <li><span class="swatch dashed"></span>{{ tr('depot.tl.break') }}</li>
+  <li class="muted">{{ tr('depot.tl.ends') }}</li>
 </ul>
 
 <div class="plot">
@@ -17,9 +17,7 @@
     [attr.width]="width()"
     [attr.height]="height()"
     role="img"
-    [attr.aria-label]="
-      'Timeline of ' + brigades().length + ' brigades; the table below lists them.'
-    "
+    [attr.aria-label]="tr('depot.tl.label', { n: brigades().length })"
     (pointerleave)="hover.set(null)"
   >
     <defs>

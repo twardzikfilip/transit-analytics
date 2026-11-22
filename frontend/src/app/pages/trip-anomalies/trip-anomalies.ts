@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
@@ -30,6 +29,9 @@ import {
   percent,
   signedDelay,
 } from './trip-kinds';
+import { Skeleton } from '../../shared/skeleton/skeleton';
+import { LocalDatePipe } from '../../shared/i18n/locale-pipes';
+import { t, tn } from '../../core/i18n/t';
 
 /** Rows of the trips table shown at first, and added by "Show more". */
 export const PAGE_ROWS = 50;
@@ -54,11 +56,13 @@ export function refreshes(w: TimeWindow): boolean {
  */
 @Component({
   selector: 'app-trip-anomalies',
-  imports: [DatePipe, TimeWindowPicker, PathMap],
+  imports: [Skeleton, LocalDatePipe, TimeWindowPicker, PathMap],
   templateUrl: './trip-anomalies.html',
   styleUrl: './trip-anomalies.scss',
 })
 export class TripAnomalies {
+  protected readonly t = t;
+  protected readonly tn = tn;
   private readonly store = inject(Store);
 
   protected readonly report = this.store.selectSignal(tripAnomaliesFeature.selectReport);
@@ -171,19 +175,19 @@ export class TripAnomalies {
   }
 
   /** A detour on a map: the usual route around it (blue), and the bus's path with its reports (orange). */
-  protected detourLines(t: AbnormalTrip): PathLine[] {
+  protected detourLines(trip: AbnormalTrip): PathLine[] {
     return [
       {
-        points: t.detourRoute,
+        points: trip.detourRoute,
         color: cssColor('--chart-line', '#1e88e5'),
-        label: 'Usual route',
+        label: t('anomalies.usualRoute'),
         weight: 6,
         opacity: 0.75,
       },
       {
-        points: t.detourPath,
+        points: trip.detourPath,
         color: cssColor('--chart-series-2', '#eb6834'),
-        label: "The bus's path (dots: its reports)",
+        label: t('anomalies.busPath'),
         dots: true,
       },
     ];

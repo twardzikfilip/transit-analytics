@@ -1,19 +1,26 @@
 import { Hotspot, HotspotApproach, HotspotLineTime } from '../../core/models/models';
 import { formatDelay } from '../../shared/format/time';
+import { t } from '../../core/i18n/t';
 
 /** "45 min" under an hour, else "2.4 h". */
 export function lostTime(hours: number): string {
-  return hours < 1 ? `${Math.round(hours * 60)} min` : `${hours.toFixed(1)} h`;
+  return hours < 1
+    ? t('units.min', { n: Math.round(hours * 60) })
+    : t('units.h', { n: hours.toFixed(1) });
 }
 
 /** A wait: "40 s" under a minute, else "1:20 min". */
 export function waitText(seconds: number): string {
-  return seconds < 60 ? `${seconds} s` : `${formatDelay(seconds)} min`;
+  return seconds < 60
+    ? t('units.s', { n: seconds })
+    : t('hotspots.waitMin', { t: formatDelay(seconds) });
 }
 
 /** "70 m from Częstochowska/Piłsudskiego", to tell where a hotspot is. */
 export function nearText(h: Hotspot): string {
-  return h.nearestStop ? `${h.nearestStopMeters} m from ${h.nearestStop}` : 'no stop nearby';
+  return h.nearestStop
+    ? t('hotspots.fromStop', { m: h.nearestStopMeters, stop: h.nearestStop })
+    : t('hotspots.noStopLower');
 }
 
 const ARROWS: Record<string, { arrow: string; name: string }> = {
@@ -31,7 +38,8 @@ const ARROWS: Record<string, { arrow: string; name: string }> = {
 export function approachText(a: HotspotApproach): { short: string; long: string } {
   const h = ARROWS[a.heading] ?? { arrow: a.heading, name: a.heading };
   const pct = Math.round(a.share * 100);
-  return { short: `${h.arrow} ${pct}%`, long: `${pct}% heading ${h.name}` };
+  const dir = a.heading in ARROWS ? t(`hotspots.dir.${a.heading}`) : a.heading;
+  return { short: `${h.arrow} ${pct}%`, long: t('hotspots.headingTo', { pct, dir }) };
 }
 
 /** The lines with the most time lost there, e.g. "21, 9, 12 +3". */

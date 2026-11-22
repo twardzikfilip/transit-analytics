@@ -59,10 +59,21 @@ Before calling a change done:
 - **URL state:** filters, time windows and selections live in query parameters. The live map on Home has its own
   (`mapAgency`, `mapLineType`, `mapMinDelay`) so the history's time window never changes it.
 - **Page titles** come from the route's `title` (shown in the header; `core/title/page-title.ts`); a title can be a
-  function of the URL (Fleet: "Fleet Overview" / "Vehicle Details").
+  function of the path ("Brigade 103-05") or a resolver ("Vehicle 230", `fleet.routes.ts`).
+- **One thing's page** has its own route under its list (`/brigades/:brigade`, `/vehicles/:id`,
+  `/routes/route/:line`); filters stay in query parameters. Its way back is the header's chevron
+  (`injectBackLink`, `core/title/page-back.ts`); Routes still has its own back button.
+- **Loading:** show `<app-skeleton>` (`shared/skeleton`, ngx-skeleton-loader) shaped like the content while it loads,
+  and only while loading (a failure is a toast, not a skeleton). The header's progress bar comes on by itself for
+  `/api` requests; mark polling with the `BACKGROUND` context (`core/api/activity.ts`).
 - **Tests:** a page test renders with `renderPage(...)` and `stateAfter(feature, ...actions)` from
   `src/app/testing/page-testing.ts`; maps in tests need `useSvgMaps()`. Backend database tests use
   `@DbIntegrationTest` and `TimetableFixture`.
+- **Texts:** every UI text is a key in `frontend/src/i18n/en.json`, `pl.json` and `de.json` (all three, or
+  `translations.spec.ts` fails), shown with `t('section.key', params)` or `tn()` for counts (`core/i18n/t.ts`;
+  components expose `protected readonly t = t`; where a template already uses `t` as a loop variable, import it as
+  `tr`). Long explanations with markup go through `[innerHTML]`. Use the `date`/`number` pipes from
+  `shared/i18n/locale-pipes.ts`, not Angular's.
 - **Docs:** keep `README.md` in step with behaviour (API section, frontend pages section).
 - Code comments and UI text: plain English, short sentences; say what something is and why, not a history of changes.
 

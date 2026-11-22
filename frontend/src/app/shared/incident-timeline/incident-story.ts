@@ -4,6 +4,7 @@ import { localTime } from '../format/time';
 import { PathLine, PathMap } from '../map/path-map';
 import { cssColor } from '../palette';
 import { IncidentTimeline } from './incident-timeline';
+import { t } from '../../core/i18n/t';
 
 /**
  * A breakdown (a change of bus) told step by step: a time line of what each bus did, with the steps numbered on its
@@ -67,17 +68,16 @@ export class IncidentStory {
       .map((p, i) => ({
         points: p.points,
         color: colors[Math.min(i, colors.length - 1)],
-        label: i === 0 ? `Bus ${p.vehicle} (broke down)` : `Bus ${p.vehicle} (took over)`,
+        label: t(i === 0 ? 'incident.brokeDown' : 'incident.tookOver', { bus: p.vehicle }),
         weight: i === 0 ? 5 : 3,
-        end: i === 0 ? `Bus ${p.vehicle}: last seen here` : undefined,
+        end: i === 0 ? t('incident.lastSeen', { bus: p.vehicle }) : undefined,
       }));
   });
-  protected readonly mapLabel = computed(
-    () =>
-      'Map of where ' +
-      this.lines()
+  protected readonly mapLabel = computed(() =>
+    t('incident.mapOf', {
+      buses: this.lines()
         .map((l) => l.label.toLowerCase())
-        .join(' and ') +
-      ' went',
+        .join(t('incident.and')),
+    }),
   );
 }

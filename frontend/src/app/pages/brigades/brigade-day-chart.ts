@@ -3,7 +3,7 @@ import { BrigadeTrip } from '../../core/models/models';
 import { hostWidth } from '../../shared/host-width';
 import {
   CHANGE_COLOR,
-  KIND_LABELS,
+  kindLabel,
   NOT_RUN_COLOR,
   NOT_SEEN_COLOR,
   actualSpan,
@@ -24,6 +24,7 @@ import {
   timeScale,
   tripRows,
 } from './brigade-day-layout';
+import { t as tr } from '../../core/i18n/t';
 
 export { CHART_HEIGHT, MIN_PX_PER_MIN, fit } from './brigade-day-layout';
 
@@ -42,6 +43,8 @@ export { CHART_HEIGHT, MIN_PX_PER_MIN, fit } from './brigade-day-layout';
   host: { '[style.--chart-height.px]': 'height' },
 })
 export class BrigadeDayChart {
+  /** Translates (`t` is the tooltip in the template). */
+  protected readonly tr = tr;
   readonly trips = input.required<BrigadeTrip[]>();
   /** The chosen trip's index, or null. */
   readonly selected = input<number | null>(null);
@@ -81,7 +84,7 @@ export class BrigadeDayChart {
       buses: t.runs.length ? busesText(t) : '',
       start: delayText(first?.startDelay),
       end: delayText(last?.endDelay),
-      kind: KIND_LABELS[t.kind],
+      kind: kindLabel(t.kind),
       note: t.note,
     };
   });

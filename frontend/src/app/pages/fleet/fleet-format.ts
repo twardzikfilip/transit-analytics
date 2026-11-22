@@ -1,6 +1,7 @@
 import { Breakdown, FleetVehicle, VehicleDetail, VehicleUsage } from '../../core/models/models';
 import { Bar } from '../../shared/bar-chart/bar-chart';
 import { clock } from '../../shared/format/time';
+import { intlLocale, t, tn } from '../../core/i18n/t';
 
 const DAY_MS = 86_400_000;
 
@@ -37,8 +38,8 @@ export function searchVehicles(usage: VehicleUsage[], query: string, limit = 8):
 
 /** "back after 1.5 days" or "not back yet (3 days)". */
 export function daysOutText(b: Breakdown): string {
-  const days = `${b.daysOut} ${b.daysOut === 1 ? 'day' : 'days'}`;
-  return b.returned ? `back after ${days}` : `not back yet (${days})`;
+  const days = tn('fleet.days', b.daysOut);
+  return t(b.returned ? 'fleet.backAfter' : 'fleet.notBackYet', { days });
 }
 
 /** Share in whole percent; 0 of 0 is 0. */
@@ -60,18 +61,27 @@ export interface TimelineRow {
 }
 
 function runText(run: { line: string; brigade: string | null; headsign: string | null }): string {
-  return `line ${run.line}${run.brigade ? `, brigade ${run.brigade}` : ''}${run.headsign ? ` → ${run.headsign}` : ''}`;
+  return (
+    t('fleet.runLine', { line: run.line }) +
+    (run.brigade ? t('fleet.runBrigade', { brigade: run.brigade }) : '') +
+    (run.headsign ? ` → ${run.headsign}` : '')
+  );
 }
 
-const DAY_FORMAT = new Intl.DateTimeFormat('en-GB', {
-  weekday: 'short',
-  day: 'numeric',
-  month: 'short',
-});
-
-/** "Mon 16 Nov" for a yyyy-MM-dd day. */
+/** "Mon 16 Nov" for a yyyy-MM-dd day, in the language shown. */
 export function dayLabel(day: string): string {
-  return DAY_FORMAT.format(new Date(`${day}T12:00:00`));
+  return new Intl.DateTimeFormat(intlLocale(), {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  }).format(new Date(`${day}T12:00:00`));
+}
+
+/** "16 Nov" for a yyyy-MM-dd day, in the language shown (the weekday left out). */
+function dayMonth(day: string): string {
+  return new Intl.DateTimeFormat(intlLocale(), { day: 'numeric', month: 'short' }).format(
+    new Date(`${day}T12:00:00`),
+  );
 }
 
 /**
@@ -121,12 +131,12 @@ export function dailyBars(detail: VehicleDetail): Bar[] {
     const incidents = detail.incidents.filter((i) => i.day === d.day).length;
     return {
       key: d.day,
-      label: dayLabel(d.day).replace(/^\w+ /, ''),
+      label: dayMonth(d.day),
       value: d.hours,
-      title: `${dayLabel(d.day)}: ${d.hours.toFixed(1)} h`,
+      title: `${dayLabel(d.day)}: ${t('fleet.hours', { n: d.hours.toFixed(1) })}`,
       detail: incidents
-        ? `${incidents} abnormal trip${incidents > 1 ? 's' : ''}`
-        : `${d.runs.length} runs`,
+        ? tn('fleet.abnormalTrips', incidents)
+        : tn('fleet.runsCount', d.runs.length),
       marked: incidentDays.has(d.day),
     };
   });
@@ -138,25 +148,23 @@ export function usageBars(usage: VehicleUsage[]): Bar[] {
     key: u.vehicle.id,
     label: u.vehicle.number,
     value: u.hours,
-    title: `${u.vehicle.number}: ${u.hours.toFixed(1)} h`,
-    detail: [u.vehicle.model, u.lines.length ? `lines ${u.lines.join(', ')}` : 'not in service']
+    title: `${u.vehicle.number}: ${t('fleet.hours', { n: u.hours.toFixed(1) })}`,
+    detail: [
+      u.vehicle.model,
+      u.lines.length
+        ? t('fleet.linesList', { lines: u.lines.join(', ') })
+        : t('fleet.notInService'),
+    ]
       .filter(Boolean)
       .join(' · '),
   }));
 }
 
 /** "1.5 h" axis labels. */
-export const hoursAxis = (v: number) => `${v} h`;
+export const hoursAxis = (v: number) => t('fleet.hours', { n: v });
 
 /** A size class in words, with its lengths (as configured in the backend's classification/vehicles.yml). */
 export function vehicleClassLabel(vehicleClass: string): string {
-  return (
-    {
-      mini: 'Mini (under 8 m)',
-      midi: 'Midi (8–11 m)',
-      maxi: 'Maxi (11–15 m)',
-      mega: 'Mega (15 m+, articulated)',
-      double_decker: 'Double-decker',
-    }[vehicleClass] ?? 'Unknown size'
-  );
+  const known = ['mini', 'midi', 'maxi', 'mega', 'double_decker'];
+  return t(`fleet.class.${known.includes(vehicleClass) ? vehicleClass : 'unknown'}`);
 }

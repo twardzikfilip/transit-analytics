@@ -8,6 +8,7 @@ import {
   timeTicks,
   MIN_GAP_MS,
 } from './chart-geometry';
+import { intlLocale, t } from '../../core/i18n/t';
 
 const HEIGHT = 260;
 const DEFAULT_FORMAT = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
@@ -25,6 +26,7 @@ const MARGIN = { top: 12, right: 16, bottom: 28, left: 44 };
   host: { '[class.loading]': 'loading()' },
 })
 export class TimeSeriesChart {
+  protected readonly t = t;
   /** Points sorted by time; only buckets with data. */
   readonly points = input.required<ChartPoint[]>();
   /** Visible time range (epoch ms). */
@@ -39,7 +41,7 @@ export class TimeSeriesChart {
   /** Formats a y axis tick (default: as a number). */
   readonly axisFormat = input<(value: number) => string>((v) => DEFAULT_FORMAT.format(v));
   /** Accessible name of the chart. */
-  readonly label = input('Chart');
+  readonly label = input('');
   /** Dims the chart while new data loads, keeping the previous frame. */
   readonly loading = input(false);
 
@@ -77,8 +79,8 @@ export class TimeSeriesChart {
       Math.max(2, Math.floor(this.width() / 90)),
     );
     const sameDay = new Date(this.from()).toDateString() === new Date(this.to() - 1).toDateString();
-    const timeFmt = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
-    const dayFmt = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
+    const timeFmt = new Intl.DateTimeFormat(intlLocale(), { hour: '2-digit', minute: '2-digit' });
+    const dayFmt = new Intl.DateTimeFormat(intlLocale(), { day: 'numeric', month: 'short' });
     return ticks.map((t) => {
       const d = new Date(t);
       const midnight = d.getHours() === 0 && d.getMinutes() === 0;
@@ -109,14 +111,14 @@ export class TimeSeriesChart {
     const i = this.hover();
     const p = i === null ? undefined : this.points()[i];
     if (!p) return null;
-    const timeFmt = new Intl.DateTimeFormat(undefined, {
+    const timeFmt = new Intl.DateTimeFormat(intlLocale(), {
       weekday: 'short',
       day: 'numeric',
       month: 'short',
       hour: '2-digit',
       minute: '2-digit',
     });
-    const endFmt = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
+    const endFmt = new Intl.DateTimeFormat(intlLocale(), { hour: '2-digit', minute: '2-digit' });
     const x = this.x(p.time);
     return {
       x,
@@ -131,10 +133,17 @@ export class TimeSeriesChart {
   /** Plain-text summary for screen readers. */
   protected readonly summary = computed(() => {
     const pts = this.points();
-    if (!pts.length) return `${this.label()}: no data in this time range.`;
+    const label = this.label() || t('charts.chart');
+    if (!pts.length) return t('charts.noData', { label });
     const values = pts.map((p) => p.value);
     const fmt = this.format();
-    return `${this.label()}: ${pts.length} points, from ${fmt(Math.min(...values))} to ${fmt(Math.max(...values))} ${this.unit()}.`;
+    return t('charts.summary', {
+      label,
+      points: pts.length,
+      min: fmt(Math.min(...values)),
+      max: fmt(Math.max(...values)),
+      unit: this.unit(),
+    });
   });
 
   protected onPointerMove(event: PointerEvent): void {

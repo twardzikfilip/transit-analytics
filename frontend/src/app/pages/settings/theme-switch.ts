@@ -1,13 +1,14 @@
 import { Component, inject } from '@angular/core';
 import { Theme, ThemeName } from '../../core/theme/theme';
 import { Icon } from '../../shared/icons/icon';
+import { t } from '../../core/i18n/t';
 
 /** Light or dark theme: two buttons, the chosen one pressed. */
 @Component({
   selector: 'app-theme-switch',
   imports: [Icon],
   template: `
-    <div class="switch" role="group" aria-label="Theme">
+    <div class="switch" role="group" [attr.aria-label]="t('settings.theme')">
       @for (o of options; track o.value) {
         <button
           type="button"
@@ -16,7 +17,7 @@ import { Icon } from '../../shared/icons/icon';
           (click)="theme.set(o.value)"
         >
           <app-icon [name]="o.icon" />
-          {{ o.label }}
+          {{ t(o.label) }}
         </button>
       }
     </div>
@@ -34,9 +35,10 @@ import { Icon } from '../../shared/icons/icon';
   `,
 })
 export class ThemeSwitch {
+  protected readonly t = t;
   protected readonly theme = inject(Theme);
   protected readonly options: { value: ThemeName; label: string; icon: 'sun' | 'moon' }[] = [
-    { value: 'light', label: 'Light', icon: 'sun' },
-    { value: 'dark', label: 'Dark', icon: 'moon' },
+    { value: 'light', label: 'settings.light', icon: 'sun' },
+    { value: 'dark', label: 'settings.dark', icon: 'moon' },
   ];
 }

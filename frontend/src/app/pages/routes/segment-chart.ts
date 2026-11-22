@@ -3,6 +3,7 @@ import { hostWidth } from '../../shared/host-width';
 import { SegmentProfile } from '../../core/models/models';
 import { niceTicks } from '../../shared/time-series-chart/chart-geometry';
 import { slowestSegments } from './format';
+import { t as tr } from '../../core/i18n/t';
 
 const HEIGHT = 220;
 const MARGIN = { top: 22, right: 16, bottom: 28, left: 44 };
@@ -18,6 +19,7 @@ const MARGIN = { top: 22, right: 16, bottom: 28, left: 44 };
   styleUrl: './segment-chart.scss',
 })
 export class SegmentChart {
+  protected readonly tr = tr;
   readonly profile = input.required<SegmentProfile>();
 
   protected readonly width = hostWidth(600, 280);
@@ -92,9 +94,15 @@ export class SegmentChart {
   protected readonly summary = computed(() => {
     const p = this.profile();
     const slow = this.slowest()
-      .map((i) => `${p.segments[i].from} to ${p.segments[i].to} ${p.segments[i].kmh} km/h`)
+      .map((i) =>
+        tr('speed.chartSlow', {
+          from: p.segments[i].from,
+          to: p.segments[i].to,
+          kmh: p.segments[i].kmh,
+        }),
+      )
       .join('; ');
-    return `Speed between stops towards ${p.headsign}. Slowest: ${slow || 'none measured'}.`;
+    return tr('speed.chartLabel', { to: p.headsign, slow: slow || tr('speed.noneMeasured') });
   });
 
   protected onPointerMove(event: PointerEvent): void {

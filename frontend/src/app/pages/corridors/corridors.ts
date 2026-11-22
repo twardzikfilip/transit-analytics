@@ -5,6 +5,8 @@ import { CorridorsActions } from '../../store/corridors/corridors.actions';
 import { corridorsFeature } from '../../store/corridors/corridors.reducer';
 import { LoadMap } from './load-map';
 import { CorridorTable } from './corridor-table';
+import { Skeleton } from '../../shared/skeleton/skeleton';
+import { t } from '../../core/i18n/t';
 
 /**
  * Important corridors: stretches of at least four consecutive stops shared by two or more lines, from the weekday
@@ -12,11 +14,12 @@ import { CorridorTable } from './corridor-table';
  */
 @Component({
   selector: 'app-corridors',
-  imports: [LoadMap, CorridorTable],
+  imports: [Skeleton, LoadMap, CorridorTable],
   templateUrl: './corridors.html',
   styleUrl: './corridors.scss',
 })
 export class Corridors {
+  protected readonly t = t;
   private readonly store = inject(Store);
 
   protected readonly report = this.store.selectSignal(corridorsFeature.selectReport);
@@ -26,11 +29,11 @@ export class Corridors {
   protected readonly oneWay = computed(() => this.corridors().filter((c) => c.oneWay).length);
 
   /** "A ≤ 0.21, B ≤ 0.3, …, F above 0.74." */
-  protected readonly gradeBands =
+  protected readonly gradeBands = () =>
     REGULARITY_GRADES.map((g, i) =>
       Number.isFinite(g.maxCv)
-        ? `${g.grade} ≤ ${g.maxCv}`
-        : `${g.grade} above ${REGULARITY_GRADES[i - 1].maxCv}`,
+        ? t('corridors.gradeAtMost', { grade: g.grade, cv: g.maxCv })
+        : t('corridors.gradeAbove', { grade: g.grade, cv: REGULARITY_GRADES[i - 1].maxCv }),
     ).join(', ') + '.';
 
   constructor() {
@@ -38,6 +41,6 @@ export class Corridors {
   }
 
   protected periods(list: { from: string; to: string }[] | undefined): string {
-    return (list ?? []).map((p) => `${p.from}–${p.to}`).join(' and ');
+    return (list ?? []).map((p) => `${p.from}–${p.to}`).join(t('corridors.and'));
   }
 }

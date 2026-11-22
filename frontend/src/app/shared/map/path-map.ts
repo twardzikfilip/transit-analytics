@@ -10,6 +10,7 @@ import {
 import * as L from 'leaflet';
 import { createBaseMap } from './base-map';
 import { WHITE } from '../palette';
+import { t } from '../../core/i18n/t';
 
 /** A line on a {@link PathMap}: points [lat, lon] in order, its colour (a CSS colour) and its name in the legend. */
 export interface PathLine {
@@ -32,7 +33,7 @@ export interface PathLine {
 @Component({
   selector: 'app-path-map',
   template: `
-    <div #map class="map" role="img" [attr.aria-label]="label()"></div>
+    <div #map class="map" role="img" [attr.aria-label]="label() || t('charts.map')"></div>
     <ul class="legend">
       @for (l of lines(); track l.label) {
         <li>
@@ -85,8 +86,9 @@ export interface PathLine {
   `,
 })
 export class PathMap {
+  protected readonly t = t;
   readonly lines = input.required<PathLine[]>();
-  readonly label = input('Map');
+  readonly label = input('');
 
   private readonly mapEl = viewChild.required<ElementRef<HTMLDivElement>>('map');
 

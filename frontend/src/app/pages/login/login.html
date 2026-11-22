@@ -1,14 +1,14 @@
 <form class="card" [formGroup]="form" (ngSubmit)="submit()">
   <h1>Transit Analytics</h1>
   <label>
-    Username
+    {{ t('login.username') }}
     <input formControlName="username" autocomplete="username" autofocus />
   </label>
   <label>
-    Password
+    {{ t('login.password') }}
     <input formControlName="password" type="password" autocomplete="current-password" />
   </label>
   <button type="submit" class="primary" [disabled]="loading()">
-    {{ loading() ? 'Signing in…' : 'Sign in' }}
+    {{ t(loading() ? 'login.signingIn' : 'login.signIn') }}
   </button>
 </form>

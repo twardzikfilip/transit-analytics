@@ -1,5 +1,6 @@
 import { Component, input } from '@angular/core';
 import { EndStop } from '../../core/models/models';
+import { t } from '../../core/i18n/t';
 
 /**
  * The line's standard end stops (where buses turn round in service), and the other stops depot runs use. Stops
@@ -11,6 +12,7 @@ import { EndStop } from '../../core/models/models';
   styleUrl: './end-stops.scss',
 })
 export class EndStops {
+  protected readonly t = t;
   readonly endStops = input.required<EndStop[]>();
   readonly depotStops = input.required<EndStop[]>();
   /** False when the timetable has no brigades, so depot runs can't be told apart. */

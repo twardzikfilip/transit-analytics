@@ -7,6 +7,8 @@ import { area, density, int, percent } from '../../shared/format/number';
 import { asOf } from './coverage-format';
 import { CoverageMap } from './coverage-map';
 import { DistrictMap } from './district-map';
+import { Skeleton } from '../../shared/skeleton/skeleton';
+import { t } from '../../core/i18n/t';
 
 type Loaded = { state: 'loading' } | { state: 'error' } | { state: 'ready'; data: NetworkCoverage };
 
@@ -17,11 +19,12 @@ type Loaded = { state: 'loading' } | { state: 'error' } | { state: 'ready'; data
  */
 @Component({
   selector: 'app-network-coverage',
-  imports: [CoverageMap, DistrictMap],
+  imports: [Skeleton, CoverageMap, DistrictMap],
   templateUrl: './network-coverage.html',
   styleUrl: './network-coverage.scss',
 })
 export class NetworkCoveragePage {
+  protected readonly t = t;
   private readonly loaded = toSignal(
     inject(NetworkCoverageApi)
       .coverage()

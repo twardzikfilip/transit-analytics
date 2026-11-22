@@ -1,5 +1,6 @@
 import { DelayBand } from '../../../core/models/models';
 import { percent } from '../../../shared/format/number';
+import { intlLocale, t, tn } from '../../../core/i18n/t';
 
 export interface DelayBandRow extends DelayBand {
   label: string;
@@ -9,9 +10,9 @@ export interface DelayBandRow extends DelayBand {
 
 /** "On time (under 2 min late, or early)", "More than 2 min (2–5)", "More than 5 min (5–10)", "More than 10 min". */
 export function bandLabel(band: DelayBand): string {
-  if (band.fromMinutes === null) return `On time (under ${band.toMinutes} min late, or early)`;
-  if (band.toMinutes === null) return `More than ${band.fromMinutes} min`;
-  return `More than ${band.fromMinutes} min (${band.fromMinutes}–${band.toMinutes})`;
+  if (band.fromMinutes === null) return t('history.band.onTime', { to: band.toMinutes });
+  if (band.toMinutes === null) return t('history.band.over', { from: band.fromMinutes });
+  return t('history.band.between', { from: band.fromMinutes, to: band.toMinutes });
 }
 
 export function bandRows(bands: DelayBand[]): DelayBandRow[] {
@@ -28,7 +29,7 @@ export function formatShare(share: number): string {
  * The window a result covers, e.g. "Mon 16 Nov, 08:36 – 14:36" or "Mon 9 Nov, 14:14 – Mon 16 Nov, 14:14" (local
  * time). `to` is exclusive, so a window ending at midnight shows 00:00 of the next day.
  */
-export function windowLabel(from: string, to: string, locale?: string): string {
+export function windowLabel(from: string, to: string, locale = intlLocale()): string {
   const a = new Date(from);
   const b = new Date(to);
   const day = new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'short' });

@@ -1,185 +1,42 @@
-<div class="search">
-  <label>
-    Find a bus
-    <input
-      type="search"
-      role="combobox"
-      aria-autocomplete="list"
-      aria-controls="vehicle-matches"
-      [attr.aria-expanded]="searchOpen() && matches().length > 0"
-      placeholder="Number or model, e.g. 230 or Urbino"
-      [value]="search()"
-      (input)="search.set($any($event.target).value); searchOpen.set(true)"
-      (focus)="searchOpen.set(true)"
-      (keydown.enter)="chooseFirst()"
-      (keydown.escape)="searchOpen.set(false)"
-    />
-  </label>
-  @if (searchOpen() && matches().length) {
-    <ul id="vehicle-matches" class="matches card" role="listbox">
-      @for (u of matches(); track trackUsage(u)) {
-        <li role="option" [attr.aria-selected]="false">
-          <button type="button" (click)="choose(u.vehicle.id)">
-            <strong>{{ u.vehicle.number }}</strong>
-            <span class="muted"
-              >{{ u.vehicle.model ?? 'model unknown' }} · {{ u.vehicle.agency ?? '—' }}</span
-            >
-            <span class="num">{{ u.hours.toFixed(1) }} h</span>
-          </button>
-        </li>
-      }
-    </ul>
-  } @else if (searchOpen() && search().trim()) {
-    <p class="muted">No bus matches “{{ search() }}”.</p>
-  }
-</div>
+<app-vehicle-search [usage]="report()?.usage ?? []" (choose)="choose($event)" />
 
 <app-time-window [defaultPreset]="defaultPreset" [agencies]="report()?.agencies ?? []">
   @if (loading()) {
-    <span class="muted" role="status">Loading…</span>
+    <span class="muted" role="status">{{ t('common.loading') }}</span>
   }
 </app-time-window>
 
-@if (selectedId()) {
-  <!-- One bus: all its details, in place of the overview. -->
-  <button type="button" class="back" (click)="clearVehicle()">‹ Fleet overview</button>
-
-  @if (detail(); as d) {
-    <section class="card detail" [class.loading]="loadingVehicle()">
-      <div class="detail-header">
-        <span class="badge">{{ d.vehicle.number }}</span>
-        <div>
-          <h3>{{ d.vehicle.model ?? 'Model unknown' }}</h3>
-          <span class="muted">
-            {{ d.vehicle.agency ?? '—' }} · {{ d.hours.toFixed(1) }} h in service on
-            {{ d.days.length }} {{ d.days.length === 1 ? 'day' : 'days' }}
-            @if (d.lines.length) {
-              · lines {{ d.lines.join(', ') }}
-            }
-            @if (d.lastSeen) {
-              · last in service {{ d.lastSeen | date: 'EEE d MMM, HH:mm' }}
-            }
-          </span>
-        </div>
-      </div>
-
-      @if (d.days.length) {
-        <h4>{{ perRun() ? 'Runs' : 'Runs per day' }}</h4>
-        <p class="muted">
-          {{
-            perRun()
-              ? 'Each run in this window on its own row: consecutive reports on one line, brigade and headsign.'
-              : 'One row per service day (03:00 to 03:00): its runs on lines, and breaks of 30 minutes or more.'
-          }}
-        </p>
-        <app-run-timeline [rows]="timeline()" />
-
-        <h4>Hours per day</h4>
-        <p class="muted">A red dot marks a day with an abnormal trip of this bus (listed below).</p>
-        <app-bar-chart [bars]="daily()" [format]="hoursAxis" label="Hours in service per day" />
-      } @else {
-        <p class="muted">This bus served no line in this window.</p>
-      }
-
-      <h4>Abnormal trips</h4>
-      <div class="data-table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Day</th>
-              <th>Departure</th>
-              <th>Line</th>
-              <th>What</th>
-              <th>What was seen</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (i of d.incidents; track i.scheduledDeparture + i.kind) {
-              <tr>
-                <td class="nowrap">{{ dayLabel(i.day) }}</td>
-                <td>{{ time(i.scheduledDeparture) }}</td>
-                <td class="nowrap">
-                  {{ i.line }} <span class="muted">{{ i.brigade }}</span>
-                </td>
-                <td>
-                  <span
-                    class="tag"
-                    [class.danger]="i.kind === 'vehicle-changed'"
-                    [class.warning]="i.kind === 'missed'"
-                  >
-                    {{ i.kind === 'vehicle-changed' ? 'Broke down' : 'Missed' }}
-                  </span>
-                </td>
-                <td>
-                  {{ i.note }}
-                  @if (i.story.length) {
-                    <button
-                      type="button"
-                      class="story-toggle"
-                      [attr.aria-expanded]="storyOpen(i)"
-                      (click)="toggleStory(i)"
-                    >
-                      {{ storyOpen(i) ? '▾' : '▸' }} Step by step ({{ i.story.length }} steps)
-                    </button>
-                  }
-                </td>
-              </tr>
-              @if (storyOpen(i)) {
-                <tr class="story-row">
-                  <td colspan="5">
-                    <app-incident-story
-                      [story]="i.story"
-                      [timeline]="i.timeline"
-                      [paths]="i.paths"
-                    />
-                  </td>
-                </tr>
-              }
-            } @empty {
-              <tr>
-                <td colspan="5" class="muted">
-                  It broke down on no trip and missed none of its brigade's trips in this window.
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    </section>
-  } @else {
-    <p class="muted" role="status">Loading the bus…</p>
-  }
-} @else if (report(); as r) {
+@if (report(); as r) {
   <div class="tiles" [class.loading]="loading()">
     <section class="card tile in-use">
-      <h2>In use</h2>
+      <h2>{{ t('fleet.inUse') }}</h2>
       <p class="hero">
-        {{ r.inUse }} <span class="muted">of {{ r.fleet }}</span>
+        {{ r.inUse }} <span class="muted">{{ t('fleet.of', { n: r.fleet }) }}</span>
       </p>
-      <p class="muted">buses served a line in this window ({{ inUseShare() }}% of the fleet).</p>
+      <p class="muted">{{ t('fleet.servedLine', { share: inUseShare() }) }}</p>
       <div class="meter" aria-hidden="true"><span [style.width.%]="inUseShare()"></span></div>
     </section>
 
     <section class="card tile models">
-      <h2>By model</h2>
-      <p class="muted">Buses in use, of the fleet's.</p>
+      <h2>{{ t('fleet.byModel') }}</h2>
+      <p class="muted">{{ t('fleet.inUseOfFleet') }}</p>
       <app-count-bars [counts]="r.models" />
     </section>
 
     <section class="card tile classes">
-      <h2>By size</h2>
-      <p class="muted">Buses in use, of the fleet's, smallest first.</p>
+      <h2>{{ t('fleet.bySize') }}</h2>
+      <p class="muted">{{ t('fleet.inUseOfFleetSmallest') }}</p>
       <app-count-bars [counts]="r.classes" [label]="classLabel" />
     </section>
 
     <section class="card tile makes">
-      <h2>By make</h2>
-      <p class="muted">Buses in use, of the fleet's.</p>
+      <h2>{{ t('fleet.byMake') }}</h2>
+      <p class="muted">{{ t('fleet.inUseOfFleet') }}</p>
       <app-count-bars [counts]="r.makes" />
     </section>
 
     <section class="card tile">
-      <h2>Most used</h2>
+      <h2>{{ t('fleet.mostUsed') }}</h2>
       <ol class="mini-list">
         @for (u of r.mostUsed; track u.vehicle.id) {
           <li>
@@ -187,17 +44,17 @@
               {{ u.vehicle.number }}
             </button>
             <span class="muted model">{{ u.vehicle.model ?? '—' }}</span>
-            <span class="num">{{ u.hours.toFixed(1) }} h</span>
+            <span class="num">{{ t('fleet.hours', { n: u.hours.toFixed(1) }) }}</span>
             <span class="muted lines">{{ u.lines.join(', ') }}</span>
           </li>
         } @empty {
-          <li class="muted">No bus in service in this window.</li>
+          <li class="muted">{{ t('fleet.noBusInService') }}</li>
         }
       </ol>
     </section>
 
     <section class="card tile">
-      <h2>Least used</h2>
+      <h2>{{ t('fleet.leastUsed') }}</h2>
       <ol class="mini-list">
         @for (u of r.leastUsed; track u.vehicle.id) {
           <li>
@@ -205,19 +62,19 @@
               {{ u.vehicle.number }}
             </button>
             <span class="muted model">{{ u.vehicle.model ?? '—' }}</span>
-            <span class="num">{{ u.hours.toFixed(1) }} h</span>
+            <span class="num">{{ t('fleet.hours', { n: u.hours.toFixed(1) }) }}</span>
             <span class="muted lines">{{ u.lines.join(', ') }}</span>
           </li>
         } @empty {
-          <li class="muted">No bus in service in this window.</li>
+          <li class="muted">{{ t('fleet.noBusInService') }}</li>
         }
       </ol>
     </section>
 
     <section class="card tile breakdowns">
-      <h2>Broken down</h2>
+      <h2>{{ t('fleet.brokenDown') }}</h2>
       <p class="hero">{{ r.breakdowns.length }}</p>
-      <p class="muted">buses replaced midway through a trip and not used again that day.</p>
+      <p class="muted">{{ t('fleet.replacedMidway') }}</p>
       <ul class="mini-list">
         @for (b of r.breakdowns; track b.vehicle.id + b.at) {
           <li>
@@ -236,52 +93,30 @@
   </div>
 
   <section class="card section" [class.loading]="loading()">
-    <h2>Hours in service per bus</h2>
-    <p class="muted">
-      Every bus of the fleet, the most used first; buses not used are at the end with 0 h. Click a
-      bar to see that bus in detail.
-    </p>
+    <h2>{{ t('fleet.hoursPerBus') }}</h2>
+    <p class="muted">{{ t('fleet.hoursPerBusIntro') }}</p>
     @if (r.usage.length) {
       <app-bar-chart
         [bars]="usageBars()"
         [format]="hoursAxis"
-        [selected]="selectedId()"
         [selectable]="true"
-        label="Hours in service per bus, the most used first"
+        [label]="t('fleet.hoursPerBusLabel')"
         (picked)="choose($event)"
       />
     } @else {
-      <p class="muted">No buses.</p>
+      <p class="muted">{{ t('fleet.noBuses') }}</p>
     }
   </section>
 
   <details class="card how">
-    <summary>How these are calculated</summary>
+    <summary>{{ t('fleet.how') }}</summary>
     <ul>
-      <li>
-        <strong>The fleet</strong> is every bus ever seen on the live feed. A bus is
-        <strong>in use</strong> when it reported a line in the window.
-      </li>
-      <li>
-        <strong>Hours in service</strong> come from the recorded positions (every 10 seconds): each
-        report on a line counts until the bus's next report, up to a minute, so gaps in the feed
-        don't count as service. <strong>Days</strong> are service days, 03:00 to 03:00.
-      </li>
-      <li>
-        <strong>Broken down</strong>, as on Abnormal trips: a trip run in full by two buses of the
-        brigade, one taking over midway, where the replaced bus wasn't used again that day. It is
-        <strong>back</strong> at its next report on a line after that day.
-      </li>
-      <li>
-        <strong>Runs</strong> are consecutive reports on one line, brigade and headsign, at most 5
-        minutes apart; a gap of 30 minutes or more between runs is a <strong>break</strong>.
-      </li>
-      <li>
-        <strong>Abnormal trips of a bus:</strong> trips it broke down on, and trips of its brigade
-        it missed (not run while it ran the brigade's other trips that day). A cancelled trip (no
-        bus on the brigade all day) has no bus to show it on. Only the city timetable's (BKM) lines
-        can be judged.
-      </li>
+      @for (i of [1, 2, 3, 4, 5]; track i) {
+        <li [innerHTML]="t('fleet.how' + i)"></li>
+      }
     </ul>
   </details>
+} @else if (loading()) {
+  <app-skeleton kind="tiles" [count]="7" [label]="t('fleet.loadingFleet')" />
+  <app-skeleton kind="chart" />
 }

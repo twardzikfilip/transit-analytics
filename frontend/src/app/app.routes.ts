@@ -12,21 +12,16 @@ export const routes: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'home' },
       {
         path: 'home',
-        title: 'Home',
+        title: 'titles.home',
         loadChildren: () => import('./pages/home/home.routes').then((m) => m.HOME_ROUTES),
       },
       {
-        path: 'fleet',
-        // "Vehicle Details" while one bus is shown (?vehicle=id), else "Fleet Overview"; worked out again whenever
-        // the query changes.
-        title: (route) =>
-          route.queryParamMap.get('vehicle') ? 'Vehicle Details' : 'Fleet Overview',
-        runGuardsAndResolvers: 'paramsOrQueryParamsChange',
+        path: 'vehicles',
         loadChildren: () => import('./pages/fleet/fleet.routes').then((m) => m.FLEET_ROUTES),
       },
       // Former pages, now part of Fleet, Routes and Home.
-      { path: 'vehicles', redirectTo: 'fleet' },
-      { path: 'vehicle-stats', redirectTo: 'fleet' },
+      { path: 'fleet', redirectTo: 'vehicles' },
+      { path: 'vehicle-stats', redirectTo: 'vehicles' },
       { path: 'route-detail', redirectTo: 'routes' },
       { path: 'live-map', redirectTo: 'home' },
       { path: 'positions', redirectTo: 'home' },
@@ -35,19 +30,19 @@ export const routes: Routes = [
       { path: 'lines', redirectTo: 'routes' },
       {
         path: 'hotspots',
-        title: 'Stop hotspots',
+        title: 'titles.hotspots',
         loadChildren: () =>
           import('./pages/hotspots/hotspots.routes').then((m) => m.HOTSPOTS_ROUTES),
       },
       {
         path: 'brigades',
-        title: 'Brigades',
+        title: 'titles.brigades',
         loadChildren: () =>
           import('./pages/brigades/brigades.routes').then((m) => m.BRIGADES_ROUTES),
       },
       {
         path: 'trip-anomalies',
-        title: 'Abnormal trips',
+        title: 'titles.tripAnomalies',
         loadChildren: () =>
           import('./pages/trip-anomalies/trip-anomalies.routes').then(
             (m) => m.TRIP_ANOMALIES_ROUTES,
@@ -55,7 +50,7 @@ export const routes: Routes = [
       },
       {
         path: 'delay-generation',
-        title: 'Delay generation',
+        title: 'titles.delayGeneration',
         loadChildren: () =>
           import('./pages/delay-generation/delay-generation.routes').then(
             (m) => m.DELAY_GENERATION_ROUTES,
@@ -63,19 +58,19 @@ export const routes: Routes = [
       },
       {
         path: 'corridors',
-        title: 'Important corridors',
+        title: 'titles.corridors',
         loadChildren: () =>
           import('./pages/corridors/corridors.routes').then((m) => m.CORRIDORS_ROUTES),
       },
       {
         path: 'bus-lanes',
-        title: 'Bus lanes',
+        title: 'titles.busLanes',
         loadChildren: () =>
           import('./pages/bus-lanes/bus-lanes.routes').then((m) => m.BUS_LANES_ROUTES),
       },
       {
         path: 'network-coverage',
-        title: 'Network coverage',
+        title: 'titles.networkCoverage',
         loadChildren: () =>
           import('./pages/network-coverage/network-coverage.routes').then(
             (m) => m.NETWORK_COVERAGE_ROUTES,
@@ -83,12 +78,12 @@ export const routes: Routes = [
       },
       {
         path: 'routes',
-        title: 'Routes',
+        title: 'titles.routes',
         loadChildren: () => import('./pages/routes/routes.routes').then((m) => m.ROUTES_ROUTES),
       },
       {
         path: 'sources',
-        title: 'Sources',
+        title: 'titles.sources',
         loadComponent: () => import('./pages/sources/sources').then((m) => m.Sources),
       },
       {
@@ -97,7 +92,7 @@ export const routes: Routes = [
       },
       {
         path: 'settings',
-        title: 'Settings',
+        title: 'titles.settings',
         loadChildren: () =>
           import('./pages/settings/settings.routes').then((m) => m.SETTINGS_ROUTES),
       },

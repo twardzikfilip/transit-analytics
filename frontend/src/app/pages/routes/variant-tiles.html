@@ -1,41 +1,25 @@
 @let d = detail();
 <div class="card tile">
-  <span class="muted">Length</span>
-  <strong>{{ d.base?.lengthKm ?? '—' }} km</strong>
-  <span class="muted small">base route, both directions averaged</span>
+  <span class="muted">{{ t('tiles.length') }}</span>
+  <strong>{{ t('tiles.km', { n: d.base?.lengthKm ?? '—' }) }}</strong>
+  <span class="muted small">{{ t('tiles.lengthNote') }}</span>
   <ul class="variant-lines">
     @for (v of d.variants; track v.direction + '|' + v.shapeId) {
       <li [class.depot]="v.kind === 'depot'">
         <span class="what"
           ><span class="kind">{{ shortKind(v.kind) }}</span> → {{ v.lastStop }}</span
         >
-        <span class="value">{{ v.km | number: '1.1-1' }} km</span>
+        <span class="value">{{ t('tiles.km', { n: v.km | number: '1.1-1' }) }}</span>
       </li>
     }
   </ul>
 </div>
 <div class="card tile">
-  <span class="muted">Scheduled travel time</span>
-  <strong>{{ d.base?.shortestMin ?? '—' }}–{{ d.base?.longestMin ?? '—' }} min</strong>
-  <span class="muted small">base route, shortest–longest run</span>
-  <ul class="variant-lines">
-    @for (v of d.variants; track v.direction + '|' + v.shapeId) {
-      <li [class.depot]="v.kind === 'depot'">
-        <span class="what"
-          ><span class="kind">{{ shortKind(v.kind) }}</span> → {{ v.lastStop }}</span
-        >
-        <span class="value">
-          {{ v.shortestMin === v.longestMin ? v.shortestMin : v.shortestMin + '–' + v.longestMin }}
-          min
-        </span>
-      </li>
-    }
-  </ul>
-</div>
-<div class="card tile">
-  <span class="muted">Scheduled average speed</span>
-  <strong>{{ d.base?.minSpeedKmh ?? '—' }}–{{ d.base?.maxSpeedKmh ?? '—' }} km/h</strong>
-  <span class="muted small">base route, slowest–fastest run</span>
+  <span class="muted">{{ t('tiles.time') }}</span>
+  <strong>{{
+    t('tiles.min', { n: (d.base?.shortestMin ?? '—') + '–' + (d.base?.longestMin ?? '—') })
+  }}</strong>
+  <span class="muted small">{{ t('tiles.timeNote') }}</span>
   <ul class="variant-lines">
     @for (v of d.variants; track v.direction + '|' + v.shapeId) {
       <li [class.depot]="v.kind === 'depot'">
@@ -44,23 +28,55 @@
         >
         <span class="value">
           {{
-            v.minSpeedKmh === v.maxSpeedKmh ? v.minSpeedKmh : v.minSpeedKmh + '–' + v.maxSpeedKmh
+            t('tiles.min', {
+              n:
+                v.shortestMin === v.longestMin ? v.shortestMin : v.shortestMin + '–' + v.longestMin,
+            })
           }}
-          km/h
         </span>
       </li>
     }
   </ul>
 </div>
 <div class="card tile">
-  <span class="muted">Zone 2 (outside the city)</span>
+  <span class="muted">{{ t('tiles.speed') }}</span>
+  <strong>{{
+    t('tiles.kmh', { n: (d.base?.minSpeedKmh ?? '—') + '–' + (d.base?.maxSpeedKmh ?? '—') })
+  }}</strong>
+  <span class="muted small">{{ t('tiles.speedNote') }}</span>
+  <ul class="variant-lines">
+    @for (v of d.variants; track v.direction + '|' + v.shapeId) {
+      <li [class.depot]="v.kind === 'depot'">
+        <span class="what"
+          ><span class="kind">{{ shortKind(v.kind) }}</span> → {{ v.lastStop }}</span
+        >
+        <span class="value">
+          {{
+            t('tiles.kmh', {
+              n:
+                v.minSpeedKmh === v.maxSpeedKmh
+                  ? v.minSpeedKmh
+                  : v.minSpeedKmh + '–' + v.maxSpeedKmh,
+            })
+          }}
+        </span>
+      </li>
+    }
+  </ul>
+</div>
+<div class="card tile">
+  <span class="muted">{{ t('tiles.zone2') }}</span>
   @if (d.zone2.length) {
     @if (zone2().base.length) {
-      <strong>{{ zone2().base[0].km }} km · {{ zone2().base[0].stops }} stops</strong>
-      <span class="muted small">on the base route</span>
+      <strong>{{
+        t('tiles.zoneValue', { km: zone2().base[0].km, stops: zone2().base[0].stops })
+      }}</strong>
+      <span class="muted small">{{ t('tiles.onBase') }}</span>
     } @else {
-      <strong>{{ zone2().longer[0].km }} km · {{ zone2().longer[0].stops }} stops</strong>
-      <span class="muted small">only on longer variants</span>
+      <strong>{{
+        t('tiles.zoneValue', { km: zone2().longer[0].km, stops: zone2().longer[0].stops })
+      }}</strong>
+      <span class="muted small">{{ t('tiles.onlyLonger') }}</span>
     }
     <ul class="variant-lines stacked">
       @for (z of d.zone2; track $index) {
@@ -68,56 +84,61 @@
           <span class="what"
             ><span class="kind">{{ shortKind(z.kind) }}</span> → {{ z.headsign }}</span
           >
-          <span class="value"
-            >{{ z.km }} of {{ z.totalKm }} km · {{ z.stops }} of {{ z.totalStops }} stops</span
-          >
+          <span class="value">{{
+            t('tiles.zoneOf', {
+              km: z.km,
+              totalKm: z.totalKm,
+              stops: z.stops,
+              totalStops: z.totalStops,
+            })
+          }}</span>
         </li>
       }
     </ul>
   } @else {
-    <strong>None</strong>
-    <span class="muted small">no variant leaves the city (zone 1)</span>
+    <strong>{{ t('tiles.none') }}</strong>
+    <span class="muted small">{{ t('tiles.staysInCity') }}</span>
   }
 </div>
 <div class="card tile">
-  <span class="muted">Brigades</span>
+  <span class="muted">{{ t('tiles.brigades') }}</span>
   @if (d.brigadesKnown) {
     <strong>{{ d.brigades.length }}</strong>
   } @else {
-    <strong>Not given</strong>
+    <strong>{{ t('tiles.notGiven') }}</strong>
   }
   <span class="muted small"
-    >{{ trips() }} trips a weekday{{
-      d.brigadesKnown ? '' : "; this timetable doesn't say which bus runs each trip"
-    }}</span
+    >{{ t('tiles.trips', { n: trips() }) }}{{ d.brigadesKnown ? '' : t('tiles.noBuses') }}</span
   >
 </div>
 <div class="card tile regularity">
-  <span class="muted">Regularity</span>
+  <span class="muted">{{ t('tiles.regularity') }}</span>
   @if (regularity(); as r) {
     <strong>
       <span class="grade" [attr.data-grade]="grade(r.peakCv)">{{ grade(r.peakCv) ?? '—' }}</span>
-      peak ·
+      {{ t('tiles.peak') }} ·
       <span class="grade" [attr.data-grade]="grade(r.offPeakCv)">{{
         grade(r.offPeakCv) ?? '—'
       }}</span>
-      off-peak
+      {{ t('tiles.offPeak') }}
     </strong>
-    <span class="muted small"
-      >how evenly departures are spread on a weekday (TCQSM grades, A best)</span
-    >
+    <span class="muted small">{{ t('tiles.regularityNote') }}</span>
     <ul class="variant-lines stacked">
       <li [attr.title]="meaning(r.peakCv)">
-        <span class="what"><span class="kind">Peak</span> {{ periods(r.peak) }}</span>
+        <span class="what"
+          ><span class="kind">{{ t('tiles.peakCap') }}</span> {{ periods(r.peak) }}</span
+        >
         <span class="value">{{ meaning(r.peakCv) }}</span>
       </li>
       <li [attr.title]="meaning(r.offPeakCv)">
-        <span class="what"><span class="kind">Off-peak</span> {{ periods(r.offPeak) }}</span>
+        <span class="what"
+          ><span class="kind">{{ t('tiles.offPeakCap') }}</span> {{ periods(r.offPeak) }}</span
+        >
         <span class="value">{{ meaning(r.offPeakCv) }}</span>
       </li>
     </ul>
   } @else {
     <strong>—</strong>
-    <span class="muted small">not known for this line</span>
+    <span class="muted small">{{ t('tiles.unknown') }}</span>
   }
 </div>

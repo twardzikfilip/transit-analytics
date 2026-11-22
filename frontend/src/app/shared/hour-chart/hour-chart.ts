@@ -2,6 +2,7 @@ import { Component, computed, input, signal } from '@angular/core';
 import { hostWidth } from '../host-width';
 import { niceTicks, segments } from '../time-series-chart/chart-geometry';
 import { clock, hourTickStep } from '../format/time';
+import { t } from '../../core/i18n/t';
 
 /** A point at an hour of the service day (fractional; 24+ is after midnight). */
 export interface HourPoint {
@@ -46,6 +47,7 @@ const MARGIN = { top: 12, right: 16, bottom: 28, left: 44 };
   host: { '[class.loading]': 'loading()' },
 })
 export class HourChart {
+  protected readonly t = t;
   readonly series = input<HourSeries[]>([]);
   readonly band = input<HourBand | null>(null);
   readonly refs = input<RefLine[]>([]);
@@ -56,9 +58,10 @@ export class HourChart {
   readonly step = input(1);
   readonly unit = input('');
   readonly format = input<(v: number) => string>((v) => String(Math.round(v * 10) / 10));
-  readonly label = input('Chart');
+  readonly label = input('');
   readonly loading = input(false);
-  readonly empty = input('Nothing recorded yet.');
+  /** Shown when there's nothing to draw; "Nothing recorded yet." by default. */
+  readonly empty = input('');
 
   protected readonly width = hostWidth(600, 280);
   protected readonly height = HEIGHT;
@@ -204,8 +207,8 @@ export class HourChart {
     };
   });
 
-  protected readonly summary = computed(
-    () => `${this.label()}: ${this.xs().length} time slots. Use the arrow keys to read values.`,
+  protected readonly summary = computed(() =>
+    t('charts.slots', { label: this.label() || t('charts.chart'), slots: this.xs().length }),
   );
 
   protected onPointerMove(event: PointerEvent): void {

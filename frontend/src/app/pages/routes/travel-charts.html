@@ -1,24 +1,24 @@
-<h2>How it actually runs</h2>
+<h2>{{ tr('travel.title') }}</h2>
 @if (performance(); as p) {
   <p class="muted">
-    Measured from recorded vehicle positions on {{ p.weekdays }} weekday{{
-      p.weekdays === 1 ? '' : 's'
-    }}
+    {{ tr('travel.measured', { days: tn('travel.weekdays', p.weekdays) }) }}
     @if (p.firstDay) {
       ({{ p.firstDay | date: 'd MMM' }} – {{ p.lastDay | date: 'd MMM y' }})
     }
-    · {{ p.fullRuns }} full runs of the base route and longer variants.
+    {{ tr('travel.fullRuns', { n: p.fullRuns }) }}
   </p>
 } @else if (loading()) {
-  <p class="muted">Loading real-time data…</p>
+  <p class="muted">{{ tr('travel.loading') }}</p>
 }
 
 <div class="charts" [class.loading]="loading()">
   @for (c of travelCharts(); track c.t.label) {
     <div class="chart">
       <h3>
-        Travel time · {{ c.title }}
-        <span class="muted">· {{ c.t.km | number: '1.1-1' }} km, {{ c.t.runs }} full runs</span>
+        {{ tr('travel.travelTime', { title: c.title }) }}
+        <span class="muted">{{
+          tr('travel.kmRuns', { km: c.t.km | number: '1.1-1', runs: c.t.runs })
+        }}</span>
       </h3>
       <app-hour-chart
         [series]="c.duration.series"
@@ -26,23 +26,23 @@
         [refs]="c.duration.refs"
         [from]="hours().from"
         [to]="hours().to"
-        unit="min"
+        [unit]="tr('travel.min')"
         [format]="minutes"
-        [label]="'Travel time of full runs by departure hour, ' + c.title"
+        [label]="tr('travel.timeLabel', { title: c.title })"
         [loading]="loading()"
-        empty="No full runs recorded yet."
+        [empty]="tr('travel.noRuns')"
       />
       <details>
-        <summary>Show as a table</summary>
+        <summary>{{ tr('travel.asTable') }}</summary>
         <table class="data-table compact">
           <thead>
             <tr>
-              <th>Hour</th>
-              <th class="num">Runs</th>
-              <th class="num">Shortest</th>
-              <th class="num">Longest</th>
-              <th class="num">Average</th>
-              <th class="num">Median</th>
+              <th>{{ tr('travel.hour') }}</th>
+              <th class="num">{{ tr('travel.runs') }}</th>
+              <th class="num">{{ tr('travel.shortest') }}</th>
+              <th class="num">{{ tr('travel.longest') }}</th>
+              <th class="num">{{ tr('travel.average') }}</th>
+              <th class="num">{{ tr('travel.median') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -50,10 +50,10 @@
               <tr>
                 <td>{{ clock(h.hour * 3600) }}–{{ clock((h.hour + 1) * 3600) }}</td>
                 <td class="num">{{ h.runs }}</td>
-                <td class="num">{{ h.min }} min</td>
-                <td class="num">{{ h.max }} min</td>
-                <td class="num">{{ h.avg }} min</td>
-                <td class="num">{{ h.median }} min</td>
+                <td class="num">{{ tr('travel.minValue', { n: h.min }) }}</td>
+                <td class="num">{{ tr('travel.minValue', { n: h.max }) }}</td>
+                <td class="num">{{ tr('travel.minValue', { n: h.avg }) }}</td>
+                <td class="num">{{ tr('travel.minValue', { n: h.median }) }}</td>
               </tr>
             }
           </tbody>
@@ -62,7 +62,7 @@
     </div>
 
     <div class="chart">
-      <h3>Average speed · {{ c.title }}</h3>
+      <h3>{{ tr('travel.avgSpeed', { title: c.title }) }}</h3>
       <app-hour-chart
         [series]="c.speed.series"
         [band]="c.speed.band"
@@ -71,20 +71,20 @@
         [to]="hours().to"
         unit="km/h"
         [format]="speed"
-        [label]="'Average speed of full runs by departure hour, ' + c.title"
+        [label]="tr('travel.speedLabel', { title: c.title })"
         [loading]="loading()"
-        empty="No full runs recorded yet."
+        [empty]="tr('travel.noRuns')"
       />
       <details>
-        <summary>Show as a table</summary>
+        <summary>{{ tr('travel.asTable') }}</summary>
         <table class="data-table compact">
           <thead>
             <tr>
-              <th>Hour</th>
-              <th class="num">Runs</th>
-              <th class="num">Slowest</th>
-              <th class="num">Fastest</th>
-              <th class="num">Average</th>
+              <th>{{ tr('travel.hour') }}</th>
+              <th class="num">{{ tr('travel.runs') }}</th>
+              <th class="num">{{ tr('travel.slowest') }}</th>
+              <th class="num">{{ tr('travel.fastest') }}</th>
+              <th class="num">{{ tr('travel.average') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -92,9 +92,9 @@
               <tr>
                 <td>{{ clock(h.hour * 3600) }}–{{ clock((h.hour + 1) * 3600) }}</td>
                 <td class="num">{{ h.runs }}</td>
-                <td class="num">{{ h.min }} km/h</td>
-                <td class="num">{{ h.max }} km/h</td>
-                <td class="num">{{ h.avg }} km/h</td>
+                <td class="num">{{ tr('travel.kmhValue', { n: h.min }) }}</td>
+                <td class="num">{{ tr('travel.kmhValue', { n: h.max }) }}</td>
+                <td class="num">{{ tr('travel.kmhValue', { n: h.avg }) }}</td>
               </tr>
             }
           </tbody>
@@ -104,33 +104,35 @@
   }
 
   <div class="chart">
-    <h3>Average delay over the weekday</h3>
+    <h3>{{ tr('travel.delayTitle') }}</h3>
     <app-hour-chart
       [series]="delayChart().series"
       [from]="hours().from"
       [to]="hours().to"
       [step]="0.25"
-      unit="min"
+      [unit]="tr('travel.min')"
       [format]="delayMinutes"
-      label="Average delay per 15 minutes over the weekday"
+      [label]="tr('travel.delayLabel')"
       [loading]="loading()"
-      empty="No delays recorded yet."
+      [empty]="tr('travel.noDelays')"
     />
     <details>
-      <summary>Show as a table</summary>
+      <summary>{{ tr('travel.asTable') }}</summary>
       <table class="data-table compact">
         <thead>
           <tr>
-            <th>Time</th>
-            <th class="num">Average delay</th>
-            <th class="num">Reports</th>
+            <th>{{ tr('travel.time') }}</th>
+            <th class="num">{{ tr('travel.avgDelay') }}</th>
+            <th class="num">{{ tr('travel.reports') }}</th>
           </tr>
         </thead>
         <tbody>
           @for (s of performance()?.delays ?? []; track s.minute) {
             <tr>
               <td>{{ clock(s.minute * 60) }}–{{ clock((s.minute + 15) * 60) }}</td>
-              <td class="num">{{ delayMinutes(s.avgDelaySeconds / 60) }} min</td>
+              <td class="num">
+                {{ tr('travel.minValue', { n: delayMinutes(s.avgDelaySeconds / 60) }) }}
+              </td>
               <td class="num">{{ s.samples }}</td>
             </tr>
           }

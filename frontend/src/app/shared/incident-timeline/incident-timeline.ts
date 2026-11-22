@@ -1,14 +1,16 @@
 import { Component, computed, input } from '@angular/core';
 import { IncidentSpan, IncidentStep } from '../../core/models/models';
 import { localTime } from '../format/time';
+import { t } from '../../core/i18n/t';
 
 /** How each kind of stretch is drawn and named in the legend. */
+/** What a bus was doing, in the legend's order; `label` is a translation key. */
 export const SPAN_KINDS: { kind: IncidentSpan['kind']; label: string }[] = [
-  { kind: 'running', label: 'On the trip' },
-  { kind: 'standing', label: 'Standing still' },
-  { kind: 'moving', label: 'Moving off, no brigade' },
-  { kind: 'approach', label: 'On its way, no brigade' },
-  { kind: 'service', label: 'On the brigade' },
+  { kind: 'running', label: 'incident.running' },
+  { kind: 'standing', label: 'incident.standing' },
+  { kind: 'moving', label: 'incident.moving' },
+  { kind: 'approach', label: 'incident.approach' },
+  { kind: 'service', label: 'incident.service' },
 ];
 
 /** Tick spacings to choose from, in minutes: the smallest giving at most six ticks wins. */
@@ -30,14 +32,14 @@ export interface TimelineLane {
 @Component({
   selector: 'app-incident-timeline',
   template: `
-    <ul class="legend" aria-label="Time line legend">
+    <ul class="legend" [attr.aria-label]="tr('incident.legend')">
       @for (k of kinds(); track k.kind) {
-        <li><span class="swatch" [class]="k.kind"></span>{{ k.label }}</li>
+        <li><span class="swatch" [class]="k.kind"></span>{{ tr(k.label) }}</li>
       }
     </ul>
     <div class="plot" role="img" [attr.aria-label]="label()">
       <div class="row steps-row">
-        <span class="lane-label muted">Steps</span>
+        <span class="lane-label muted">{{ tr('incident.steps') }}</span>
         <div class="track">
           @for (s of steps(); track $index) {
             <span
@@ -52,7 +54,7 @@ export interface TimelineLane {
       </div>
       @for (lane of lanes(); track lane.vehicle) {
         <div class="row">
-          <span class="lane-label">Bus {{ lane.vehicle }}</span>
+          <span class="lane-label">{{ tr('incident.bus', { bus: lane.vehicle }) }}</span>
           <div class="track lane">
             @for (b of lane.bars; track $index) {
               <span
@@ -79,6 +81,8 @@ export interface TimelineLane {
   styleUrl: './incident-timeline.scss',
 })
 export class IncidentTimeline {
+  /** Translates (`t` is a loop variable in the template). */
+  protected readonly tr = t;
   readonly spans = input.required<IncidentSpan[]>();
   readonly story = input.required<IncidentStep[]>();
 
@@ -111,14 +115,15 @@ export class IncidentTimeline {
       lanes.set(s.vehicle, lane);
       const left = this.position(Date.parse(s.from));
       const width = this.position(Date.parse(s.to)) - left;
-      const label = SPAN_KINDS.find((k) => k.kind === s.kind)?.label ?? s.kind;
+      const key = SPAN_KINDS.find((k) => k.kind === s.kind)?.label;
+      const label = key ? t(key) : s.kind;
       const when =
         s.from === s.to ? `from ${localTime(s.from)}` : `${localTime(s.from)}–${localTime(s.to)}`;
       lane.bars.push({
         kind: s.kind,
         left,
         width: Math.max(width, MOMENT_WIDTH),
-        title: `Bus ${s.vehicle}: ${label.toLowerCase()}, ${when}`,
+        title: t('incident.spanTitle', { bus: s.vehicle, what: label.toLowerCase(), when }),
       });
     }
     return [...lanes.values()];

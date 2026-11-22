@@ -1,10 +1,23 @@
-import { ParamMap, Router, convertToParamMap } from '@angular/router';
-import { routes } from '../../app.routes';
+import { TestBed } from '@angular/core/testing';
+import {
+  ActivatedRouteSnapshot,
+  Router,
+  RouterStateSnapshot,
+  convertToParamMap,
+} from '@angular/router';
+import { Observable, firstValueFrom, of, throwError } from 'rxjs';
+import { FleetApi } from '../../core/api/api.services';
+import { t } from '../../core/i18n/t';
+import { PageBack } from '../../core/title/page-back';
+import { pageTitle } from '../../core/title/page-title';
 import { FleetReport, FleetVehicle, VehicleDetail, VehicleUsage } from '../../core/models/models';
 import { FleetActions } from '../../store/fleet/fleet.actions';
 import { fleetFeature } from '../../store/fleet/fleet.reducer';
 import { renderPage, stateAfter, text, useSvgMaps } from '../../testing/page-testing';
+import { CountBars } from './count-bars';
 import { Fleet } from './fleet';
+import { FLEET_ROUTES, vehicleTitle } from './fleet.routes';
+import { VehiclePage } from './vehicle';
 import { localTime } from '../../shared/format/time';
 import {
   dailyBars,
@@ -227,8 +240,20 @@ describe('Fleet helpers', () => {
       ['15 Nov', 1, false],
       ['16 Nov', 2.5, true],
     ]);
-    expect(days[0].detail).toBe('1 runs');
+    expect(days[0].detail).toBe('1 run');
     expect(days[1].detail).toBe('1 abnormal trip');
+  });
+});
+
+describe('Count bars', () => {
+  it('lists every kind, however many', () => {
+    const fixture = TestBed.createComponent(CountBars);
+    const counts = Array.from({ length: 12 }, (_, i) => ({ model: `M${i}`, inUse: 1, fleet: 2 }));
+    fixture.componentRef.setInput('counts', counts);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelectorAll('.model-bars li')).toHaveLength(12);
+    expect(el.querySelector('button')).toBeNull();
   });
 });
 
@@ -256,6 +281,8 @@ describe('Fleet page', () => {
       'Maxi (11–15 m): 2 of 2 in use',
     );
     expect(bars('makes')).toEqual(['Solaris1/1', 'MAN1/1', 'unknown0/1']);
+    // Every kind listed, however many: no button for more.
+    expect(el.querySelector('app-count-bars button')).toBeNull();
     const lists = [...el.querySelectorAll('.tile .mini-list')];
     expect([...lists[0].querySelector('li')!.children].map(text)).toEqual([
       '230',
@@ -271,12 +298,12 @@ describe('Fleet page', () => {
     const order = [...el.querySelectorAll('.search, app-time-window')].map((e) => e.tagName);
     expect(order).toEqual(['DIV', 'APP-TIME-WINDOW']);
     expect(el.querySelector('.detail')).toBeNull();
-    expect(el.querySelector('button.back')).toBeNull();
+    expect(TestBed.inject(PageBack).link()).toBeNull();
     expect(text(el.querySelector('app-agency-picker'))).toContain('BKM');
   });
 
   it('searches for a bus and shows it, loading it for the window', () => {
-    const { el, fixture, render, setQuery, store } = renderPage(
+    const { el, fixture, render } = renderPage(
       Fleet,
       stateAfter(fleetFeature, FleetActions.loaded({ report: report() })),
       URL,
@@ -291,10 +318,9 @@ describe('Fleet page', () => {
     const options = [...el.querySelectorAll('.matches button')];
     expect(options.map(text)).toEqual(['1230MAN Lion’s City · BKM4.0 h']);
     (options[0] as HTMLButtonElement).click();
-    expect(navigate).toHaveBeenLastCalledWith([], {
-      queryParams: { vehicle: 2 },
-      queryParamsHandling: 'merge',
-    });
+    // Its own page, in the same window.
+    const opened = (id: number) => [['/vehicles', id], { queryParamsHandling: 'preserve' }];
+    expect(navigate).toHaveBeenLastCalledWith(...opened(2));
 
     input.value = 'nothing';
     input.dispatchEvent(new Event('input'));
@@ -303,41 +329,48 @@ describe('Fleet page', () => {
     input.value = '230';
     input.dispatchEvent(new Event('input'));
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
-    expect(navigate).toHaveBeenLastCalledWith([], {
-      queryParams: { vehicle: 1 },
-      queryParamsHandling: 'merge',
-    });
+    expect(navigate).toHaveBeenLastCalledWith(...opened(1));
 
     // A click on a bar or a name in the tiles chooses the bus too.
     (el.querySelectorAll('app-bar-chart rect.hit')[2] as SVGElement).dispatchEvent(
       new Event('click'),
     );
-    expect(navigate).toHaveBeenLastCalledWith([], {
-      queryParams: { vehicle: 3 },
-      queryParamsHandling: 'merge',
-    });
+    expect(navigate).toHaveBeenLastCalledWith(...opened(3));
+    (el.querySelector('.tile .mini-list button.link') as HTMLButtonElement).click();
+    expect(navigate).toHaveBeenLastCalledWith(...opened(1));
+  });
 
-    setQuery({ ...URL, vehicle: '1' });
-    expect(store.dispatch).toHaveBeenLastCalledWith(
+  it("loads the bus in the path for the URL's window, and the fleet for the search", () => {
+    const { store, setQuery } = renderPage(VehiclePage, {}, URL, [], { id: '1' });
+    expect(store.dispatch).toHaveBeenCalledWith(
       FleetActions.loadVehicle({ id: 1, window: WINDOW }),
     );
+    expect(store.dispatch).toHaveBeenCalledWith(
+      FleetActions.load({ window: WINDOW, agencies: [] }),
+    );
     const loads = vi.mocked(store.dispatch).mock.calls.length;
-    setQuery({ ...URL, vehicle: '1' });
-    expect(vi.mocked(store.dispatch).mock.calls).toHaveLength(loads);
     setQuery(URL);
-    expect(store.dispatch).toHaveBeenLastCalledWith(FleetActions.clearVehicle());
+    expect(vi.mocked(store.dispatch).mock.calls).toHaveLength(loads);
+    // Another window: the bus again, for it.
+    setQuery({ range: '24h' });
+    expect(store.dispatch).toHaveBeenLastCalledWith(
+      expect.objectContaining({ type: FleetActions.loadVehicle.type, id: 1 }),
+    );
+    expect(vi.mocked(store.dispatch).mock.calls.length).toBeGreaterThan(loads);
   });
 
   it('tells each breakdown of the bus step by step, with both buses on a time line and a map', async () => {
     useSvgMaps();
     const { el, fixture } = renderPage(
-      Fleet,
+      VehiclePage,
       stateAfter(
         fleetFeature,
         FleetActions.loaded({ report: report() }),
         FleetActions.vehicleLoaded({ vehicle: detail() }),
       ),
-      { ...URL, vehicle: '1' },
+      URL,
+      [],
+      { id: '1' },
     );
     await fixture.whenStable();
     fixture.detectChanges();
@@ -399,15 +432,18 @@ describe('Fleet page', () => {
 
   it("shows a bus's runs per day, hours per day and abnormal trips", () => {
     const { el, fixture } = renderPage(
-      Fleet,
+      VehiclePage,
       stateAfter(
         fleetFeature,
         FleetActions.loaded({ report: report() }),
         FleetActions.vehicleLoaded({ vehicle: detail() }),
       ),
-      { ...URL, vehicle: '1' },
+      URL,
+      [],
+      { id: '1' },
     );
-    // The bus's details instead of the overview: no tiles or fleet chart; the search and window stay on top.
+    // The search and the window first (the way back is in the header); no tiles or fleet chart.
+    expect(el.firstElementChild?.tagName).toBe('APP-VEHICLE-SEARCH');
     expect(el.querySelector('.tiles')).toBeNull();
     expect(text(el)).not.toContain('Hours in service per bus');
     expect(el.querySelector('.search input')).not.toBeNull();
@@ -437,23 +473,24 @@ describe('Fleet page', () => {
     const navigate = vi
       .spyOn(fixture.debugElement.injector.get(Router), 'navigate')
       .mockResolvedValue(true);
-    (el.querySelector('button.back') as HTMLButtonElement).click();
-    expect(navigate).toHaveBeenLastCalledWith([], {
-      queryParams: { vehicle: null },
-      queryParamsHandling: 'merge',
-    });
+    const back = TestBed.inject(PageBack).link()!;
+    expect(t(back.label)).toBe('Back to the fleet overview');
+    back.go();
+    expect(navigate).toHaveBeenLastCalledWith(['/vehicles'], { queryParamsHandling: 'preserve' });
   });
 
   it('shows the runs one per row for a window of a day, and a bus without trouble', () => {
     const short = detail('2026-11-11T11:00:00Z');
     const { el } = renderPage(
-      Fleet,
+      VehiclePage,
       stateAfter(
         fleetFeature,
         FleetActions.loaded({ report: report() }),
         FleetActions.vehicleLoaded({ vehicle: { ...short, incidents: [] } }),
       ),
-      { ...URL, vehicle: '1' },
+      URL,
+      [],
+      { id: '1' },
     );
     expect(text(el.querySelector('.detail h4'))).toBe('Runs');
     expect(el.querySelectorAll('app-run-timeline text.name')).toHaveLength(4);
@@ -463,13 +500,15 @@ describe('Fleet page', () => {
   it('says when a bus served no line in the window', () => {
     const short = detail('2026-11-11T11:00:00Z');
     const idle = renderPage(
-      Fleet,
+      VehiclePage,
       stateAfter(
         fleetFeature,
         FleetActions.loaded({ report: report() }),
         FleetActions.vehicleLoaded({ vehicle: { ...short, days: [], incidents: [] } }),
       ),
-      { ...URL, vehicle: '1' },
+      URL,
+      [],
+      { id: '1' },
     );
     expect(text(idle.el.querySelector('.detail'))).toContain(
       'This bus served no line in this window.',
@@ -483,23 +522,32 @@ describe('Fleet page', () => {
         fleetFeature,
         FleetActions.loaded({ report: { ...report(), usage: [], mostUsed: [], leastUsed: [] } }),
         FleetActions.load({ window: WINDOW, agencies: [] }),
-        FleetActions.loadVehicle({ id: 9, window: WINDOW }),
-        FleetActions.vehicleFailure({ error: 'Vehicle 9 not found' }),
       ),
       URL,
     );
     expect(text(el.querySelector('[role=status]'))).toBe('Loading…');
-    // The error itself is a toast (core/api/error-toasts.ts), not text on the page.
-    expect(text(el)).not.toContain('Vehicle 9 not found');
     expect(text(el.querySelector('.tile .mini-list'))).toBe('No bus in service in this window.');
     expect(text(el)).toContain('No buses.');
   });
 
-  it('is titled Fleet Overview, or Vehicle Details while a bus is shown', () => {
-    const fleet = routes.flatMap((r) => r.children ?? []).find((r) => r.path === 'fleet');
-    const title = fleet?.title as (route: { queryParamMap: ParamMap }) => string;
-    expect(title({ queryParamMap: convertToParamMap({}) })).toBe('Fleet Overview');
-    expect(title({ queryParamMap: convertToParamMap({ vehicle: '7' }) })).toBe('Vehicle Details');
-    expect(fleet?.runGuardsAndResolvers).toBe('paramsOrQueryParamsChange');
+  it("is titled Fleet Overview, and a bus's page by its number", async () => {
+    const [{ children }] = FLEET_ROUTES;
+    expect(pageTitle(children?.find((r) => r.path === '')?.title as string)).toBe('Fleet Overview');
+    expect(children?.find((r) => r.path === ':id')?.title).toBe(vehicleTitle);
+
+    const title = (number: Observable<string>) => {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [{ provide: FleetApi, useValue: { number: () => number } }],
+      });
+      const route = { paramMap: convertToParamMap({ id: '7' }) } as ActivatedRouteSnapshot;
+      return firstValueFrom(
+        TestBed.runInInjectionContext(
+          () => vehicleTitle(route, {} as RouterStateSnapshot) as Observable<string>,
+        ),
+      );
+    };
+    expect(pageTitle(await title(of('230')))).toBe('Vehicle 230');
+    expect(pageTitle(await title(throwError(() => new Error('gone'))))).toBe('Vehicle');
   });
 });

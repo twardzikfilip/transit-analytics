@@ -1,4 +1,3 @@
-import { DecimalPipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
@@ -8,13 +7,17 @@ import { Pager, rowNumber } from '../../shared/pager/pager';
 import { listQuery } from '../../shared/list-query';
 import { StopsActions } from '../../store/stops/stops.actions';
 import { stopsFeature } from '../../store/stops/stops.reducer';
+import { Skeleton } from '../../shared/skeleton/skeleton';
+import { LocalNumberPipe } from '../../shared/i18n/locale-pipes';
+import { t } from '../../core/i18n/t';
 
 @Component({
   selector: 'app-stops',
-  imports: [RouterLink, Pager, DecimalPipe],
+  imports: [Skeleton, RouterLink, Pager, LocalNumberPipe],
   templateUrl: './stops.html',
 })
 export class Stops {
+  protected readonly t = t;
   private readonly store = inject(Store);
 
   protected readonly stops = this.store.selectSignal(stopsFeature.selectAll);

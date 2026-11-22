@@ -1,0 +1,50 @@
+<aside id="sidebar" class="sidebar" [class.open]="open()" [class.collapsed]="collapsed()">
+  <div class="brand">
+    <span class="brand-full">Transit Analytics</span>
+    <!-- On a desktop: narrow the sidebar to its icons, and back (the icon of the phone's header button). -->
+    <button
+      type="button"
+      class="collapse-toggle"
+      aria-controls="sidebar"
+      [attr.aria-expanded]="!collapsed()"
+      [attr.aria-label]="t(collapsed() ? 'nav.withNames' : 'nav.iconsOnly')"
+      [title]="t(collapsed() ? 'nav.withNames' : 'nav.iconsOnly')"
+      (click)="toggleCollapsed()"
+    >
+      <app-icon name="sidebar" />
+    </button>
+    <button
+      type="button"
+      class="nav-close"
+      [attr.aria-label]="t('nav.hidePages')"
+      (click)="close.emit()"
+    >
+      <app-icon name="chevronLeft" />
+    </button>
+  </div>
+  <nav [attr.aria-label]="t('nav.pages')">
+    @for (group of navGroups; track $index) {
+      @if (group.label) {
+        <h2 class="group">
+          <span class="label">{{ t(group.label) }}</span>
+        </h2>
+      }
+      <ul>
+        @for (item of group.items; track item.path) {
+          <li>
+            <a
+              [routerLink]="item.path"
+              routerLinkActive="active"
+              ariaCurrentWhenActive="page"
+              [attr.title]="collapsed() ? t(item.label) : null"
+              (click)="close.emit()"
+            >
+              <app-icon class="icon" [name]="item.icon" />
+              <span class="label">{{ t(item.label) }}</span>
+            </a>
+          </li>
+        }
+      </ul>
+    }
+  </nav>
+</aside>

@@ -1,84 +1,97 @@
 <div class="header">
-  <h2>Live map <span class="muted now">now</span></h2>
+  <h2>
+    {{ t('live.title') }} <span class="muted now">{{ t('live.now') }}</span>
+  </h2>
   <span class="muted status">
     @if (filtering()) {
-      {{ visible().length }} of {{ count() }} vehicles ({{ filterSummary() }})
+      {{
+        t('live.someVehicles', {
+          shown: visible().length,
+          total: count(),
+          filters: filterSummary(),
+        })
+      }}
     } @else {
-      {{ count() }} vehicles
+      {{ tn('live.vehicles', count()) }}
     }
-    @if (lastUpdated(); as t) {
-      · updated {{ t | date: 'mediumTime' }}
+    @if (lastUpdated(); as at) {
+      {{ t('live.updated', { time: at | date: 'mediumTime' }) }}
     }
   </span>
 </div>
 <div class="filters">
   <label>
-    Operator
+    {{ t('live.operator') }}
     <select class="agency" [value]="agency()" (change)="setAgency($any($event.target).value)">
-      <option value="">All operators</option>
+      <option value="">{{ t('live.allOperators') }}</option>
       @for (a of agencies(); track a) {
         <option [value]="a" [selected]="a === agency()">{{ a }}</option>
       }
     </select>
   </label>
   <label>
-    Lines
+    {{ t('live.lines') }}
     <select class="line-type" (change)="setLineType($any($event.target).value)">
-      <option value="" [selected]="lineType() === null">All lines</option>
-      @for (t of lineTypes; track t.key) {
-        <option [value]="t.key" [selected]="t.key === lineType()">{{ t.label }}</option>
+      <option value="" [selected]="lineType() === null">{{ t('live.allLines') }}</option>
+      @for (type of lineTypes; track type.key) {
+        <option [value]="type.key" [selected]="type.key === lineType()">{{ t(type.label) }}</option>
       }
     </select>
   </label>
   <label class="delay">
-    Delay over
+    {{ t('live.delayOver') }}
     <span class="input-with-unit">
       <input
         type="number"
         min="0"
         step="1"
         inputmode="numeric"
-        placeholder="any"
-        aria-label="Show only vehicles delayed more than this many minutes"
+        [placeholder]="t('live.any')"
+        [attr.aria-label]="t('live.delayInput')"
         [value]="minDelay() ?? ''"
         (input)="setMinDelay($any($event.target).value)"
       />
-      min
+      {{ t('live.min') }}
     </span>
   </label>
   @for (preset of [2, 5, 10]; track preset) {
     <button type="button" [class.active]="minDelay() === preset" (click)="setMinDelay('' + preset)">
-      &gt; {{ preset }} min
+      {{ t('live.over', { n: preset }) }}
     </button>
   }
   <button type="button" class="reset" [disabled]="!filtering()" (click)="resetFilters()">
-    Reset filters
+    {{ t('live.reset') }}
   </button>
 </div>
 <div #map class="map"></div>
-<div class="legend muted" aria-label="Map legend">
+<div class="legend muted" [attr.aria-label]="t('live.mapLegend')">
   <span class="group">
-    Delay
+    {{ t('live.delay') }}
     @for (s of delayStops; track s.seconds) {
-      <span class="item"><span class="dot" [style.background]="s.color"></span>{{ s.label }}</span>
+      <span class="item"
+        ><span class="dot" [style.background]="s.color"></span>{{ t(s.label) }}</span
+      >
     }
-    <span class="item"><span class="dot" [style.background]="noDelayColor"></span>unknown</span>
+    <span class="item"
+      ><span class="dot" [style.background]="noDelayColor"></span>{{ t('live.unknown') }}</span
+    >
   </span>
   <span class="group">
-    Lines on the map
+    {{ t('live.linesOnMap') }}
     @for (b of boundaries; track b.label) {
       <span class="item"
         ><span
           class="line-swatch"
-          [class.bus-lane]="b.label === 'Bus lane'"
+          [class.bus-lane]="b.label === 'palette.busLane'"
           [style.border-top-color]="b.color"
           [style.border-top-style]="b.dashArray ? 'dashed' : 'solid'"
         ></span
-        >{{ b.label }}</span
+        >{{ t(b.label) }}</span
       >
     }
   </span>
 </div>
 <p class="muted source">
-  Live data: <a href="https://zbiorkom.live" target="_blank" rel="noopener">zbiorkom.live</a>
+  {{ t('live.liveData') }}
+  <a href="https://zbiorkom.live" target="_blank" rel="noopener">zbiorkom.live</a>
 </p>

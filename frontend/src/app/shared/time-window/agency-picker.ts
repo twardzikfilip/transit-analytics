@@ -1,4 +1,5 @@
 import { Component, ElementRef, computed, inject, input, output, signal } from '@angular/core';
+import { t } from '../../core/i18n/t';
 /** An operator to choose, with how many vehicles it has. */
 export interface AgencyOption {
   name: string;
@@ -7,8 +8,11 @@ export interface AgencyOption {
 
 /** "All operators", "BKM" or "2 of 3 operators": the picker's button text. */
 export function pickerLabel(options: AgencyOption[], selected: string[]): string {
-  if (!selected.length || options.every((o) => selected.includes(o.name))) return 'All operators';
-  return selected.length === 1 ? selected[0] : `${selected.length} of ${options.length} operators`;
+  if (!selected.length || options.every((o) => selected.includes(o.name)))
+    return t('time.allOperators');
+  return selected.length === 1
+    ? selected[0]
+    : t('time.someOperators', { count: selected.length, total: options.length });
 }
 
 /**
@@ -41,7 +45,7 @@ export function toggleAgency(options: AgencyOption[], selected: string[], name: 
     </button>
     @if (open()) {
       <fieldset class="panel">
-        <legend class="sr-only">Operators to include</legend>
+        <legend class="sr-only">{{ t('time.operatorsToInclude') }}</legend>
         @for (o of options(); track o.name) {
           <label class="checkbox">
             <input
@@ -53,10 +57,12 @@ export function toggleAgency(options: AgencyOption[], selected: string[], name: 
             {{ o.name }} <span class="muted">{{ o.vehicles }}</span>
           </label>
         } @empty {
-          <span class="muted">No operators to choose from.</span>
+          <span class="muted">{{ t('time.noOperators') }}</span>
         }
         @if (selected().length) {
-          <button type="button" class="all" (click)="changed.emit([])">Select all</button>
+          <button type="button" class="all" (click)="changed.emit([])">
+            {{ t('time.selectAll') }}
+          </button>
         }
       </fieldset>
     }
@@ -124,6 +130,7 @@ export function toggleAgency(options: AgencyOption[], selected: string[], name: 
   },
 })
 export class AgencyPicker {
+  protected readonly t = t;
   private readonly host = inject(ElementRef<HTMLElement>);
 
   /** Operators to choose from, with their vehicle counts. */

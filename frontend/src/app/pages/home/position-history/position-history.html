@@ -1,8 +1,8 @@
 <header class="section-head">
-  <h2>Recorded positions</h2>
+  <h2>{{ t('history.title') }}</h2>
   @if (series()?.summary; as s) {
     @if (s.last) {
-      <span class="muted">Last recorded {{ s.last | date: 'medium' }}</span>
+      <span class="muted">{{ t('history.lastRecorded', { when: s.last | date: 'medium' }) }}</span>
     }
   }
 </header>
@@ -10,18 +10,20 @@
 <!-- These filters scope this section only (figures, charts, delay distribution), not the live map above. -->
 <app-time-window defaultPreset="24h">
   <label>
-    Operator
+    {{ t('history.operator') }}
     <select class="agency" (change)="setAgency($any($event.target).value)">
-      <option [value]="allAgencies" [selected]="agency() === null">All operators</option>
+      <option [value]="allAgencies" [selected]="agency() === null">
+        {{ t('history.allOperators') }}
+      </option>
       @for (a of agencyOptions(); track a) {
         <option [value]="a" [selected]="agency() === a">{{ a }}</option>
       }
     </select>
   </label>
   <label>
-    Line
+    {{ t('history.line') }}
     <select (change)="setRoute($any($event.target).value)">
-      <option value="" [selected]="route() === ''">All lines</option>
+      <option value="" [selected]="route() === ''">{{ t('history.allLines') }}</option>
       @for (r of routes(); track r.route) {
         <option [value]="r.route" [selected]="route() === r.route">{{ r.route }}</option>
       }
@@ -35,45 +37,51 @@
 @if (series()?.summary; as s) {
   <div class="figures" [class.loading]="loadingSeries()">
     <div class="card figure">
-      <span class="muted">Running now</span>
+      <span class="muted">{{ t('history.runningNow') }}</span>
       <strong>{{ s.latestVehicles | number }}</strong>
       <span class="muted small">
         @if (s.latestPoll) {
-          in the poll at {{ s.latestPoll | date: 'HH:mm' }}
+          {{ t('history.inPoll', { time: s.latestPoll | date: 'HH:mm' }) }}
         } @else {
-          no poll in this window
+          {{ t('history.noPoll') }}
         }
       </span>
     </div>
     <div class="card figure">
-      <span class="muted">Most at once</span>
+      <span class="muted">{{ t('history.mostAtOnce') }}</span>
       <strong>{{ s.peakVehicles | number }}</strong>
-      <span class="muted small">largest single poll</span>
+      <span class="muted small">{{ t('history.largestPoll') }}</span>
     </div>
     <div class="card figure">
-      <span class="muted">Different vehicles seen</span>
+      <span class="muted">{{ t('history.differentVehicles') }}</span>
       <strong>{{ s.vehicles | number }}</strong>
-      <span class="muted small">over the whole window, as vehicles start and end their runs</span>
+      <span class="muted small">{{ t('history.wholeWindow') }}</span>
     </div>
     <div class="card figure">
-      <span class="muted">Mean delay</span>
+      <span class="muted">{{ t('history.meanDelay') }}</span>
       <strong>{{ formatDelay(s.meanDelaySeconds) }}</strong>
-      <span class="muted small">min:s, over {{ s.samples | number }} reports</span>
+      <span class="muted small">{{ t('history.overReports', { count: s.samples | number }) }}</span>
     </div>
   </div>
+} @else if (loadingSeries()) {
+  <app-skeleton kind="tiles" [count]="4" [label]="t('history.loadingRecorded')" />
 }
 
 <section class="card chart-card">
   <div class="chart-head">
     <div>
-      <h2>Vehicles running and mean delay</h2>
+      <h2>{{ t('history.chartTitle') }}</h2>
       <p class="muted">
-        {{ route() ? 'Line ' + route() : 'All lines' }}, {{ stepLabel() }}. Breaks in a line are
-        periods with no recording.
+        {{
+          t('history.chartIntro', {
+            lines: route() ? t('history.lineX', { line: route() }) : t('history.allLines'),
+            step: stepLabel(),
+          })
+        }}
       </p>
     </div>
     <button type="button" (click)="showTable.set(!showTable())" [attr.aria-pressed]="showTable()">
-      {{ showTable() ? 'Show charts' : 'Show table' }}
+      {{ t(showTable() ? 'history.showCharts' : 'history.showTable') }}
     </button>
   </div>
 
@@ -83,11 +91,11 @@
         <table class="data-table" [class.loading]="loadingSeries()">
           <thead>
             <tr>
-              <th>From</th>
-              <th class="num">Vehicles running</th>
-              <th class="num">Most at once</th>
-              <th class="num">Reports</th>
-              <th class="num">Mean delay</th>
+              <th>{{ t('history.from') }}</th>
+              <th class="num">{{ t('history.vehiclesRunning') }}</th>
+              <th class="num">{{ t('history.mostAtOnce') }}</th>
+              <th class="num">{{ t('history.reports') }}</th>
+              <th class="num">{{ t('history.meanDelay') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -101,59 +109,56 @@
               </tr>
             } @empty {
               <tr>
-                <td colspan="5" class="muted">Nothing was recorded in this time range.</td>
+                <td colspan="5" class="muted">{{ t('history.nothing') }}</td>
               </tr>
             }
           </tbody>
         </table>
       </div>
     } @else {
-      <h3>Vehicles running</h3>
+      <h3>{{ t('history.vehiclesRunning') }}</h3>
       <app-time-series-chart
         [points]="c.vehicles"
         [from]="c.from"
         [to]="c.to"
         [stepMs]="c.stepMs"
-        unit="vehicles"
-        label="Vehicles running over time"
+        [unit]="t('history.vehiclesUnit')"
+        [label]="t('history.vehiclesOverTime')"
         [loading]="loadingSeries()"
       />
-      <h3>Mean delay <span class="muted">(below zero: early)</span></h3>
+      <h3>
+        {{ t('history.meanDelay') }} <span class="muted">{{ t('history.belowZero') }}</span>
+      </h3>
       <app-time-series-chart
         [points]="c.delay"
         [from]="c.from"
         [to]="c.to"
         [stepMs]="c.stepMs"
-        unit="min"
-        label="Mean delay over time, in minutes"
+        [unit]="t('live.min')"
+        [label]="t('history.delayOverTime')"
         [format]="delayTooltip"
         [axisFormat]="delayAxis"
         [loading]="loadingSeries()"
       />
     }
   } @else {
-    <p class="muted">Loading…</p>
+    <app-skeleton kind="map" height="300px" [label]="t('history.loadingCharts')" />
   }
 </section>
 
 <section class="card delays-card">
   <h2>
-    Delay distribution <span class="coverage">{{ coverage() }}</span>
+    {{ t('history.distribution') }} <span class="coverage">{{ coverage() }}</span>
   </h2>
-  <p class="muted">
-    How late vehicles were in the selected time window, line and operator; it changes with the
-    filters above. <em>Vehicles</em> counts each vehicle in every band it was in at some point, so
-    the column doesn't add up to the vehicles seen. <em>Share of time</em> is the share of all
-    reports.
-  </p>
+  <p class="muted" [innerHTML]="t('history.distributionIntro')"></p>
   <div class="data-table-wrap">
     <table class="data-table bands" [class.loading]="loadingSeries()">
       <thead>
         <tr>
-          <th>Delay</th>
-          <th class="num">Vehicles</th>
-          <th class="num">Reports</th>
-          <th>Share of time</th>
+          <th>{{ t('history.delay') }}</th>
+          <th class="num">{{ t('history.vehicles') }}</th>
+          <th class="num">{{ t('history.reports') }}</th>
+          <th>{{ t('history.shareOfTime') }}</th>
         </tr>
       </thead>
       <tbody>

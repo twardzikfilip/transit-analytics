@@ -1,4 +1,3 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
 import {
   Component,
   ElementRef,
@@ -26,10 +25,12 @@ import { LineRegularity } from './variant-tiles';
 import { clock, duration } from '../../shared/format/time';
 import { cssColor, INK, WHITE } from '../../shared/palette';
 import {
-  CAPACITIES,
   GEOMETRIES,
   SUBTYPES,
-  lineTable,
+  capacityDescription,
+  capacityLabel,
+  geometryDescription,
+  geometryLabel,
   subtypeLabel,
   variantKindLabel,
 } from './format';
@@ -37,29 +38,32 @@ import { TravelCharts } from './travel-charts';
 import { VariantTiles } from './variant-tiles';
 import { VariantTable } from './variant-table';
 import { SpeedProfiles } from './speed-profiles';
-import { LineChooser } from './line-chooser';
 import { DepotRuns } from './depot-runs';
 import { leafletHost } from '../../shared/map/leaflet-host';
 import { injectBusLanes } from '../../shared/map/bus-lanes';
 import { injectCityBoundaries } from '../../shared/map/city-boundaries';
 import { BOUNDARY_STYLES, BUS_LANE_STYLE, VARIANT_COLORS } from '../../shared/palette';
+import { Skeleton } from '../../shared/skeleton/skeleton';
+import { LocalDatePipe, LocalNumberPipe } from '../../shared/i18n/locale-pipes';
+import { t, tn } from '../../core/i18n/t';
 
-/**
- * Routes: pick a line (city, suburban, night or regional) to see it on the map with its variants, its timetable
- * figures (lengths, travel times, speeds, zone 2, brigades) and how it actually runs, measured from recorded vehicle
- * positions; with links to its trips and its timetable on the operator's website. Regional lines of other operators
- * aren't in the timetable: only what was recorded is shown for them.
- */
 /** A recorded variant driven less than this share of the runs is drawn thin and dashed. */
 export const RARE_SHARE = 0.05;
+
+/**
+ * One route (/routes/route/103): the line (city, suburban, night or regional) on the map with its variants, its
+ * timetable figures (lengths, travel times, speeds, zone 2, brigades) and how it actually runs, measured from
+ * recorded vehicle positions; with links to its trips and its timetable on the operator's website. Regional lines of
+ * other operators aren't in the timetable: only what was recorded is shown for them.
+ */
 
 @Component({
   selector: 'app-routes',
   imports: [
+    Skeleton,
     RouterLink,
-    DatePipe,
-    DecimalPipe,
-    LineChooser,
+    LocalDatePipe,
+    LocalNumberPipe,
     VariantTiles,
     VariantTable,
     SpeedProfiles,
@@ -73,12 +77,13 @@ export const RARE_SHARE = 0.05;
   styleUrl: './routes.scss',
 })
 export class RoutesPage {
+  protected readonly t = t;
+  protected readonly tn = tn;
   private readonly store = inject(Store);
   private readonly router = inject(Router);
-  private readonly params = toSignal(inject(ActivatedRoute).queryParamMap, { requireSync: true });
+  private readonly path = toSignal(inject(ActivatedRoute).paramMap, { requireSync: true });
   private readonly mapEl = viewChild.required<ElementRef<HTMLDivElement>>('map');
 
-  protected readonly lines = this.store.selectSignal(routeDetailFeature.selectLines);
   protected readonly detail = this.store.selectSignal(routeDetailFeature.selectDetail);
   protected readonly performance = this.store.selectSignal(routeDetailFeature.selectPerformance);
   protected readonly loadingDetail = this.store.selectSignal(
@@ -106,22 +111,25 @@ export class RoutesPage {
       : null;
   });
 
-  /** The lines to pick: a row per kind of line, a column per geometry; the buttons show the capacity. */
-  protected readonly table = computed(() => lineTable(this.lines()));
   protected readonly geometries = GEOMETRIES;
   /** What a line's classes mean, for the line title. */
   protected readonly classes = computed(() => {
     const d = this.detail();
     if (!d) return null;
     return {
-      geometry: GEOMETRIES.find((g) => g.geometry === d.geometry) ?? null,
-      capacity: CAPACITIES.find((c) => c.capacity === d.capacityClass) ?? null,
+      geometry: d.geometry
+        ? { label: geometryLabel(d.geometry), description: geometryDescription(d.geometry) }
+        : null,
+      capacity: d.capacityClass
+        ? {
+            label: t('routes.capacityOf', { capacity: capacityLabel(d.capacityClass) }),
+            description: capacityDescription(d.capacityClass),
+          }
+        : null,
     };
   });
-  /** The line in the URL (?line=103), else the first line. */
-  protected readonly selected = computed(
-    () => this.params().get('line') ?? this.lines()[0]?.line ?? null,
-  );
+  /** The line in the path (/routes/route/103). */
+  protected readonly selected = computed(() => this.path().get('line'));
 
   protected readonly clock = clock;
   protected readonly duration = duration;
@@ -173,7 +181,6 @@ export class RoutesPage {
   protected readonly boundaryStyles = BOUNDARY_STYLES;
 
   constructor() {
-    this.store.dispatch(RouteDetailActions.loadLines());
     this.store.dispatch(LineStatsActions.load());
 
     // Load the selected line once per change.
@@ -204,8 +211,9 @@ export class RoutesPage {
     });
   }
 
-  protected select(line: string): void {
-    this.router.navigate([], { queryParams: { line }, replaceUrl: true });
+  /** Back to every route. */
+  protected back(): void {
+    void this.router.navigate(['/routes']);
   }
 
   /** CSS custom property name of a subtype's colour, e.g. "--line-suburban". */
@@ -237,7 +245,7 @@ export class RoutesPage {
         opacity: main ? 0.85 : 1,
         dashArray: main ? undefined : depot ? '2 6' : '6 5',
       })
-        .bindTooltip(variantLabel(v), { sticky: true })
+        .bindTooltip(escapeHtml(variantLabel(v)), { sticky: true })
         .addTo(layers);
       v.points.forEach((p) => bounds.extend(p));
     }
@@ -256,7 +264,7 @@ export class RoutesPage {
           fillColor: zone2 ? color : WHITE,
           fillOpacity: 1,
         })
-          .bindTooltip(`${s.name}${zone2 ? ' · zone 2' : ''}`)
+          .bindTooltip(escapeHtml(zone2 ? t('routes.tip.zone2', { stop: s.name }) : s.name))
           .addTo(layers);
         bounds.extend([s.lat, s.lon]);
       }
@@ -271,7 +279,7 @@ export class RoutesPage {
           fillColor: depotColor,
           fillOpacity: d.code === own ? 0.6 : 0.35,
         })
-          .bindTooltip(`${d.name}${d.address ? ', ' + d.address : ''}`, {
+          .bindTooltip(escapeHtml(`${d.name}${d.address ? ', ' + d.address : ''}`), {
             permanent: d.code === own && ring === d.outlines[0],
             direction: 'right',
             className: 'depot-label',
@@ -287,10 +295,13 @@ export class RoutesPage {
       const depot = detail.depots.find((d) => d.code === l.depot)?.name ?? l.depot;
       L.polyline(l.path, { color: depotColor, weight: 3, dashArray: '8 6', opacity: 0.95 })
         .bindTooltip(
-          (out
-            ? `${brigadesText(l.brigades)} from ${depot} start at ${l.stop}`
-            : `${brigadesText(l.brigades)} end at ${l.stop} and go back to ${depot}`) +
-            (l.routed ? '' : ' (straight line: no street route found)'),
+          escapeHtml(
+            t(out ? 'routes.tip.pullOut' : 'routes.tip.pullIn', {
+              brigades: tn('routes.tip.brigades', l.brigades),
+              depot,
+              stop: l.stop,
+            }) + (l.routed ? '' : ' ' + t('routes.tip.straight')),
+          ),
           { sticky: true },
         )
         .addTo(layers);
@@ -301,7 +312,7 @@ export class RoutesPage {
         fillColor: WHITE,
         fillOpacity: 1,
       })
-        .bindTooltip(`${l.stop}: ${out ? 'buses enter service' : 'buses leave service'}`)
+        .bindTooltip(escapeHtml(t(out ? 'routes.tip.enter' : 'routes.tip.leave', { stop: l.stop })))
         .addTo(layers);
       l.path.forEach((p) => bounds.extend(p));
     }
@@ -338,7 +349,7 @@ export class RoutesPage {
       const tip =
         `<strong>${escapeHtml(v.headsign)}</strong><br>` +
         `${escapeHtml(v.from ?? '?')} → ${escapeHtml(v.to ?? '?')}<br>` +
-        `driven ${v.runs} ${v.runs === 1 ? 'time' : 'times'}, ${v.km.toFixed(1)} km`;
+        escapeHtml(tn('routes.tip.driven', v.runs, { km: v.km.toFixed(1) }));
       L.polyline(v.path, {
         color: v.color,
         weight: v.id === chosen ? 7 : v.rare ? 2 : 4,
@@ -357,7 +368,11 @@ export class RoutesPage {
           fillColor: filled ? v.color : WHITE,
           fillOpacity: faded ? 0.25 : 1,
         })
-          .bindTooltip(`${escapeHtml(v.headsign)}: ${filled ? 'runs end' : 'runs start'} here`)
+          .bindTooltip(
+            escapeHtml(
+              t(filled ? 'routes.tip.runsEnd' : 'routes.tip.runsStart', { headsign: v.headsign }),
+            ),
+          )
           .addTo(layers);
       end(v.path[0], false);
       end(v.path[v.path.length - 1], true);
@@ -372,14 +387,15 @@ export class RoutesPage {
   }
 }
 
-function brigadesText(n: number): string {
-  return n === 1 ? '1 brigade' : `${n} brigades`;
-}
-
 function variantLabel(v: LineVariant): string {
   const kind =
     v.kind === 'main' || v.kind === 'depot'
       ? variantKindLabel(v.kind)
-      : `${variantKindLabel(v.kind)} variant`;
-  return `${kind} towards ${v.headsign}: ${v.km.toFixed(1)} km, ${v.tripsPerDay} trips a weekday`;
+      : t('routes.tip.variantOf', { kind: variantKindLabel(v.kind) });
+  return t('routes.tip.variant', {
+    kind,
+    headsign: v.headsign,
+    km: v.km.toFixed(1),
+    trips: v.tripsPerDay,
+  });
 }

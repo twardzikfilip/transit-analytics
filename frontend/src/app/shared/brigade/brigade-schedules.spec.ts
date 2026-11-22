@@ -82,7 +82,9 @@ describe('brigade schedules', () => {
     expect(
       brigadeSection('103-05', { loadedAt: 0, failed: true, schedule: null }, at, true),
     ).toContain('Schedule unavailable');
-    expect(brigadeSection('103-05', state([]), at, false)).toContain("Not in that day's timetable");
+    expect(brigadeSection('103-05', state([]), at, false)).toContain(
+      'Not in that day&#39;s timetable',
+    );
     expect(brigadeSection('103-05', state(runs), new Date('2026-11-16T09:00:00Z'), true)).toContain(
       'No more runs today',
     );

@@ -1,12 +1,13 @@
-import { DecimalPipe } from '@angular/common';
 import { Component, input } from '@angular/core';
 import { SegmentProfile } from '../../core/models/models';
 import { SegmentChart } from './segment-chart';
+import { LocalNumberPipe } from '../../shared/i18n/locale-pipes';
+import { t } from '../../core/i18n/t';
 
 /** Peak-hour speed on each stretch between stops, a chart per direction, each also as a table. */
 @Component({
   selector: 'app-speed-profiles',
-  imports: [DecimalPipe, SegmentChart],
+  imports: [LocalNumberPipe, SegmentChart],
   templateUrl: './speed-profiles.html',
   styles: `
     :host {
@@ -33,6 +34,7 @@ import { SegmentChart } from './segment-chart';
   `,
 })
 export class SpeedProfiles {
+  protected readonly t = t;
   readonly segments = input.required<SegmentProfile[]>();
   readonly loading = input(false);
 }

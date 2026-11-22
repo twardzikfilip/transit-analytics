@@ -2,6 +2,7 @@ import { Component, computed, input, output } from '@angular/core';
 import { DelayLineStretch } from '../../core/models/models';
 import { changeClass, delayText, signedChange } from './delay-scale';
 import { percent } from '../../shared/format/number';
+import { t } from '../../core/i18n/t';
 
 /** A heatmap cell: whole seconds with a sign, "+31", "−6", "0" (never "−0"). */
 export function cellText(seconds: number): string {
@@ -30,12 +31,14 @@ export function activeHours(stretches: DelayLineStretch[]): number[] {
       <table class="data-table heatmap">
         <thead>
           <tr>
-            <th>Stretch</th>
-            <th class="num" title="Average change in delay per bus">Average</th>
-            <th class="num" title="90th percentile: one bus in ten gains this much or more">
-              1 in 10
+            <th>{{ t('delayGen.col.stretch') }}</th>
+            <th class="num" [title]="t('delayGen.heat.averageTitle')">
+              {{ t('delayGen.heat.average') }}
             </th>
-            <th class="num" title="Share of buses gaining a minute or more here">≥ 1 min</th>
+            <th class="num" [title]="t('delayGen.heat.p90Title')">{{ t('delayGen.heat.p90') }}</th>
+            <th class="num" [title]="t('delayGen.heat.over1Title')">
+              {{ t('delayGen.heat.over1') }}
+            </th>
             @for (h of hours(); track h) {
               <th class="hour" [title]="h + ':00–' + (h + 1) + ':00'">{{ h }}</th>
             }
@@ -53,8 +56,13 @@ export function activeHours(stretches: DelayLineStretch[]): number[] {
               <td class="stretch">
                 {{ s.from }} <span class="muted">→</span> {{ s.to }}
                 <div class="muted note">
-                  {{ s.runs }} buses · leaving {{ delayText(s.delayBefore) }} · median
-                  {{ signed(s.medianSeconds) }}
+                  {{
+                    t('delayGen.heat.note', {
+                      buses: s.runs,
+                      leaving: delayText(s.delayBefore),
+                      median: signed(s.medianSeconds),
+                    })
+                  }}
                 </div>
               </td>
               <td class="num">
@@ -150,6 +158,7 @@ export function activeHours(stretches: DelayLineStretch[]): number[] {
   `,
 })
 export class LineHeatmap {
+  protected readonly t = t;
   readonly stretches = input.required<DelayLineStretch[]>();
   /** Index of the chosen stretch, or null. */
   readonly selected = input<number | null>(null);

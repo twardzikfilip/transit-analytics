@@ -7,13 +7,16 @@ import { Pager, rowNumber } from '../../shared/pager/pager';
 import { listQuery } from '../../shared/list-query';
 import { StopTimesActions } from '../../store/stop-times/stop-times.actions';
 import { stopTimesFeature } from '../../store/stop-times/stop-times.reducer';
+import { Skeleton } from '../../shared/skeleton/skeleton';
+import { t } from '../../core/i18n/t';
 
 @Component({
   selector: 'app-stop-times',
-  imports: [RouterLink, Pager],
+  imports: [Skeleton, RouterLink, Pager],
   templateUrl: './stop-times.html',
 })
 export class StopTimes {
+  protected readonly t = t;
   private readonly store = inject(Store);
 
   protected readonly stopTimes = this.store.selectSignal(stopTimesFeature.selectAll);
@@ -33,9 +36,14 @@ export class StopTimes {
   protected readonly title = computed(() => {
     const first = this.first();
     if (this.query.get('tripId'))
-      return first ? `Trip ${first.routeName} → ${first.tripHeadsign ?? ''}` : 'Trip';
-    if (this.query.get('stopId')) return first ? `Departures from ${first.stopName}` : 'Departures';
-    return 'Stop times';
+      return first
+        ? t('timetable.titleTrip', { route: first.routeName, to: first.tripHeadsign ?? '' })
+        : t('timetable.titleTripShort');
+    if (this.query.get('stopId'))
+      return first
+        ? t('timetable.titleDepartures', { stop: first.stopName })
+        : t('timetable.departures');
+    return t('timetable.stopTimes');
   });
 
   protected readonly formatTime = formatGtfsTime;
@@ -44,9 +52,12 @@ export class StopTimes {
   protected boarding(st: StopTime): string | null {
     const pickup = boardingRule(st.pickupType);
     const dropOff = boardingRule(st.dropOffType);
-    if (pickup && pickup === dropOff) return `Stops ${pickup}`;
+    if (pickup && pickup === dropOff) return t('timetable.stops', { rule: pickup });
     return (
-      [pickup && `boarding ${pickup}`, dropOff && `alighting ${dropOff}`]
+      [
+        pickup && t('timetable.boarding', { rule: pickup }),
+        dropOff && t('timetable.alighting', { rule: dropOff }),
+      ]
         .filter(Boolean)
         .join(', ') || null
     );

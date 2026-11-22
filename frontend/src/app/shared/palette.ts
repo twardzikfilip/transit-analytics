@@ -1,4 +1,6 @@
 /**
+ * Labels here are translation keys (shown with t()).
+ *
  * Colours used in code (map layers can't use CSS custom properties). Theme colours are read from the tokens in
  * styles.scss with cssColor(), so they follow light and dark mode; the data scales below are fixed.
  */
@@ -11,10 +13,10 @@ export function cssColor(token: string, fallback: string): string {
 
 /** Delay scale (Delays map): on time (≤ 1 min late, or early) green → 3 min yellow → 6 min orange → 10+ min red. */
 export const DELAY_STOPS: { seconds: number; color: string; label: string }[] = [
-  { seconds: 60, color: '#2e9e5b', label: 'on time' },
-  { seconds: 180, color: '#f2c12e', label: '3 min' },
-  { seconds: 360, color: '#f07f22', label: '6 min' },
-  { seconds: 600, color: '#d7301f', label: '10+ min' },
+  { seconds: 60, color: '#2e9e5b', label: 'palette.onTime' },
+  { seconds: 180, color: '#f2c12e', label: 'palette.min3' },
+  { seconds: 360, color: '#f07f22', label: 'palette.min6' },
+  { seconds: 600, color: '#d7301f', label: 'palette.min10' },
 ];
 
 /** Neutral grey: no data, not seen, no figure (always with a label). */
@@ -66,8 +68,8 @@ export const SEQUENTIAL_BLUE = ['#86b6ef', '#5598e7', '#2a78d6', '#1c5cab', '#10
  * solid. Drawn under the vehicles and named in the map legend.
  */
 export const BOUNDARY_STYLES = {
-  city: { color: '#212529', dashArray: '6 4', weight: 1, label: 'City limits' },
-  centre: { color: '#212529', dashArray: undefined, weight: 1, label: 'City centre' },
+  city: { color: '#212529', dashArray: '6 4', weight: 1, label: 'palette.cityLimits' },
+  centre: { color: '#212529', dashArray: undefined, weight: 1, label: 'palette.cityCentre' },
 } as const;
 
 /**
@@ -93,7 +95,7 @@ export const BUS_LANE_STYLE = {
   color: '#00a9bc',
   weight: 6,
   opacity: 0.45,
-  label: 'Bus lane',
+  label: 'palette.busLane',
 } as const;
 
 /** Dark ink for outlines and dots on maps (chosen or highlighted marks, stops). */
@@ -150,11 +152,11 @@ export const BOTH_WAYS_COLOR = '#e8590c';
  * readers too. Numbers are always shown beside the colour.
  */
 export const DELAY_CHANGE_CLASSES: { to: number; color: string; label: string; dark: boolean }[] = [
-  { to: -60, color: '#104281', label: 'recovers 1 min or more', dark: true },
-  { to: -30, color: '#2a78d6', label: 'recovers 30–60 s', dark: true },
-  { to: -10, color: '#86b6ef', label: 'recovers 10–30 s', dark: false },
-  { to: 10, color: '#d4d3ce', label: 'within 10 s', dark: false },
-  { to: 30, color: '#ec948a', label: 'gains 10–30 s', dark: false },
-  { to: 60, color: '#e34948', label: 'gains 30–60 s', dark: true },
-  { to: Infinity, color: '#a32626', label: 'gains 1 min or more', dark: true },
+  { to: -60, color: '#104281', label: 'palette.recovers60', dark: true },
+  { to: -30, color: '#2a78d6', label: 'palette.recovers30', dark: true },
+  { to: -10, color: '#86b6ef', label: 'palette.recovers10', dark: false },
+  { to: 10, color: '#d4d3ce', label: 'palette.within10', dark: false },
+  { to: 30, color: '#ec948a', label: 'palette.gains10', dark: false },
+  { to: 60, color: '#e34948', label: 'palette.gains30', dark: true },
+  { to: Infinity, color: '#a32626', label: 'palette.gains60', dark: true },
 ];

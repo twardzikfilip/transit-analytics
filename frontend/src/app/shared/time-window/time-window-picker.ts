@@ -11,6 +11,7 @@ import {
   readAgencies,
   readWindow,
 } from './time-window';
+import { t } from '../../core/i18n/t';
 
 /**
  * The time window (and operators) of a report page, in the URL: from/to pickers in the first row; below, the
@@ -24,7 +25,7 @@ import {
   template: `
     <div class="row">
       <label>
-        From
+        {{ t('time.from') }}
         <input
           type="datetime-local"
           [value]="fromInput()"
@@ -32,7 +33,7 @@ import {
         />
       </label>
       <label>
-        To
+        {{ t('time.to') }}
         <input
           type="datetime-local"
           [value]="toInput()"
@@ -40,23 +41,23 @@ import {
         />
       </label>
       @if (!window().from) {
-        <span class="muted all">From the first recording</span>
+        <span class="muted all">{{ t('time.fromFirst') }}</span>
       }
     </div>
     <div class="row">
       <!-- On a phone the eleven buttons don't fit in a row: one dropdown instead. -->
       <label class="preset-select">
-        Window
+        {{ t('time.window') }}
         <select class="window-preset" (change)="setPreset($any($event.target).value)">
           @if (!window().preset) {
-            <option value="" selected disabled>Custom</option>
+            <option value="" selected disabled>{{ t('time.custom') }}</option>
           }
           @for (p of presets; track p.key) {
-            <option [value]="p.key" [selected]="window().preset === p.key">{{ p.label }}</option>
+            <option [value]="p.key" [selected]="window().preset === p.key">{{ t(p.label) }}</option>
           }
         </select>
       </label>
-      <div class="presets" role="group" aria-label="Time window">
+      <div class="presets" role="group" [attr.aria-label]="t('time.timeWindow')">
         @for (p of presets; track p.key) {
           <button
             type="button"
@@ -64,7 +65,7 @@ import {
             [attr.aria-pressed]="window().preset === p.key"
             (click)="setPreset(p.key)"
           >
-            {{ p.label }}
+            {{ t(p.label) }}
           </button>
         }
       </div>
@@ -169,6 +170,7 @@ import {
   `,
 })
 export class TimeWindowPicker {
+  protected readonly t = t;
   private readonly setQuery = injectSetQuery();
   private readonly params = toSignal(inject(ActivatedRoute).queryParamMap, { requireSync: true });
 

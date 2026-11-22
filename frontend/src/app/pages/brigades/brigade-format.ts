@@ -1,22 +1,15 @@
 import { BrigadeTrip, BrigadeTripKind } from '../../core/models/models';
 import { formatDelay, localTime } from '../../shared/format/time';
 import { shareOf } from '../../shared/format/number';
+import { t } from '../../core/i18n/t';
 
 /** The brigade chart's colours (see shared/palette.ts). */
 export { CHANGE_COLOR, NOT_RUN_COLOR, NOT_SEEN_COLOR, TRIP_COLORS } from '../../shared/palette';
 
-export const KIND_LABELS: Record<BrigadeTripKind, string> = {
-  completed: 'Run in full',
-  detour: 'Detour',
-  'vehicle-changed': 'Bus changed',
-  'no-signal': 'Bus not seen for part',
-  'short-turned': 'Turned short',
-  lost: 'Lost',
-  missed: 'Missed',
-  cancelled: 'Cancelled',
-  'not-recorded': 'Not recorded',
-  pending: 'Upcoming',
-};
+/** A trip's outcome, in the language shown ("Run in full"). */
+export function kindLabel(kind: BrigadeTripKind): string {
+  return t(`brigades.kinds.${kind}`);
+}
 
 /** Outcomes that are a problem with the service (not of recording). */
 export const PROBLEMS: BrigadeTripKind[] = [
@@ -31,7 +24,7 @@ export const PROBLEMS: BrigadeTripKind[] = [
 /** "+1:20" late, "−0:40" early, "on time" within 30 s; "–" unknown. */
 export function delayText(seconds: number | null | undefined): string {
   if (seconds === null || seconds === undefined) return '–';
-  if (Math.abs(seconds) < 30) return 'on time';
+  if (Math.abs(seconds) < 30) return t('brigades.onTime');
   return (seconds > 0 ? '+' : '') + formatDelay(seconds);
 }
 

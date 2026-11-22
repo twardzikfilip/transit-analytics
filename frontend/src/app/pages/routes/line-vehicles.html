@@ -1,21 +1,20 @@
 @if (vehicles(); as v) {
   <p class="muted">
-    Buses recorded on this line on {{ v.days }} day{{ v.days === 1 ? '' : 's' }} (all recorded days,
-    weekends too). "Days" counts the days a bus ran on the line.
+    {{ t('lineVehicles.intro', { days: tn('common.days', v.days) }) }}
   </p>
   <div class="vehicle-tables">
     <div>
       <h3>
-        All vehicles <span class="muted">· {{ v.vehicles.length }}</span>
+        {{ t('lineVehicles.all') }} <span class="muted">· {{ v.vehicles.length }}</span>
       </h3>
       <div class="data-table-wrap scroll">
         <table class="data-table compact">
           <thead>
             <tr>
-              <th>Vehicle</th>
-              <th>Model</th>
-              <th class="num">Days</th>
-              <th>Brigades</th>
+              <th>{{ t('lineVehicles.vehicle') }}</th>
+              <th>{{ t('lineVehicles.model') }}</th>
+              <th class="num">{{ t('lineVehicles.days') }}</th>
+              <th>{{ t('lineVehicles.brigades') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -32,15 +31,15 @@
       </div>
     </div>
     <div>
-      <h3>Most used vehicle per brigade</h3>
+      <h3>{{ t('lineVehicles.mostUsed') }}</h3>
       <div class="data-table-wrap scroll">
         <table class="data-table compact">
           <thead>
             <tr>
-              <th>Brigade</th>
-              <th>Vehicle</th>
-              <th class="num">Days</th>
-              <th class="num">Different vehicles</th>
+              <th>{{ t('lineVehicles.brigade') }}</th>
+              <th>{{ t('lineVehicles.vehicle') }}</th>
+              <th class="num">{{ t('lineVehicles.days') }}</th>
+              <th class="num">{{ t('lineVehicles.different') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -48,7 +47,9 @@
               <tr>
                 <td>{{ b.brigade }}</td>
                 <td>{{ b.mostUsed }}</td>
-                <td class="num">{{ b.mostUsedDays }} of {{ b.days }}</td>
+                <td class="num">
+                  {{ t('lineVehicles.daysOf', { n: b.mostUsedDays, total: b.days }) }}
+                </td>
                 <td class="num">{{ b.vehicles }}</td>
               </tr>
             }
@@ -57,7 +58,7 @@
       </div>
     </div>
   </div>
-  <h3>Vehicle changes during the day</h3>
+  <h3>{{ t('lineVehicles.changes') }}</h3>
   @if (v.switches.length) {
     <ul class="switches">
       @for (sw of v.switches; track sw.day + sw.brigade) {
@@ -69,10 +70,10 @@
       }
     </ul>
   } @else {
-    <p class="muted">Every brigade kept the same bus all day.</p>
+    <p class="muted">{{ t('lineVehicles.noChanges') }}</p>
   }
 } @else {
   <p class="muted">
-    {{ loading() ? 'Loading vehicles…' : 'No vehicles recorded.' }}
+    {{ t(loading() ? 'lineVehicles.loading' : 'lineVehicles.none') }}
   </p>
 }

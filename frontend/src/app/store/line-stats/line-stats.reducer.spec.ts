@@ -10,6 +10,7 @@ describe('line stats reducer', () => {
     lastDate: '2027-02-05',
     peak: [{ from: '06:00', to: '09:00' }],
     offPeak: [{ from: '17:00', to: '20:00' }],
+    delayDays: 28,
     lines: [],
   };
 

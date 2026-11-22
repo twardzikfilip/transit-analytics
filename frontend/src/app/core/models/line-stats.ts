@@ -9,6 +9,8 @@ export interface LineStatsReport {
   lastDate: string | null;
   peak: TimePeriod[];
   offPeak: TimePeriod[];
+  /** Recorded delays are averaged over the weekdays of this many last days. */
+  delayDays: number;
   lines: LineStats[];
 }
 
@@ -37,4 +39,7 @@ export interface LineStats {
   peakVehicles: number;
   offPeakVehicles: number;
   trips: number;
+  /** Recorded: mean delay in seconds of the line's buses in peak hours (negative: early); null without recordings. */
+  peakDelaySeconds: number | null;
+  offPeakDelaySeconds: number | null;
 }

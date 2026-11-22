@@ -1,11 +1,11 @@
 <div class="list-filters">
   <label>
-    Route
+    {{ t('timetable.route') }}
     <select
       [value]="query.get('routeId')"
       (change)="query.setFilters({ routeId: $any($event.target).value })"
     >
-      <option value="">All routes</option>
+      <option value="">{{ t('timetable.allRoutes') }}</option>
       @for (route of routes(); track route.id) {
         <option [value]="route.id" [selected]="query.get('routeId') === '' + route.id">
           {{ route.name }}
@@ -14,32 +14,32 @@
     </select>
   </label>
   <label>
-    Direction
+    {{ t('timetable.direction') }}
     <select
       [value]="query.get('direction')"
       (change)="query.setFilters({ direction: $any($event.target).value })"
     >
-      <option value="">Both</option>
-      <option value="0">Outbound (0)</option>
-      <option value="1">Inbound (1)</option>
+      <option value="">{{ t('timetable.both') }}</option>
+      <option value="0">{{ t('timetable.outbound') }}</option>
+      <option value="1">{{ t('timetable.inbound') }}</option>
     </select>
   </label>
   <label>
-    Headsign
+    {{ t('timetable.headsign') }}
     <input
       type="search"
-      placeholder="e.g. Dworzec"
+      [placeholder]="t('timetable.headsignExample')"
       [value]="query.get('q')"
       (input)="onSearch($any($event.target).value)"
     />
   </label>
   @if (query.get('serviceId'); as service) {
     <span class="chip"
-      >Service {{ service }}
+      >{{ t('timetable.serviceX', { service: service }) }}
       <button
         type="button"
         (click)="query.setFilters({ serviceId: null })"
-        aria-label="Clear service filter"
+        [attr.aria-label]="t('timetable.clearService')"
       >
         ×
       </button></span
@@ -52,12 +52,12 @@
     <thead>
       <tr>
         <th class="index">#</th>
-        <th>Route</th>
-        <th>Headsign</th>
-        <th>Direction</th>
-        <th>Service</th>
-        <th>Variant</th>
-        <th>Access</th>
+        <th>{{ t('timetable.route') }}</th>
+        <th>{{ t('timetable.headsign') }}</th>
+        <th>{{ t('timetable.direction') }}</th>
+        <th>{{ t('timetable.service') }}</th>
+        <th>{{ t('timetable.variant') }}</th>
+        <th>{{ t('timetable.access') }}</th>
         <th></th>
       </tr>
     </thead>
@@ -88,22 +88,30 @@
           <td>{{ trip.shortName ?? '—' }}</td>
           <td>
             @if (trip.wheelchairAccessible === 1) {
-              <span title="Wheelchair accessible">♿</span>
+              <span [title]="t('timetable.wheelchair')">♿</span>
             }
             @if (trip.bikesAllowed === 1) {
-              <span title="Bikes allowed">🚲</span>
+              <span [title]="t('timetable.bikes')">🚲</span>
             }
           </td>
           <td class="num">
-            <a [routerLink]="['/stop-times']" [queryParams]="{ tripId: trip.id }">Stop times</a>
+            <a [routerLink]="['/stop-times']" [queryParams]="{ tripId: trip.id }">{{
+              t('timetable.stopTimes')
+            }}</a>
           </td>
         </tr>
       } @empty {
         <tr>
-          <td colspan="8" class="muted">{{ loading() ? 'Loading…' : 'No trips match.' }}</td>
+          <td colspan="8" class="muted">
+            @if (loading()) {
+              <app-skeleton [count]="10" [label]="t('timetable.loadingTrips')" />
+            } @else {
+              {{ t('timetable.noTrips') }}
+            }
+          </td>
         </tr>
       }
     </tbody>
   </table>
 </div>
-<app-pager [page]="page()" noun="trips" (pageChange)="query.setPage($event)" />
+<app-pager [page]="page()" noun="pager.trips" (pageChange)="query.setPage($event)" />

@@ -27,17 +27,17 @@ export const TIMETABLE_ROUTES: Routes = [
     children: [
       {
         path: 'stops',
-        title: 'Stops',
+        title: 'titles.stops',
         loadComponent: () => import('./stops/stops').then((m) => m.Stops),
       },
       {
         path: 'trips',
-        title: 'Trips',
+        title: 'titles.trips',
         loadComponent: () => import('./trips/trips').then((m) => m.Trips),
       },
       {
         path: 'stop-times',
-        title: 'Stop times',
+        title: 'titles.stopTimes',
         loadComponent: () => import('./stop-times/stop-times').then((m) => m.StopTimes),
       },
     ],

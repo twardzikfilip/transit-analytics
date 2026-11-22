@@ -125,6 +125,6 @@
     </div>
   }
   @if (!hasData() && !loading()) {
-    <p class="empty muted">{{ empty() }}</p>
+    <p class="empty muted">{{ empty() || t('charts.nothingYet') }}</p>
   }
 </div>

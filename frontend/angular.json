@@ -27,6 +27,11 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "*.json",
+                "input": "src/i18n",
+                "output": "i18n"
               }
             ],
             "styles": [
@@ -103,7 +108,10 @@
               "branches": 74,
               "functions": 76,
               "lines": 82
-            }
+            },
+            "setupFiles": [
+              "src/test-setup.ts"
+            ]
           }
         }
       }

@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
@@ -21,6 +20,9 @@ import { LineHeatmap } from './line-heatmap';
 import { MIN_MAP_RUNS, StretchMap } from './stretch-map';
 import { TripProfile } from './trip-profile';
 import { percent } from '../../shared/format/number';
+import { Skeleton } from '../../shared/skeleton/skeleton';
+import { LocalDatePipe } from '../../shared/i18n/locale-pipes';
+import { t, tn } from '../../core/i18n/t';
 
 /** Stretches listed where delay is created, and where it is recovered. */
 export const CREATED_ROWS = 15;
@@ -56,11 +58,13 @@ export const DEFAULT_PRESET = '1w';
  */
 @Component({
   selector: 'app-delay-generation',
-  imports: [DatePipe, LineHeatmap, StretchMap, TripProfile, TimeWindowPicker],
+  imports: [Skeleton, LocalDatePipe, LineHeatmap, StretchMap, TripProfile, TimeWindowPicker],
   templateUrl: './delay-generation.html',
   styleUrl: './delay-generation.scss',
 })
 export class DelayGeneration {
+  protected readonly t = t;
+  protected readonly tn = tn;
   private readonly store = inject(Store);
   private readonly navigate = injectSetQuery();
 
@@ -199,5 +203,12 @@ export class DelayGeneration {
 
   protected worst(l: DelayLineSummary): string {
     return l.worstFrom ? `${l.worstFrom} → ${l.worstTo}` : '—';
+  }
+
+  /** A part of the day's name, in the language shown (the backend's when it isn't known here). */
+  protected bandLabel(band: { key: string; label: string }): string {
+    const key = `delayGen.bands.${band.key}`;
+    const text = t(key);
+    return text === key ? band.label : text;
   }
 }

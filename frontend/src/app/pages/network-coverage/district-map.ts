@@ -14,6 +14,7 @@ import {
   WHITE,
 } from '../../shared/palette';
 import { densityColor, densityStepLabel, densityTooltip, labelMinKm2 } from './coverage-format';
+import { t } from '../../core/i18n/t';
 
 /** Panes, bottom to top: the places' fills, the woods, the outlines and the city limits. */
 const PANES = { fills: 410, woods: 420, lines: 430 };
@@ -27,23 +28,19 @@ const PANES = { fills: 410, woods: 420, lines: 430 };
 @Component({
   selector: 'app-district-map',
   template: `
-    <div
-      #map
-      class="leaflet-map"
-      role="region"
-      aria-label="Map of the districts and the villages around the city by population density"
-    ></div>
-    <ul class="legend" aria-label="Residents per km²">
-      <li class="muted">Residents per km²:</li>
+    <div #map class="leaflet-map" role="region" [attr.aria-label]="t('coverage.districtMap')"></div>
+    <ul class="legend" [attr.aria-label]="t('coverage.perKm2')">
+      <li class="muted">{{ t('coverage.perKm2Colon') }}</li>
       <li>
-        <span class="swatch outlined" [style.background]="noneSwatch"></span>0: woods, Biała valley
+        <span class="swatch outlined" [style.background]="noneSwatch"></span
+        >{{ t('coverage.zeroEmpty') }}
       </li>
       @for (s of scale; track s.min) {
         <li>
           <span class="swatch outlined" [style.background]="s.color"></span>{{ stepLabel(s) }}
         </li>
       }
-      <li><span class="swatch unknown"></span>No figure</li>
+      <li><span class="swatch unknown"></span>{{ t('coverage.noFigureLegend') }}</li>
     </ul>
   `,
   styles: `
@@ -84,6 +81,7 @@ const PANES = { fills: 410, woods: 420, lines: 430 };
   `,
 })
 export class DistrictMap {
+  protected readonly t = t;
   readonly data = input.required<NetworkCoverage>();
 
   protected readonly scale = DENSITY_SCALE;
@@ -116,9 +114,9 @@ export class DistrictMap {
     const empty = [
       ...[...data.forests.flatMap((f) => f.shapes), ...data.belt.woods].map((shape) => ({
         shape,
-        tip: 'Woods: no residents',
+        tip: t('coverage.woodsEmpty'),
       })),
-      ...data.valley.map((v) => ({ shape: v.shape, tip: 'Biała valley: no residents' })),
+      ...data.valley.map((v) => ({ shape: v.shape, tip: t('coverage.valleyEmpty') })),
     ];
     for (const { shape, tip } of empty) {
       L.polygon(rings(shape), {

@@ -8,27 +8,36 @@
 
 <app-time-window [defaultPreset]="defaultPreset">
   <label class="line">
-    <span class="sr-only">Line</span>
+    <span class="sr-only">{{ t('hotspots.line') }}</span>
     <select [value]="line() ?? ''" (change)="setLine($any($event.target).value)">
-      <option value="">All lines</option>
+      <option value="">{{ t('hotspots.allLines') }}</option>
       @for (l of lineOptions(); track l) {
-        <option [value]="l" [selected]="l === line()">Line {{ l }}</option>
+        <option [value]="l" [selected]="l === line()">
+          {{ t('hotspots.lineX', { line: l }) }}
+        </option>
       }
     </select>
   </label>
   @if (loading()) {
-    <span class="muted" role="status">Loading…</span>
+    <span class="muted" role="status">{{ t('common.loading') }}</span>
   }
 </app-time-window>
 
 @if (report(); as r) {
-  <p class="summary">
-    Buses{{ r.line ? ' on line ' + r.line : '' }} stood still away from stops
-    <strong>{{ r.standstills }}</strong> times, for
-    <strong>{{ lostTime(r.standstillHours) }}</strong> ({{ lostTime(r.standstillHours / r.days) }} a
-    day over {{ r.days }} {{ r.days === 1 ? 'day' : 'days' }} recorded).
-    <strong>{{ r.hotspots.length }}</strong> hotspots hold {{ inHotspots() }}% of that time.
-  </p>
+  <p
+    class="summary"
+    [innerHTML]="
+      t('hotspots.summary', {
+        onLine: r.line ? t('hotspots.onLine', { line: r.line }) : '',
+        count: r.standstills,
+        lost: lostTime(r.standstillHours),
+        perDay: lostTime(r.standstillHours / r.days),
+        days: tn('common.days', r.days),
+        hotspots: r.hotspots.length,
+        share: inHotspots(),
+      })
+    "
+  ></p>
 
   <section class="card map-card" [class.loading]="loading()">
     <app-hotspot-map
@@ -39,27 +48,24 @@
   </section>
 
   <section class="card" [class.loading]="loading()">
-    <h2>Where buses lose the most time</h2>
-    <p class="muted">
-      Each hotspot with the time buses stood still there altogether, the most first. Click a row to
-      show it on the map.
-    </p>
+    <h2>{{ t('hotspots.loseMost') }}</h2>
+    <p class="muted">{{ t('hotspots.intro') }}</p>
     <div class="data-table-wrap">
       <table class="data-table clickable hotspots">
         <thead>
           <tr>
             <th class="index">#</th>
-            <th>Near stop</th>
-            <th class="num">Time lost</th>
-            <th class="num">Per day</th>
-            <th class="num">Standstills</th>
-            <th class="num">Buses</th>
-            <th class="num" title="Typical (median) and long (90th percentile) standstill">
-              Wait, typical / long
+            <th>{{ t('hotspots.col.near') }}</th>
+            <th class="num">{{ t('hotspots.col.lost') }}</th>
+            <th class="num">{{ t('hotspots.col.perDay') }}</th>
+            <th class="num">{{ t('hotspots.col.standstills') }}</th>
+            <th class="num">{{ t('hotspots.col.buses') }}</th>
+            <th class="num" [title]="t('hotspots.col.waitTitle')">
+              {{ t('hotspots.col.wait') }}
             </th>
-            <th>Heading</th>
-            <th>Busiest hour</th>
-            <th>Lines</th>
+            <th>{{ t('hotspots.col.heading') }}</th>
+            <th>{{ t('hotspots.col.busiest') }}</th>
+            <th>{{ t('hotspots.col.lines') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -74,13 +80,13 @@
             >
               <td class="index">{{ h.id }}</td>
               <td class="where">
-                {{ h.nearestStop ?? 'No stop nearby' }}
+                {{ h.nearestStop ?? t('hotspots.noStop') }}
                 @if (h.nearestStop) {
-                  <div class="muted note">{{ h.nearestStopMeters }} m away</div>
+                  <div class="muted note">{{ t('hotspots.away', { m: h.nearestStopMeters }) }}</div>
                 }
               </td>
               <td class="num">{{ lostTime(h.hours) }}</td>
-              <td class="num">{{ h.minutesPerDay.toFixed(1) }} min</td>
+              <td class="num">{{ t('hotspots.minPerDay', { n: h.minutesPerDay.toFixed(1) }) }}</td>
               <td class="num">{{ h.standstills }}</td>
               <td class="num">{{ h.vehicles }}</td>
               <td class="num">
@@ -95,12 +101,14 @@
                 }
               </td>
               <td class="time">{{ hourText(h.peakHour) }}</td>
-              <td class="lines" [title]="h.lines.length + ' lines'">{{ linesText(h.lines) }}</td>
+              <td class="lines" [title]="t('hotspots.linesCount', { n: h.lines.length })">
+                {{ linesText(h.lines) }}
+              </td>
             </tr>
           } @empty {
             <tr>
               <td colspan="10" class="muted">
-                No place where buses repeatedly stood still in this window.
+                {{ t('hotspots.none') }}
               </td>
             </tr>
           }
@@ -109,36 +117,24 @@
     </div>
     @if (r.hotspots.length > firstRows) {
       <button type="button" class="more" (click)="showAll.set(!showAll())">
-        {{ showAll() ? 'Show the first ' + firstRows : 'Show all ' + r.hotspots.length }}
+        {{
+          showAll()
+            ? t('hotspots.showFirst', { n: firstRows })
+            : t('hotspots.showAll', { n: r.hotspots.length })
+        }}
       </button>
     }
   </section>
 
   <details class="card how">
-    <summary>How hotspots are found</summary>
+    <summary>{{ t('hotspots.how') }}</summary>
     <ul>
-      <li>
-        <strong>Standstill:</strong> a bus on a line reporting twice or more in a row (every 10
-        seconds) within 10 m. Its time counts from the first of those reports to the last, so waits
-        shorter than about 10 seconds are mostly missed.
-      </li>
-      <li>
-        <strong>Away from stops:</strong> standstills within 50 m of a stop are boarding, and within
-        150 m of a terminal are layovers; both are left out, and so are standstills longer than 5
-        minutes (breaks, breakdowns). Only lines in the city timetable count, since other operators'
-        stops aren't known.
-      </li>
-      <li>
-        <strong>Hotspots:</strong> standstills are grouped where they gather (DBSCAN: standstills
-        within 25 m of each other, at least 5 together) and a group needs at least 3 different
-        buses. Time lost is the standing time altogether; slowing down and pulling away aren't
-        included, so the real loss is larger.
-      </li>
-      <li>
-        <strong>Heading</strong> is the direction the buses faced while waiting, so a junction shows
-        which approach holds them up. <strong>Busiest hour</strong> is the hour of the day with the
-        most time lost.
-      </li>
+      @for (i of [1, 2, 3, 4]; track i) {
+        <li [innerHTML]="t('hotspots.how' + i)"></li>
+      }
     </ul>
   </details>
+} @else if (loading()) {
+  <app-skeleton kind="map" height="420px" [label]="t('hotspots.loading')" />
+  <app-skeleton kind="table" [count]="8" />
 }

@@ -2,10 +2,10 @@
   #map
   class="leaflet-map"
   role="region"
-  [attr.aria-label]="'Map of buses in peak hours by ' + mode()"
+  [attr.aria-label]="t('corridors.mapLabel', { mode: t('corridors.mode.' + mode()) })"
 ></div>
 <div class="legend inset">
-  <span class="muted">Buses in peak hours, both directions:</span>
+  <span class="muted">{{ t('corridors.legend') }}</span>
   @if (mode() === 'width') {
     @for (w of widthSamples(); track w.value) {
       <span class="item">

@@ -1,6 +1,7 @@
-import { DecimalPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import { PageMeta } from '../../core/models/models';
+import { LocalNumberPipe } from '../i18n/locale-pipes';
+import { t, tn } from '../../core/i18n/t';
 
 /** Number of the `i`-th row of a page, counted across pages (row 1 of page 2 of 50 is 51). */
 export function rowNumber(page: PageMeta | null | undefined, i: number): number {
@@ -10,14 +11,14 @@ export function rowNumber(page: PageMeta | null | undefined, i: number): number 
 /** "Page 2 of 31 · 1,083 stops" with previous/next buttons. */
 @Component({
   selector: 'app-pager',
-  imports: [DecimalPipe],
+  imports: [LocalNumberPipe],
   template: `
     @if (page(); as p) {
       <span class="muted">
         @if (p.totalPages > 1) {
-          Page {{ p.number + 1 | number }} of {{ p.totalPages | number }} ·
+          {{ t('pager.pageOf', { page: p.number + 1 | number, pages: p.totalPages | number }) }}
         }
-        {{ p.totalElements | number }} {{ noun() }}
+        {{ tn(noun(), p.totalElements) }}
       </span>
       @if (p.totalPages > 1) {
         <span class="buttons">
@@ -25,21 +26,21 @@ export function rowNumber(page: PageMeta | null | undefined, i: number): number 
             type="button"
             [disabled]="p.number === 0"
             (click)="pageChange.emit(0)"
-            aria-label="First page"
+            [attr.aria-label]="t('pager.first')"
           >
             «
           </button>
           <button type="button" [disabled]="p.number === 0" (click)="pageChange.emit(p.number - 1)">
-            Previous
+            {{ t('pager.previousShort') }}
           </button>
           <button type="button" [disabled]="isLast()" (click)="pageChange.emit(p.number + 1)">
-            Next
+            {{ t('pager.nextShort') }}
           </button>
           <button
             type="button"
             [disabled]="isLast()"
             (click)="pageChange.emit(p.totalPages - 1)"
-            aria-label="Last page"
+            [attr.aria-label]="t('pager.last')"
           >
             »
           </button>
@@ -63,9 +64,11 @@ export function rowNumber(page: PageMeta | null | undefined, i: number): number 
   `,
 })
 export class Pager {
+  protected readonly t = t;
+  protected readonly tn = tn;
   readonly page = input<PageMeta | null>(null);
-  /** What is being counted, e.g. "stops". */
-  readonly noun = input('rows');
+  /** What is being counted: a plural translation key, e.g. 'pager.stops'. */
+  readonly noun = input('pager.rows');
   /** Zero-based page index. */
   readonly pageChange = output<number>();
 

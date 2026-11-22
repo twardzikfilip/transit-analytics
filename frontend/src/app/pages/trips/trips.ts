@@ -10,13 +10,16 @@ import { RoutesActions } from '../../store/routes/routes.actions';
 import { routesFeature } from '../../store/routes/routes.reducer';
 import { TripsActions } from '../../store/trips/trips.actions';
 import { tripsFeature } from '../../store/trips/trips.reducer';
+import { Skeleton } from '../../shared/skeleton/skeleton';
+import { t } from '../../core/i18n/t';
 
 @Component({
   selector: 'app-trips',
-  imports: [RouterLink, Pager],
+  imports: [Skeleton, RouterLink, Pager],
   templateUrl: './trips.html',
 })
 export class Trips {
+  protected readonly t = t;
   private readonly store = inject(Store);
 
   protected readonly trips = this.store.selectSignal(tripsFeature.selectAll);

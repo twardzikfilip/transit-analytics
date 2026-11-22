@@ -1,4 +1,3 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, ParamMap } from '@angular/router';
@@ -20,6 +19,9 @@ import {
   windowQuery,
 } from '../../../shared/time-window/time-window';
 import { bandRows, formatShare, windowLabel } from './delay-bands';
+import { Skeleton } from '../../../shared/skeleton/skeleton';
+import { LocalDatePipe, LocalNumberPipe } from '../../../shared/i18n/locale-pipes';
+import { t } from '../../../core/i18n/t';
 
 /** The city operator (Białystok's BKM), shown unless another operator is chosen. */
 export const CITY_AGENCY = 'BKM';
@@ -40,11 +42,12 @@ export function readAgency(params: ParamMap): string | null {
  */
 @Component({
   selector: 'app-position-history',
-  imports: [TimeSeriesChart, DecimalPipe, DatePipe, TimeWindowPicker],
+  imports: [Skeleton, TimeSeriesChart, LocalNumberPipe, LocalDatePipe, TimeWindowPicker],
   templateUrl: './position-history.html',
   styleUrl: './position-history.scss',
 })
 export class PositionHistory {
+  protected readonly t = t;
   private readonly store = inject(Store);
   private readonly navigate = injectSetQuery();
   private readonly params = toSignal(inject(ActivatedRoute).queryParamMap, { requireSync: true });
@@ -66,8 +69,12 @@ export class PositionHistory {
     const from = q.from ?? this.series()?.from ?? null;
     const window = from
       ? windowLabel(from, q.to)
-      : `until ${windowLabel(q.to, q.to).split(' – ')[0]}`;
-    return `${window} · ${q.route ? 'line ' + q.route : 'all lines'} · ${q.agency ?? 'all operators'}`;
+      : t('history.until', { when: windowLabel(q.to, q.to).split(' – ')[0] });
+    return t('history.coverage', {
+      window,
+      lines: q.route ? t('history.lineLower', { line: q.route }) : t('history.allLinesLower'),
+      operators: q.agency ?? t('history.allOperatorsLower'),
+    });
   });
 
   protected readonly showTable = signal(false);
@@ -112,18 +119,18 @@ export class PositionHistory {
 
   /** Chart formatters: delay values are minutes. */
   protected readonly delayTooltip = (minutes: number) => formatDelay(minutes * 60);
-  protected readonly delayAxis = (minutes: number) => `${minutes} min`;
+  protected readonly delayAxis = (minutes: number) => t('history.minutes', { n: minutes });
   protected readonly formatDelay = formatDelay;
   protected readonly formatShare = formatShare;
 
   /** "every 10 s (each poll)", "every minute", or "per 10 min" for longer windows. */
   protected readonly stepLabel = computed(() => {
     const seconds = this.series()?.stepSeconds ?? 60;
-    if (seconds < 60) return `every ${seconds} s (each poll)`;
-    if (seconds === 60) return 'every minute';
-    if (seconds % 86_400 === 0) return `per ${seconds / 86_400} day`;
-    if (seconds % 3_600 === 0) return `per ${seconds / 3_600} h`;
-    return `per ${seconds / 60} min`;
+    if (seconds < 60) return t('history.stepPoll', { n: seconds });
+    if (seconds === 60) return t('history.stepMinute');
+    if (seconds % 86_400 === 0) return t('history.stepDays', { n: seconds / 86_400 });
+    if (seconds % 3_600 === 0) return t('history.stepHours', { n: seconds / 3_600 });
+    return t('history.stepMinutes', { n: seconds / 60 });
   });
 
   constructor() {
