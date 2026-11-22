@@ -1,14 +1,15 @@
 package com.transitanalytics.service;
 
 import com.transitanalytics.dto.TripAnomalyDto;
+import com.transitanalytics.service.TripAnomalies.Kind;
+import com.transitanalytics.service.TripAnomalies.Outcome;
+import com.transitanalytics.service.TripHandovers.Fate;
 
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static com.transitanalytics.service.TripAnomalies.*;
-import static com.transitanalytics.service.TripHandovers.*;
 
 /**
  * Part of {@link TripAnomalies}: a window's outcomes counted, overall and per line.

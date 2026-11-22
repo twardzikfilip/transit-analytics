@@ -43,9 +43,9 @@
       </div>
       <div class="card tile">
         <span class="muted">{{ t('brigades.typicalDelay') }}</span>
-        <strong>{{ delayText(d.summary.medianStartDelay) }}</strong>
+        <strong>{{ departureDelayText(d.summary.medianStartDelay) }}</strong>
         <span class="muted small">{{
-          t('brigades.most', { delay: delayText(d.summary.maxDelay) })
+          t('brigades.most', { delay: departureDelayText(d.summary.maxDelay) })
         }}</span>
       </div>
       <div class="card tile">
@@ -111,15 +111,17 @@
                 <td class="time">{{ span(trip.departure, trip.arrival) }}</td>
                 <td>{{ tripLabel(trip) }}</td>
                 <td class="time">{{ actualSpan(trip) }}</td>
-                <td class="num">{{ delayText(trip.runs[0]?.startDelay) }}</td>
-                <td class="num">{{ delayText(trip.runs[trip.runs.length - 1]?.endDelay) }}</td>
+                <td class="num">{{ departureDelayText(trip.runs[0]?.startDelay) }}</td>
+                <td class="num">
+                  {{ departureDelayText(trip.runs[trip.runs.length - 1]?.endDelay) }}
+                </td>
                 <td>{{ busesText(trip) }}</td>
                 <td>
                   <span class="outcome" [class.problem]="problems.includes(trip.kind)">{{
                     kindLabel(trip.kind)
                   }}</span>
-                  @if (trip.note) {
-                    <div class="muted note">{{ trip.note }}</div>
+                  @if (trip.note?.length) {
+                    <div class="muted note">{{ phrasesText(trip.note) }}</div>
                   }
                   @for (m of trip.missing; track $index) {
                     <div class="muted note">

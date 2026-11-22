@@ -16,7 +16,14 @@ import { loadDay, loadList } from '../../store/brigades/brigades.effects';
 import { brigadesFeature } from '../../store/brigades/brigades.reducer';
 import { renderPage, stateAfter, text } from '../../testing/page-testing';
 import { BrigadeDayChart, fit } from './brigade-day-chart';
-import { TRIP_COLORS, actualSpan, busesText, delayText, share, shortStop } from './brigade-format';
+import {
+  TRIP_COLORS,
+  actualSpan,
+  busesText,
+  departureDelayText,
+  share,
+  shortStop,
+} from './brigade-format';
 import { t } from '../../core/i18n/t';
 import { PageBack } from '../../core/title/page-back';
 import { BrigadePage } from './brigade';
@@ -84,7 +91,12 @@ const LIST: BrigadeList = {
 function day(): BrigadeDay {
   const lost = trip('T3', '07:00', '07:40', 'lost', [run('209', '07:01', '07:20', 60, 1, 9)]);
   lost.missing = [{ fromStop: 9, toStop: 20, from: at('07:20'), to: at('07:40'), why: 'not-run' }];
-  lost.note = 'Bus 209 stopped reporting.';
+  lost.note = [
+    {
+      key: 'lostForGood',
+      params: { bus: '209', stop: 'Lipowa', index: 8, total: 25, time: '07:20' },
+    },
+  ];
   return {
     brigade: '103-05',
     serviceDay: '2026-11-18',
@@ -276,7 +288,9 @@ describe('Brigade day chart', () => {
     expect(tip).toContain('103 → Choroszcz/Cmentarz');
     expect(tip).toContain('Lost');
     expect(tip).toContain('bus 209');
-    expect(tip).toContain('Bus 209 stopped reporting.');
+    expect(tip).toContain(
+      "Bus 209 stopped reporting heading to Lipowa (stop 8 of 25) at 07:20 and wasn't seen again",
+    );
   });
 
   it('fits labels into the room they have', () => {
@@ -288,10 +302,10 @@ describe('Brigade day chart', () => {
 
 describe('Brigade formats', () => {
   it('formats delays, spans, buses, shares and stop names', () => {
-    expect(delayText(null)).toBe('–');
-    expect(delayText(20)).toBe('on time');
-    expect(delayText(90)).toBe('+1:30');
-    expect(delayText(-45)).toBe('−0:45');
+    expect(departureDelayText(null)).toBe('–');
+    expect(departureDelayText(20)).toBe('on time');
+    expect(departureDelayText(90)).toBe('+1:30');
+    expect(departureDelayText(-45)).toBe('−0:45');
     expect(busesText(day().trips[1])).toBe('209 → 486');
     expect(busesText(day().trips[3])).toBe('–');
     expect(actualSpan(day().trips[3])).toBe('–');

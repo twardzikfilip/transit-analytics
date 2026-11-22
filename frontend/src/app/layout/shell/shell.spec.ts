@@ -8,7 +8,7 @@ import { PageTitle } from '../../core/title/page-title';
 import { Shell } from './shell';
 
 describe('Shell', () => {
-  it('shows the user, every page in the sidebar, and a menu that logs out', () => {
+  it('shows the user, every page in the sidebar, and a menu of settings, data sources and logout', () => {
     const { el, store, render } = renderPage(Shell, signedIn('ADMIN'));
 
     expect(text(el.querySelector('.user'))).toBe('ann ADMIN');
@@ -20,6 +20,10 @@ describe('Shell', () => {
     toggle.click();
     render();
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    const items = [...el.querySelectorAll('[role=menuitem]')];
+    expect(items.map(text)).toEqual(['Settings', 'Data sources', 'Logout']);
+    expect(items.map((i) => i.getAttribute('href'))).toEqual(['/settings', '/sources', null]);
+    expect(items.every((i) => i.querySelector('app-icon svg path'))).toBe(true);
     const logout = [...el.querySelectorAll('[role=menuitem]')].find(
       (i) => text(i) === 'Logout',
     ) as HTMLElement;
@@ -56,7 +60,7 @@ describe('Shell', () => {
     ]);
     const hrefs = [...network.querySelectorAll('a')].map((a) => a.getAttribute('href'));
     expect(hrefs).toContain('/network-coverage');
-    expect(hrefs).toContain('/sources');
+    expect(hrefs).not.toContain('/sources');
     const all = [...el.querySelectorAll('aside nav a')].map((a) => a.getAttribute('href'));
     for (const gone of ['/delays', '/live-map', '/positions', '/lines'])
       expect(all).not.toContain(gone);

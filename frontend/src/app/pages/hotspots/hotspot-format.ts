@@ -1,12 +1,13 @@
 import { Hotspot, HotspotApproach, HotspotLineTime } from '../../core/models/models';
 import { formatDelay } from '../../shared/format/time';
 import { t } from '../../core/i18n/t';
+import { decimal } from '../../shared/format/number';
 
 /** "45 min" under an hour, else "2.4 h". */
 export function lostTime(hours: number): string {
   return hours < 1
     ? t('units.min', { n: Math.round(hours * 60) })
-    : t('units.h', { n: hours.toFixed(1) });
+    : t('units.h', { n: decimal(hours) });
 }
 
 /** A wait: "40 s" under a minute, else "1:20 min". */

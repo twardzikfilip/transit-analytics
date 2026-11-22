@@ -69,13 +69,14 @@ public final class BrigadeDto {
      * @param direction 0 or 1 (by destination); alternate trips of a brigade usually alternate
      * @param kind      the trip's outcome, as on Abnormal trips: completed, detour, vehicle-changed, no-signal,
      *                  short-turned, lost, missed, cancelled, not-recorded, pending
-     * @param note      what happened, for an abnormal trip
+     * @param note      what happened, in phrases, for an abnormal trip
      * @param runs      what ran, one per bus in order (more than one: the bus was changed)
      * @param missing   parts of the trip nobody ran, in scheduled time: before, between and after the runs (a trip
      *                  not run at all is missing whole)
      */
     public record Trip(String tripId, String line, String headsign, String from, String to, int direction,
-                       Instant departure, Instant arrival, int stops, String kind, String note, List<ActualRun> runs,
+                       Instant departure, Instant arrival, int stops, String kind, List<TripAnomalyDto.Phrase> note,
+                       List<ActualRun> runs,
                        List<Missing> missing) {
     }
 

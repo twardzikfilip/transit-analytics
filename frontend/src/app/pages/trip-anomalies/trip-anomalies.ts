@@ -26,12 +26,13 @@ import {
   stoodLabel,
   kindLabel,
   replacementFrom,
-  percent,
+  shareText,
   signedDelay,
 } from './trip-kinds';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { LocalDatePipe } from '../../shared/i18n/locale-pipes';
 import { t, tn } from '../../core/i18n/t';
+import { phrasesText } from '../../shared/i18n/phrases';
 
 /** Rows of the trips table shown at first, and added by "Show more". */
 export const PAGE_ROWS = 50;
@@ -62,6 +63,7 @@ export function refreshes(w: TimeWindow): boolean {
 })
 export class TripAnomalies {
   protected readonly t = t;
+  protected readonly phrasesText = phrasesText;
   protected readonly tn = tn;
   private readonly store = inject(Store);
 
@@ -119,7 +121,7 @@ export class TripAnomalies {
   );
 
   protected readonly time = localTime;
-  protected readonly percent = percent;
+  protected readonly shareText = shareText;
   protected readonly signedDelay = signedDelay;
   protected readonly coverage = coverage;
   protected readonly kindLabel = kindLabel;

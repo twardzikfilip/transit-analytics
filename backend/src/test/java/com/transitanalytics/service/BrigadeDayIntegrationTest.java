@@ -102,7 +102,7 @@ class BrigadeDayIntegrationTest {
             assertThat(r.departure()).isEqualTo(local("07:01:00"));
         });
         BrigadeDto.Trip lost = day.trips().get(1);
-        assertThat(lost.note()).contains("stopped reporting");
+        assertThat(EnglishPhrases.text(lost.note())).contains("stopped reporting");
         assertThat(lost.missing()).singleElement().satisfies(m -> {
             assertThat(m.fromStop()).isEqualTo(2);
             assertThat(m.toStop()).isEqualTo(4);

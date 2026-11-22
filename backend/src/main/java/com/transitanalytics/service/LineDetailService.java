@@ -8,6 +8,7 @@ import com.transitanalytics.dto.BusLaneDto;
 import com.transitanalytics.dto.LineDetailDto.Variant;
 import com.transitanalytics.dto.LineDetailDto.Zone2;
 import com.transitanalytics.dto.LineDetailDto;
+import com.transitanalytics.geo.Geo;
 import com.transitanalytics.recording.DelayOutliers;
 import com.transitanalytics.repository.RouteRepository;
 import com.transitanalytics.zbiorkom.BialystokFeed;
@@ -282,13 +283,7 @@ public class LineDetailService {
 
     /** The depot nearest a point, [lat, lon]. */
     static MapProperties.Depot nearest(double[] point, List<MapProperties.Depot> depots) {
-        double cos = Math.cos(Math.toRadians(point[0]));
-        return depots.stream().min(Comparator.comparingDouble(d -> {
-            double[] c = d.centre();
-            double dx = (c[1] - point[1]) * cos;
-            double dy = c[0] - point[0];
-            return dx * dx + dy * dy;
-        })).orElseThrow();
+        return depots.stream().min(Comparator.comparingDouble(d -> Geo.meters(point, d.centre()))).orElseThrow();
     }
 
     @Transactional(readOnly = true)

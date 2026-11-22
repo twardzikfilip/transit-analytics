@@ -1,6 +1,6 @@
 import { LaneFigures, LaneHeading } from '../../core/models/models';
 import { SEQUENTIAL_BLUE } from '../../shared/palette';
-import { kmh } from '../../shared/format/number';
+import { decimal, int, kmh } from '../../shared/format/number';
 import { t } from '../../core/i18n/t';
 
 /** Speed classes on the map, km/h: the slowest darkest (most held up). */
@@ -39,10 +39,10 @@ export function speedText(speed: number | null | undefined): string {
 }
 
 /** "+17.6 s/km" (delay gained), "−4.0 s/km" (made up), or "–". */
-export function delayText(perKm: number | null | undefined): string {
+export function delayPerKmText(perKm: number | null | undefined): string {
   if (perKm === null || perKm === undefined) return '–';
   const sign = perKm > 0 ? '+' : perKm < 0 ? '−' : '';
-  return t('busLanes.perKm', { sign, n: Math.abs(perKm).toFixed(1) });
+  return t('busLanes.perKm', { sign, n: decimal(Math.abs(perKm)) });
 }
 
 /** "7% slower", "3% faster", or "–". */
@@ -50,9 +50,7 @@ export function slowdownText(f: LaneFigures | null | undefined): string {
   const s = f?.peakSlowdown;
   if (s === null || s === undefined) return '–';
   if (Math.abs(s) < 0.5) return t('busLanes.noSlower');
-  return s > 0
-    ? t('busLanes.slower', { n: s.toFixed(0) })
-    : t('busLanes.faster', { n: (-s).toFixed(0) });
+  return s > 0 ? t('busLanes.slower', { n: int(s) }) : t('busLanes.faster', { n: int(-s) });
 }
 
 /** Lines as text, the first few then "+n". */

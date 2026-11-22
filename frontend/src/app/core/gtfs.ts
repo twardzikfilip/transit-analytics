@@ -1,23 +1,6 @@
 import { t } from './i18n/t';
 /** Display helpers for GTFS values. */
 
-const ROUTE_TYPES: Record<number, string> = {
-  0: 'Tram',
-  1: 'Metro',
-  2: 'Rail',
-  3: 'Bus',
-  4: 'Ferry',
-  5: 'Cable tram',
-  6: 'Aerial lift',
-  7: 'Funicular',
-  11: 'Trolleybus',
-  12: 'Monorail',
-};
-
-export function routeTypeLabel(type: number | null): string {
-  return type === null ? '—' : (ROUTE_TYPES[type] ?? `Type ${type}`);
-}
-
 /**
  * "HH:MM:SS" → "HH:MM". GTFS counts past midnight on the same service day (25:10:00 = 01:10 the next day),
  * so those times are shown as the clock time with "+1".

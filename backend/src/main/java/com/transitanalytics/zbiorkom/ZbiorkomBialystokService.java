@@ -19,7 +19,6 @@ import java.util.List;
 @Service
 public class ZbiorkomBialystokService {
 
-    /** The city operator (Białostocka Komunikacja Miejska); zbiorkom reports it as "default". */
     /** A recorder snapshot older than this isn't live any more. */
     static final Duration MAX_AGE = Duration.ofSeconds(60);
     /** The fallback is logged at most this often. */

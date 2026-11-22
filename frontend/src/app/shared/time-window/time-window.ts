@@ -115,6 +115,15 @@ export function refreshMs(w: TimeWindow): number {
   return length !== null && length <= SHORT_WINDOW_MS ? POLL_MS : MINUTE;
 }
 
+/**
+ * A query as text, "1w|BKM" for a preset or "<from>|<to>|BKM" for a custom window: the same text means the same
+ * results (a preset stays the same query as time moves on).
+ */
+export function queryKey(window: TimeWindow, agencies: string[] = []): string {
+  const span = window.preset ?? `${window.from?.toISOString() ?? ''}|${window.to.toISOString()}`;
+  return `${span}|${agencies.join(',')}`;
+}
+
 /** Same window and operators: whether a reload is needed. */
 export function sameQuery<Q extends { window: TimeWindow; agencies?: string[] }>(
   a: Q,

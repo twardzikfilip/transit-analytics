@@ -115,14 +115,6 @@ export function toggleAgency(options: AgencyOption[], selected: string[], name: 
         margin-top: 4px;
       }
     }
-
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip-path: inset(50%);
-    }
   `,
   host: {
     '(document:click)': 'closeOutside($event)',

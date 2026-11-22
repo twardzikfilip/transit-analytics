@@ -192,8 +192,10 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   back within 15 min), missed (not run while the brigade ran other trips; with where the brigade's bus was instead)
   and cancelled (no bus on the brigade all day). Trips during gaps in recording (3+ minutes without any report)
   aren't judged; trips are judged as soon as it's clear what the bus did. Counts overall and per line, and the
-  abnormal trips (the latest 2000) with brigade, buses, stops seen, delays and a note. Each finished service day is
-  judged once; the running day again after a minute. The last month is judged at startup in the background.
+  abnormal trips (the latest 2000) with brigade, buses, stops seen, delays and a note. The `note` and each step's
+  `text` are lists of phrases, `{key, params}`: the page writes them in the reader's language from `tripNotes.<key>`
+  in its translations (`shared/i18n/phrases.ts`); a value is text, a number or another phrase. Each finished
+  service day is judged once; the running day again after a minute. The last month is judged at startup in the background.
 - `GET /api/brigades?date=&agency=` — the brigades of an agency (default: the city's, BKM) on a service day (default:
   today's): each with its lines, trip count and first and last times, plus the agencies whose timetables name brigades.
 - `GET /api/brigades/{brigade}/day?date=` — a brigade's day: each trip as scheduled with what actually ran (a part per
@@ -420,7 +422,7 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
 - `core/api` — generic `CrudApiService` + one service per backend resource
 - `layout/shell` — the sidebar (pages grouped into *Operation* and *Network*, each with a filled Bootstrap icon from
   `shared/icons`) and the header bar with the page's title (from the route's `title`, see `core/title/page-title.ts`)
-  and the hamburger menu (Settings, Logout). On a desktop the icon at the right of the sidebar's header narrows it to its
+  and the hamburger menu (Settings, Data sources, Logout, each with an icon). On a desktop the icon at the right of the sidebar's header narrows it to its
   icons (names as tooltips; remembered in the browser; `layout/shell/sidebar.ts`). Up to 768 px wide (phones, small tablets) the sidebar is hidden to the
   left and shown over the page with the button at the left of the header bar; choosing a page, tapping beside it,
   its ‹ button or Escape hides it again. Up to 600 px the time window's presets are a dropdown, the From/To fields
@@ -433,8 +435,8 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
   right corner, with the backend's message (`core/api/error-toasts.ts`, ngx-toastr); pages never show the error text
   themselves. `errors-as-toasts.spec.ts` opens every page with the API failing to check that. ngx-toastr 20 declares
   Angular 21; `overrides` in `package.json` lets it run on Angular 22 until a release supports it.
-- Languages: English (default), Polish and German, chosen in Settings from a dropdown of flags and native names,
-  remembered in the browser and applied at once (Transloco). The texts are in `src/i18n/{en,pl,de}.json`; English is
+- Languages: English (default), Polish, German and French, chosen in Settings from a dropdown of flags and native names,
+  remembered in the browser and applied at once (Transloco). The texts are in `src/i18n/{en,pl,de,fr}.json`; English is
   built in, the others load from `/i18n/` when chosen. Templates and code translate with `t('key', params)` and
   counts with `tn('key', n)` (`core/i18n/t.ts`, plural forms per language); the `date` and `number` pipes follow the
   language (`shared/i18n/locale-pipes.ts`). `translations.spec.ts` checks every language has every text, the same
@@ -459,7 +461,7 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
   (`?range=1w`, or `?from=…&to=…` in local time, and `?agency=`).
 - Startup bundle: telemetry (the OpenTelemetry SDK) loads as its own chunk right after startup, and the NgRx
   devtools are only in development builds (`store-devtools.prod.ts` replaces them in production).
-- `pages` — login, settings (theme; GTFS import for admins), sources (where the data comes from), and:
+- `pages` — login, settings (theme; GTFS import for admins), sources (where the data comes from; "Data sources" in the header menu), and:
 - Home: the live map on top (Leaflet/OSM; a `livePositions` load every 5 s, markers drawn from the store; filled by
   delay, outlined by kind of line: urban blue, suburban black, regional magenta; its own filters by operator and delay,
   in the URL as `?mapAgency=` and `?mapMinDelay=`, with a reset; the popup shows the brigade and its remaining runs

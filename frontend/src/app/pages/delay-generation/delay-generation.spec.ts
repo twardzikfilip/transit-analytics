@@ -16,7 +16,7 @@ import { load, loadLine } from '../../store/delay-generation/delay-generation.ef
 import { delayGenerationFeature } from '../../store/delay-generation/delay-generation.reducer';
 import { renderPage, stateAfter, text, useSvgMaps } from '../../testing/page-testing';
 import { DelayGeneration, bandStretches } from './delay-generation';
-import { changeClass, delayText, minutesPerDay, signedChange } from './delay-scale';
+import { changeClass, lateOrEarlyText, minutesPerDay, signedChange } from './delay-scale';
 import { activeHours, cellText } from './line-heatmap';
 import { offsetLine } from './stretch-map';
 import { scheduledTime } from './trip-profile';
@@ -324,9 +324,9 @@ describe('delay generation helpers', () => {
     expect(signedChange(35)).toBe('+0:35');
     expect(signedChange(-65)).toBe('−1:05');
     expect(signedChange(0.4)).toBe('0:00');
-    expect(delayText(135)).toBe('2:15 late');
-    expect(delayText(-40)).toBe('0:40 early');
-    expect(delayText(0)).toBe('on time');
+    expect(lateOrEarlyText(135)).toBe('2:15 late');
+    expect(lateOrEarlyText(-40)).toBe('0:40 early');
+    expect(lateOrEarlyText(0)).toBe('on time');
     expect(minutesPerDay(30, 400, 4)).toBe(50);
     expect(minutesPerDay(30, 400, 0)).toBe(200);
     expect(scheduledTime('2026-11-16T15:41:00Z', 120)).toBe('16:39');

@@ -151,10 +151,10 @@ class TripAnomaliesTest {
         assertThat(d.detourRoute()).hasSize(2);
         assertThat(d.detourRoute().get(0)).containsExactly(53.10, LON);
         assertThat(outcomes.get(full.tripId()).trip()).isNull();
-        assertThat(d.note()).startsWith("Run in full. Off the route for 3 min, up to");
+        assertThat(EnglishPhrases.text(d.note())).startsWith("Run in full. Off the route for 3 min, up to");
         assertThat(d.vehicles()).containsExactly("V1");
 
-        assertThat(outcomes.get(missed.tripId()).trip().note())
+        assertThat(EnglishPhrases.text(outcomes.get(missed.tripId()).trip().note()))
                 .isEqualTo("Between the brigade's runs. Bus V1 was on line 10 (brigade 010-01).");
         assertThat(outcomes.get(missed.tripId()).vehicleIds()).as("the brigade's bus that day").containsExactly(1L);
         assertThat(outcomes.get(detour.tripId()).vehicleIds()).containsExactly(1L);
@@ -164,16 +164,17 @@ class TripAnomaliesTest {
         assertThat(s.fromStop()).isEqualTo(1);
         assertThat(s.toStop()).isEqualTo(3);
         assertThat(s.coveredTo()).isEqualTo("C");
-        assertThat(s.note()).isEqualTo("Left the trip heading to C (stop 3 of 5) at 07:47 and went on to the "
+        assertThat(EnglishPhrases.text(s.note()))
+                .isEqualTo("Left the trip heading to C (stop 3 of 5) at 07:47 and went on to the "
                 + "brigade's next trip towards Zajezdnia.");
         assertThat(s.startDelay()).isZero();
 
-        assertThat(outcomes.get(cancelled.tripId()).trip().note())
+        assertThat(EnglishPhrases.text(outcomes.get(cancelled.tripId()).trip().note()))
                 .isEqualTo("No bus ran brigade 009-02 all day while recording.");
-        assertThat(outcomes.get(lost.tripId()).trip().note())
+        assertThat(EnglishPhrases.text(outcomes.get(lost.tripId()).trip().note()))
                 .isEqualTo("Bus V3 stopped reporting heading to C (stop 3 of 5) at 08:02 and wasn't seen again "
                         + "that day.");
-        assertThat(outcomes.get(noSignal.tripId()).trip().note())
+        assertThat(EnglishPhrases.text(outcomes.get(noSignal.tripId()).trip().note()))
                 .isEqualTo("Bus V4 stopped reporting heading to C (stop 3 of 5) at 08:02; back at 08:15 on the "
                         + "brigade's next trip towards South, so it probably finished the trip.");
 
@@ -198,10 +199,10 @@ class TripAnomaliesTest {
 
         Map<String, Outcome> outcomes = judge(List.of(first, second, other), reports, NOON);
         assertThat(outcomes.get(second.tripId()).kind()).isEqualTo(Kind.SHORT_TURNED);
-        assertThat(outcomes.get(second.tripId()).trip().note()).startsWith(
+        assertThat(EnglishPhrases.text(outcomes.get(second.tripId()).trip().note())).startsWith(
                 "Started midway: joined heading to B (stop 4 of 5) at 07:19, coming from line 10 (brigade 010-01).");
         assertThat(outcomes.get(other.tripId()).kind()).isEqualTo(Kind.NO_SIGNAL);
-        assertThat(outcomes.get(other.tripId()).trip().note())
+        assertThat(EnglishPhrases.text(outcomes.get(other.tripId()).trip().note()))
                 .isEqualTo("Bus V2 started reporting midway, heading to D (stop 4 of 5) at 07:04.");
 
         // At 07:27 the next trip hasn't been seen, but its bus is still on the brigade (running late): pending.
@@ -218,7 +219,7 @@ class TripAnomaliesTest {
         ScheduledTrip due = trip("009-09", "North", "07:10");
         assertThat(judge(List.of(first, due), late, at("07:27")).get(due.tripId())).satisfies(o -> {
                     assertThat(o.kind()).isEqualTo(Kind.CANCELLED);
-                    assertThat(o.trip().note()).startsWith("So far: No bus ran brigade 009-09");
+                    assertThat(EnglishPhrases.text(o.trip().note())).startsWith("So far: No bus ran brigade 009-09");
                 });
     }
 
@@ -247,7 +248,7 @@ class TripAnomaliesTest {
         Outcome changed = judge(List.of(trip), reports, NOON).get(trip.tripId());
         assertThat(changed.kind()).isEqualTo(Kind.VEHICLE_CHANGED);
         assertThat(changed.trip().vehicles()).containsExactly("V1", "V3", "V2");
-        assertThat(changed.trip().note()).isEqualTo("Run in full. Bus V1 stopped heading to D (stop 4 of 5) at "
+        assertThat(EnglishPhrases.text(changed.trip().note())).isEqualTo("Run in full. Bus V1 stopped heading to D (stop 4 of 5) at "
                 + "07:04; 2 min later bus V2 took over at the same place, heading to E (stop 5). Delay +0:00 before, "
                 + "+0:00 after. Bus V2 hadn't run any other brigade that day (from the depot). Bus V1 stood there for 1 "
                 + "min (07:04–07:05), then stopped reporting and wasn't seen again that day (switched off, or towed "
@@ -293,21 +294,21 @@ class TripAnomaliesTest {
         assertThat(reassigned.changeFate()).isEqualTo("reassigned");
         assertThat(reassigned.replacementLine()).isEqualTo("10");
         assertThat(reassigned.replacementBrigade()).isEqualTo("010-02");
-        assertThat(reassigned.note()).endsWith("Bus V2 came straight from line 10 (brigade 010-02), until 07:05. "
+        assertThat(EnglishPhrases.text(reassigned.note())).endsWith("Bus V2 came straight from line 10 (brigade 010-02), until 07:05. "
                 + "Bus V1 was used again on line 12 (brigade 012-01) from 08:00.");
 
         // Bus 2 ran another brigade of the line hours before; bus 1 is back on its brigade later.
         TripAnomalyDto.Trip returned = judged.apply(List.of(elsewhere(2, "05:30", "9", "009-07"),
                 elsewhere(1, "09:00", "9", "009-01"), elsewhere(1, "09:20", "9", "009-01")));
         assertThat(returned.changeFate()).isEqualTo("returned");
-        assertThat(returned.note()).endsWith("Bus V2 had run brigade 009-07 of the same line earlier that day, "
+        assertThat(EnglishPhrases.text(returned.note())).endsWith("Bus V2 had run brigade 009-07 of the same line earlier that day, "
                 + "until 05:30. Bus V1 was back on the brigade at 09:00.");
 
         // Bus 1 stands where it gave up, then is driven off reporting its brigade once: not used again.
         Report gaveUp = changeOfBus(trip).get(12);
         TripAnomalyDto.Trip stood = judged.apply(List.of(
                 new Report(1, "V1", at("07:20"), "9", "009-01", "South", 2000, 4, gaveUp.lat(), LON)));
-        assertThat(stood.note()).endsWith("Bus V1 stood there for 16 min (07:04–07:20), then stopped reporting "
+        assertThat(EnglishPhrases.text(stood.note())).endsWith("Bus V1 stood there for 16 min (07:04–07:20), then stopped reporting "
                 + "and wasn't seen again that day (switched off, or towed with its tracker off): possibly broken down.");
         assertThat(stood.stoodThen()).isEqualTo("vanished");
         assertThat(stood.stoodLastSeen()).isEqualTo(at("07:20"));
@@ -316,7 +317,7 @@ class TripAnomaliesTest {
         standing.add(new Report(1, "V1", at("07:20"), "9", "009-01", "South", 2000, 4, gaveUp.lat(), LON));
         TripAnomalyDto.Trip still = judge(List.of(trip), standing, at("07:21")).get(trip.tripId()).trip();
         assertThat(still.stoodThen()).isEqualTo("still-there");
-        assertThat(still.note()).endsWith("Bus V1 has stood there since 07:04 (16 min, last report 07:20) and "
+        assertThat(EnglishPhrases.text(still.note())).endsWith("Bus V1 has stood there since 07:04 (16 min, last report 07:20) and "
                 + "hasn't been used since: possibly broken down.");
         // Stood until 07:10, then off to the depot: last seen 07:30, kilometres away.
         TripAnomalyDto.Trip towed = judged.apply(List.of(
@@ -324,8 +325,8 @@ class TripAnomaliesTest {
                 elsewhere(1, "07:25", "9", "009-01"), new Report(1, "V1", at("07:30"), "9", null, null, null, null,
                         53.2, 23.2)));
         assertThat(towed.changeFate()).isEqualTo("broken-down");
-        assertThat(towed.note()).endsWith("Bus V1 stood there for 6 min (07:04–07:10), then moved off without "
-                + "running a brigade; last seen at 07:30, 11.0 km away. Not used again that day: possibly broken "
+        assertThat(EnglishPhrases.text(towed.note())).endsWith("Bus V1 stood there for 6 min (07:04–07:10), then moved off without "
+                + "running a brigade; last seen at 07:30, 11 km away. Not used again that day: possibly broken "
                 + "down.");
         assertThat(towed.stoodThen()).isEqualTo("drove-off");
         assertThat(towed.stoodMinutes()).isEqualTo(6);
@@ -384,7 +385,7 @@ class TripAnomaliesTest {
                 .get(first.tripId()).trip();
 
         assertThat(changed.story()).extracting(TripAnomalyDto.Step::at).isSorted();
-        assertThat(changed.story()).extracting(TripAnomalyDto.Step::text).containsExactly(
+        assertThat(changed.story()).extracting(s -> EnglishPhrases.text(s.text())).containsExactly(
                 "Bus V1 runs line 9 towards North, heading to A (stop 1 of 5), delay +0:00.",
                 "Bus V1 stops heading to D (stop 4 of 5; delay +0:00) and doesn't move on; the feed's delay keeps "
                         + "growing, to +34:00 by 07:40.",

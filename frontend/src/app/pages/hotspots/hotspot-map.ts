@@ -15,6 +15,7 @@ import { leafletHost } from '../../shared/map/leaflet-host';
 import { cssColor, INK } from '../../shared/palette';
 import { lostTime, nearText, waitText } from './hotspot-format';
 import { t } from '../../core/i18n/t';
+import { decimal } from '../../shared/format/number';
 
 /** Marker radius in px of the hotspot with the most time lost; the others are smaller, by area. */
 export const MAX_RADIUS = 22;
@@ -129,7 +130,7 @@ export class HotspotMap {
       })
         .bindTooltip(
           `<strong>#${h.id} ${escapeHtml(nearText(h))}</strong><br>` +
-            `${escapeHtml(t('hotspots.tipLost', { lost: lostTime(h.hours), perDay: h.minutesPerDay.toFixed(1) }))}<br>` +
+            `${escapeHtml(t('hotspots.tipLost', { lost: lostTime(h.hours), perDay: decimal(h.minutesPerDay) }))}<br>` +
             escapeHtml(
               t('hotspots.tipStandstills', { n: h.standstills, wait: waitText(h.medianSeconds) }),
             ),

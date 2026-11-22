@@ -69,7 +69,7 @@ Before calling a change done:
 - **Tests:** a page test renders with `renderPage(...)` and `stateAfter(feature, ...actions)` from
   `src/app/testing/page-testing.ts`; maps in tests need `useSvgMaps()`. Backend database tests use
   `@DbIntegrationTest` and `TimetableFixture`.
-- **Texts:** every UI text is a key in `frontend/src/i18n/en.json`, `pl.json` and `de.json` (all three, or
+- **Texts:** every UI text is a key in `frontend/src/i18n/en.json`, `pl.json`, `de.json` and `fr.json` (all four, or
   `translations.spec.ts` fails), shown with `t('section.key', params)` or `tn()` for counts (`core/i18n/t.ts`;
   components expose `protected readonly t = t`; where a template already uses `t` as a loop variable, import it as
   `tr`). Long explanations with markup go through `[innerHTML]`. Use the `date`/`number` pipes from

@@ -63,8 +63,8 @@
                     >{{ signed(s.meanSeconds) }}</span
                   >
                 </td>
-                <td class="num">{{ (s.runs / r.days).toFixed(0) }}</td>
-                <td class="num">{{ t('delayGen.minutes', { n: s.minutesPerDay.toFixed(0) }) }}</td>
+                <td class="num">{{ int(s.runs / r.days) }}</td>
+                <td class="num">{{ t('delayGen.minutes', { n: int(s.minutesPerDay) }) }}</td>
                 <td class="lines">{{ s.stretch.lines.join(', ') }}</td>
               </tr>
             } @empty {
@@ -105,8 +105,8 @@
                     >{{ signed(s.meanSeconds) }}</span
                   >
                 </td>
-                <td class="num">{{ (s.runs / r.days).toFixed(0) }}</td>
-                <td class="num">{{ t('delayGen.minutes', { n: s.minutesPerDay.toFixed(0) }) }}</td>
+                <td class="num">{{ int(s.runs / r.days) }}</td>
+                <td class="num">{{ t('delayGen.minutes', { n: int(s.minutesPerDay) }) }}</td>
                 <td class="lines">{{ s.stretch.lines.join(', ') }}</td>
               </tr>
             } @empty {
@@ -166,7 +166,7 @@
               <td class="num">{{ signed(l.medianGainSeconds) }}</td>
               <td class="num">{{ wholePercent(l.gainingShare) }}</td>
               <td class="num">
-                {{ t('delayGen.minutes', { n: l.generatedMinutesPerDay.toFixed(0) }) }}
+                {{ t('delayGen.minutes', { n: int(l.generatedMinutesPerDay) }) }}
               </td>
               <td>
                 {{ worst(l) }}

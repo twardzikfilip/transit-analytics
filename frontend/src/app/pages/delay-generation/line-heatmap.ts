@@ -1,6 +1,6 @@
 import { Component, computed, input, output } from '@angular/core';
 import { DelayLineStretch } from '../../core/models/models';
-import { changeClass, delayText, signedChange } from './delay-scale';
+import { changeClass, lateOrEarlyText, signedChange } from './delay-scale';
 import { percent } from '../../shared/format/number';
 import { t } from '../../core/i18n/t';
 
@@ -59,7 +59,7 @@ export function activeHours(stretches: DelayLineStretch[]): number[] {
                   {{
                     t('delayGen.heat.note', {
                       buses: s.runs,
-                      leaving: delayText(s.delayBefore),
+                      leaving: lateOrEarlyText(s.delayBefore),
                       median: signed(s.medianSeconds),
                     })
                   }}
@@ -168,7 +168,7 @@ export class LineHeatmap {
   protected readonly signed = signedChange;
   /** A share in whole percent, "42%". */
   protected readonly wholePercent = (share: number) => percent(share, { digits: 0 });
-  protected readonly delayText = delayText;
+  protected readonly lateOrEarlyText = lateOrEarlyText;
 
   /** Whole seconds with a sign: "+31", "−6", "0" (never "−0"). */
   protected cellText(seconds: number): string {

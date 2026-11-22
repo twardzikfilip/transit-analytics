@@ -58,11 +58,13 @@ class FleetIntegrationTest {
         record(b, "IT1", "IT1-02", "Rynek", local("06:00"), local("06:30"));
         record(b, "IT2", "IT2-01", "Rynek", local("09:00"), local("09:30"));
 
-        var trip = new TripAnomalyDto.Trip("vehicle-changed", "Bus IT-FA wasn't seen again that day.", "IT1-01_1",
+        var trip = new TripAnomalyDto.Trip("vehicle-changed",
+                List.of(TripAnomalyDto.Phrase.of("silentAtOnce", "bus", "IT-FA")), "IT1-01_1",
                 "IT1", "IT1-01", "Dworzec", "Rynek", "Dworzec", local("07:30"), local("08:10"), 10, List.of("IT-FA"),
                 1, 10, null, null, null, null, null, null, null, null, null, null, null, List.of(), List.of(), "broken-down", null, null,
                 3, null, null, "Lipowa", null, 0, local("08:00"), 20, "vanished", local("08:20"), 0,
-                List.of(new TripAnomalyDto.Step(local("08:00"), "Bus IT-FA stops.")),
+                List.of(new TripAnomalyDto.Step(local("08:00"),
+                        List.of(TripAnomalyDto.Phrase.of("stepStillThere", "bus", "IT-FA")))),
                 List.of(new TripAnomalyDto.Span("IT-FA", "standing", local("08:00"), local("08:20"))));
         TripAnomalyService trips = mock(TripAnomalyService.class);
         when(trips.outcomes(any(), any())).thenReturn(List.of(
@@ -98,7 +100,8 @@ class FleetIntegrationTest {
             assertThat(i.kind()).isEqualTo("vehicle-changed");
             assertThat(i.day()).isEqualTo(DAY);
             // Told step by step, with a time line, on the bus's page.
-            assertThat(i.story()).extracting(TripAnomalyDto.Step::text).containsExactly("Bus IT-FA stops.");
+            assertThat(i.story()).extracting(s -> EnglishPhrases.text(s.text()))
+                    .containsExactly("Bus IT-FA is still standing there at its latest report.");
             assertThat(i.timeline()).extracting(TripAnomalyDto.Span::kind).containsExactly("standing");
             // Where it went over the time line, 2 min either side: its reports at 07:58, 07:59 and 08:00.
             assertThat(i.paths()).singleElement().satisfies(p -> {

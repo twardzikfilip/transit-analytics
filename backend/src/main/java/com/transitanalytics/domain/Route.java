@@ -160,24 +160,12 @@ public class Route {
         return geometry;
     }
 
-    public void setGeometry(RouteGeometry geometry) {
-        this.geometry = geometry;
-    }
-
     public RouteCapacity getCapacityClass() {
         return capacityClass;
     }
 
-    public void setCapacityClass(RouteCapacity capacityClass) {
-        this.capacityClass = capacityClass;
-    }
-
     public String getOperatingAgency() {
         return operatingAgency;
-    }
-
-    public void setOperatingAgency(String operatingAgency) {
-        this.operatingAgency = operatingAgency;
     }
 
     /** What riders see: the short name, or the long name when there is none. */

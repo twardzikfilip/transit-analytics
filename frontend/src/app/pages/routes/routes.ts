@@ -25,7 +25,6 @@ import { LineRegularity } from './variant-tiles';
 import { clock, duration } from '../../shared/format/time';
 import { cssColor, INK, WHITE } from '../../shared/palette';
 import {
-  GEOMETRIES,
   SUBTYPES,
   capacityDescription,
   capacityLabel,
@@ -46,6 +45,7 @@ import { BOUNDARY_STYLES, BUS_LANE_STYLE, VARIANT_COLORS } from '../../shared/pa
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { LocalDatePipe, LocalNumberPipe } from '../../shared/i18n/locale-pipes';
 import { t, tn } from '../../core/i18n/t';
+import { decimal, int } from '../../shared/format/number';
 
 /** A recorded variant driven less than this share of the runs is drawn thin and dashed. */
 export const RARE_SHARE = 0.05;
@@ -78,6 +78,8 @@ export const RARE_SHARE = 0.05;
 })
 export class RoutesPage {
   protected readonly t = t;
+  protected readonly int = int;
+  protected readonly decimal = decimal;
   protected readonly tn = tn;
   private readonly store = inject(Store);
   private readonly router = inject(Router);
@@ -92,7 +94,6 @@ export class RoutesPage {
   protected readonly loadingPerformance = this.store.selectSignal(
     routeDetailFeature.selectLoadingPerformance,
   );
-  protected readonly error = this.store.selectSignal(routeDetailFeature.selectError);
 
   /** Every line's weekday statistics (GET /api/lines/stats), for the chosen line's regularity tile. */
   private readonly lineStats = this.store.selectSignal(lineStatsFeature.selectReport);
@@ -111,7 +112,6 @@ export class RoutesPage {
       : null;
   });
 
-  protected readonly geometries = GEOMETRIES;
   /** What a line's classes mean, for the line title. */
   protected readonly classes = computed(() => {
     const d = this.detail();
@@ -349,7 +349,7 @@ export class RoutesPage {
       const tip =
         `<strong>${escapeHtml(v.headsign)}</strong><br>` +
         `${escapeHtml(v.from ?? '?')} → ${escapeHtml(v.to ?? '?')}<br>` +
-        escapeHtml(tn('routes.tip.driven', v.runs, { km: v.km.toFixed(1) }));
+        escapeHtml(tn('routes.tip.driven', v.runs, { km: decimal(v.km) }));
       L.polyline(v.path, {
         color: v.color,
         weight: v.id === chosen ? 7 : v.rare ? 2 : 4,
@@ -395,7 +395,7 @@ function variantLabel(v: LineVariant): string {
   return t('routes.tip.variant', {
     kind,
     headsign: v.headsign,
-    km: v.km.toFixed(1),
+    km: decimal(v.km),
     trips: v.tripsPerDay,
   });
 }

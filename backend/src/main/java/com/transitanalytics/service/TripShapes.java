@@ -1,13 +1,17 @@
 package com.transitanalytics.service;
 
 import com.transitanalytics.geo.Geo;
+import com.transitanalytics.service.TripAnomalies.Report;
+import com.transitanalytics.service.TripAnomalies.ScheduledTrip;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.transitanalytics.service.TripAnomalies.*;
-import static com.transitanalytics.service.TripHandovers.*;
+import static com.transitanalytics.service.TripAnomalies.DETOUR_REPORTS;
+import static com.transitanalytics.service.TripAnomalies.DETOUR_REPORT_GAP;
+import static com.transitanalytics.service.TripAnomalies.OFF_ROUTE_METERS;
+import static com.transitanalytics.service.TripAnomalies.between;
 
 /**
  * Part of {@link TripAnomalies}: route shapes in metres, how far a bus is from its route, and detours.

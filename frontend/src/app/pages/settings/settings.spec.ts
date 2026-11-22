@@ -82,8 +82,9 @@ describe('Settings page', () => {
     button.click();
     render();
     const options = [...el.querySelectorAll('[role=option]')] as HTMLElement[];
-    expect(options.map(text)).toEqual(['English✓', 'Polski', 'Deutsch']);
+    expect(options.map(text)).toEqual(['English✓', 'Polski', 'Deutsch', 'Français']);
     expect(options.map((o) => o.querySelector('app-flag svg') !== null)).toEqual([
+      true,
       true,
       true,
       true,

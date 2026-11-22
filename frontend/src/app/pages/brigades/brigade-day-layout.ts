@@ -1,6 +1,7 @@
 import { BrigadeTrip } from '../../core/models/models';
 import { localTime } from '../../shared/format/time';
-import { TRIP_COLORS, delayText, shortStop } from './brigade-format';
+import { TRIP_COLORS, departureDelayText, shortStop } from './brigade-format';
+import { t as tr } from '../../core/i18n/t';
 
 /**
  * Where everything goes on the brigade day chart: pure functions of the trips and the width there is, so they can be
@@ -99,11 +100,11 @@ export function tripRows(trips: BrigadeTrip[], scale: TimeScale) {
     const busX = first ? scale.x(first.departure) : scheduled.x;
     const nextBus = nextInRow?.runs[0] ? scale.x(nextInRow.runs[0].departure) : scale.width;
     const busLabel = first
-      ? `${t.runs.map((r) => r.bus).join(' → ')} ${delayText(first.startDelay)}`
+      ? `${t.runs.map((r) => r.bus).join(' → ')} ${departureDelayText(first.startDelay)}`
       : t.kind === 'pending'
-        ? 'upcoming'
+        ? tr('brigades.chart.upcoming')
         : t.kind === 'not-recorded'
-          ? 'no data'
+          ? tr('brigades.chart.noData')
           : '';
     const allX = [
       scheduled.x,

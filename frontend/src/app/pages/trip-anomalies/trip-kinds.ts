@@ -6,7 +6,7 @@ import {
   TripAnomalySummary,
 } from '../../core/models/models';
 import { duration, formatDelay } from '../../shared/format/time';
-import { shareOf } from '../../shared/format/number';
+import { km, shareOf } from '../../shared/format/number';
 import { t, tn } from '../../core/i18n/t';
 
 /** Kinds of abnormal trip, the most serious first, with where their count is in the summary and per line. */
@@ -98,7 +98,7 @@ export function stoodLabel(trip: AbnormalTrip): string | null {
       return trip.stoodMinutes ? t('anomalies.thenSilent', { stood }) : t('anomalies.silentAtOnce');
     case 'drove-off': {
       const m = trip.stoodLastSeenMeters ?? 0;
-      const away = m < 1000 ? `${Math.round(m / 50) * 50} m` : `${(m / 1000).toFixed(1)} km`;
+      const away = m < 1000 ? `${Math.round(m / 50) * 50} m` : km(m / 1000);
       return trip.stoodMinutes
         ? t('anomalies.movedOff', { stood, away })
         : t('anomalies.oldMovedOff', { away });
@@ -112,7 +112,7 @@ export function kindLabel(kind: TripAnomalyKind): string {
 }
 
 /** A share as a percentage: "4.2%", "0%"; "—" without a total. */
-export function percent(part: number, total: number): string {
+export function shareText(part: number, total: number): string {
   return shareOf(part, total, { adaptive: true, empty: '—' });
 }
 

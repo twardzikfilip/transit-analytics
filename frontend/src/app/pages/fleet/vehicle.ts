@@ -9,16 +9,18 @@ import { BarChart } from '../../shared/bar-chart/bar-chart';
 import { IncidentStory } from '../../shared/incident-timeline/incident-story';
 import { localTime } from '../../shared/format/time';
 import { TimeWindowPicker } from '../../shared/time-window/time-window-picker';
-import { sameQuery, windowQuery } from '../../shared/time-window/time-window';
+import { windowQuery } from '../../shared/time-window/time-window';
 import { FleetActions } from '../../store/fleet/fleet.actions';
 import { fleetFeature } from '../../store/fleet/fleet.reducer';
-import { DEFAULT_PRESET, FleetQuery, fleetQuery, openVehicle } from './fleet';
+import { DEFAULT_PRESET, fleetQuery, loadReport, openVehicle } from './fleet';
 import { dailyBars, dayLabel, hoursAxis, isShortWindow, timelineRows } from './fleet-format';
 import { RunTimeline } from './run-timeline';
 import { VehicleSearch } from './vehicle-search';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { LocalDatePipe } from '../../shared/i18n/locale-pipes';
 import { t, tn } from '../../core/i18n/t';
+import { decimal } from '../../shared/format/number';
+import { phrasesText } from '../../shared/i18n/phrases';
 
 /**
  * One bus (/vehicles/7, its id): its runs day by day, its hours per day and the abnormal trips it was part of,
@@ -40,6 +42,8 @@ import { t, tn } from '../../core/i18n/t';
 })
 export class VehiclePage {
   protected readonly t = t;
+  protected readonly phrasesText = phrasesText;
+  protected readonly decimal = decimal;
   protected readonly tn = tn;
   private readonly store = inject(Store);
   private readonly router = inject(Router);
@@ -84,17 +88,12 @@ export class VehiclePage {
 
   constructor() {
     injectBackLink('nav.backToFleet', () => this.back());
-    let window: FleetQuery | null = null;
+    const state = this.store.selectSignal(fleetFeature.selectFleetState);
     combineLatest([fleetQuery(this.route), this.id$])
       .pipe(takeUntilDestroyed())
       .subscribe(([q, id]) => {
-        if (!window || !sameQuery(window, q)) {
-          // The fleet's buses, for the search.
-          this.store.dispatch(
-            FleetActions.load({ window: windowQuery(q.window), agencies: q.agencies }),
-          );
-        }
-        window = q;
+        // The fleet's buses, for the search: the report already loaded for this window when there is one.
+        loadReport(this.store, state, q);
         this.store.dispatch(FleetActions.loadVehicle({ id, window: windowQuery(q.window) }));
       });
   }

@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { Lang } from '../../core/i18n/t';
 
-/** A small flag for a language: the United Kingdom's for English, Poland's and Germany's. Decorative. */
+/** A small flag for a language: the United Kingdom's for English, Poland's, Germany's and France's. Decorative. */
 @Component({
   selector: 'app-flag',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -19,6 +19,13 @@ import { Lang } from '../../core/i18n/t';
           <rect width="15" height="3" fill="#000" />
           <rect y="3" width="15" height="3" fill="#dd0000" />
           <rect y="6" width="15" height="3" fill="#ffce00" />
+        </svg>
+      }
+      @case ('fr') {
+        <svg viewBox="0 0 3 2" preserveAspectRatio="xMidYMid slice">
+          <rect width="1" height="2" fill="#002395" />
+          <rect x="1" width="1" height="2" fill="#fff" />
+          <rect x="2" width="1" height="2" fill="#ed2939" />
         </svg>
       }
       @default {

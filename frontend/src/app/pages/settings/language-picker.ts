@@ -5,8 +5,8 @@ import { Flag } from '../../shared/i18n/flag';
 
 /**
  * The language of the app: a dropdown of the languages, each with its flag and its name in its own language
- * ("Polski", "Deutsch"). A listbox (not a <select>, which can't show flags): arrows move, Enter chooses, Escape
- * closes.
+ * ("Polski", "Deutsch", "Français"). A listbox (not a <select>, which can't show flags): arrows move, Enter
+ * chooses, Escape closes.
  */
 @Component({
   selector: 'app-language-picker',

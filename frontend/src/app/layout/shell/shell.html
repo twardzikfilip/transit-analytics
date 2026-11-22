@@ -45,12 +45,19 @@
       @if (menuOpen()) {
         <ul class="dropdown" role="menu">
           <li role="none">
-            <a role="menuitem" routerLink="/settings" (click)="menuOpen.set(false)">{{
-              t('nav.settings')
-            }}</a>
+            <a role="menuitem" routerLink="/settings" (click)="menuOpen.set(false)"
+              ><app-icon name="settings" />{{ t('nav.settings') }}</a
+            >
           </li>
           <li role="none">
-            <button role="menuitem" type="button" (click)="logout()">{{ t('nav.logout') }}</button>
+            <a role="menuitem" routerLink="/sources" (click)="menuOpen.set(false)"
+              ><app-icon name="sources" />{{ t('nav.sources') }}</a
+            >
+          </li>
+          <li role="none">
+            <button role="menuitem" type="button" (click)="logout()">
+              <app-icon name="logout" />{{ t('nav.logout') }}
+            </button>
           </li>
         </ul>
       }

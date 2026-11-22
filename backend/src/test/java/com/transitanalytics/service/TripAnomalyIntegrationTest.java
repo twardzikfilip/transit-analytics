@@ -81,7 +81,7 @@ class TripAnomalyIntegrationTest {
         assertThat(detour.startDelay()).isZero();
         TripAnomalyDto.Trip cancelled = report.trips().get(1);
         assertThat(cancelled.brigade()).isEqualTo("ITA-02");
-        assertThat(cancelled.note()).isEqualTo("No bus ran brigade ITA-02 all day while recording.");
+        assertThat(EnglishPhrases.text(cancelled.note())).isEqualTo("No bus ran brigade ITA-02 all day while recording.");
         assertThat(report.lines()).singleElement().satisfies(l -> {
             assertThat(l.line()).isEqualTo("IT-TA");
             assertThat(l.judged()).isEqualTo(3);

@@ -17,7 +17,7 @@ import { BusLanesActions } from '../../store/bus-lanes/bus-lanes.actions';
 import { busLanesFeature } from '../../store/bus-lanes/bus-lanes.reducer';
 import { BusLaneMap } from './bus-lane-map';
 import { LaneDirectionMap } from './lane-direction-map';
-import { delayText, headingText, linesText, slowdownText, speedText } from './lane-format';
+import { delayPerKmText, headingText, linesText, slowdownText, speedText } from './lane-format';
 import { kmh } from '../../shared/format/number';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { LocalDatePipe, LocalNumberPipe } from '../../shared/i18n/locale-pipes';
@@ -63,8 +63,7 @@ export class BusLanesPage {
 
   protected readonly report = this.store.selectSignal(busLanesFeature.selectReport);
   protected readonly loading = this.store.selectSignal(busLanesFeature.selectLoading);
-  /** The lanes themselves; fixed data, fetched once. */
-  /** The lanes; null until they arrive, or when they can't be loaded (the error shows as a toast). */
+  /** The lanes: fixed data, fetched once; null until they arrive, or when they can't be loaded (a toast). */
   protected readonly lanes = toSignal(
     inject(BusLaneApi)
       .lanes()
@@ -160,12 +159,12 @@ export class BusLanesPage {
   });
 
   protected readonly speedText = speedText;
-  protected readonly delayText = delayText;
+  protected readonly delayPerKmText = delayPerKmText;
   protected readonly slowdownText = slowdownText;
   protected readonly headingText = headingText;
   protected readonly linesText = linesText;
   protected readonly kmh = kmh;
-  protected readonly perKm = (v: number) => delayText(v);
+  protected readonly perKm = (v: number) => delayPerKmText(v);
 
   constructor() {
     this.window$.pipe(takeUntilDestroyed()).subscribe(({ window }) => {

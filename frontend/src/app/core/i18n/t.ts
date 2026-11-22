@@ -3,15 +3,15 @@ import type { TranslocoService } from '@jsverse/transloco';
 import en from '../../../i18n/en.json';
 
 /** The languages of the app: English (the default), Polish and German. */
-export type Lang = 'en' | 'pl' | 'de';
-export const LANGS: Lang[] = ['en', 'pl', 'de'];
+export type Lang = 'en' | 'pl' | 'de' | 'fr';
+export const LANGS: Lang[] = ['en', 'pl', 'de', 'fr'];
 
 /** Values filled into a text's {{placeholders}}. */
 export type Params = Record<string, unknown>;
 
 /** Each language's locale for Intl (dates, plurals) and for Angular's date and number formats. */
-const INTL_LOCALE: Record<Lang, string> = { en: 'en-GB', pl: 'pl-PL', de: 'de-DE' };
-const ANGULAR_LOCALE: Record<Lang, string> = { en: 'en-US', pl: 'pl', de: 'de' };
+const INTL_LOCALE: Record<Lang, string> = { en: 'en-GB', pl: 'pl-PL', de: 'de-DE', fr: 'fr-FR' };
+const ANGULAR_LOCALE: Record<Lang, string> = { en: 'en-US', pl: 'pl', de: 'de', fr: 'fr' };
 
 /**
  * The language shown, set once its translations are loaded (see Language). Everything below reads it, so templates

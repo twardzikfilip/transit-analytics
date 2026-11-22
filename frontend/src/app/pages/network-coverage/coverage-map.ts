@@ -49,8 +49,6 @@ const PANES = { covered: 410, woods: 420, valley: 425, border: 430, stops: 440 }
   styles: `
     :host {
       display: block;
-      --map-height: 560px;
-      --map-height-mobile: 380px;
     }
     .covered {
       background: color-mix(in srgb, ${COVERAGE_STYLE.covered} 35%, transparent);

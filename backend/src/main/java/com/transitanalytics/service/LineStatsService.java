@@ -151,11 +151,12 @@ public class LineStatsService {
                            extract(hour FROM bucket AT TIME ZONE '%1$s')::int AS hour
                     FROM route_delay_hourly
                     WHERE bucket >= now() - make_interval(days => ?)
-                      AND extract(isodow FROM bucket AT TIME ZONE '%1$s') <= 5)
+                      AND %4$s)
                 SELECT route_name,
                        average(rollup(delay_stats) FILTER (WHERE hour IN (%2$s))) AS peak,
                        average(rollup(delay_stats) FILTER (WHERE hour IN (%3$s))) AS off_peak
-                FROM local GROUP BY route_name""".formatted(ServiceDay.ZONE.getId(), hours(PEAK), hours(OFF_PEAK)),
+                FROM local GROUP BY route_name""".formatted(ServiceDay.ZONE.getId(), hours(PEAK), hours(OFF_PEAK),
+                        ServiceDay.weekdaySql("(bucket AT TIME ZONE '%s')".formatted(ServiceDay.ZONE.getId()))),
                 rs -> {
                     delays.put(rs.getString("route_name"),
                             new Double[] {rounded(rs.getObject("peak")), rounded(rs.getObject("off_peak"))});

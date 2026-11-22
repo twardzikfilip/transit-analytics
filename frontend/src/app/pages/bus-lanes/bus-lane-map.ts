@@ -16,12 +16,13 @@ import { injectCityBoundaries } from '../../shared/map/city-boundaries';
 import {
   NO_SPEED_COLOR,
   SPEED_SCALE,
-  delayText,
+  delayPerKmText,
   headingText,
   speedColor,
   speedText,
 } from './lane-format';
 import { t } from '../../core/i18n/t';
+import { decimal } from '../../shared/format/number';
 
 /**
  * Every bus lane on a grey map, coloured by the average speed of buses on it in the window (darker: slower); lanes
@@ -48,11 +49,6 @@ import { t } from '../../core/i18n/t';
   styles: `
     :host {
       display: block;
-      --map-height: 560px;
-      --map-height-mobile: 380px;
-    }
-
-    @media (max-width: 600px) {
     }
 
     .swatch {
@@ -118,7 +114,7 @@ export class BusLaneMap {
       const color = speedColor(f?.figures.speed);
       const tip =
         `<strong>${escapeHtml(s.name)}</strong> ${headingText(s.heading)}<br>` +
-        `${escapeHtml(t('busLanes.tip.km', { km: s.km.toFixed(2) }))}<br>` +
+        `${escapeHtml(t('busLanes.tip.km', { km: decimal(s.km, 2) }))}<br>` +
         escapeHtml(
           f
             ? t('busLanes.tip.average', {
@@ -129,7 +125,7 @@ export class BusLaneMap {
             : t('busLanes.tip.noBuses'),
         ) +
         (f
-          ? `<br>${escapeHtml(t('busLanes.tip.delay', { delay: delayText(f.figures.delayPerKm) }))}` +
+          ? `<br>${escapeHtml(t('busLanes.tip.delay', { delay: delayPerKmText(f.figures.delayPerKm) }))}` +
             (f.opposite
               ? `<br>${escapeHtml(t('busLanes.tip.otherWay', { speed: speedText(f.opposite.speed) }))}`
               : '')

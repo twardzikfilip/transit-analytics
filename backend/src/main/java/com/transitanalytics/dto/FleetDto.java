@@ -104,7 +104,8 @@ public final class FleetDto {
      * @param paths    on a breakdown, where each of those buses went over the time line, for a map
      */
     public record Incident(String kind, LocalDate day, String line, String brigade, String headsign,
-                           Instant scheduledDeparture, String note, List<TripAnomalyDto.Step> story,
+                           Instant scheduledDeparture, List<TripAnomalyDto.Phrase> note,
+                           List<TripAnomalyDto.Step> story,
                            List<TripAnomalyDto.Span> timeline, List<Path> paths) {
 
         public Incident withPaths(List<Path> paths) {

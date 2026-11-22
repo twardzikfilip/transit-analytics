@@ -1,5 +1,6 @@
 import de from '../../../i18n/de.json';
 import en from '../../../i18n/en.json';
+import fr from '../../../i18n/fr.json';
 import pl from '../../../i18n/pl.json';
 import { activeLang, intlLocale, t, tn } from './t';
 
@@ -22,6 +23,7 @@ describe('Translations', () => {
     const english = keys(en as Tree).sort();
     expect(keys(pl as Tree).sort()).toEqual(english);
     expect(keys(de as Tree).sort()).toEqual(english);
+    expect(keys(fr as Tree).sort()).toEqual(english);
   });
 
   it('keeps each text’s placeholders in every language', () => {
@@ -37,6 +39,7 @@ describe('Translations', () => {
       });
     expect(walk(en as Tree, pl as Tree, '')).toEqual([]);
     expect(walk(en as Tree, de as Tree, '')).toEqual([]);
+    expect(walk(en as Tree, fr as Tree, '')).toEqual([]);
   });
 
   it('has a plural form for every form the language uses', () => {
@@ -58,6 +61,7 @@ describe('Translations', () => {
     expect(missing(en as Tree, 'en-GB')).toEqual([]);
     expect(missing(pl as Tree, 'pl-PL')).toEqual([]);
     expect(missing(de as Tree, 'de-DE')).toEqual([]);
+    expect(missing(fr as Tree, 'fr-FR')).toEqual([]);
   });
 
   it('shows English, filling in placeholders, before Transloco is set up', () => {

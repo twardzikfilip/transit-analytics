@@ -13,13 +13,14 @@ import {
   kindLabel,
   actualSpan,
   busesText,
-  delayText,
+  departureDelayText,
   share,
   span,
   tripLabel,
 } from './brigade-format';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { t } from '../../core/i18n/t';
+import { phrasesText } from '../../shared/i18n/phrases';
 
 /**
  * One brigade on one service day (/brigades/103-05?date=2026-11-18; without a date, today's): its trips as
@@ -33,6 +34,7 @@ import { t } from '../../core/i18n/t';
 })
 export class BrigadePage {
   protected readonly t = t;
+  protected readonly phrasesText = phrasesText;
   private readonly store = inject(Store);
   private readonly router = inject(Router);
   private readonly navigate = injectSetQuery();
@@ -58,7 +60,7 @@ export class BrigadePage {
   protected readonly selected = signal<number | null>(null);
 
   protected readonly kindLabel = kindLabel;
-  protected readonly delayText = delayText;
+  protected readonly departureDelayText = departureDelayText;
   protected readonly formatDelay = formatDelay;
   protected readonly span = span;
   protected readonly actualSpan = actualSpan;

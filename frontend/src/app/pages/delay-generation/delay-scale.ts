@@ -18,7 +18,7 @@ export function signedChange(seconds: number): string {
 }
 
 /** A delay: "2:15 late", "0:40 early", "on time". */
-export function delayText(seconds: number): string {
+export function lateOrEarlyText(seconds: number): string {
   const rounded = Math.round(seconds);
   if (rounded === 0) return t('delayGen.onTime');
   return t(rounded > 0 ? 'delayGen.late' : 'delayGen.early', {
