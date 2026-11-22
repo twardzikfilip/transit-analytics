@@ -24,8 +24,9 @@ public class GtfsController {
     @Operation(summary = "Import a timetable feed",
             description = "Downloads a GTFS feed and replaces what it loaded before (agencies, routes, stops, trips, "
                     + "stop times, calendar dates and shapes) with it: \"bialystok\" is the city's (komunikacja.bialystok.pl); "
-                    + "other operators' feeds are configured under app.gtfs.extra (e.g. \"pksnova-500\", PKS Nova line "
-                    + "500) and loaded with their ids prefixed, so imports of one feed never touch another's. Admin only; "
+                    + "other operators' feeds are configured under app.gtfs.extra (\"pksnova-500\", \"wschodexpress\", "
+                    + "\"turosn-koscielna\"). Each row records its feed, so imports of one feed never touch another's; "
+                    + "another feed's stops that are the city's (their code is its stop id) are the city's. Admin only; "
                     + "takes a few seconds.")
     @ApiResponse(responseCode = "200", description = "Imported; row counts per table")
     @ApiResponse(responseCode = "404", description = "No such feed")

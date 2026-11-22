@@ -1,5 +1,6 @@
 package com.transitanalytics.service;
 
+import com.transitanalytics.domain.TimetableFeed;
 import com.transitanalytics.domain.CityBoundaries;
 import com.transitanalytics.domain.Route;
 import com.transitanalytics.dto.LineDetailDto.Brigade;
@@ -100,7 +101,7 @@ public class LineTimetable {
                 .orElseThrow()));
         Map<Long, List<StopPoint>> stopsByTrip = stops(representative.values().stream().map(TripRow::id).toList());
         Map<String, List<double[]>> shapes = withShapes
-                ? shapes(byVariant.values().stream().map(l -> l.get(0).shapeId()).filter(Objects::nonNull).toList())
+                ? shapes(route.getFeed(), byVariant.values().stream().map(l -> l.get(0).shapeId()).filter(Objects::nonNull).toList())
                 : Map.of();
 
         // Termini: where buses turn round in service, plus the base routes' ends. Depot runs start or end elsewhere.
@@ -168,7 +169,8 @@ public class LineTimetable {
                 ORDER BY t.id""".formatted(ServiceDay.BRIGADE_SQL, placeholders(services.size())),
                 (rs, i) -> {
                     noDirection[0] &= rs.getBoolean("no_direction");
-                    noBrigades[0] &= rs.getBoolean("no_block") && route.getGtfsId().contains(":");
+                    // Brigades are named in the city's timetable (trip ids); in another feed only by block ids.
+                    noBrigades[0] &= rs.getBoolean("no_block") && !TimetableFeed.MAIN.equals(route.getFeed());
                     return new TripRow(rs.getLong("id"), rs.getString("duty"), rs.getInt("direction"),
                         rs.getString("shape_id"), rs.getString("headsign"), rs.getInt("start_s"), rs.getInt("end_s"),
                         rs.getObject("km") == null ? null : rs.getDouble("km"), rs.getInt("stops"),
@@ -207,21 +209,22 @@ public class LineTimetable {
     List<String> services(Route route) {
         String weekday = weekdayTimetable.serviceId();
         if (weekday != null && Boolean.TRUE.equals(jdbc.queryForObject(
-                "SELECT EXISTS (SELECT 1 FROM trip WHERE route_id = ? AND service_id = ?)", Boolean.class,
-                route.getId(), weekday))) {
+                "SELECT EXISTS (SELECT 1 FROM trip WHERE route_id = ? AND feed = ? AND service_id = ?)", Boolean.class,
+                route.getId(), TimetableFeed.MAIN, weekday))) {
             return List.of(weekday);
         }
         List<String> day = jdbc.query("""
                 WITH days AS (
                     SELECT cd.date, count(*) AS trips
-                    FROM trip t JOIN calendar_date cd ON cd.service_id = t.service_id AND cd.exception_type = 1
+                    FROM trip t JOIN calendar_date cd ON cd.feed = t.feed AND cd.service_id = t.service_id
+                         AND cd.exception_type = 1
                     WHERE t.route_id = ? AND %s
                     GROUP BY cd.date
                     ORDER BY (cd.date >= current_date) DESC, count(*) DESC, cd.date
                     LIMIT 1)
                 SELECT DISTINCT t.service_id
                 FROM days d JOIN calendar_date cd ON cd.date = d.date AND cd.exception_type = 1
-                JOIN trip t ON t.service_id = cd.service_id AND t.route_id = ?
+                JOIN trip t ON t.feed = cd.feed AND t.service_id = cd.service_id AND t.route_id = ?
                 ORDER BY t.service_id""".formatted(ServiceDay.weekdaySql("cd.date")), (rs, i) -> rs.getString(1),
                 route.getId(), route.getId());
         return day;
@@ -292,21 +295,24 @@ public class LineTimetable {
         return result;
     }
 
-    private Map<String, List<double[]>> shapes(List<String> shapeIds) {
+    /** The shapes with these ids in a feed (a line's trips and shapes are all in its own feed). */
+    private Map<String, List<double[]>> shapes(String feed, List<String> shapeIds) {
         Map<String, List<double[]>> result = new HashMap<>();
         List<String> distinct = shapeIds.stream().distinct().toList();
         if (distinct.isEmpty()) {
             return result;
         }
+        List<Object> args = new ArrayList<>(List.of(feed));
+        args.addAll(distinct);
         jdbc.query("""
                 SELECT shape_id, latitude, longitude FROM shape_point
-                WHERE shape_id IN (%s) ORDER BY shape_id, sequence""".formatted(placeholders(distinct.size())),
+                WHERE feed = ? AND shape_id IN (%s) ORDER BY shape_id, sequence""".formatted(placeholders(distinct.size())),
                 rs -> {
                     result.computeIfAbsent(rs.getString("shape_id"), k -> new ArrayList<>()).add(new double[]{
                             TimetableMath.round(rs.getDouble("latitude"), 5),
                             TimetableMath.round(rs.getDouble("longitude"), 5)});
                 },
-                distinct.toArray());
+                args.toArray());
         return result;
     }
 

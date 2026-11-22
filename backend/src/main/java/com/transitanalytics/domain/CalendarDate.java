@@ -12,6 +12,10 @@ public class CalendarDate {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** The GTFS feed this row came from ({@link TimetableFeed}); its ids are unique within it. */
+    @Column(nullable = false, length = 32)
+    private String feed = TimetableFeed.MAIN;
+
     @Column(name = "service_id", nullable = false, length = 64)
     private String serviceId;
 
@@ -21,6 +25,14 @@ public class CalendarDate {
     /** 1 = service added, 2 = service removed. */
     @Column(name = "exception_type", nullable = false)
     private Short exceptionType;
+
+    public String getFeed() {
+        return feed;
+    }
+
+    public void setFeed(String feed) {
+        this.feed = feed;
+    }
 
     public Long getId() {
         return id;

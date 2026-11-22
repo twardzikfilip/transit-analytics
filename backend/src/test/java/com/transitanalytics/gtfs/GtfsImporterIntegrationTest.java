@@ -81,16 +81,17 @@ class GtfsImporterIntegrationTest {
 
     @Test
     void loadsFeedSkipsBrokenReferencesAndKeepsIdsOnReimport() throws IOException {
-        // Rows other feeds loaded (e.g. PKS Nova's line 500) stay: the counts are the whole tables.
+        // Rows other feeds loaded (e.g. PKS Nova's line 500) stay: the counts are the whole tables. Not their stop
+        // times at the city's stops: those stops go with this feed replacing the city's, and their stop times too.
         Map<String, Long> others = Map.of(
-                "agency", count("SELECT count(*) FROM agency WHERE gtfs_id LIKE '%:%'"),
-                "route", count("SELECT count(*) FROM route WHERE gtfs_id LIKE '%:%'"),
-                "stop", count("SELECT count(*) FROM stop WHERE gtfs_id LIKE '%:%'"),
-                "trip", count("SELECT count(*) FROM trip WHERE gtfs_id LIKE '%:%'"),
+                "agency", count("SELECT count(*) FROM agency WHERE feed <> 'bialystok'"),
+                "route", count("SELECT count(*) FROM route WHERE feed <> 'bialystok'"),
+                "stop", count("SELECT count(*) FROM stop WHERE feed <> 'bialystok'"),
+                "trip", count("SELECT count(*) FROM trip WHERE feed <> 'bialystok'"),
                 "stop_time", count("SELECT count(*) FROM stop_time st JOIN trip t ON t.id = st.trip_id "
-                        + "WHERE t.gtfs_id LIKE '%:%'"),
-                "calendar_date", count("SELECT count(*) FROM calendar_date WHERE service_id LIKE '%:%'"),
-                "shape_point", count("SELECT count(*) FROM shape_point WHERE shape_id LIKE '%:%'"));
+                        + "JOIN stop s ON s.id = st.stop_id WHERE t.feed <> 'bialystok' AND s.feed <> 'bialystok'"),
+                "calendar_date", count("SELECT count(*) FROM calendar_date WHERE feed <> 'bialystok'"),
+                "shape_point", count("SELECT count(*) FROM shape_point WHERE feed <> 'bialystok'"));
         GtfsImporter.Loaded first;
         try (ZipFile zip = zip(FEED)) {
             first = importer.load(zip);
@@ -106,25 +107,33 @@ class GtfsImporterIntegrationTest {
         assertThat(first.ignoredFiles()).containsExactly("feed_info.txt");
 
         assertThat(jdbc.queryForObject("SELECT a.gtfs_id FROM route r JOIN agency a ON a.id = r.agency_id "
-                + "WHERE r.gtfs_id = 'R1'", String.class)).as("route without agency_id gets the only agency")
+                + "WHERE r.feed = 'bialystok' AND r.gtfs_id = 'R1'", String.class))
+                .as("route without agency_id gets the only agency")
                 .isEqualTo("BKM");
-        assertThat(jdbc.queryForObject("SELECT color FROM route WHERE gtfs_id = 'R1'", String.class))
+        assertThat(jdbc.queryForObject("SELECT color FROM route WHERE feed = 'bialystok' AND gtfs_id = 'R1'",
+                String.class))
                 .isEqualTo("#FF0000");
-        assertThat(jdbc.queryForObject("SELECT name FROM stop WHERE gtfs_id = 'S1'", String.class))
+        assertThat(jdbc.queryForObject("SELECT name FROM stop WHERE feed = 'bialystok' AND gtfs_id = 'S1'",
+                String.class))
                 .isEqualTo("Lipowa, Rynek");
         assertThat(jdbc.queryForList("SELECT st.departure_time FROM stop_time st JOIN trip t ON t.id = st.trip_id "
-                + "WHERE t.gtfs_id = 'T1' ORDER BY st.stop_sequence", String.class))
+                + "WHERE t.feed = 'bialystok' AND t.gtfs_id = 'T1' ORDER BY st.stop_sequence", String.class))
                 .containsExactly("04:49:00", "24:05:00");
 
-        Long tripId = jdbc.queryForObject("SELECT id FROM trip WHERE gtfs_id = 'T1'", Long.class);
+        Long tripId = jdbc.queryForObject("SELECT id FROM trip WHERE feed = 'bialystok' AND gtfs_id = 'T1'",
+                Long.class);
         try (ZipFile zip = zip(FEED)) {
             importer.load(zip);
         }
-        assertThat(jdbc.queryForObject("SELECT id FROM trip WHERE gtfs_id = 'T1'", Long.class))
+        assertThat(jdbc.queryForObject("SELECT id FROM trip WHERE feed = 'bialystok' AND gtfs_id = 'T1'", Long.class))
                 .as("re-import keeps database ids").isEqualTo(tripId);
     }
 
-    /** Another operator's feed, with ids that clash with the main one's (agency, route, stop, trip, service, shape). */
+    /**
+     * Another operator's feed, with ids that clash with the main one's (agency, route, stop, trip, service, shape).
+     * Its stop S3 is the main feed's S2 (its code, at the same place); S1 and S4 aren't (S4's code is S1's id, but it
+     * is 1.3 km from it).
+     */
     private static final Map<String, String> OTHER = Map.of(
             "agency.txt", """
                     agency_id,agency_name,agency_url,agency_timezone
@@ -135,9 +144,11 @@ class GtfsImporterIntegrationTest {
                     R1,BKM,500,3
                     """,
             "stops.txt", """
-                    stop_id,stop_name,stop_lat,stop_lon,parent_station
-                    S1,Dworzec autobusowy,53.13,23.13,
-                    S2,Supraśl,53.21,23.33,S1
+                    stop_id,stop_code,stop_name,stop_lat,stop_lon,parent_station
+                    S1,,Dworzec autobusowy,53.13,23.13,
+                    S2,,Supraśl,53.21,23.33,S1
+                    S3,S2,Dworzec (city stop),53.1402,23.1603,
+                    S4,S1,Far from S1,53.13,23.17,
                     """,
             "trips.txt", """
                     route_id,service_id,trip_id,trip_headsign,shape_id
@@ -146,7 +157,9 @@ class GtfsImporterIntegrationTest {
             "stop_times.txt", """
                     trip_id,arrival_time,departure_time,stop_id,stop_sequence
                     T1,06:00:00,06:00:00,S1,0
-                    T1,06:30:00,06:30:00,S2,1
+                    T1,06:10:00,06:10:00,S3,1
+                    T1,06:20:00,06:20:00,S4,2
+                    T1,06:30:00,06:30:00,S2,3
                     """,
             "calendar_dates.txt", """
                     service_id,date,exception_type
@@ -162,50 +175,58 @@ class GtfsImporterIntegrationTest {
         return jdbc.queryForObject(sql, Long.class);
     }
 
+    /** Where a feed's trip stops, in order: each stop's feed and id. */
+    private java.util.List<String> stopsOf(String feed, String trip) {
+        return jdbc.queryForList("SELECT s.feed || ' ' || s.gtfs_id FROM stop_time st JOIN trip t ON t.id = st.trip_id"
+                + " JOIN stop s ON s.id = st.stop_id WHERE t.feed = ? AND t.gtfs_id = ? ORDER BY st.stop_sequence",
+                String.class, feed, trip);
+    }
+
     @Test
     void keepsEachFeedsRowsApartAndReplacesOnlyItsOwn() throws IOException {
         try (ZipFile zip = zip(FEED)) {
             importer.load(zip);
         }
         try (ZipFile zip = zip(OTHER)) {
-            importer.load(zip, "nova:");
+            importer.load(zip, "nova");
         }
-        // The other feed's ids are prefixed, so nothing clashed with the main feed's.
+        // The same ids in both feeds: each feed's rows are its own, with ids as the feed gives them.
         assertThat(jdbc.queryForObject("SELECT a.name FROM route r JOIN agency a ON a.id = r.agency_id "
-                + "WHERE r.gtfs_id = 'nova:R1'", String.class)).isEqualTo("Other operator");
-        assertThat(jdbc.queryForObject("SELECT name FROM agency WHERE gtfs_id = 'BKM'", String.class))
-                .isEqualTo("Test agency");
-        assertThat(jdbc.queryForObject("SELECT parent_station FROM stop WHERE gtfs_id = 'nova:S2'", String.class))
-                .isEqualTo("nova:S1");
-        assertThat(jdbc.queryForObject("SELECT service_id || ' ' || shape_id FROM trip WHERE gtfs_id = 'nova:T1'",
-                String.class)).isEqualTo("nova:P nova:SH");
-        assertThat(count("SELECT count(*) FROM stop_time st JOIN trip t ON t.id = st.trip_id "
-                + "WHERE t.gtfs_id = 'nova:T1'")).isEqualTo(2);
-        assertThat(count("SELECT count(*) FROM calendar_date WHERE service_id = 'nova:P'")).isEqualTo(1);
-        assertThat(count("SELECT count(*) FROM shape_point WHERE shape_id = 'nova:SH'")).isEqualTo(2);
+                + "WHERE r.feed = 'nova' AND r.gtfs_id = 'R1'", String.class)).isEqualTo("Other operator");
+        assertThat(jdbc.queryForObject("SELECT name FROM agency WHERE feed = 'bialystok' AND gtfs_id = 'BKM'",
+                String.class)).isEqualTo("Test agency");
+        assertThat(jdbc.queryForObject("SELECT parent_station FROM stop WHERE feed = 'nova' AND gtfs_id = 'S2'",
+                String.class)).isEqualTo("S1");
+        assertThat(jdbc.queryForObject("SELECT service_id || ' ' || shape_id FROM trip "
+                + "WHERE feed = 'nova' AND gtfs_id = 'T1'", String.class)).isEqualTo("P SH");
+        // Each feed's trip stops at its own stops; S3 is the city's S2, so the other feed has no copy of it.
+        assertThat(stopsOf("bialystok", "T1")).containsExactly("bialystok S1", "bialystok S2");
+        assertThat(stopsOf("nova", "T1")).containsExactly("nova S1", "bialystok S2", "nova S4", "nova S2");
+        assertThat(count("SELECT count(*) FROM stop WHERE feed = 'nova'")).isEqualTo(3);
+        assertThat(count("SELECT count(*) FROM calendar_date WHERE feed = 'nova' AND service_id = 'P'")).isEqualTo(1);
+        assertThat(count("SELECT count(*) FROM shape_point WHERE feed = 'nova' AND shape_id = 'SH'")).isEqualTo(2);
 
         // Re-importing the main feed leaves the other one's rows alone, and the other way round.
         try (ZipFile zip = zip(FEED)) {
             importer.load(zip);
         }
-        assertThat(count("SELECT count(*) FROM stop_time st JOIN trip t ON t.id = st.trip_id "
-                + "WHERE t.gtfs_id = 'nova:T1'")).isEqualTo(2);
-        assertThat(count("SELECT count(*) FROM shape_point WHERE shape_id = 'nova:SH'")).isEqualTo(2);
-        assertThat(count("SELECT count(*) FROM route WHERE gtfs_id IN ('R1', 'R2', 'nova:R1')")).isEqualTo(3);
+        assertThat(stopsOf("nova", "T1")).hasSize(4);
+        assertThat(count("SELECT count(*) FROM shape_point WHERE feed = 'nova'")).isEqualTo(2);
+        assertThat(count("SELECT count(*) FROM route WHERE gtfs_id IN ('R1', 'R2')"
+                + " AND feed IN ('bialystok', 'nova')")).isEqualTo(3);
         Map<String, String> fewer = new java.util.HashMap<>(OTHER);
         fewer.put("calendar_dates.txt", "service_id,date,exception_type\nP,20261118,1\n");
         try (ZipFile zip = zip(fewer)) {
-            importer.load(zip, "nova:");
+            importer.load(zip, "nova");
         }
-        assertThat(count("SELECT count(*) FROM calendar_date WHERE service_id = 'P'")).isEqualTo(1);
-        assertThat(jdbc.queryForList("SELECT date::text FROM calendar_date WHERE service_id = 'nova:P'",
+        assertThat(jdbc.queryForList("SELECT date::text FROM calendar_date"
+                + " WHERE feed = 'bialystok' AND service_id = 'P'", String.class)).containsExactly("2026-11-16");
+        assertThat(jdbc.queryForList("SELECT date::text FROM calendar_date WHERE feed = 'nova' AND service_id = 'P'",
                 String.class)).containsExactly("2026-11-18");
-        assertThat(count("SELECT count(*) FROM stop_time st JOIN trip t ON t.id = st.trip_id "
-                + "WHERE t.gtfs_id = 'T1'")).as("the main feed's stop times stay").isEqualTo(2);
+        assertThat(stopsOf("bialystok", "T1")).as("the main feed's stop times stay").hasSize(2);
 
-        assertThat(GtfsImporter.mine("x.gtfs_id", "")).isEqualTo("strpos(x.gtfs_id, ':') = 0");
         try (ZipFile zip = zip(OTHER)) {
-            assertThatThrownBy(() -> importer.load(zip, "bad prefix")).isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> importer.load(zip, "bad key")).isInstanceOf(IllegalArgumentException.class);
         }
     }
 

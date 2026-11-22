@@ -1,5 +1,6 @@
 package com.transitanalytics.classification;
 
+import com.transitanalytics.domain.TimetableFeed;
 import com.transitanalytics.domain.CityBoundaries;
 import com.transitanalytics.domain.CityTime;
 import com.transitanalytics.domain.RouteCapacity;
@@ -138,13 +139,13 @@ public class RouteClasses {
         Map<Long, List<double[]>> shapes = new HashMap<>();
         jdbc.query("""
                 WITH used AS (
-                    SELECT route_id, coalesce(direction, 0) AS dir, shape_id, count(*) AS n
-                    FROM trip WHERE shape_id IS NOT NULL GROUP BY 1, 2, 3),
+                    SELECT route_id, feed, coalesce(direction, 0) AS dir, shape_id, count(*) AS n
+                    FROM trip WHERE shape_id IS NOT NULL GROUP BY 1, 2, 3, 4),
                 main AS (
-                    SELECT DISTINCT ON (route_id) route_id, shape_id FROM used
+                    SELECT DISTINCT ON (route_id) route_id, feed, shape_id FROM used
                     ORDER BY route_id, (dir <> 0), n DESC, shape_id)
                 SELECT m.route_id, sp.latitude, sp.longitude
-                FROM main m JOIN shape_point sp ON sp.shape_id = m.shape_id
+                FROM main m JOIN shape_point sp ON sp.feed = m.feed AND sp.shape_id = m.shape_id
                 ORDER BY m.route_id, sp.sequence""",
                 rs -> {
                     shapes.computeIfAbsent(rs.getLong("route_id"), k -> new ArrayList<>())
@@ -161,10 +162,10 @@ public class RouteClasses {
         Map<Long, Map<Integer, List<Integer>>> departures = new HashMap<>();
         jdbc.query("""
                 WITH services AS (
-                    SELECT route_id, service_id, count(*) AS n FROM trip GROUP BY 1, 2),
+                    SELECT route_id, feed, service_id, count(*) AS n FROM trip GROUP BY 1, 2, 3),
                 chosen AS (
                     SELECT DISTINCT ON (route_id) route_id, service_id FROM services
-                    ORDER BY route_id, (service_id IS NOT DISTINCT FROM ?) DESC, n DESC, service_id)
+                    ORDER BY route_id, (feed = ? AND service_id IS NOT DISTINCT FROM ?) DESC, n DESC, service_id)
                 SELECT t.route_id, coalesce(t.direction, 0) AS dir,
                        extract(epoch FROM min(st.departure_time)::interval)::int AS departure_s
                 FROM trip t
@@ -176,7 +177,7 @@ public class RouteClasses {
                             .computeIfAbsent(rs.getInt("dir"), k -> new ArrayList<>())
                             .add(rs.getInt("departure_s"));
                 },
-                weekdayTimetable.serviceId());
+                TimetableFeed.MAIN, weekdayTimetable.serviceId());
         return departures;
     }
 

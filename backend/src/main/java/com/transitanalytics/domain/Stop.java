@@ -11,7 +11,11 @@ public class Stop {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "gtfs_id", nullable = false, unique = true, length = 64)
+    /** The GTFS feed this row came from ({@link TimetableFeed}); its ids are unique within it. */
+    @Column(nullable = false, length = 32)
+    private String feed = TimetableFeed.MAIN;
+
+    @Column(name = "gtfs_id", nullable = false, length = 64)
     private String gtfsId;
 
     @Column(length = 32)
@@ -36,7 +40,7 @@ public class Stop {
     @Column(name = "location_type")
     private Short locationType;
 
-    /** gtfs_id of the parent station, if any. */
+    /** gtfs_id of the parent station (same feed), if any. */
     @Column(name = "parent_station", length = 64)
     private String parentStation;
 
@@ -45,6 +49,14 @@ public class Stop {
 
     @Column(name = "platform_code", length = 32)
     private String platformCode;
+
+    public String getFeed() {
+        return feed;
+    }
+
+    public void setFeed(String feed) {
+        this.feed = feed;
+    }
 
     public Long getId() {
         return id;

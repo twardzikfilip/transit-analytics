@@ -1,5 +1,6 @@
 package com.transitanalytics.service;
 
+import com.transitanalytics.domain.TimetableFeed;
 import com.transitanalytics.domain.Route;
 import com.transitanalytics.dto.LineStatsDto;
 import com.transitanalytics.repository.RouteRepository;
@@ -69,8 +70,8 @@ public class LineStatsService {
         }
         var days = jdbc.queryForMap("""
                 SELECT count(*) AS days, min(date) AS first, max(date) AS last FROM calendar_date
-                WHERE service_id = ? AND exception_type = 1 AND %s""".formatted(ServiceDay.weekdaySql("date")),
-                service);
+                WHERE feed = ? AND service_id = ? AND exception_type = 1 AND %s""".formatted(ServiceDay.weekdaySql("date")),
+                TimetableFeed.MAIN, service);
 
         // One row per trip: start/end in seconds (GTFS times can pass 24:00), distance along the shape and the vehicle
         // duty (brigade).
@@ -81,19 +82,19 @@ public class LineStatsService {
                        extract(epoch FROM max(st.arrival_time)::interval)::int AS end_s,
                        max(st.shape_dist_traveled) AS km
                 FROM trip t JOIN stop_time st ON st.trip_id = t.id
-                WHERE t.service_id = ?
+                WHERE t.feed = ? AND t.service_id = ?
                 GROUP BY t.id""".formatted(ServiceDay.BRIGADE_SQL),
                 (rs, i) -> new TripTimes(rs.getLong("route_id"), rs.getInt("direction"), rs.getString("shape_id"),
                         rs.getString("duty"), rs.getInt("start_s"), rs.getInt("end_s"),
                         rs.getObject("km") == null ? null : rs.getDouble("km")),
-                service);
+                TimetableFeed.MAIN, service);
 
         // Departures at each direction's reference stop (first stop of its main variant), for regularity. Every trip
         // of that direction serving the stop counts, once (a loop line returns to its first stop).
         Map<Long, Map<Integer, List<Integer>>> departures = new HashMap<>();
         jdbc.query("""
                 WITH t AS (
-                    SELECT id, route_id, coalesce(direction, 0) AS dir, shape_id FROM trip WHERE service_id = ?),
+                    SELECT id, route_id, coalesce(direction, 0) AS dir, shape_id FROM trip WHERE feed = ? AND service_id = ?),
                 main AS (
                     SELECT DISTINCT ON (route_id, dir) route_id, dir, shape_id
                     FROM t GROUP BY route_id, dir, shape_id
@@ -116,7 +117,7 @@ public class LineStatsService {
                             .computeIfAbsent(rs.getInt("dir"), k -> new ArrayList<>())
                             .add(rs.getInt("departure_s"));
                 },
-                service);
+                TimetableFeed.MAIN, service);
 
         Map<Long, Route> routeById = routes.findAll().stream().collect(Collectors.toMap(Route::getId, Function.identity()));
         List<LineStatsDto.Line> lines = trips.stream()

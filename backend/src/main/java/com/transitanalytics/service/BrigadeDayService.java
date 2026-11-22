@@ -1,5 +1,6 @@
 package com.transitanalytics.service;
 
+import com.transitanalytics.domain.TimetableFeed;
 import com.transitanalytics.dto.BrigadeDto;
 import com.transitanalytics.dto.TripAnomalyDto;
 import com.transitanalytics.service.TripAnomalies.Kind;
@@ -40,6 +41,13 @@ public class BrigadeDayService {
     private final TripAnomalyService anomalies;
     private final Clock clock;
 
+    /**
+     * SQL: an agency's key on {@code agency a}: its id in the city's timetable (BKM), else the feed and its id
+     * (wschodexpress-1), as feeds reuse each other's agency ids.
+     */
+    static final String AGENCY_KEY =
+            "CASE WHEN a.feed = '" + TimetableFeed.MAIN + "' THEN a.gtfs_id ELSE a.feed || '-' || a.gtfs_id END";
+
     public BrigadeDayService(JdbcTemplate jdbc, TripAnomalyService anomalies, Clock clock) {
         this.jdbc = jdbc;
         this.anomalies = anomalies;
@@ -55,16 +63,18 @@ public class BrigadeDayService {
      * Every brigade of an agency in the timetable, whatever day it runs, each with the lines it runs. Every agency is
      * offered; one whose timetable doesn't name brigades (another operator's feed without them) has none.
      *
-     * @param agency the agency's timetable id; null or unknown: the city's (BKM), else the agency with most trips
+     * @param agency the agency's key ({@link #AGENCY_KEY}); null or unknown: the city's (BKM), else the agency with
+     *               most trips
      */
     public BrigadeDto.BrigadeList brigades(String agency) {
-        String named = "(t.block_id IS NOT NULL OR strpos(t.gtfs_id, ':') = 0)";
+        // Brigades are named in the city's timetable (trip ids), in another feed only by block ids.
+        String named = "(t.block_id IS NOT NULL OR t.feed = '" + TimetableFeed.MAIN + "')";
         List<BrigadeDto.Agency> agencies = jdbc.query("""
-                SELECT a.gtfs_id, a.name, count(*) AS trips, strpos(a.gtfs_id, ':') > 0 AS other
+                SELECT %s AS key, a.name, count(*) AS trips, a.feed <> ? AS other
                 FROM trip t JOIN route r ON r.id = t.route_id JOIN agency a ON a.id = r.agency_id
-                GROUP BY a.gtfs_id, a.name
-                ORDER BY other, trips DESC, a.name""",
-                (rs, i) -> new BrigadeDto.Agency(rs.getString("gtfs_id"), rs.getString("name")));
+                GROUP BY a.feed, a.gtfs_id, a.name
+                ORDER BY other, trips DESC, a.name""".formatted(AGENCY_KEY),
+                (rs, i) -> new BrigadeDto.Agency(rs.getString("key"), rs.getString("name")), TimetableFeed.MAIN);
         List<String> ids = agencies.stream().map(BrigadeDto.Agency::id).toList();
         String chosen = ids.contains(agency) ? agency
                 : ids.contains(BialystokFeed.CITY_AGENCY) ? BialystokFeed.CITY_AGENCY
@@ -75,8 +85,8 @@ public class BrigadeDayService {
         List<BrigadeDto.BrigadeRef> brigades = new ArrayList<>(jdbc.query("""
                 SELECT %s AS brigade, array_agg(DISTINCT coalesce(nullif(r.short_name, ''), r.long_name)) AS lines
                 FROM trip t JOIN route r ON r.id = t.route_id JOIN agency a ON a.id = r.agency_id
-                WHERE %s AND a.gtfs_id = ?
-                GROUP BY 1""".formatted(ServiceDay.BRIGADE_SQL, named),
+                WHERE %s AND %s = ?
+                GROUP BY 1""".formatted(ServiceDay.BRIGADE_SQL, named, AGENCY_KEY),
                 (rs, i) -> new BrigadeDto.BrigadeRef(rs.getString("brigade"),
                         List.of((String[]) rs.getArray("lines").getArray()).stream().sorted(LINE_ORDER).toList()),
                 chosen));
@@ -114,7 +124,7 @@ public class BrigadeDayService {
             List<TripAnomalyDto.Phrase> note = outcome == null || outcome.trip() == null ? null : outcome.trip().note();
             List<BrigadeDto.ActualRun> runs = runs(trip, matched.getOrDefault(trip, List.of()));
             int direction = Objects.equals(trip.stops()[trip.size() - 1], outbound) ? 0 : 1;
-            result.add(new BrigadeDto.Trip(trip.tripId(), lineName(trip.line()), trip.headsign(), trip.stops()[0],
+            result.add(new BrigadeDto.Trip(trip.tripId(), trip.line(), trip.headsign(), trip.stops()[0],
                     trip.stops()[trip.size() - 1], direction, trip.departure(), trip.arrival(), trip.size(),
                     kind.key, note, runs, missing(trip, kind, runs)));
         }
@@ -123,11 +133,6 @@ public class BrigadeDayService {
 
     private static String key(String line, Instant departure, Instant arrival) {
         return line + "|" + departure + "|" + arrival;
-    }
-
-    /** A line's name as people know it (another operator's ids are prefixed, e.g. "pksnova:500"). */
-    private static String lineName(String line) {
-        return line.substring(line.indexOf(':') + 1);
     }
 
     /** What ran: the trip's reports split where the bus changes, each part from its first stop to its last. */

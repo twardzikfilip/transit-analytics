@@ -1,7 +1,9 @@
 package com.transitanalytics.service;
 
+import com.transitanalytics.domain.TimetableFeed;
 import com.transitanalytics.dto.TripAnomalyDto;
 import com.transitanalytics.geo.Geo;
+import com.transitanalytics.gtfs.GtfsProperties;
 import com.transitanalytics.service.TripAnomalies.Outcome;
 import com.transitanalytics.service.TripAnomalies.Report;
 import com.transitanalytics.service.TripAnomalies.ScheduledTrip;
@@ -17,6 +19,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -25,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 /** Abnormal trips: scheduled trips not run, run only partly, lost, or off their route. */
 @Service
@@ -35,6 +39,8 @@ public class TripAnomalyService {
     /** The report lists at most this many abnormal trips (the latest); the counts cover them all. */
     static final int MAX_TRIPS = 2000;
 
+    /** See {@link #recordedFeeds(GtfsProperties)}. */
+    private final String[] recordedFeeds;
     private final JdbcTemplate jdbc;
     private final Clock clock;
     /** Each service day's outcomes, and when they were computed; a day long over is kept as it is. */
@@ -42,10 +48,20 @@ public class TripAnomalyService {
     private final RecentCache<ReportWindow, TripAnomalyDto.Report> reports;
     private volatile Shapes shapes;
 
-    public TripAnomalyService(JdbcTemplate jdbc, Clock clock) {
+    public TripAnomalyService(JdbcTemplate jdbc, Clock clock, GtfsProperties feeds) {
         this.jdbc = jdbc;
         this.clock = clock;
+        this.recordedFeeds = recordedFeeds(feeds);
         this.reports = new RecentCache<>(clock, CACHE_FOR, 16);
+    }
+
+    /**
+     * The feeds whose buses are on the live feed. Other feeds' trips (PKS Nova's line 500) are left out: nothing can be
+     * recorded for them, so they would all look cancelled.
+     */
+    static String[] recordedFeeds(GtfsProperties feeds) {
+        return Stream.concat(Stream.of(TimetableFeed.MAIN), feeds.extra().keySet().stream())
+                .filter(key -> feeds.feed(key).agency() != null).toArray(String[]::new);
     }
 
     private record DayOutcomes(Instant computed, List<Outcome> outcomes) {
@@ -191,21 +207,22 @@ public class TripAnomalyService {
                    String stop, int departure, int arrival, double lat, double lon) {
         }
         List<Row> rows = jdbc.query("""
-                SELECT t.id, t.gtfs_id, r.gtfs_id AS line, %s AS brigade, t.headsign, t.shape_id, st.stop_sequence,
+                SELECT t.id, t.gtfs_id, r.gtfs_id AS line, %s AS brigade, t.headsign, %s AS shape_id, st.stop_sequence,
                        s.name, s.latitude, s.longitude, extract(epoch FROM st.departure_time::interval)::int AS departure,
                        extract(epoch FROM st.arrival_time::interval)::int AS arrival
                 FROM trip t JOIN route r ON r.id = t.route_id
                      JOIN stop_time st ON st.trip_id = t.id JOIN stop s ON s.id = st.stop_id
-                WHERE %s%s
-                ORDER BY t.id, st.stop_sequence""".formatted(ServiceDay.BRIGADE_SQL, ServiceDay.TRIPS_OF_DAY_SQL,
+                WHERE t.feed = ANY (?) AND %s%s
+                ORDER BY t.id, st.stop_sequence""".formatted(ServiceDay.BRIGADE_SQL, shapeKey("t"),
+                        ServiceDay.TRIPS_OF_DAY_SQL,
                         brigade == null ? "" : " AND " + ServiceDay.BRIGADE_SQL + " = ?"),
                 (rs, i) -> new Row(rs.getLong("id"), rs.getString("gtfs_id"), rs.getString("line"),
                         rs.getString("brigade"), rs.getString("headsign"), rs.getString("shape_id"),
                         rs.getInt("stop_sequence"), StopPlaces.stopName(rs.getString("name")),
                         rs.getInt("departure"), rs.getInt("arrival"), rs.getDouble("latitude"),
                         rs.getDouble("longitude")),
-                brigade == null ? ServiceDay.tripsOfDayArgs(day)
-                        : new Object[] {day, day.plusDays(1), brigade});
+                Stream.concat(Stream.<Object>of((Object) recordedFeeds), Arrays.stream(brigade == null
+                        ? ServiceDay.tripsOfDayArgs(day) : new Object[] {day, day.plusDays(1), brigade})).toArray());
         Map<Long, List<Row>> byTrip = new LinkedHashMap<>();
         rows.forEach(r -> byTrip.computeIfAbsent(r.trip(), k -> new ArrayList<>()).add(r));
         List<ScheduledTrip> trips = new ArrayList<>();
@@ -251,6 +268,14 @@ public class TripAnomalyService {
                         Timestamp.from(to), brigade});
     }
 
+    /**
+     * SQL: the key of a trip's or shape point's shape among all feeds' (feeds reuse each other's shape ids), on a
+     * table alias with {@code feed} and {@code shape_id}; null when the trip has no shape.
+     */
+    private static String shapeKey(String alias) {
+        return alias + ".feed || '/' || " + alias + ".shape_id";
+    }
+
     /** All route shapes, read again when the timetable changes (another import). */
     private Shapes shapes() {
         Map<String, Object> v = jdbc.queryForMap("SELECT count(*) AS trips, max(id) AS last FROM trip");
@@ -260,7 +285,8 @@ public class TripAnomalyService {
             return current;
         }
         Map<String, List<double[]>> points = new HashMap<>();
-        jdbc.query("SELECT shape_id, latitude, longitude FROM shape_point ORDER BY shape_id, sequence",
+        jdbc.query("SELECT " + shapeKey("sp") + " AS shape_id, latitude, longitude FROM shape_point sp"
+                        + " ORDER BY feed, shape_id, sequence",
                 rs -> {
                     points.computeIfAbsent(rs.getString("shape_id"), k -> new ArrayList<>())
                             .add(new double[] {rs.getDouble("latitude"), rs.getDouble("longitude")});

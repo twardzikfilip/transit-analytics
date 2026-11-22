@@ -65,6 +65,26 @@ class LineDetailIntegrationTest {
     }
 
     @Test
+    void knowsNoBrigadesOrDepotRunsOfAnotherOperatorsLineWithoutBlockIds() {
+        // The same line from another feed, whose trips have plain ids and no block ids (as Wschód Express's).
+        jdbc.update("UPDATE route SET feed = 'it' WHERE id = ?", route);
+        jdbc.update("UPDATE trip SET feed = 'it' WHERE route_id = ?", route);
+        jdbc.update("""
+                INSERT INTO calendar_date (feed, service_id, date, exception_type)
+                SELECT 'it', service_id, date, exception_type FROM calendar_date
+                WHERE feed = 'bialystok' AND service_id = ?""", SERVICE);
+
+        LineDetailDto.Detail d = lines.detail("IT-177");
+
+        assertThat(d.variants()).isNotEmpty();
+        assertThat(d.brigadesKnown()).isFalse();
+        assertThat(d.brigades()).isEmpty();
+        assertThat(d.depotRuns()).isEmpty();
+        assertThat(d.depotStops()).isEmpty();
+        assertThat(d.depotLinks()).isEmpty();
+    }
+
+    @Test
     void describesVariantsZoneTwoAndBrigadesFromTheTimetable() {
         LineDetailDto.Detail d = lines.detail("IT-177");
         assertThat(d.recorded()).as("a line in the timetable has its timetable routes").isNull();
@@ -193,8 +213,13 @@ class LineDetailIntegrationTest {
     @Autowired
     com.transitanalytics.buslanes.BusLanes busLanes;
 
+    @Autowired
+    com.transitanalytics.gtfs.GtfsProperties feeds;
+
     @Test
     void showsAnotherOperatorsLineOnlySeenOnTheFeed() {
+        // Line 700 may be in the timetable (Turośń Kościelna's feed); here it is only on the live feed.
+        jdbc.update("DELETE FROM route WHERE gtfs_id = '700'");
         long bus = jdbc.queryForObject(
                 "INSERT INTO vehicle (vehicle_number, type, agency) VALUES ('IT-LD7', 'BUS', 'IT-OTHER') RETURNING id",
                 Long.class);
@@ -209,7 +234,7 @@ class LineDetailIntegrationTest {
         var service = new LineDetailService(jdbc, routes, timetables, subtypes, java.time.Clock.systemUTC(),
                 new MapProperties(null, java.util.List.of()), ClassificationConfigs.operators(),
                 new DepotRouter(new MapProperties(null, java.util.List.of()), org.springframework.web.client.RestClient.builder(),
-                        tools.jackson.databind.json.JsonMapper.builder().build()), busLanes);
+                        tools.jackson.databind.json.JsonMapper.builder().build()), busLanes, feeds);
 
         assertThat(service.lines()).filteredOn(l -> l.line().equals("700")).singleElement().satisfies(l -> {
             assertThat(l.id()).as("not in the timetable").isNull();

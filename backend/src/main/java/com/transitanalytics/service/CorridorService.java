@@ -1,5 +1,6 @@
 package com.transitanalytics.service;
 
+import com.transitanalytics.domain.TimetableFeed;
 import com.transitanalytics.dto.CorridorDto;
 import com.transitanalytics.service.Periods.Window;
 import com.transitanalytics.service.StopPlaces.StopRef;
@@ -56,7 +57,8 @@ public class CorridorService {
         }
         // The result only changes with the timetable: keyed by the service and its trips, so an import refreshes it.
         Map<String, Object> version = jdbc.queryForMap(
-                "SELECT count(*) AS trips, coalesce(max(id), 0) AS last FROM trip WHERE service_id = ?", service);
+                "SELECT count(*) AS trips, coalesce(max(id), 0) AS last FROM trip WHERE feed = ? AND service_id = ?",
+                TimetableFeed.MAIN, service);
         String key = service + ":" + version.get("trips") + ":" + version.get("last");
         CorridorDto.Report report = cache.get(key);
         if (report == null) {
@@ -87,7 +89,7 @@ public class CorridorService {
                 JOIN route r ON r.id = t.route_id
                 JOIN stop_time st ON st.trip_id = t.id
                 JOIN stop s ON s.id = st.stop_id
-                WHERE t.service_id = ?
+                WHERE t.feed = ? AND t.service_id = ?
                 ORDER BY t.id, st.stop_sequence""",
                 rs -> {
                     long stop = rs.getLong("stop_id");
@@ -102,7 +104,7 @@ public class CorridorService {
                             rs.getObject("departure") == null ? -1 : rs.getInt("departure"),
                             rs.getObject("km") == null ? null : rs.getDouble("km")});
                 },
-                service);
+                TimetableFeed.MAIN, service);
         List<TripStops> trips = new ArrayList<>();
         rows.forEach((id, list) -> {
             long[] s = new long[list.size()];
@@ -120,14 +122,14 @@ public class CorridorService {
         jdbc.query("""
                 SELECT sp.shape_id, sp.latitude, sp.longitude, sp.shape_dist_traveled
                 FROM shape_point sp
-                WHERE sp.shape_id IN (SELECT DISTINCT shape_id FROM trip WHERE service_id = ?)
+                WHERE sp.feed = ? AND sp.shape_id IN (SELECT DISTINCT shape_id FROM trip WHERE feed = ? AND service_id = ?)
                 ORDER BY sp.shape_id, sp.sequence""",
                 rs -> {
                     shapes.computeIfAbsent(rs.getString("shape_id"), k -> new ArrayList<>()).add(new ShapePoint(
                             rs.getDouble("latitude"), rs.getDouble("longitude"),
                             (Double) rs.getObject("shape_dist_traveled")));
                 },
-                service);
+                TimetableFeed.MAIN, TimetableFeed.MAIN, service);
 
         return new CorridorDto.Report(service, periods(PEAK), periods(OFF_PEAK), corridors(trips, stops),
                 segmentLoads(trips, stops, shapes));

@@ -25,13 +25,13 @@ public final class BrigadeDto {
     /**
      * Every brigade in the timetable, whatever day it runs, for picking one.
      *
-     * @param agency    the agency they are of (its timetable id, e.g. BKM)
+     * @param agency    the agency they are of (its key: its timetable id for the city's, e.g. BKM; else feed-id)
      * @param agencies  every agency in the timetable; one whose timetable doesn't name brigades has none
      */
     public record BrigadeList(String agency, List<Agency> agencies, List<BrigadeRef> brigades) {
     }
 
-    /** An agency to pick: its timetable id and name. */
+    /** An agency to pick: its key (see agency above) and name. */
     public record Agency(String id, String name) {
     }
 

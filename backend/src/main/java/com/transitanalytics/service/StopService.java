@@ -41,7 +41,7 @@ public class StopService extends CrudService<Stop, StopDto.Request, StopDto.Resp
 
     @Override
     protected StopDto.Response toResponse(Stop e) {
-        return new StopDto.Response(e.getId(), e.getGtfsId(), e.getCode(), e.getName(), e.getDescription(),
+        return new StopDto.Response(e.getId(), e.getFeed(), e.getGtfsId(), e.getCode(), e.getName(), e.getDescription(),
                 e.getLatitude(), e.getLongitude(), e.getZoneId(), e.getUrl(), e.getLocationType(),
                 e.getParentStation(), e.getWheelchairBoarding(), e.getPlatformCode());
     }

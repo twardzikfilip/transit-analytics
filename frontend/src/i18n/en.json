@@ -879,7 +879,14 @@
       "3": "on request"
     },
     "allStopTimes1": "All stop times of all trips. Open them for one trip from",
-    "allStopTimes2": ", or as a departure board from"
+    "allStopTimes2": ", or as a departure board from",
+    "feed": "Timetable",
+    "feeds": {
+      "bialystok": "BKM",
+      "pksnova-500": "PKS Nova",
+      "wschodexpress": "Wschód Express",
+      "turosn-koscielna": "Turośń Kościelna"
+    }
   },
   "sources": {
     "col": {
@@ -904,7 +911,19 @@
     "pks": {
       "name": "PKS Nova line 500 (GTFS)",
       "gives": "Timetable of the Białystok – Supraśl line (unofficial feed, CC0).",
-      "usedOn": "Routes, Brigades",
+      "usedOn": "Routes, Brigades, Stops",
+      "refreshed": "Nightly"
+    },
+    "wschodexpress": {
+      "name": "Wschód Express lines 400–476 (GTFS)",
+      "gives": "Timetables of the regional lines to Dobrzyniewo Duże, Zabłudów, Trzcianne and Krypno; their stops in the city are BKM's (unofficial feed, CC0).",
+      "usedOn": "Routes, Brigades, Stops, Delay generation, Stop hotspots, Bus lanes",
+      "refreshed": "Nightly"
+    },
+    "turosn": {
+      "name": "Turośń Kościelna line 700 (GTFS)",
+      "gives": "Timetable of the Białystok – Turośń Kościelna line; its stops in the city are BKM's (unofficial feed, CC0).",
+      "usedOn": "Routes, Brigades, Stops, Delay generation, Stop hotspots, Bus lanes",
       "refreshed": "Nightly"
     },
     "osm": {
@@ -942,6 +961,12 @@
       "gives": "Length, class and capacity of each bus model.",
       "usedOn": "Fleet, Corridors",
       "refreshed": "By hand"
+    },
+    "routeTypes": {
+      "name": "Alternative Transport: route types",
+      "gives": "Defines the route geometries (radial, diameter, arcantial, tangential, feeder) that lines are classified by.",
+      "usedOn": "Routes",
+      "refreshed": "Fixed reference"
     }
   },
   "corridors": {

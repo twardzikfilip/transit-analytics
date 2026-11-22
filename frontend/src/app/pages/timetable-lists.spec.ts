@@ -19,8 +19,17 @@ function page<T>(content: T[], number = 0, totalElements = content.length): Page
   };
 }
 
-const stop = (id: number, name: string, zoneId = '1') =>
-  ({ id, gtfsId: `${id}`, code: `${id}`, name, zoneId, latitude: 53.1, longitude: 23.1 }) as Stop;
+const stop = (id: number, name: string, zoneId = '1', feed = 'bialystok') =>
+  ({
+    id,
+    feed,
+    gtfsId: `${id}`,
+    code: `${id}`,
+    name,
+    zoneId,
+    latitude: 53.1,
+    longitude: 23.1,
+  }) as Stop;
 
 describe('timetable list pages', () => {
   it('Stops: loads the page in the URL with its filters, numbering rows across pages', () => {
@@ -40,6 +49,31 @@ describe('timetable list pages', () => {
     );
     expect([...el.querySelectorAll('tbody tr td:first-child')].map(text)).toEqual(['51', '52']);
     expect(text(el.querySelector('app-pager'))).toContain('Page 2 of 2');
+  });
+
+  it("Stops: shows each stop's timetable, BKM's or another operator's", () => {
+    const { el } = renderPage(
+      Stops,
+      stateAfter(
+        stopsFeature,
+        StopsActions.loadSuccess({
+          result: page(
+            [
+              stop(1, 'Rynek'),
+              stop(2, 'Kulikówka', '1', 'wschodexpress'),
+              stop(3, 'Nowa', '1', 'komunikacja-x'),
+            ],
+            0,
+            3,
+          ),
+        }),
+      ),
+    );
+    const rows = [...el.querySelectorAll('tbody tr')].map(text);
+    expect(rows[0]).toContain('BKM');
+    expect(rows[1]).toContain('Wschód Express');
+    expect(rows[2]).toContain('komunikacja-x');
+    expect(rows[2]).not.toContain('timetable.feeds');
   });
 
   it('Stops: loads again when the URL changes', () => {

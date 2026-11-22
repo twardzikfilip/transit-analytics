@@ -57,7 +57,7 @@ final class ServiceDay {
     static final int DAY_START_SECONDS = DAY_START_HOUR * 3600;
 
     private static final String RUNS_ON =
-            "t.service_id IN (SELECT service_id FROM calendar_date WHERE date = ? AND exception_type = 1)";
+            "(t.feed, t.service_id) IN (SELECT feed, service_id FROM calendar_date WHERE date = ? AND exception_type = 1)";
     private static final String STARTS_BEFORE_DAY_START = "EXISTS (SELECT 1 FROM stop_time e WHERE e.trip_id = t.id"
             + " AND e.departure_time::interval < interval '" + DAY_START_HOUR + " hours')";
 

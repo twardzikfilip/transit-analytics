@@ -891,7 +891,14 @@
       "3": "sur demande"
     },
     "allStopTimes1": "Tous les horaires de toutes les courses. Ouvrez-les pour une course depuis",
-    "allStopTimes2": ", ou en tableau des départs depuis"
+    "allStopTimes2": ", ou en tableau des départs depuis",
+    "feed": "Horaires",
+    "feeds": {
+      "bialystok": "BKM",
+      "pksnova-500": "PKS Nova",
+      "wschodexpress": "Wschód Express",
+      "turosn-koscielna": "Turośń Kościelna"
+    }
   },
   "sources": {
     "col": {
@@ -914,9 +921,21 @@
       "refreshed": "Import dans les Paramètres"
     },
     "pks": {
-      "name": "PKS Nova ligne 500 (GTFS)",
-      "gives": "Horaire de la ligne Białystok – Supraśl (flux non officiel, CC0).",
-      "usedOn": "Lignes, Services",
+      "name": "PKS Nova, ligne 500 (GTFS)",
+      "gives": "Horaires de la ligne Białystok – Supraśl (flux non officiel, CC0).",
+      "usedOn": "Lignes, Services, Arrêts",
+      "refreshed": "Chaque nuit"
+    },
+    "wschodexpress": {
+      "name": "Wschód Express, lignes 400–476 (GTFS)",
+      "gives": "Horaires des lignes régionales vers Dobrzyniewo Duże, Zabłudów, Trzcianne et Krypno ; leurs arrêts en ville sont ceux de BKM (flux non officiel, CC0).",
+      "usedOn": "Lignes, Services, Arrêts, Formation des retards, Points d'immobilisation, Couloirs de bus",
+      "refreshed": "Chaque nuit"
+    },
+    "turosn": {
+      "name": "Turośń Kościelna, ligne 700 (GTFS)",
+      "gives": "Horaires de la ligne Białystok – Turośń Kościelna ; ses arrêts en ville sont ceux de BKM (flux non officiel, CC0).",
+      "usedOn": "Lignes, Services, Arrêts, Formation des retards, Points d'immobilisation, Couloirs de bus",
       "refreshed": "Chaque nuit"
     },
     "osm": {
@@ -954,6 +973,12 @@
       "gives": "Longueur, classe et capacité de chaque modèle de bus.",
       "usedOn": "Flotte, Axes",
       "refreshed": "À la main"
+    },
+    "routeTypes": {
+      "name": "Alternative Transport : types de lignes",
+      "gives": "Définit les géométries de lignes (radiale, diamétrale, coudée, tangentielle, de rabattement) qui servent à classer les lignes.",
+      "usedOn": "Lignes",
+      "refreshed": "Référence fixe"
     }
   },
   "corridors": {

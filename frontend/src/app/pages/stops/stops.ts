@@ -18,6 +18,13 @@ import { t } from '../../core/i18n/t';
 })
 export class Stops {
   protected readonly t = t;
+
+  /** The timetable a stop is from, by name; a feed added in the settings without a name here shows its key. */
+  protected feedName(feed: string): string {
+    const key = `timetable.feeds.${feed}`;
+    const name = t(key);
+    return name === key ? feed : name;
+  }
   private readonly store = inject(Store);
 
   protected readonly stops = this.store.selectSignal(stopsFeature.selectAll);

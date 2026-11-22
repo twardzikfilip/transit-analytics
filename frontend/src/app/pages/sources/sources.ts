@@ -60,11 +60,14 @@ export class Sources {
     { id: 'zbiorkom', url: 'https://zbiorkom.live' },
     { id: 'bkm', url: 'https://komunikacja.bialystok.pl' },
     { id: 'pks', url: 'https://files.girlc.at/gtfs/pks_nova_suprasl.zip' },
+    { id: 'wschodexpress', url: 'https://files.girlc.at/gtfs/wschod_express.zip' },
+    { id: 'turosn', url: 'https://files.girlc.at/gtfs/turosn_koscielna.zip' },
     { id: 'osm', url: 'https://www.openstreetmap.org' },
     { id: 'osrm', url: 'https://router.project-osrm.org' },
     { id: 'city', url: null },
     { id: 'census', url: null },
     { id: 'operators', url: 'https://komunikacja.bialystok.pl/pl/informacje/kontakt/' },
     { id: 'models', url: null },
+    { id: 'routeTypes', url: 'https://alternativetransport.wordpress.com/2017/12/07/route-types/' },
   ];
 }

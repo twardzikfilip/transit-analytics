@@ -7,6 +7,7 @@ describe('stops reducer (paged)', () => {
   const reduce = stopsFeature.reducer;
   const stop = (id: number, name: string): Stop => ({
     id,
+    feed: 'bialystok',
     gtfsId: String(id),
     code: String(id),
     name,
