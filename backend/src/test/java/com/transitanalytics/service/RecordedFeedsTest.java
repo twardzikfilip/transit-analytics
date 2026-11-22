@@ -16,10 +16,12 @@ class RecordedFeedsTest {
         extra.put("pksnova-500", new GtfsProperties.Feed("https://example.org/pks.zip", "PKS Nova", null));
         extra.put("wschodexpress", new GtfsProperties.Feed("https://example.org/we.zip", "Wschód Express",
                 "WSCHODEXPRESS"));
+        // The city's feed without `agency` (a settings override leaving it out) is still on the live feed as BKM.
         GtfsProperties feeds = new GtfsProperties(null, null, null,
-                new GtfsProperties.Feed("https://example.org/bkm.zip", null, "BKM"), extra, "-");
+                new GtfsProperties.Feed("https://example.org/bkm.zip", null, null), extra, "-");
 
+        assertThat(feeds.feed("bialystok").agency()).isEqualTo("BKM");
         // PKS Nova's buses aren't on the live feed: its trips would all look cancelled.
-        assertThat(TripAnomalyService.recordedFeeds(feeds)).isEqualTo("'bialystok', 'wschodexpress'");
+        assertThat(TripAnomalyService.recordedFeeds(feeds)).containsExactlyInAnyOrder("bialystok", "wschodexpress");
     }
 }

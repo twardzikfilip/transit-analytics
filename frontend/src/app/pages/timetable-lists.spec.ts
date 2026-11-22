@@ -57,13 +57,23 @@ describe('timetable list pages', () => {
       stateAfter(
         stopsFeature,
         StopsActions.loadSuccess({
-          result: page([stop(1, 'Rynek'), stop(2, 'Kulikówka', '1', 'wschodexpress')], 0, 2),
+          result: page(
+            [
+              stop(1, 'Rynek'),
+              stop(2, 'Kulikówka', '1', 'wschodexpress'),
+              stop(3, 'Nowa', '1', 'komunikacja-x'),
+            ],
+            0,
+            3,
+          ),
         }),
       ),
     );
     const rows = [...el.querySelectorAll('tbody tr')].map(text);
     expect(rows[0]).toContain('BKM');
     expect(rows[1]).toContain('Wschód Express');
+    expect(rows[2]).toContain('komunikacja-x');
+    expect(rows[2]).not.toContain('timetable.feeds');
   });
 
   it('Stops: loads again when the URL changes', () => {

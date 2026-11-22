@@ -19,6 +19,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -27,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /** Abnormal trips: scheduled trips not run, run only partly, lost, or off their route. */
@@ -40,7 +40,7 @@ public class TripAnomalyService {
     static final int MAX_TRIPS = 2000;
 
     /** See {@link #recordedFeeds(GtfsProperties)}. */
-    private final String recordedFeeds;
+    private final String[] recordedFeeds;
     private final JdbcTemplate jdbc;
     private final Clock clock;
     /** Each service day's outcomes, and when they were computed; a day long over is kept as it is. */
@@ -56,13 +56,12 @@ public class TripAnomalyService {
     }
 
     /**
-     * SQL: the feeds whose buses are on the live feed, as a list of literals. Other feeds' trips (PKS Nova's line 500)
-     * are left out: nothing can be recorded for them, so they would all look cancelled.
+     * The feeds whose buses are on the live feed. Other feeds' trips (PKS Nova's line 500) are left out: nothing can be
+     * recorded for them, so they would all look cancelled.
      */
-    static String recordedFeeds(GtfsProperties feeds) {
+    static String[] recordedFeeds(GtfsProperties feeds) {
         return Stream.concat(Stream.of(TimetableFeed.MAIN), feeds.extra().keySet().stream())
-                .filter(key -> key.matches("[a-z0-9-]+") && feeds.feed(key) != null && feeds.feed(key).agency() != null)
-                .map(key -> "'" + key + "'").collect(Collectors.joining(", "));
+                .filter(key -> feeds.feed(key).agency() != null).toArray(String[]::new);
     }
 
     private record DayOutcomes(Instant computed, List<Outcome> outcomes) {
@@ -213,17 +212,17 @@ public class TripAnomalyService {
                        extract(epoch FROM st.arrival_time::interval)::int AS arrival
                 FROM trip t JOIN route r ON r.id = t.route_id
                      JOIN stop_time st ON st.trip_id = t.id JOIN stop s ON s.id = st.stop_id
-                WHERE t.feed IN (%s) AND %s%s
+                WHERE t.feed = ANY (?) AND %s%s
                 ORDER BY t.id, st.stop_sequence""".formatted(ServiceDay.BRIGADE_SQL, shapeKey("t"),
-                        recordedFeeds.isEmpty() ? "NULL" : recordedFeeds, ServiceDay.TRIPS_OF_DAY_SQL,
+                        ServiceDay.TRIPS_OF_DAY_SQL,
                         brigade == null ? "" : " AND " + ServiceDay.BRIGADE_SQL + " = ?"),
                 (rs, i) -> new Row(rs.getLong("id"), rs.getString("gtfs_id"), rs.getString("line"),
                         rs.getString("brigade"), rs.getString("headsign"), rs.getString("shape_id"),
                         rs.getInt("stop_sequence"), StopPlaces.stopName(rs.getString("name")),
                         rs.getInt("departure"), rs.getInt("arrival"), rs.getDouble("latitude"),
                         rs.getDouble("longitude")),
-                brigade == null ? ServiceDay.tripsOfDayArgs(day)
-                        : new Object[] {day, day.plusDays(1), brigade});
+                Stream.concat(Stream.<Object>of((Object) recordedFeeds), Arrays.stream(brigade == null
+                        ? ServiceDay.tripsOfDayArgs(day) : new Object[] {day, day.plusDays(1), brigade})).toArray());
         Map<Long, List<Row>> byTrip = new LinkedHashMap<>();
         rows.forEach(r -> byTrip.computeIfAbsent(r.trip(), k -> new ArrayList<>()).add(r));
         List<ScheduledTrip> trips = new ArrayList<>();

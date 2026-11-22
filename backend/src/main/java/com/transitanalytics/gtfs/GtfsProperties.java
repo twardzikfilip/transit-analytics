@@ -1,5 +1,7 @@
 package com.transitanalytics.gtfs;
 
+import com.transitanalytics.domain.TimetableFeed;
+import com.transitanalytics.zbiorkom.BialystokFeed;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.util.unit.DataSize;
 
@@ -20,6 +22,10 @@ public record GtfsProperties(Duration connectTimeout, Duration readTimeout, Data
 
     public GtfsProperties {
         extra = extra == null ? Map.of() : Map.copyOf(extra);
+        // The city's buses are on the live feed as BKM, whatever a settings override leaves out.
+        if (bialystok != null && bialystok.agency() == null) {
+            bialystok = new Feed(bialystok.url(), bialystok.name(), BialystokFeed.CITY_AGENCY);
+        }
     }
 
     /**
@@ -33,6 +39,6 @@ public record GtfsProperties(Duration connectTimeout, Duration readTimeout, Data
 
     /** The feed with this key ({@code bialystok} or a key under {@code extra}); null if there is none. */
     public Feed feed(String key) {
-        return com.transitanalytics.domain.TimetableFeed.MAIN.equals(key) ? bialystok : extra.get(key);
+        return TimetableFeed.MAIN.equals(key) ? bialystok : extra.get(key);
     }
 }

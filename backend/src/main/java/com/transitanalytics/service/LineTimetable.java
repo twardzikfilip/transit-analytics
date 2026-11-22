@@ -169,7 +169,8 @@ public class LineTimetable {
                 ORDER BY t.id""".formatted(ServiceDay.BRIGADE_SQL, placeholders(services.size())),
                 (rs, i) -> {
                     noDirection[0] &= rs.getBoolean("no_direction");
-                    noBrigades[0] &= rs.getBoolean("no_block") && route.getGtfsId().contains(":");
+                    // Brigades are named in the city's timetable (trip ids); in another feed only by block ids.
+                    noBrigades[0] &= rs.getBoolean("no_block") && !TimetableFeed.MAIN.equals(route.getFeed());
                     return new TripRow(rs.getLong("id"), rs.getString("duty"), rs.getInt("direction"),
                         rs.getString("shape_id"), rs.getString("headsign"), rs.getInt("start_s"), rs.getInt("end_s"),
                         rs.getObject("km") == null ? null : rs.getDouble("km"), rs.getInt("stops"),
@@ -301,6 +302,8 @@ public class LineTimetable {
         if (distinct.isEmpty()) {
             return result;
         }
+        List<Object> args = new ArrayList<>(List.of(feed));
+        args.addAll(distinct);
         jdbc.query("""
                 SELECT shape_id, latitude, longitude FROM shape_point
                 WHERE feed = ? AND shape_id IN (%s) ORDER BY shape_id, sequence""".formatted(placeholders(distinct.size())),
@@ -309,7 +312,7 @@ public class LineTimetable {
                             TimetableMath.round(rs.getDouble("latitude"), 5),
                             TimetableMath.round(rs.getDouble("longitude"), 5)});
                 },
-                java.util.stream.Stream.concat(java.util.stream.Stream.of(feed), distinct.stream()).toArray());
+                args.toArray());
         return result;
     }
 

@@ -65,6 +65,26 @@ class LineDetailIntegrationTest {
     }
 
     @Test
+    void knowsNoBrigadesOrDepotRunsOfAnotherOperatorsLineWithoutBlockIds() {
+        // The same line from another feed, whose trips have plain ids and no block ids (as Wschód Express's).
+        jdbc.update("UPDATE route SET feed = 'it' WHERE id = ?", route);
+        jdbc.update("UPDATE trip SET feed = 'it' WHERE route_id = ?", route);
+        jdbc.update("""
+                INSERT INTO calendar_date (feed, service_id, date, exception_type)
+                SELECT 'it', service_id, date, exception_type FROM calendar_date
+                WHERE feed = 'bialystok' AND service_id = ?""", SERVICE);
+
+        LineDetailDto.Detail d = lines.detail("IT-177");
+
+        assertThat(d.variants()).isNotEmpty();
+        assertThat(d.brigadesKnown()).isFalse();
+        assertThat(d.brigades()).isEmpty();
+        assertThat(d.depotRuns()).isEmpty();
+        assertThat(d.depotStops()).isEmpty();
+        assertThat(d.depotLinks()).isEmpty();
+    }
+
+    @Test
     void describesVariantsZoneTwoAndBrigadesFromTheTimetable() {
         LineDetailDto.Detail d = lines.detail("IT-177");
         assertThat(d.recorded()).as("a line in the timetable has its timetable routes").isNull();

@@ -41,7 +41,7 @@
           <td class="num">{{ stop.code ?? '—' }}</td>
           <td>{{ stop.name }}</td>
           <td>{{ stop.zoneId ?? '—' }}</td>
-          <td>{{ t('timetable.feeds.' + stop.feed) }}</td>
+          <td>{{ feedName(stop.feed) }}</td>
           <td class="num">
             @if (stop.latitude !== null && stop.longitude !== null) {
               <a
