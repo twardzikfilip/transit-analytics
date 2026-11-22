@@ -34,7 +34,7 @@ class GtfsFeedServiceTest {
     private final GtfsFeedService service = new GtfsFeedService(downloader, importer,
             new GtfsProperties(Duration.ofSeconds(5), Duration.ofSeconds(30), DataSize.ofMegabytes(50),
                     new GtfsProperties.Feed(URL, null, null),
-                    Map.of("other", new GtfsProperties.Feed(OTHER_URL, "other:", "Other line")), "-"),
+                    Map.of("other", new GtfsProperties.Feed(OTHER_URL, "Other line", "OTHER")), "-"),
             ObservationRegistry.NOOP, events);
 
     private static Path zipWith(String entry) throws Exception {
@@ -90,15 +90,15 @@ class GtfsFeedServiceTest {
     }
 
     @Test
-    void importsAnotherOperatorsFeedWithItsPrefixAndRefreshesThemOnSchedule() throws Exception {
+    void importsAnotherOperatorsFeedUnderItsKeyAndRefreshesThemOnSchedule() throws Exception {
         given(downloader.download(OTHER_URL)).willAnswer(inv -> zipWith("stops.txt"));
-        given(importer.load(any(), eq("other:"))).willReturn(new GtfsImporter.Loaded(Map.of(), Map.of(), List.of()));
+        given(importer.load(any(), eq("other"))).willReturn(new GtfsImporter.Loaded(Map.of(), Map.of(), List.of()));
 
         GtfsImportResult result = service.importFeed("other");
 
         assertThat(result.feed()).isEqualTo("other");
         assertThat(result.source()).isEqualTo(OTHER_URL);
-        org.mockito.Mockito.verify(importer).load(any(), eq("other:"));
+        org.mockito.Mockito.verify(importer).load(any(), eq("other"));
         org.mockito.Mockito.verify(events).publishEvent(
                 org.mockito.ArgumentMatchers.<Object>argThat(e -> e instanceof GtfsImported g && g.feed().equals("other")));
 

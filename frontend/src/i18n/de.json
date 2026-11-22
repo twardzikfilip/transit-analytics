@@ -879,7 +879,14 @@
       "3": "bei Bedarf"
     },
     "allStopTimes1": "Alle Haltezeiten aller Fahrten. Öffne sie für eine Fahrt unter",
-    "allStopTimes2": " oder als Abfahrtstafel unter"
+    "allStopTimes2": " oder als Abfahrtstafel unter",
+    "feed": "Fahrplan",
+    "feeds": {
+      "bialystok": "BKM",
+      "pksnova-500": "PKS Nova",
+      "wschodexpress": "Wschód Express",
+      "turosn-koscielna": "Turośń Kościelna"
+    }
   },
   "sources": {
     "col": {
@@ -902,9 +909,21 @@
       "refreshed": "Import in den Einstellungen"
     },
     "pks": {
-      "name": "PKS Nova Linie 500 (GTFS)",
+      "name": "PKS Nova, Linie 500 (GTFS)",
       "gives": "Fahrplan der Linie Białystok – Supraśl (inoffizieller Feed, CC0).",
-      "usedOn": "Linien, Umläufe",
+      "usedOn": "Linien, Umläufe, Haltestellen",
+      "refreshed": "Jede Nacht"
+    },
+    "wschodexpress": {
+      "name": "Wschód Express, Linien 400–476 (GTFS)",
+      "gives": "Fahrpläne der Regionallinien nach Dobrzyniewo Duże, Zabłudów, Trzcianne und Krypno; ihre Haltestellen in der Stadt sind die der BKM (inoffizieller Feed, CC0).",
+      "usedOn": "Linien, Umläufe, Haltestellen, Verspätungsaufbau, Standzeit-Hotspots, Busspuren",
+      "refreshed": "Jede Nacht"
+    },
+    "turosn": {
+      "name": "Turośń Kościelna, Linie 700 (GTFS)",
+      "gives": "Fahrplan der Linie Białystok – Turośń Kościelna; ihre Haltestellen in der Stadt sind die der BKM (inoffizieller Feed, CC0).",
+      "usedOn": "Linien, Umläufe, Haltestellen, Verspätungsaufbau, Standzeit-Hotspots, Busspuren",
       "refreshed": "Jede Nacht"
     },
     "osm": {
@@ -942,6 +961,12 @@
       "gives": "Länge, Klasse und Kapazität jedes Busmodells.",
       "usedOn": "Fahrzeugflotte, Korridore",
       "refreshed": "Von Hand"
+    },
+    "routeTypes": {
+      "name": "Alternative Transport: Linientypen",
+      "gives": "Definiert die Liniengeometrien (radial, Durchmesser, Bogenlinie, tangential, Zubringer), nach denen die Linien eingeteilt werden.",
+      "usedOn": "Linien",
+      "refreshed": "Feste Quelle"
     }
   },
   "corridors": {

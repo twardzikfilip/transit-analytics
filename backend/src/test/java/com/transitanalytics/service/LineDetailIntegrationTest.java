@@ -193,8 +193,13 @@ class LineDetailIntegrationTest {
     @Autowired
     com.transitanalytics.buslanes.BusLanes busLanes;
 
+    @Autowired
+    com.transitanalytics.gtfs.GtfsProperties feeds;
+
     @Test
     void showsAnotherOperatorsLineOnlySeenOnTheFeed() {
+        // Line 700 may be in the timetable (Turośń Kościelna's feed); here it is only on the live feed.
+        jdbc.update("DELETE FROM route WHERE gtfs_id = '700'");
         long bus = jdbc.queryForObject(
                 "INSERT INTO vehicle (vehicle_number, type, agency) VALUES ('IT-LD7', 'BUS', 'IT-OTHER') RETURNING id",
                 Long.class);
@@ -209,7 +214,7 @@ class LineDetailIntegrationTest {
         var service = new LineDetailService(jdbc, routes, timetables, subtypes, java.time.Clock.systemUTC(),
                 new MapProperties(null, java.util.List.of()), ClassificationConfigs.operators(),
                 new DepotRouter(new MapProperties(null, java.util.List.of()), org.springframework.web.client.RestClient.builder(),
-                        tools.jackson.databind.json.JsonMapper.builder().build()), busLanes);
+                        tools.jackson.databind.json.JsonMapper.builder().build()), busLanes, feeds);
 
         assertThat(service.lines()).filteredOn(l -> l.line().equals("700")).singleElement().satisfies(l -> {
             assertThat(l.id()).as("not in the timetable").isNull();

@@ -57,12 +57,14 @@ class BrigadeDayIntegrationTest {
         timetable.trip(route, "ITB-01_IT_BD_3", 0, "IT-BD 4", "IT-BD-S", "08:00", 6, stops);
         timetable.trip(route, "ITB-02_IT_BD_1", 0, "IT-BD 4", "IT-BD-S", "07:00", 6, stops);
         // Another operator's feed, whose timetable doesn't name brigades.
-        long otherRoute = timetable.route("it:IT-BX", "IT-BX");
+        long otherRoute = timetable.route("IT-BX", "IT-BX");
         long otherAgency = jdbc.queryForObject("""
-                INSERT INTO agency (gtfs_id, name, url, timezone)
-                VALUES ('it:IT-BXA', 'Other operator', 'https://example.org', 'Europe/Warsaw') RETURNING id""", Long.class);
-        jdbc.update("UPDATE route SET agency_id = ? WHERE id = ?", otherAgency, otherRoute);
-        timetable.trip(otherRoute, "it:IT-BX-1", 0, "IT-BD 4", "IT-BD-S", "07:00", 6, stops);
+                INSERT INTO agency (feed, gtfs_id, name, url, timezone)
+                VALUES ('it', 'IT-BXA', 'Other operator', 'https://example.org', 'Europe/Warsaw') RETURNING id""",
+                Long.class);
+        jdbc.update("UPDATE route SET feed = 'it', agency_id = ? WHERE id = ?", otherAgency, otherRoute);
+        long otherTrip = timetable.trip(otherRoute, "IT-BX-1", 0, "IT-BD 4", "IT-BD-S", "07:00", 6, stops);
+        jdbc.update("UPDATE trip SET feed = 'it' WHERE id = ?", otherTrip);
 
         long a = vehicle("IT-BD-A");
         long b = vehicle("IT-BD-B");
@@ -83,10 +85,10 @@ class BrigadeDayIntegrationTest {
         assertThat(list.brigades()).extracting(BrigadeDto.BrigadeRef::brigade).containsExactly("ITB-01", "ITB-02");
         assertThat(list.brigades().get(0).lines()).containsExactly("IT-BD");
         assertThat(service.brigades("IT-NONE").agency()).as("unknown: the main agency").isNotEqualTo("IT-NONE");
-        BrigadeDto.BrigadeList unnamed = service.brigades("it:IT-BXA");
+        BrigadeDto.BrigadeList unnamed = service.brigades("it-IT-BXA");
         assertThat(unnamed.agencies()).as("every agency is offered").extracting(BrigadeDto.Agency::id)
-                .contains("IT-BDA", "it:IT-BXA");
-        assertThat(unnamed.agency()).isEqualTo("it:IT-BXA");
+                .contains("IT-BDA", "it-IT-BXA");
+        assertThat(unnamed.agency()).isEqualTo("it-IT-BXA");
         assertThat(unnamed.brigades()).as("its timetable names no brigades").isEmpty();
 
         BrigadeDto.Day day = service.day("ITB-01", DAY);

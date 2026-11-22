@@ -1,6 +1,7 @@
 package com.transitanalytics.gtfs;
 
 import com.transitanalytics.domain.CityTime;
+import com.transitanalytics.domain.TimetableFeed;
 import com.transitanalytics.service.NotFoundException;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationRegistry;
@@ -27,7 +28,7 @@ import java.util.zip.ZipFile;
 public class GtfsFeedService {
 
     /** The main feed: Białystok's timetable. */
-    static final String FEED = "bialystok";
+    static final String FEED = TimetableFeed.MAIN;
 
     private static final Logger log = LoggerFactory.getLogger(GtfsFeedService.class);
 
@@ -60,7 +61,7 @@ public class GtfsFeedService {
      * @throws GtfsImportInProgressException if an import is already running
      */
     public GtfsImportResult importFeed(String key) {
-        GtfsProperties.Feed feed = FEED.equals(key) ? properties.bialystok() : properties.extra().get(key);
+        GtfsProperties.Feed feed = properties.feed(key);
         if (feed == null) {
             throw new NotFoundException("GTFS feed", key);
         }
@@ -95,7 +96,7 @@ public class GtfsFeedService {
         Path file = downloader.download(url);
         try (ZipFile zip = new ZipFile(file.toFile())) {
             long bytes = Files.size(file);
-            GtfsImporter.Loaded loaded = importer.load(zip, feed.prefix());
+            GtfsImporter.Loaded loaded = importer.load(zip, key);
             long ms = Duration.between(start, Instant.now()).toMillis();
             log.info("Imported GTFS feed {} ({} bytes) in {} ms: {}; skipped {}; ignored files {}",
                     key, bytes, ms, loaded.rows(), loaded.skipped(), loaded.ignoredFiles());

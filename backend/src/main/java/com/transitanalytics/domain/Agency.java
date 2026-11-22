@@ -11,7 +11,11 @@ public class Agency {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "gtfs_id", nullable = false, unique = true, length = 64)
+    /** The GTFS feed this row came from ({@link TimetableFeed}); its ids are unique within it. */
+    @Column(nullable = false, length = 32)
+    private String feed = TimetableFeed.MAIN;
+
+    @Column(name = "gtfs_id", nullable = false, length = 64)
     private String gtfsId;
 
     @Column(nullable = false)
@@ -33,6 +37,14 @@ public class Agency {
     private String fareUrl;
 
     private String email;
+
+    public String getFeed() {
+        return feed;
+    }
+
+    public void setFeed(String feed) {
+        this.feed = feed;
+    }
 
     public Long getId() {
         return id;

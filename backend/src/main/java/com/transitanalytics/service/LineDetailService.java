@@ -4,14 +4,15 @@ import com.transitanalytics.buslanes.BusLaneMatcher;
 import com.transitanalytics.buslanes.BusLanes;
 import com.transitanalytics.classification.OperatorProperties;
 import com.transitanalytics.domain.Route;
+import com.transitanalytics.domain.TimetableFeed;
 import com.transitanalytics.dto.BusLaneDto;
 import com.transitanalytics.dto.LineDetailDto.Variant;
 import com.transitanalytics.dto.LineDetailDto.Zone2;
 import com.transitanalytics.dto.LineDetailDto;
 import com.transitanalytics.geo.Geo;
+import com.transitanalytics.gtfs.GtfsProperties;
 import com.transitanalytics.recording.DelayOutliers;
 import com.transitanalytics.repository.RouteRepository;
-import com.transitanalytics.zbiorkom.BialystokFeed;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,11 +58,12 @@ public class LineDetailService {
     private final OperatorProperties operators;
     private final DepotRouter router;
     private final BusLanes busLanes;
+    private final GtfsProperties feeds;
     private final RecentCache<String, List<String>> feedLines;
 
     public LineDetailService(JdbcTemplate jdbc, RouteRepository routes, LineTimetable timetables,
                              LineSubtypes subtypes, Clock clock, MapProperties map, OperatorProperties operators,
-                             DepotRouter router, BusLanes busLanes) {
+                             DepotRouter router, BusLanes busLanes, GtfsProperties feeds) {
         this.jdbc = jdbc;
         this.routes = routes;
         this.timetables = timetables;
@@ -70,6 +72,7 @@ public class LineDetailService {
         this.operators = operators;
         this.router = router;
         this.busLanes = busLanes;
+        this.feeds = feeds;
         this.feedLines = new RecentCache<>(clock, FEED_LINES_MAX_AGE, 1);
     }
 
@@ -246,11 +249,20 @@ public class LineDetailService {
     }
 
     /**
-     * A line from another operator's feed (e.g. PKS Nova's, imported with its ids prefixed "pksnova:"): the BKM
-     * depots and companies have nothing to do with it.
+     * A line from another operator's feed (e.g. PKS Nova's line 500): the BKM depots and companies have nothing to do
+     * with it.
      */
     static boolean otherFeed(Route route) {
-        return route.getGtfsId() != null && route.getGtfsId().contains(":");
+        return !TimetableFeed.MAIN.equals(route.getFeed());
+    }
+
+    /**
+     * The operator a line's buses have on the live feed (BKM for the city's lines), so its recorded runs can be told
+     * from another operator's line of the same number; null when its buses aren't on the live feed.
+     */
+    private String liveAgency(Route route) {
+        GtfsProperties.Feed feed = feeds.feed(route.getFeed());
+        return feed == null ? null : feed.agency();
     }
 
     /** A place where brigades enter service (pull_out) or leave it (pull_in), and how many. */
@@ -308,7 +320,7 @@ public class LineDetailService {
                 ORDER BY p.vehicle_id, p.observed_at""".formatted(ofLine),
                 (rs, i) -> new Sample(rs.getLong("vehicle_id"), rs.getDouble("t"), rs.getString("brigade"),
                         rs.getString("headsign"), rs.getInt("seq"), rs.getString("next_stop_name")),
-                route.getGtfsId(), BialystokFeed.CITY_AGENCY);
+                route.getGtfsId(), liveAgency(route));
 
         // Runs are measured per route pattern: the base route and longer variants, each in both directions (the
         // reverse may be classed differently, e.g. when the most frequent variant differs by direction).
@@ -336,7 +348,7 @@ public class LineDetailService {
         List<LineDetailDto.DelaySlot> delays = delaySlots("""
                 p.delay_seconds <= %d AND coalesce(p.next_stop_sequence, 1) > 0 AND %s"""
                 .formatted(DelayOutliers.THRESHOLD_SECONDS, ofLine),
-                route.getGtfsId(), BialystokFeed.CITY_AGENCY);
+                route.getGtfsId(), liveAgency(route));
 
         TreeSet<LocalDate> days = new TreeSet<>();
         samples.forEach(s -> days.add(serviceDay(s.t())));
@@ -348,7 +360,7 @@ public class LineDetailService {
 
         return new LineDetailDto.Performance(days.isEmpty() ? null : days.first(),
                 days.isEmpty() ? null : days.last(), days.size(), runs.size(), travelTimes, delays, segments,
-                vehicles(route.getGtfsId(), BialystokFeed.CITY_AGENCY));
+                vehicles(route.getGtfsId(), liveAgency(route)));
     }
 
     /** The average delay in each quarter of an hour of the service day, of the reports matching {@code where}. */
@@ -400,9 +412,13 @@ public class LineDetailService {
 
     // --- timetable ---------------------------------------------------------------------------------------------
 
-    /** @param line the route's GTFS id, e.g. "103"; null when the timetable has no such route */
+    /**
+     * @param line the route's GTFS id, e.g. "103" or "500"; the city's when another feed has the same id; null when the
+     *             timetable has no such route
+     */
     private Route findRoute(String line) {
-        return jdbc.queryForList("SELECT id FROM route WHERE gtfs_id = ?", Long.class, line).stream().findFirst()
+        return jdbc.queryForList("SELECT id FROM route WHERE gtfs_id = ? ORDER BY feed <> ?, feed LIMIT 1", Long.class,
+                        line, TimetableFeed.MAIN).stream().findFirst()
                 .flatMap(routes::findById).orElse(null);
     }
 }

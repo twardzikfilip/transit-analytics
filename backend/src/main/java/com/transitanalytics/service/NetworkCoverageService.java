@@ -1,5 +1,6 @@
 package com.transitanalytics.service;
 
+import com.transitanalytics.domain.TimetableFeed;
 import com.transitanalytics.dto.NetworkCoverageDto;
 import com.transitanalytics.dto.NetworkCoverageDto.Coverage;
 import com.transitanalytics.dto.NetworkCoverageDto.Forest;
@@ -63,15 +64,18 @@ public class NetworkCoverageService {
         return current.coverage();
     }
 
-    /** One point per place where the city's lines stop (the main timetable's agencies, not other operators'). */
+    /**
+     * One point per place where the city's lines stop (the main timetable's, not other operators'; their stops in
+     * the city are the city's own).
+     */
     List<double[]> stops() {
         return jdbc.query("""
                 SELECT DISTINCT round(s.latitude::numeric, 5)::float8 AS lat, round(s.longitude::numeric, 5)::float8 AS lon
                 FROM stop s
                 WHERE EXISTS (SELECT 1 FROM stop_time st JOIN trip t ON t.id = st.trip_id
-                                       JOIN route r ON r.id = t.route_id JOIN agency a ON a.id = r.agency_id
-                              WHERE st.stop_id = s.id AND strpos(a.gtfs_id, ':') = 0)
-                ORDER BY 1, 2""", (rs, i) -> new double[] {rs.getDouble("lat"), rs.getDouble("lon")});
+                              WHERE st.stop_id = s.id AND t.feed = ?)
+                ORDER BY 1, 2""", (rs, i) -> new double[] {rs.getDouble("lat"), rs.getDouble("lon")},
+                TimetableFeed.MAIN);
     }
 
     NetworkCoverageDto compute(List<double[]> stops) {

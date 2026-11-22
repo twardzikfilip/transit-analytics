@@ -1,5 +1,6 @@
 package com.transitanalytics.service;
 
+import com.transitanalytics.domain.TimetableFeed;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -16,16 +17,16 @@ public class WeekdayTimetable {
     }
 
     /**
-     * The service that runs on the most upcoming weekdays (else on the most weekdays overall). Null when no
+     * The city's (main feed's) service that runs on the most upcoming weekdays (else on the most weekdays overall). Null when no
      * timetable is imported.
      */
     public String serviceId() {
         List<String> services = jdbc.queryForList("""
                 SELECT service_id FROM calendar_date
-                WHERE exception_type = 1 AND %s
+                WHERE feed = ? AND exception_type = 1 AND %s
                 GROUP BY service_id
                 ORDER BY count(*) FILTER (WHERE date >= current_date) DESC, count(*) DESC, service_id
-                LIMIT 1""".formatted(ServiceDay.weekdaySql("date")), String.class);
+                LIMIT 1""".formatted(ServiceDay.weekdaySql("date")), String.class, TimetableFeed.MAIN);
         return services.isEmpty() ? null : services.get(0);
     }
 }

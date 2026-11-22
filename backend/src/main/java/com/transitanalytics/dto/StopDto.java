@@ -25,7 +25,7 @@ public final class StopDto {
             @Size(max = 32) String platformCode) {
     }
 
-    public record Response(Long id, String gtfsId, String code, String name, String description, Double latitude,
+    public record Response(Long id, String feed, String gtfsId, String code, String name, String description, Double latitude,
                            Double longitude, String zoneId, String url, Short locationType, String parentStation,
                            Short wheelchairBoarding, String platformCode) {
     }

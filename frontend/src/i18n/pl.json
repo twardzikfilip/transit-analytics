@@ -903,7 +903,14 @@
       "3": "na żądanie"
     },
     "allStopTimes1": "Wszystkie godziny odjazdów wszystkich kursów. Otwórz je dla jednego kursu w zakładce",
-    "allStopTimes2": " albo jako tablicę odjazdów w zakładce"
+    "allStopTimes2": " albo jako tablicę odjazdów w zakładce",
+    "feed": "Rozkład",
+    "feeds": {
+      "bialystok": "BKM",
+      "pksnova-500": "PKS Nova",
+      "wschodexpress": "Wschód Express",
+      "turosn-koscielna": "Turośń Kościelna"
+    }
   },
   "sources": {
     "col": {
@@ -926,9 +933,21 @@
       "refreshed": "Import w Ustawieniach"
     },
     "pks": {
-      "name": "PKS Nova linia 500 (GTFS)",
+      "name": "PKS Nova, linia 500 (GTFS)",
       "gives": "Rozkład linii Białystok – Supraśl (nieoficjalne źródło, CC0).",
-      "usedOn": "Linie, Brygady",
+      "usedOn": "Linie, Brygady, Przystanki",
+      "refreshed": "Co noc"
+    },
+    "wschodexpress": {
+      "name": "Wschód Express, linie 400–476 (GTFS)",
+      "gives": "Rozkłady linii regionalnych do gmin Dobrzyniewo Duże, Zabłudów, Trzcianne i Krypno; ich przystanki w mieście to przystanki BKM (nieoficjalne źródło, CC0).",
+      "usedOn": "Linie, Brygady, Przystanki, Narastanie opóźnień, Miejsca przestojów, Buspasy",
+      "refreshed": "Co noc"
+    },
+    "turosn": {
+      "name": "Turośń Kościelna, linia 700 (GTFS)",
+      "gives": "Rozkład linii Białystok – Turośń Kościelna; jej przystanki w mieście to przystanki BKM (nieoficjalne źródło, CC0).",
+      "usedOn": "Linie, Brygady, Przystanki, Narastanie opóźnień, Miejsca przestojów, Buspasy",
       "refreshed": "Co noc"
     },
     "osm": {
@@ -966,6 +985,12 @@
       "gives": "Długość, klasa i pojemność każdego modelu autobusu.",
       "usedOn": "Tabor, Korytarze",
       "refreshed": "Ręcznie"
+    },
+    "routeTypes": {
+      "name": "Alternative Transport: typy tras",
+      "gives": "Definiuje geometrie tras (radialna, średnicowa, łukowa, okrężna, dowozowa), według których klasyfikowane są linie.",
+      "usedOn": "Linie",
+      "refreshed": "Stałe źródło"
     }
   },
   "corridors": {
@@ -1121,7 +1146,7 @@
       "radial": "Radialna",
       "diameter": "Średnicowa",
       "arcantial": "Łukowa",
-      "tangential": "Styczna",
+      "tangential": "Okrężna",
       "feeder": "Dowozowa"
     },
     "geometryDesc": {

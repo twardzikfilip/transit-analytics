@@ -117,7 +117,7 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   Also every stretch between two consecutive stops (both directions together) with its peak and all-day buses and
   its route shape, for the maps. Computed in the background at startup and cached per timetable.
 - `POST /api/gtfs/{feed}/import` (admin) — downloads a GTFS timetable and loads it: `bialystok` (the city's) or
-  another operator's feed from `app.gtfs.extra` (`pksnova-500`: PKS Nova line 500); see below.
+  another operator's feed from `app.gtfs.extra` (`pksnova-500`, `wschodexpress`, `turosn-koscielna`); see below.
 - `GET /api/zbiorkom/bialystok/positions` — live Białystok vehicle positions from [zbiorkom.live](https://zbiorkom.live),
   used by the live map: transit-recorder's latest snapshot (at most 10 s old), or straight from zbiorkom.live when the
   recorder doesn't answer. Vehicles seen for the first time are added to the vehicle table (number, type, agency,
@@ -277,19 +277,37 @@ inserting the ~384k stop times.
   `COPY`, then merged with SQL) and `gtfs/GtfsFeedService` (download + import of each feed).
 
 **Other operators' lines** (`app.gtfs.extra` in `application.yml`): each feed is loaded into its own share of the
-timetable, its ids (agency, route, stop, trip, service, shape) prefixed, so they never clash with the city's and an
-import of one feed replaces only that feed's rows (the city's import leaves them alone too). Imported with
-`POST /api/gtfs/<key>/import` and again every night at 04:50 (`extra-refresh-cron`), as these feeds cover about two
-weeks at a time.
+timetable. Every timetable row has a `feed` column (`bialystok` for the city's, else the key below) and keeps its ids
+as the feed gives them; feeds reuse each other's ids (stop `536`, service `319`, agency `1`), so ids are unique per
+feed and the import looks them up within the feed. An import replaces only that feed's rows (the city's import leaves
+the others alone too). Imported with `POST /api/gtfs/<key>/import` and again every night at 04:50
+(`extra-refresh-cron`), as these feeds cover about two weeks at a time.
 
-- `pksnova-500`: **PKS Nova line 500** (Białystok D.A. ⇄ Supraśl), the unofficial feed generated from Time4Bus
-  (`https://files.girlc.at/gtfs/pks_nova_suprasl.zip`, listed on Transitland as `f-u92~pks~nova~suprasl`, CC0).
-  Agency "PKS NOVA S.A.", route `pksnova:500`, a suburban line (from its number), about 50 trips a weekday.
+- **Shared stops:** these feeds give a city stop their own id and BKM's id as its code (Wschód Express's stop `536`,
+  code `305`, is BKM's al. Piłsudskiego/Rzeka Biała, `305`). A stop whose code is a BKM stop id within 60 m of it is
+  BKM's stop: the line's trips stop there and no copy is loaded. Re-importing BKM's timetable keeps its stops (and
+  their database ids); a BKM stop that leaves its timetable takes the other feeds' stop times there with it until
+  their next import.
+- `pksnova-500`: **PKS Nova line 500** (Białystok D.A. ⇄ Supraśl), `https://files.girlc.at/gtfs/pks_nova_suprasl.zip`
+  (Transitland `f-u92~pks~nova~suprasl`). Agency "PKS NOVA S.A.", route `500`, a suburban line (from its number),
+  about 50 trips a weekday; 15 of its 40 stops are BKM's. It isn't on the live feed (zbiorkom.live), so nothing is
+  recorded for it.
+- `wschodexpress`: **Wschód Express**, regional lines 400–476 run for the gminas Dobrzyniewo Duże, Zabłudów,
+  Trzcianne and Krypno (five agencies), `https://files.girlc.at/gtfs/wschod_express.zip`; 98 of its 574 stops are
+  BKM's. Its buses are on the live feed as `WSCHODEXPRESS`.
+- `turosn-koscielna`: **Turośń Kościelna line 700**, `https://files.girlc.at/gtfs/turosn_koscielna.zip`; 7 of its 60
+  stops are BKM's. Its buses are on the live feed as `TUROSN`.
+- All three are unofficial feeds generated from Time4Bus (CC0). `agency` in each feed's settings names the operator
+  its buses have on the live feed, so a line's recorded runs (travel times, delays on the Routes page) are its own.
 - On the Routes page such a line shows like the city's (map, variants, termini, bus lanes, zone 2, travel times),
-  run by its own operator. What the feed doesn't have is said rather than guessed: without brigades there are no
-  brigades or depot runs; trips without a direction get one from where they start; stops without a fare zone are
-  zone 1 inside the city limits and 2 outside. Its timetable is the weekday the line has the most trips (its feed has
-  a service per date). It isn't on the live feed (zbiorkom.live), so nothing is recorded for it.
+  run by its own operator, at `/routes/route/<number>` (a city line wins if a feed ever had the same route id). What
+  the feed doesn't have is said rather than guessed: without brigades there are no brigades or depot runs; trips
+  without a direction get one from where they start; stops without a fare zone are zone 1 inside the city limits and
+  2 outside. Its timetable is the weekday the line has the most trips (its feed has a service per date). Line classes
+  (geometry, capacity) and Network coverage are the city's lines only. On Brigades each feed's agency is listed (key
+  `<feed>-<agency id>`, e.g. `wschodexpress-1`); these feeds name no brigades. On Abnormal trips their trips are
+  "not recorded" (the live feed's brigades don't match their trips), and a feed whose buses aren't on the live feed
+  (no `agency`: PKS Nova) is left out, as nothing can be recorded for it. The Stops page shows each stop's timetable.
 
 ### Vehicle position history (time series)
 

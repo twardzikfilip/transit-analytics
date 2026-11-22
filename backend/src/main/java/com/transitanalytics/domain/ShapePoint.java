@@ -11,6 +11,10 @@ public class ShapePoint {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** The GTFS feed this row came from ({@link TimetableFeed}); its ids are unique within it. */
+    @Column(nullable = false, length = 32)
+    private String feed = TimetableFeed.MAIN;
+
     @Column(name = "shape_id", nullable = false, length = 64)
     private String shapeId;
 
@@ -25,6 +29,14 @@ public class ShapePoint {
 
     @Column(name = "shape_dist_traveled")
     private Double shapeDistTraveled;
+
+    public String getFeed() {
+        return feed;
+    }
+
+    public void setFeed(String feed) {
+        this.feed = feed;
+    }
 
     public Long getId() {
         return id;

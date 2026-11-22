@@ -11,7 +11,11 @@ public class Trip {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "gtfs_id", nullable = false, unique = true, length = 64)
+    /** The GTFS feed this row came from ({@link TimetableFeed}); its ids are unique within it. */
+    @Column(nullable = false, length = 32)
+    private String feed = TimetableFeed.MAIN;
+
+    @Column(name = "gtfs_id", nullable = false, length = 64)
     private String gtfsId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -19,7 +23,7 @@ public class Trip {
     private Route route;
 
 
-    /** Matches calendar_date.service_id. */
+    /** Matches calendar_date.service_id of the same feed. */
     @Column(name = "service_id", nullable = false, length = 64)
     private String serviceId;
 
@@ -34,7 +38,7 @@ public class Trip {
     @Column(name = "block_id", length = 64)
     private String blockId;
 
-    /** Matches shape_point.shape_id. */
+    /** Matches shape_point.shape_id of the same feed. */
     @Column(name = "shape_id", length = 64)
     private String shapeId;
 
@@ -43,6 +47,14 @@ public class Trip {
 
     @Column(name = "bikes_allowed")
     private Short bikesAllowed;
+
+    public String getFeed() {
+        return feed;
+    }
+
+    public void setFeed(String feed) {
+        this.feed = feed;
+    }
 
     public Long getId() {
         return id;

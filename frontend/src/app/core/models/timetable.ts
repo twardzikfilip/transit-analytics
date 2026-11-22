@@ -41,6 +41,8 @@ export type RouteCapacity = 'main' | 'primary' | 'secondary' | 'tertiary' | 'irr
 /** A stop or station (GTFS stop). */
 export interface Stop {
   id: number;
+  /** The timetable (GTFS feed) it is from: bialystok (BKM's) or another operator's; see timetable.feeds. */
+  feed: string;
   gtfsId: string;
   code: string | null;
   name: string;
