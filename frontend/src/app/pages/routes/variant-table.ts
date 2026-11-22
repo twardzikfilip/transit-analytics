@@ -2,7 +2,7 @@ import { Component, input } from '@angular/core';
 import { LineVariant } from '../../core/models/models';
 import { variantKindLabel } from './format';
 import { LocalNumberPipe } from '../../shared/i18n/locale-pipes';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /** A line's variants: each one's ends, length, trips, scheduled travel time and speed; the main ones in bold. */
 @Component({

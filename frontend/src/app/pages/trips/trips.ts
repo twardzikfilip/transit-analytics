@@ -11,7 +11,7 @@ import { routesFeature } from '../../store/routes/routes.reducer';
 import { TripsActions } from '../../store/trips/trips.actions';
 import { tripsFeature } from '../../store/trips/trips.reducer';
 import { Skeleton } from '../../shared/skeleton/skeleton';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 @Component({
   selector: 'app-trips',

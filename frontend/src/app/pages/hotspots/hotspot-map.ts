@@ -14,7 +14,7 @@ import { escapeHtml } from '../../shared/format/html';
 import { leafletHost } from '../../shared/map/leaflet-host';
 import { cssColor, INK } from '../../shared/palette';
 import { lostTime, nearText, waitText } from './hotspot-format';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /** Marker radius in px of the hotspot with the most time lost; the others are smaller, by area. */
 export const MAX_RADIUS = 22;

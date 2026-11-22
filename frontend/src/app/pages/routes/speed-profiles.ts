@@ -2,7 +2,7 @@ import { Component, input } from '@angular/core';
 import { SegmentProfile } from '../../core/models/models';
 import { SegmentChart } from './segment-chart';
 import { LocalNumberPipe } from '../../shared/i18n/locale-pipes';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /** Peak-hour speed on each stretch between stops, a chart per direction, each also as a table. */
 @Component({

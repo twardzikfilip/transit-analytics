@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { NgxSkeletonLoaderComponent } from 'ngx-skeleton-loader';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /** The shapes a page's content can take while it loads. */
 export type SkeletonKind = 'tiles' | 'chart' | 'map' | 'table' | 'lines' | 'chips' | 'card';

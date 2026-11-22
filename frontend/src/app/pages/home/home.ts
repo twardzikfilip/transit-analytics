@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { LiveMap } from './live-map/live-map';
 import { PositionHistory } from './position-history/position-history';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /**
  * Home: the live map (vehicles now, with their delays) and, below it, the recorded positions over a chosen time

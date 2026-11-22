@@ -8,8 +8,7 @@ import {
   timeTicks,
   MIN_GAP_MS,
 } from './chart-geometry';
-import { t, tn } from '../../core/i18n/t';
-import { intlLocale } from '../../core/i18n/t';
+import { intlLocale, t } from '../../core/i18n/t';
 
 const HEIGHT = 260;
 const DEFAULT_FORMAT = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });

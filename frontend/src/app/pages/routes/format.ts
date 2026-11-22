@@ -7,7 +7,7 @@ import {
   VariantKind,
 } from '../../core/models/models';
 import { localTime } from '../../shared/format/time';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /** Subtypes in display order, with their label and line colour (a CSS custom property from styles.scss). */
 export const SUBTYPES: { subtype: RouteSubtype; color: string }[] = [

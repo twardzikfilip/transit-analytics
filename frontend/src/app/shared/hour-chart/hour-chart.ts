@@ -2,7 +2,7 @@ import { Component, computed, input, signal } from '@angular/core';
 import { hostWidth } from '../host-width';
 import { niceTicks, segments } from '../time-series-chart/chart-geometry';
 import { clock, hourTickStep } from '../format/time';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /** A point at an hour of the service day (fractional; 24+ is after midnight). */
 export interface HourPoint {

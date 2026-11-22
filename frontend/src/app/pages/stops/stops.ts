@@ -9,7 +9,7 @@ import { StopsActions } from '../../store/stops/stops.actions';
 import { stopsFeature } from '../../store/stops/stops.reducer';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { LocalNumberPipe } from '../../shared/i18n/locale-pipes';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 @Component({
   selector: 'app-stops',

@@ -1,7 +1,7 @@
 import { LaneFigures, LaneHeading } from '../../core/models/models';
 import { SEQUENTIAL_BLUE } from '../../shared/palette';
 import { kmh } from '../../shared/format/number';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /** Speed classes on the map, km/h: the slowest darkest (most held up). */
 export const SPEED_SCALE: { below: number; color: string; label: string }[] = [

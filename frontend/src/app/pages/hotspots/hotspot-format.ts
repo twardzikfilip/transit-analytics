@@ -1,6 +1,6 @@
 import { Hotspot, HotspotApproach, HotspotLineTime } from '../../core/models/models';
 import { formatDelay } from '../../shared/format/time';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /** "45 min" under an hour, else "2.4 h". */
 export function lostTime(hours: number): string {

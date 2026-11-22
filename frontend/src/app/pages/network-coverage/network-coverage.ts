@@ -8,7 +8,7 @@ import { asOf } from './coverage-format';
 import { CoverageMap } from './coverage-map';
 import { DistrictMap } from './district-map';
 import { Skeleton } from '../../shared/skeleton/skeleton';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 type Loaded = { state: 'loading' } | { state: 'error' } | { state: 'ready'; data: NetworkCoverage };
 

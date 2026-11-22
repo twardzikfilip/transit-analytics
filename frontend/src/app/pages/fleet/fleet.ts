@@ -19,7 +19,7 @@ import { CountBars } from './count-bars';
 import { VehicleSearch } from './vehicle-search';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { LocalDatePipe } from '../../shared/i18n/locale-pipes';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 export const DEFAULT_PRESET = '1w';
 

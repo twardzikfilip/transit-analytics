@@ -477,7 +477,7 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
   shows its capacity class by its border's thickness and its fill (strongest for main lines, dashed for irregular
   ones), with a legend. Under it, eight tiles in two rows rank the lines, a top 10 from either end: length, speed in
   peak and off-peak hours, regularity in peak hours, delay (recorded, last 28 days) and frequency in peak and
-  off-peak hours. Choosing a line opens its page, `/routes/route/103` (title "Route 103", a way back at the top;
+  off-peak hours. Choosing a line opens its page, `/routes/route/103` (a former `?line=` link leads there too; title "Route 103", a way back at the top;
   Corridors links there too); its title says what its geometry and
   capacity class mean and links to its trips and its timetable on the operator's website. Regional lines of other
   operators aren't in the timetable: for them the map shows where their buses actually went, from every recorded
@@ -501,7 +501,7 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
 - Important corridors: two maps of every stretch between stops by its buses in peak hours (one by line width, one
   by colour in equal classes of a sequential blue), then the corridors above in a sortable table (busiest first), with each corridor's stops in an
   expandable list and its lines linking to Routes. Store slice `corridors`, registered by its lazy route.
-- Fleet (`/vehicles`; `/fleet` leads there): tiles with the buses in use, the fleet by model, by size class (smallest first) and by make (the model
+- Fleet (`/vehicles`; `/fleet` leads there, and a former `?vehicle=7` link to the bus's page): tiles with the buses in use, the fleet by model, by size class (smallest first) and by make (the model
   name's first word) — bars of in use / in the fleet, the 10 most and least used
   buses and the buses that broke down (when, and how many days until they were back, or that they aren't yet); a
   bar chart of every bus's hours, the most used first; and a search by number or model (title "Fleet Overview"). A
@@ -533,7 +533,7 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
   its brigades. Window, part of the day and line are kept in the URL (`?part=`, `?line=`). Store slice
   `delayGeneration`, registered by its lazy route.
 - Brigades: every brigade of an agency (BKM by default; `?agency=`) in rows by line, with a search by name or line.
-  Choosing one opens its page, `/brigades/103-05` (title "Brigade 103-05"; the way back is a chevron at the
+  Choosing one opens its page, `/brigades/103-05` (a former `?brigade=` link leads there too; title "Brigade 103-05"; the way back is a chevron at the
   left of the header), with only the day (`?date=`, today's service day by default) at the top. Tiles sum the
   day up; a timeline shows every scheduled trip in turn (consecutive trips alternate BKM light blue and green, labelled with
   time, line and destination) and, under each, what actually ran: a bar per bus labelled with the bus and how late it

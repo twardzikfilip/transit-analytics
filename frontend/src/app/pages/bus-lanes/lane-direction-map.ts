@@ -7,7 +7,7 @@ import { injectCityBoundaries } from '../../shared/map/city-boundaries';
 
 /** One direction only, and both (one section with a lane each way, or both carriageways with one). */
 import { BOTH_WAYS_COLOR, ONE_WAY_COLOR } from '../../shared/palette';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 export { BOTH_WAYS_COLOR, ONE_WAY_COLOR };
 /** Arrows from this zoom in; further out they would cover the lanes. */

@@ -10,7 +10,7 @@ import {
 import * as L from 'leaflet';
 import { createBaseMap } from './base-map';
 import { WHITE } from '../palette';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /** A line on a {@link PathMap}: points [lat, lon] in order, its colour (a CSS colour) and its name in the legend. */
 export interface PathLine {

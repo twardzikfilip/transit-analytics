@@ -6,7 +6,7 @@ import { corridorsFeature } from '../../store/corridors/corridors.reducer';
 import { LoadMap } from './load-map';
 import { CorridorTable } from './corridor-table';
 import { Skeleton } from '../../shared/skeleton/skeleton';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /**
  * Important corridors: stretches of at least four consecutive stops shared by two or more lines, from the weekday

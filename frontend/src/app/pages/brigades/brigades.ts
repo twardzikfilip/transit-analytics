@@ -7,7 +7,7 @@ import { injectSetQuery } from '../../shared/url-query';
 import { BrigadesActions } from '../../store/brigades/brigades.actions';
 import { brigadesFeature } from '../../store/brigades/brigades.reducer';
 import { Skeleton } from '../../shared/skeleton/skeleton';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /**
  * Brigades: every brigade of an agency (BKM at first; ?agency=X), any in the timetable, in rows by line. Choosing one

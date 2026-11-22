@@ -1246,6 +1246,26 @@
       "suburban": "Vorortlinie",
       "night_urban": "Nachtlinie",
       "regional": "Regionallinie"
+    },
+    "tip": {
+      "zone2": "{{stop}} · Zone 2",
+      "brigades": {
+        "one": "{{n}} Umlauf",
+        "other": "{{n}} Umläufe"
+      },
+      "pullOut": "{{brigades}} vom Depot {{depot}} beginnen an {{stop}}",
+      "pullIn": "{{brigades}} enden an {{stop}} und fahren zurück zum Depot {{depot}}",
+      "straight": "(gerade Linie: keine Straßenroute gefunden)",
+      "enter": "{{stop}}: Busse gehen in Betrieb",
+      "leave": "{{stop}}: Busse gehen außer Betrieb",
+      "driven": {
+        "one": "{{n}}-mal gefahren, {{km}} km",
+        "other": "{{n}}-mal gefahren, {{km}} km"
+      },
+      "runsStart": "{{headsign}}: hier beginnen Fahrten",
+      "runsEnd": "{{headsign}}: hier enden Fahrten",
+      "variantOf": "Variante {{kind}}",
+      "variant": "{{kind}} Richtung {{headsign}}: {{km}} km, {{trips}} Fahrten pro Werktag"
     }
   },
   "travel": {

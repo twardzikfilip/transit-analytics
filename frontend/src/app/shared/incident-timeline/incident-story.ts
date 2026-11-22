@@ -4,7 +4,7 @@ import { localTime } from '../format/time';
 import { PathLine, PathMap } from '../map/path-map';
 import { cssColor } from '../palette';
 import { IncidentTimeline } from './incident-timeline';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /**
  * A breakdown (a change of bus) told step by step: a time line of what each bus did, with the steps numbered on its

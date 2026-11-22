@@ -2,7 +2,7 @@ import { formatDelay } from '../../shared/format/time';
 
 /** The diverging scale for a change in delay (see shared/palette.ts). */
 import { DELAY_CHANGE_CLASSES } from '../../shared/palette';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 export { DELAY_CHANGE_CLASSES };
 

@@ -7,7 +7,7 @@ import { defineHatch, hatchFill, hatchSwatch, uniqueId } from '../../shared/map/
 import { leafletHost, paneRenderer } from '../../shared/map/leaflet-host';
 import { rings } from '../../shared/map/shapes';
 import { BOUNDARY_STYLES, COVERAGE_STYLE, INK } from '../../shared/palette';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /**
  * Panes, bottom to top: the covered area (one see-through layer, so overlaps don't darken), woods, the Biała valley,

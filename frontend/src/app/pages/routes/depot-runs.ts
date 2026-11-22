@@ -1,7 +1,7 @@
 import { Component, input } from '@angular/core';
 import { DepotRun } from '../../core/models/models';
 import { clock } from '../../shared/format/time';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /** The line's depot runs (pull-outs and pull-ins) with their brigades, in yellow with a label. */
 @Component({

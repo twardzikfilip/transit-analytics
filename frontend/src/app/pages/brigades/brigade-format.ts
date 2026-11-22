@@ -1,7 +1,7 @@
 import { BrigadeTrip, BrigadeTripKind } from '../../core/models/models';
 import { formatDelay, localTime } from '../../shared/format/time';
 import { shareOf } from '../../shared/format/number';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /** The brigade chart's colours (see shared/palette.ts). */
 export { CHANGE_COLOR, NOT_RUN_COLOR, NOT_SEEN_COLOR, TRIP_COLORS } from '../../shared/palette';

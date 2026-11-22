@@ -1,7 +1,7 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 import { VehicleUsage } from '../../core/models/models';
 import { searchVehicles } from './fleet-format';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /** Find a bus by number or model among the fleet's buses; choosing one emits its id. */
 @Component({

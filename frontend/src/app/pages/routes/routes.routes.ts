@@ -7,6 +7,7 @@ import * as routeDetailEffects from '../../store/route-detail/route-detail.effec
 import { routeDetailFeature } from '../../store/route-detail/route-detail.reducer';
 import { RoutesPage } from './routes';
 import { RoutesOverview } from './routes-overview';
+import { openFormerQueryLink } from '../../shared/url-query';
 
 /**
  * Routes (every line, ranked) and one route's page, with their store slices (the lines, and every line's weekday
@@ -22,7 +23,11 @@ export const ROUTES_ROUTES: Routes = [
       provideEffects(lineStatsEffects),
     ],
     children: [
-      { path: '', component: RoutesOverview },
+      {
+        path: '',
+        component: RoutesOverview,
+        canActivate: [openFormerQueryLink('line', ['/routes/route'])],
+      },
       {
         path: 'route/:line',
         title: (route) => `titles.route:${route.paramMap.get('line')}`,

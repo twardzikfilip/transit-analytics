@@ -1,5 +1,5 @@
 import { Component, ElementRef, computed, inject, input, output, signal } from '@angular/core';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 /** An operator to choose, with how many vehicles it has. */
 export interface AgencyOption {
   name: string;

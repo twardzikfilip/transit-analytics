@@ -2,7 +2,7 @@ import { PlaceDensity } from '../../core/models/models';
 import { area, density, int } from '../../shared/format/number';
 import { escapeHtml } from '../../shared/format/html';
 import { DENSITY_SCALE } from '../../shared/palette';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /** The colour of a density on the scale. */
 export function densityColor(perKm2: number): string {

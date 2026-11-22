@@ -1,7 +1,7 @@
 import { LineStats, TimePeriod } from '../../core/models/models';
 import { kmh } from '../../shared/format/number';
 import { formatDelay } from '../../shared/format/time';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /** One way of ranking the lines: its label ("Longest") and which end of the scale comes first. */
 export interface RankingSide {

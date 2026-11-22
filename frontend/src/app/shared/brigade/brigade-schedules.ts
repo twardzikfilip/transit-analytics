@@ -4,7 +4,7 @@ import { BrigadeApi } from '../../core/api/api.services';
 import { BrigadeSchedule, ScheduledRun } from '../../core/models/models';
 import { escapeHtml } from '../format/html';
 import { localTime } from '../format/time';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /** Today's schedule is fetched again after this long (timetable changes during the day are rare but happen). */
 const TODAY_MAX_AGE_MS = 10 * 60_000;

@@ -77,6 +77,13 @@ export function dayLabel(day: string): string {
   }).format(new Date(`${day}T12:00:00`));
 }
 
+/** "16 Nov" for a yyyy-MM-dd day, in the language shown (the weekday left out). */
+function dayMonth(day: string): string {
+  return new Intl.DateTimeFormat(intlLocale(), { day: 'numeric', month: 'short' }).format(
+    new Date(`${day}T12:00:00`),
+  );
+}
+
 /**
  * A bus's timeline: one row per service day (times of day on the axis), or for a window of a day or less, one row
  * per run (times since the first day's start, so a run after midnight follows on).
@@ -124,7 +131,7 @@ export function dailyBars(detail: VehicleDetail): Bar[] {
     const incidents = detail.incidents.filter((i) => i.day === d.day).length;
     return {
       key: d.day,
-      label: dayLabel(d.day).replace(/^\w+ /, ''),
+      label: dayMonth(d.day),
       value: d.hours,
       title: `${dayLabel(d.day)}: ${t('fleet.hours', { n: d.hours.toFixed(1) })}`,
       detail: incidents

@@ -1,4 +1,4 @@
-import { t, tn } from '../core/i18n/t';
+import { t } from '../core/i18n/t';
 /**
  * Regularity grades for the coefficient of variation (CV) of headways — standard deviation of the gaps between
  * departures divided by their mean; 0 = perfectly even. Bands as in the Transit Capacity and Quality of Service

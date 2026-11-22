@@ -2,7 +2,7 @@ import { Component, computed, input } from '@angular/core';
 import { LineDetail, TimePeriod, VariantKind } from '../../core/models/models';
 import { regularityGrade, regularityMeaning } from '../../shared/regularity';
 import { LocalNumberPipe } from '../../shared/i18n/locale-pipes';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /**
  * How evenly a line's departures are spread on a weekday, in peak and off-peak hours: the coefficient of variation

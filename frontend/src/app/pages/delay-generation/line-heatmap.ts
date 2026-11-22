@@ -2,7 +2,7 @@ import { Component, computed, input, output } from '@angular/core';
 import { DelayLineStretch } from '../../core/models/models';
 import { changeClass, delayText, signedChange } from './delay-scale';
 import { percent } from '../../shared/format/number';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /** A heatmap cell: whole seconds with a sign, "+31", "−6", "0" (never "−0"). */
 export function cellText(seconds: number): string {

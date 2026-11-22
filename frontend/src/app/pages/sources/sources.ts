@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /** A source: its id (its texts are `sources.<id>.name`, `.gives`, `.usedOn`, `.refreshed`) and its address. */
 interface Source {

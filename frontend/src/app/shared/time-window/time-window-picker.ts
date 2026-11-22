@@ -11,7 +11,7 @@ import {
   readAgencies,
   readWindow,
 } from './time-window';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /**
  * The time window (and operators) of a report page, in the URL: from/to pickers in the first row; below, the

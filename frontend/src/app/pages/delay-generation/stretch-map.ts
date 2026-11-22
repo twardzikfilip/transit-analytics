@@ -4,7 +4,7 @@ import { DelayStretch } from '../../core/models/models';
 import { escapeHtml } from '../../shared/format/html';
 import { leafletHost } from '../../shared/map/leaflet-host';
 import { DELAY_CHANGE_CLASSES, changeClass, signedChange } from './delay-scale';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /** Stretches measured fewer times in the chosen part of the day aren't drawn. */
 export const MIN_MAP_RUNS = 5;

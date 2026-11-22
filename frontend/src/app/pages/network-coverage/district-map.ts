@@ -14,7 +14,7 @@ import {
   WHITE,
 } from '../../shared/palette';
 import { densityColor, densityStepLabel, densityTooltip, labelMinKm2 } from './coverage-format';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /** Panes, bottom to top: the places' fills, the woods, the outlines and the city limits. */
 const PANES = { fills: 410, woods: 420, lines: 430 };

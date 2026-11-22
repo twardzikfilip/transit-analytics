@@ -1272,6 +1272,30 @@
       "suburban": "Linia podmiejska",
       "night_urban": "Linia nocna",
       "regional": "Linia regionalna"
+    },
+    "tip": {
+      "zone2": "{{stop}} · strefa 2",
+      "brigades": {
+        "one": "{{n}} brygada",
+        "few": "{{n}} brygady",
+        "many": "{{n}} brygad",
+        "other": "{{n}} brygady"
+      },
+      "pullOut": "{{brigades}} z zajezdni {{depot}} zaczyna dzień na przystanku {{stop}}",
+      "pullIn": "{{brigades}} kończy dzień na przystanku {{stop}} i wraca do zajezdni {{depot}}",
+      "straight": "(linia prosta: nie znaleziono trasy po ulicach)",
+      "enter": "{{stop}}: autobusy wchodzą do obsługi",
+      "leave": "{{stop}}: autobusy schodzą z obsługi",
+      "driven": {
+        "one": "przejechany {{n}} raz, {{km}} km",
+        "few": "przejechany {{n}} razy, {{km}} km",
+        "many": "przejechany {{n}} razy, {{km}} km",
+        "other": "przejechany {{n}} raza, {{km}} km"
+      },
+      "runsStart": "{{headsign}}: tu zaczynają się przejazdy",
+      "runsEnd": "{{headsign}}: tu kończą się przejazdy",
+      "variantOf": "Wariant {{kind}}",
+      "variant": "{{kind}} w kierunku {{headsign}}: {{km}} km, {{trips}} kursów w dzień powszedni"
     }
   },
   "travel": {

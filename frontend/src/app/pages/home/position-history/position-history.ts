@@ -21,7 +21,7 @@ import {
 import { bandRows, formatShare, windowLabel } from './delay-bands';
 import { Skeleton } from '../../../shared/skeleton/skeleton';
 import { LocalDatePipe, LocalNumberPipe } from '../../../shared/i18n/locale-pipes';
-import { t, tn } from '../../../core/i18n/t';
+import { t } from '../../../core/i18n/t';
 
 /** The city operator (Białystok's BKM), shown unless another operator is chosen. */
 export const CITY_AGENCY = 'BKM';

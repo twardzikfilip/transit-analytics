@@ -245,7 +245,7 @@ export class RoutesPage {
         opacity: main ? 0.85 : 1,
         dashArray: main ? undefined : depot ? '2 6' : '6 5',
       })
-        .bindTooltip(variantLabel(v), { sticky: true })
+        .bindTooltip(escapeHtml(variantLabel(v)), { sticky: true })
         .addTo(layers);
       v.points.forEach((p) => bounds.extend(p));
     }
@@ -264,7 +264,7 @@ export class RoutesPage {
           fillColor: zone2 ? color : WHITE,
           fillOpacity: 1,
         })
-          .bindTooltip(`${s.name}${zone2 ? ' · zone 2' : ''}`)
+          .bindTooltip(escapeHtml(zone2 ? t('routes.tip.zone2', { stop: s.name }) : s.name))
           .addTo(layers);
         bounds.extend([s.lat, s.lon]);
       }
@@ -279,7 +279,7 @@ export class RoutesPage {
           fillColor: depotColor,
           fillOpacity: d.code === own ? 0.6 : 0.35,
         })
-          .bindTooltip(`${d.name}${d.address ? ', ' + d.address : ''}`, {
+          .bindTooltip(escapeHtml(`${d.name}${d.address ? ', ' + d.address : ''}`), {
             permanent: d.code === own && ring === d.outlines[0],
             direction: 'right',
             className: 'depot-label',
@@ -295,10 +295,13 @@ export class RoutesPage {
       const depot = detail.depots.find((d) => d.code === l.depot)?.name ?? l.depot;
       L.polyline(l.path, { color: depotColor, weight: 3, dashArray: '8 6', opacity: 0.95 })
         .bindTooltip(
-          (out
-            ? `${brigadesText(l.brigades)} from ${depot} start at ${l.stop}`
-            : `${brigadesText(l.brigades)} end at ${l.stop} and go back to ${depot}`) +
-            (l.routed ? '' : ' (straight line: no street route found)'),
+          escapeHtml(
+            t(out ? 'routes.tip.pullOut' : 'routes.tip.pullIn', {
+              brigades: tn('routes.tip.brigades', l.brigades),
+              depot,
+              stop: l.stop,
+            }) + (l.routed ? '' : ' ' + t('routes.tip.straight')),
+          ),
           { sticky: true },
         )
         .addTo(layers);
@@ -309,7 +312,7 @@ export class RoutesPage {
         fillColor: WHITE,
         fillOpacity: 1,
       })
-        .bindTooltip(`${l.stop}: ${out ? 'buses enter service' : 'buses leave service'}`)
+        .bindTooltip(escapeHtml(t(out ? 'routes.tip.enter' : 'routes.tip.leave', { stop: l.stop })))
         .addTo(layers);
       l.path.forEach((p) => bounds.extend(p));
     }
@@ -346,7 +349,7 @@ export class RoutesPage {
       const tip =
         `<strong>${escapeHtml(v.headsign)}</strong><br>` +
         `${escapeHtml(v.from ?? '?')} → ${escapeHtml(v.to ?? '?')}<br>` +
-        `driven ${v.runs} ${v.runs === 1 ? 'time' : 'times'}, ${v.km.toFixed(1)} km`;
+        escapeHtml(tn('routes.tip.driven', v.runs, { km: v.km.toFixed(1) }));
       L.polyline(v.path, {
         color: v.color,
         weight: v.id === chosen ? 7 : v.rare ? 2 : 4,
@@ -365,7 +368,11 @@ export class RoutesPage {
           fillColor: filled ? v.color : WHITE,
           fillOpacity: faded ? 0.25 : 1,
         })
-          .bindTooltip(`${escapeHtml(v.headsign)}: ${filled ? 'runs end' : 'runs start'} here`)
+          .bindTooltip(
+            escapeHtml(
+              t(filled ? 'routes.tip.runsEnd' : 'routes.tip.runsStart', { headsign: v.headsign }),
+            ),
+          )
           .addTo(layers);
       end(v.path[0], false);
       end(v.path[v.path.length - 1], true);
@@ -380,14 +387,15 @@ export class RoutesPage {
   }
 }
 
-function brigadesText(n: number): string {
-  return n === 1 ? '1 brigade' : `${n} brigades`;
-}
-
 function variantLabel(v: LineVariant): string {
   const kind =
     v.kind === 'main' || v.kind === 'depot'
       ? variantKindLabel(v.kind)
-      : `${variantKindLabel(v.kind)} variant`;
-  return `${kind} towards ${v.headsign}: ${v.km.toFixed(1)} km, ${v.tripsPerDay} trips a weekday`;
+      : t('routes.tip.variantOf', { kind: variantKindLabel(v.kind) });
+  return t('routes.tip.variant', {
+    kind,
+    headsign: v.headsign,
+    km: v.km.toFixed(1),
+    trips: v.tripsPerDay,
+  });
 }

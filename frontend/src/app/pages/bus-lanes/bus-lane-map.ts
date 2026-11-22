@@ -21,7 +21,7 @@ import {
   speedColor,
   speedText,
 } from './lane-format';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /**
  * Every bus lane on a grey map, coloured by the average speed of buses on it in the window (darker: slower); lanes

@@ -19,7 +19,7 @@ import {
   tripLabel,
 } from './brigade-format';
 import { Skeleton } from '../../shared/skeleton/skeleton';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /**
  * One brigade on one service day (/brigades/103-05?date=2026-11-18; without a date, today's): its trips as

@@ -1246,6 +1246,26 @@
       "suburban": "Suburban line",
       "night_urban": "Night line",
       "regional": "Regional line"
+    },
+    "tip": {
+      "zone2": "{{stop}} · zone 2",
+      "brigades": {
+        "one": "{{n}} brigade",
+        "other": "{{n}} brigades"
+      },
+      "pullOut": "{{brigades}} from {{depot}} start at {{stop}}",
+      "pullIn": "{{brigades}} end at {{stop}} and go back to {{depot}}",
+      "straight": "(straight line: no street route found)",
+      "enter": "{{stop}}: buses enter service",
+      "leave": "{{stop}}: buses leave service",
+      "driven": {
+        "one": "driven {{n}} time, {{km}} km",
+        "other": "driven {{n}} times, {{km}} km"
+      },
+      "runsStart": "{{headsign}}: runs start here",
+      "runsEnd": "{{headsign}}: runs end here",
+      "variantOf": "{{kind}} variant",
+      "variant": "{{kind}} towards {{headsign}}: {{km}} km, {{trips}} trips a weekday"
     }
   },
   "travel": {

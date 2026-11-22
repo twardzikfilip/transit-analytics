@@ -1,6 +1,6 @@
 import { Component, input } from '@angular/core';
 import { EndStop } from '../../core/models/models';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /**
  * The line's standard end stops (where buses turn round in service), and the other stops depot runs use. Stops

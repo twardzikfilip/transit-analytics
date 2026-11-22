@@ -8,7 +8,7 @@ import { listQuery } from '../../shared/list-query';
 import { StopTimesActions } from '../../store/stop-times/stop-times.actions';
 import { stopTimesFeature } from '../../store/stop-times/stop-times.reducer';
 import { Skeleton } from '../../shared/skeleton/skeleton';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 @Component({
   selector: 'app-stop-times',

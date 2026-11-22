@@ -72,13 +72,21 @@ export class Language {
   }
 
   private apply(lang: Lang): Promise<void> {
-    return firstValueFrom(this.transloco.load(lang)).then(() => {
-      // A later choice wins over a slower load.
-      if (this.current() !== lang) return;
-      this.transloco.setActiveLang(lang);
-      useLanguage(this.transloco, lang);
-      this.root.lang = lang;
-    });
+    return firstValueFrom(this.transloco.load(lang)).then(
+      () => {
+        // A later choice wins over a slower load.
+        if (this.current() !== lang) return;
+        this.transloco.setActiveLang(lang);
+        useLanguage(this.transloco, lang);
+        this.root.lang = lang;
+      },
+      () => {
+        // The language's file didn't load (offline, a failed deploy): stay in English rather than fail to start.
+        if (this.current() !== lang || lang === 'en') return;
+        this.current.set('en');
+        return this.apply('en');
+      },
+    );
   }
 }
 

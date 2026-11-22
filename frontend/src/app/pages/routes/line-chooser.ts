@@ -2,7 +2,7 @@ import { Component, input, output } from '@angular/core';
 import { LineRef } from '../../core/models/models';
 import { activeLang } from '../../core/i18n/t';
 import { CAPACITIES, LineTable, capacityDescription, capacityLabel, geometryLabel } from './format';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /**
  * The lines to pick from: a row per kind of line (urban, suburban, night, regional), a column per geometry; each line

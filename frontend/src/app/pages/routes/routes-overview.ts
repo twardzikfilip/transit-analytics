@@ -9,7 +9,7 @@ import { lineTable } from './format';
 import { LineChooser } from './line-chooser';
 import { periodsText, ranked, rankings } from './rankings';
 import { Skeleton } from '../../shared/skeleton/skeleton';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /**
  * Routes: every line, a row per kind of line and a column per geometry; choosing one opens its page

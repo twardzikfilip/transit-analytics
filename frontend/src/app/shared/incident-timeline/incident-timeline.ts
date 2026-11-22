@@ -1,7 +1,7 @@
 import { Component, computed, input } from '@angular/core';
 import { IncidentSpan, IncidentStep } from '../../core/models/models';
 import { localTime } from '../format/time';
-import { t, tn } from '../../core/i18n/t';
+import { t } from '../../core/i18n/t';
 
 /** How each kind of stretch is drawn and named in the legend. */
 /** What a bus was doing, in the legend's order; `label` is a translation key. */
