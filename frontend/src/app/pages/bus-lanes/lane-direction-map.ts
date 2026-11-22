@@ -85,11 +85,6 @@ export function arrowPoints(
   styles: `
     :host {
       display: block;
-      --map-height: 560px;
-      --map-height-mobile: 380px;
-    }
-
-    @media (max-width: 600px) {
     }
 
     .swatch {

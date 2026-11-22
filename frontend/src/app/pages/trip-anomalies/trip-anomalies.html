@@ -39,7 +39,7 @@
       <span class="label">{{ t('anomalies.runInFull') }}</span>
       <strong class="value">{{ r.summary.completed }}</strong>
       <span class="muted small">{{
-        t('anomalies.ofJudged', { share: percent(r.summary.completed, r.summary.judged) })
+        t('anomalies.ofJudged', { share: shareText(r.summary.completed, r.summary.judged) })
       }}</span>
     </div>
     @for (k of kinds; track k.key) {
@@ -56,7 +56,7 @@
         >
         <strong class="value">{{ r.summary[k.count] }}</strong>
         <span class="muted small">{{
-          t('anomalies.ofJudged', { share: percent(r.summary[k.count], r.summary.judged) })
+          t('anomalies.ofJudged', { share: shareText(r.summary[k.count], r.summary.judged) })
         }}</span>
         @if (k.key === 'vehicle-changed' && r.summary.vehicleChanged) {
           <span class="muted small changes">{{
@@ -99,7 +99,7 @@
                   <strong>{{ l.line }}</strong>
                 </td>
                 <td class="num">{{ l.judged }}</td>
-                <td class="num">{{ percent(l.completed, l.judged) }}</td>
+                <td class="num">{{ shareText(l.completed, l.judged) }}</td>
                 @for (k of kinds; track k.key) {
                   <td class="num" [class.muted]="!l[k.count]">{{ l[k.count] || '·' }}</td>
                 }
@@ -237,7 +237,7 @@
                 {{ signedDelay(trip.endDelay) }}
               </td>
               <td class="note">
-                {{ trip.note }}
+                {{ phrasesText(trip.note) }}
                 @if (trip.changeMinutes !== null) {
                   <div class="changeover">
                     <span class="chip" [class.long]="trip.changeMinutes >= 10">{{

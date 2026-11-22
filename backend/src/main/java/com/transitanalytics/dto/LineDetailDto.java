@@ -17,9 +17,6 @@ public final class LineDetailDto {
     /**
      * A line to pick from. {@code line} is the route's GTFS id, used in the detail URLs; for a line only seen on the
      * live feed (another operator's, not in the timetable) it is the line's name, and {@code id} is null.
-     */
-    /**
-     * A line to pick.
      *
      * @param geometry      how it runs relative to the centre; null when not classified (other operators' lines)
      * @param capacityClass how much it carries; null when not classified

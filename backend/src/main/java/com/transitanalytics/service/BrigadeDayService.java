@@ -1,6 +1,7 @@
 package com.transitanalytics.service;
 
 import com.transitanalytics.dto.BrigadeDto;
+import com.transitanalytics.dto.TripAnomalyDto;
 import com.transitanalytics.service.TripAnomalies.Kind;
 import com.transitanalytics.service.TripAnomalies.Outcome;
 import com.transitanalytics.service.TripAnomalies.Report;
@@ -110,7 +111,7 @@ public class BrigadeDayService {
         for (ScheduledTrip trip : trips) {
             Outcome outcome = outcomes.get(key(trip.line(), trip.departure(), trip.arrival()));
             Kind kind = outcome == null ? Kind.NOT_RECORDED : outcome.kind();
-            String note = outcome == null || outcome.trip() == null ? null : outcome.trip().note();
+            List<TripAnomalyDto.Phrase> note = outcome == null || outcome.trip() == null ? null : outcome.trip().note();
             List<BrigadeDto.ActualRun> runs = runs(trip, matched.getOrDefault(trip, List.of()));
             int direction = Objects.equals(trip.stops()[trip.size() - 1], outbound) ? 0 : 1;
             result.add(new BrigadeDto.Trip(trip.tripId(), lineName(trip.line()), trip.headsign(), trip.stops()[0],

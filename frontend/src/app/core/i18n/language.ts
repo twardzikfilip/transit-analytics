@@ -17,6 +17,7 @@ export const LANGUAGE_OPTIONS: LanguageOption[] = [
   { code: 'en', name: 'English' },
   { code: 'pl', name: 'Polski' },
   { code: 'de', name: 'Deutsch' },
+  { code: 'fr', name: 'Français' },
 ];
 
 /** The saved language; English when none is saved or storage is unavailable. */

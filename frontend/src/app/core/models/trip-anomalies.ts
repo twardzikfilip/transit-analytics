@@ -49,8 +49,8 @@ export interface TripAnomalyLine {
 
 export interface AbnormalTrip {
   kind: TripAnomalyKind;
-  /** What was seen, in words. */
-  note: string;
+  /** What was seen, in phrases. */
+  note: Phrase[];
   tripId: string;
   line: string;
   brigade: string | null;
@@ -111,7 +111,16 @@ export interface AbnormalTrip {
 
 export interface IncidentStep {
   at: string;
-  text: string;
+  text: Phrase[];
+}
+
+/**
+ * A sentence (or part of one) about a trip, for the page to write in the reader's language: a key under `tripNotes`
+ * and its values; a value can itself be a phrase. Written by `phrasesText` (`shared/i18n/phrases.ts`).
+ */
+export interface Phrase {
+  key: string;
+  params: Record<string, string | number | Phrase>;
 }
 
 /**

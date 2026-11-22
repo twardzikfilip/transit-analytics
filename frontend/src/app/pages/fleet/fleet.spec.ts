@@ -12,7 +12,13 @@ import { PageBack } from '../../core/title/page-back';
 import { pageTitle } from '../../core/title/page-title';
 import { FleetReport, FleetVehicle, VehicleDetail, VehicleUsage } from '../../core/models/models';
 import { FleetActions } from '../../store/fleet/fleet.actions';
-import { fleetFeature } from '../../store/fleet/fleet.reducer';
+import {
+  FleetState,
+  REPORT_FRESH_MS,
+  fleetFeature,
+  hasFreshReport,
+} from '../../store/fleet/fleet.reducer';
+import { queryKey } from '../../shared/time-window/time-window';
 import { renderPage, stateAfter, text, useSvgMaps } from '../../testing/page-testing';
 import { CountBars } from './count-bars';
 import { Fleet } from './fleet';
@@ -24,7 +30,7 @@ import {
   dayLabel,
   daysOutText,
   isShortWindow,
-  percent,
+  wholePercent,
   searchVehicles,
   timelineRows,
   usageBars,
@@ -131,11 +137,57 @@ function detail(to = '2026-11-17T11:00:00Z'): VehicleDetail {
         brigade: '011-02',
         headsign: 'Dworzec',
         scheduledDeparture: '2026-11-16T07:00:00Z',
-        note: 'Bus 230 wasn’t seen again that day: possibly broken down.',
+        note: [{ key: 'silentAtOnce', params: { bus: '230' } }],
         story: [
-          { at: '2026-11-16T07:01:00Z', text: 'Bus 230 runs line 11.' },
-          { at: '2026-11-16T07:10:00Z', text: "Bus 230 stops and doesn't move on." },
-          { at: '2026-11-16T07:27:00Z', text: 'Bus 412 takes over.' },
+          {
+            at: '2026-11-16T07:01:00Z',
+            text: [
+              {
+                key: 'stepRuns',
+                params: {
+                  bus: '230',
+                  line: '11',
+                  to: 'Dworzec',
+                  stop: 'Rynek',
+                  index: 1,
+                  total: 25,
+                },
+              },
+            ],
+          },
+          {
+            at: '2026-11-16T07:10:00Z',
+            text: [
+              {
+                key: 'stepStops',
+                params: {
+                  bus: '230',
+                  stop: 'Lipowa',
+                  index: 8,
+                  total: 25,
+                  then: { key: 'thenStays', params: {} },
+                },
+              },
+            ],
+          },
+          {
+            at: '2026-11-16T07:27:00Z',
+            text: [
+              {
+                key: 'stepTakesOver',
+                params: {
+                  bus: '412',
+                  joined: { key: 'stopsFurtherOn', params: { n: 2 } },
+                  stop: 'Lipowa',
+                  index: 10,
+                  total: 25,
+                  away: { key: 'kilometres', params: { n: 1.5 } },
+                  other: '230',
+                },
+              },
+              { key: 'stepNoBusFor', params: { n: 17 } },
+            ],
+          },
         ],
         timeline: [
           {
@@ -203,8 +255,8 @@ describe('Fleet helpers', () => {
     expect(daysOutText({ ...b, returned: '2026-11-17T05:00:00Z', daysOut: 1 })).toBe(
       'back after 1 day',
     );
-    expect(percent(2, 3)).toBe(67);
-    expect(percent(1, 0)).toBe(0);
+    expect(wholePercent(2, 3)).toBe(67);
+    expect(wholePercent(1, 0)).toBe(0);
     expect(dayLabel('2026-11-16')).toBe('Mon 16 Nov');
     expect(isShortWindow('2026-11-16T11:00:00Z', '2026-11-17T11:00:20Z')).toBe(true);
     expect(isShortWindow('2026-11-14T11:00:00Z', '2026-11-17T11:00:00Z')).toBe(false);
@@ -245,6 +297,40 @@ describe('Fleet helpers', () => {
   });
 });
 
+describe('Fleet report reuse', () => {
+  const state = (key: string | null, reportAt: number | null, loading = false) =>
+    ({ reportKey: key, reportAt, loading }) as FleetState;
+
+  it('reuses a report for the same query that is loading or under 5 minutes old', () => {
+    const now = 1_000_000_000;
+    expect(hasFreshReport(state('1w|', null, true), '1w|', now)).toBe(true);
+    expect(hasFreshReport(state('1w|', now - REPORT_FRESH_MS + 1, false), '1w|', now)).toBe(true);
+    expect(hasFreshReport(state('1w|', now - REPORT_FRESH_MS, false), '1w|', now)).toBe(false);
+    expect(hasFreshReport(state('24h|', now, false), '1w|', now)).toBe(false);
+    expect(hasFreshReport(state(null, null, false), '1w|', now)).toBe(false);
+  });
+
+  it('names a query by its preset, or its custom window, and its operators', () => {
+    const to = new Date('2026-11-22T10:00:00Z');
+    expect(queryKey({ preset: '1w', from: new Date(0), to }, ['BKM', 'X'])).toBe('1w|BKM,X');
+    expect(queryKey({ preset: null, from: null, to })).toBe(`|${to.toISOString()}|`);
+  });
+
+  it('remembers which query the report answers, and forgets it on a failure', () => {
+    const loading = stateAfter(
+      fleetFeature,
+      FleetActions.load({ window: { from: null, to: 'x' }, agencies: [], key: 'k' }),
+    );
+    expect(loading['fleet'].reportKey).toBe('k');
+    const failed = stateAfter(
+      fleetFeature,
+      FleetActions.load({ window: { from: null, to: 'x' }, agencies: [], key: 'k' }),
+      FleetActions.failure({ error: 'down' }),
+    );
+    expect(failed['fleet'].reportKey).toBeNull();
+  });
+});
+
 describe('Count bars', () => {
   it('lists every kind, however many', () => {
     const fixture = TestBed.createComponent(CountBars);
@@ -269,7 +355,11 @@ describe('Fleet page', () => {
     );
 
     expect(store.dispatch).toHaveBeenCalledWith(
-      FleetActions.load({ window: WINDOW, agencies: ['BKM'] }),
+      FleetActions.load({
+        window: WINDOW,
+        agencies: ['BKM'],
+        key: `${WINDOW.from}|${WINDOW.to}|BKM`,
+      }),
     );
     expect(text(el.querySelector('.in-use .hero'))).toBe('2 of 3');
     expect(text(el.querySelector('.in-use'))).toContain('67% of the fleet');
@@ -346,7 +436,7 @@ describe('Fleet page', () => {
       FleetActions.loadVehicle({ id: 1, window: WINDOW }),
     );
     expect(store.dispatch).toHaveBeenCalledWith(
-      FleetActions.load({ window: WINDOW, agencies: [] }),
+      FleetActions.load({ window: WINDOW, agencies: [], key: `${WINDOW.from}|${WINDOW.to}|` }),
     );
     const loads = vi.mocked(store.dispatch).mock.calls.length;
     setQuery(URL);
@@ -357,6 +447,22 @@ describe('Fleet page', () => {
       expect.objectContaining({ type: FleetActions.loadVehicle.type, id: 1 }),
     );
     expect(vi.mocked(store.dispatch).mock.calls.length).toBeGreaterThan(loads);
+  });
+
+  it('uses the fleet report already loaded for the same window instead of asking again', () => {
+    const key = `${WINDOW.from}|${WINDOW.to}|`;
+    const loaded = stateAfter(
+      fleetFeature,
+      FleetActions.load({ window: WINDOW, agencies: [], key }),
+      FleetActions.loaded({ report: report() }),
+    );
+    const { store } = renderPage(VehiclePage, loaded, URL, [], { id: '1' });
+    expect(store.dispatch).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: FleetActions.load.type }),
+    );
+    expect(store.dispatch).toHaveBeenCalledWith(
+      FleetActions.loadVehicle({ id: 1, window: WINDOW }),
+    );
   });
 
   it('tells each breakdown of the bus step by step, with both buses on a time line and a map', async () => {
@@ -380,9 +486,10 @@ describe('Fleet page', () => {
     expect(text(toggle)).toBe('▾ Step by step (3 steps)');
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
     expect([...story()!.querySelectorAll('ol.steps li')].map(text)).toEqual([
-      `${localTime('2026-11-16T07:01:00Z')} Bus 230 runs line 11.`,
-      `${localTime('2026-11-16T07:10:00Z')} Bus 230 stops and doesn't move on.`,
-      `${localTime('2026-11-16T07:27:00Z')} Bus 412 takes over.`,
+      `${localTime('2026-11-16T07:01:00Z')} Bus 230 runs line 11 towards Dworzec, heading to Rynek (stop 1 of 25).`,
+      `${localTime('2026-11-16T07:10:00Z')} Bus 230 stops heading to Lipowa (stop 8 of 25) and doesn't move on.`,
+      `${localTime('2026-11-16T07:27:00Z')} Bus 412 takes over 2 stops further on, heading to Lipowa (stop 10 of 25), ` +
+        '1.5 km from where bus 230 stopped. The trip had no bus for 17 min.',
     ]);
     // A lane per bus, a bar per stretch, the steps numbered on the axis.
     expect([...story()!.querySelectorAll('.lane-label')].map(text)).toEqual([

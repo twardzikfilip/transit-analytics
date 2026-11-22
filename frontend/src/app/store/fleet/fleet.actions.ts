@@ -4,8 +4,11 @@ import { FleetReport, VehicleDetail, WindowQuery } from '../../core/models/model
 export const FleetActions = createActionGroup({
   source: 'Fleet',
   events: {
-    /** `agencies`: the operators whose buses to include; empty for all. */
-    Load: props<{ window: WindowQuery; agencies: string[] }>(),
+    /**
+     * `agencies`: the operators whose buses to include; empty for all. `key`: the query as text (queryKey), so a
+     * page can tell whether the report it needs is loaded.
+     */
+    Load: props<{ window: WindowQuery; agencies: string[]; key?: string }>(),
     Loaded: props<{ report: FleetReport }>(),
     Failure: props<{ error: string }>(),
     'Load Vehicle': props<{ id: number; window: WindowQuery }>(),

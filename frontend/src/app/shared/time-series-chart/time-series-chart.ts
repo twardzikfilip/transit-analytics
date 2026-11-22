@@ -9,9 +9,9 @@ import {
   MIN_GAP_MS,
 } from './chart-geometry';
 import { intlLocale, t } from '../../core/i18n/t';
+import { num } from '../format/number';
 
 const HEIGHT = 260;
-const DEFAULT_FORMAT = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
 const MARGIN = { top: 12, right: 16, bottom: 28, left: 44 };
 
 /**
@@ -37,9 +37,9 @@ export class TimeSeriesChart {
   /** Unit after a value in the tooltip, e.g. "vehicles". */
   readonly unit = input('');
   /** Formats a value for the tooltip (default: up to one decimal). */
-  readonly format = input<(value: number) => string>((v) => DEFAULT_FORMAT.format(v));
+  readonly format = input<(value: number) => string>((v) => num(v));
   /** Formats a y axis tick (default: as a number). */
-  readonly axisFormat = input<(value: number) => string>((v) => DEFAULT_FORMAT.format(v));
+  readonly axisFormat = input<(value: number) => string>((v) => num(v));
   /** Accessible name of the chart. */
   readonly label = input('');
   /** Dims the chart while new data loads, keeping the previous frame. */

@@ -50,24 +50,3 @@ h2 {
 button.more {
   margin-top: 0.5rem;
 }
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-}
-
-.how {
-  font-size: 0.9rem;
-
-  summary {
-    cursor: pointer;
-    font-weight: 600;
-  }
-
-  li + li {
-    margin-top: 0.35rem;
-  }
-}

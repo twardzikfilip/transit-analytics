@@ -3,10 +3,11 @@ import { Translation, TranslocoLoader, provideTransloco } from '@jsverse/translo
 import { Observable, of } from 'rxjs';
 import de from '../../i18n/de.json';
 import en from '../../i18n/en.json';
+import fr from '../../i18n/fr.json';
 import pl from '../../i18n/pl.json';
 import { LANGS } from '../core/i18n/t';
 
-const FILES: Record<string, Translation> = { en, pl, de };
+const FILES: Record<string, Translation> = { en, pl, de, fr };
 
 /** The translation files, at once (no HTTP). */
 class FileLoader implements TranslocoLoader {

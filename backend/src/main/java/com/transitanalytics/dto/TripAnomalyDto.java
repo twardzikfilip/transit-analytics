@@ -1,7 +1,10 @@
 package com.transitanalytics.dto;
 
 import java.time.Instant;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Abnormal trips: scheduled trips of the timetable that weren't run, or not in full, or not on their route, from
@@ -55,7 +58,7 @@ public final class TripAnomalyDto {
      * An abnormal trip.
      *
      * @param kind          cancelled, missed, lost, short-turned, vehicle-changed, no-signal or detour
-     * @param note          what was seen, in words: why it counts as abnormal and what the bus did instead
+     * @param note          what was seen, in phrases: why it counts as abnormal and what the bus did instead
      * @param stops         stops on the trip
      * @param vehicles      buses seen on it, in order
      * @param fromStop      first stop it was seen at or after (1-based), null when not run
@@ -89,7 +92,7 @@ public final class TripAnomalyDto {
      * @param story         on a change of bus, what happened step by step, in time order
      * @param timeline      on a change of bus, what each bus did when, for a time line
      */
-    public record Trip(String kind, String note, String tripId, String line, String brigade, String headsign,
+    public record Trip(String kind, List<Phrase> note, String tripId, String line, String brigade, String headsign,
                        String firstStop, String lastStop, Instant scheduledDeparture, Instant scheduledArrival,
                        int stops, List<String> vehicles, Integer fromStop, Integer toStop, String coveredFrom,
                        String coveredTo, Instant firstSeen, Instant lastSeen, Integer startDelay, Integer maxDelay,
@@ -102,8 +105,28 @@ public final class TripAnomalyDto {
                        List<Span> timeline) {
     }
 
-    /** One step of what happened at a change of bus. */
-    public record Step(Instant at, String text) {
+    /** One step of what happened at a change of bus, in phrases. */
+    public record Step(Instant at, List<Phrase> text) {
+    }
+
+    /**
+     * A sentence for the page to write in the reader's language: a text key (under {@code tripNotes} in the
+     * frontend's translations) and the values it needs. A value is text, a number (the page formats it), or another
+     * phrase (a part of the sentence, such as "the brigade's next trip").
+     */
+    public record Phrase(String key, Map<String, Object> params) {
+
+        /** A phrase from its key and its values as name, value pairs: {@code of("lost", "bus", "046")}. */
+        public static Phrase of(String key, Object... namesAndValues) {
+            if (namesAndValues.length % 2 != 0) {
+                throw new IllegalArgumentException("Names and values come in pairs: " + key);
+            }
+            Map<String, Object> params = new LinkedHashMap<>();
+            for (int i = 0; i < namesAndValues.length; i += 2) {
+                params.put((String) namesAndValues[i], namesAndValues[i + 1]);
+            }
+            return new Phrase(key, Collections.unmodifiableMap(params));
+        }
     }
 
     /**

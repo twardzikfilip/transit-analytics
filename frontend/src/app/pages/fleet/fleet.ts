@@ -7,19 +7,21 @@ import { BarChart } from '../../shared/bar-chart/bar-chart';
 import { TimeWindowPicker } from '../../shared/time-window/time-window-picker';
 import {
   TimeWindow,
+  queryKey,
   readAgencies,
   readWindow,
   sameQuery,
   windowQuery,
 } from '../../shared/time-window/time-window';
 import { FleetActions } from '../../store/fleet/fleet.actions';
-import { fleetFeature } from '../../store/fleet/fleet.reducer';
-import { daysOutText, hoursAxis, percent, usageBars, vehicleClassLabel } from './fleet-format';
+import { FleetState, fleetFeature, hasFreshReport } from '../../store/fleet/fleet.reducer';
+import { daysOutText, hoursAxis, wholePercent, usageBars, vehicleClassLabel } from './fleet-format';
 import { CountBars } from './count-bars';
 import { VehicleSearch } from './vehicle-search';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { LocalDatePipe } from '../../shared/i18n/locale-pipes';
 import { t } from '../../core/i18n/t';
+import { decimal } from '../../shared/format/number';
 
 export const DEFAULT_PRESET = '1w';
 
@@ -34,6 +36,16 @@ export function fleetQuery(route: ActivatedRoute) {
     map((p): FleetQuery => ({ window: readWindow(p, DEFAULT_PRESET), agencies: readAgencies(p) })),
     distinctUntilChanged(sameQuery),
   );
+}
+
+/**
+ * Loads the fleet report for the query, unless the store already has it (or is loading it) and it is fresh: going
+ * from the overview to a bus, from bus to bus and back asks the backend once per window.
+ */
+export function loadReport(store: Store, state: () => FleetState | undefined, q: FleetQuery): void {
+  const key = queryKey(q.window, q.agencies);
+  if (hasFreshReport(state(), key)) return;
+  store.dispatch(FleetActions.load({ window: windowQuery(q.window), agencies: q.agencies, key }));
 }
 
 /** Opens a bus's page (/vehicles/7), keeping the window and operators. */
@@ -54,6 +66,7 @@ export function openVehicle(router: Router, id: number): void {
 })
 export class Fleet {
   protected readonly t = t;
+  protected readonly decimal = decimal;
   private readonly store = inject(Store);
   private readonly router = inject(Router);
 
@@ -66,18 +79,15 @@ export class Fleet {
   protected readonly usageBars = computed(() => usageBars(this.report()?.usage ?? []));
   protected readonly inUseShare = computed(() => {
     const r = this.report();
-    return r ? percent(r.inUse, r.fleet) : 0;
+    return r ? wholePercent(r.inUse, r.fleet) : 0;
   });
   protected readonly classLabel = vehicleClassLabel;
   protected readonly daysOutText = daysOutText;
   protected readonly hoursAxis = hoursAxis;
 
   constructor() {
-    this.query$.pipe(takeUntilDestroyed()).subscribe((q) => {
-      this.store.dispatch(
-        FleetActions.load({ window: windowQuery(q.window), agencies: q.agencies }),
-      );
-    });
+    const state = this.store.selectSignal(fleetFeature.selectFleetState);
+    this.query$.pipe(takeUntilDestroyed()).subscribe((q) => loadReport(this.store, state, q));
   }
 
   protected choose(id: number | string): void {

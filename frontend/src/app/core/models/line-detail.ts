@@ -3,8 +3,10 @@ import { RouteCapacity, RouteGeometry, RouteSubtype } from './timetable';
 
 /** Routes in detail: one line's timetable and its measured performance. */
 
-/** A line to pick on Routes in detail; `line` is the route's GTFS id. */
-/** A line to pick; one only seen on the live feed (another operator's, not in the timetable) has no id. */
+/**
+ * A line to pick on Routes in detail. `line` is the route's GTFS id, used in the URLs; for a line only seen on the
+ * live feed (another operator's, not in the timetable) it is the line's name, and `id` is null.
+ */
 export interface LineRef {
   id: number | null;
   line: string;
@@ -253,7 +255,6 @@ export interface LineVehicles {
   }[];
 }
 
-/** Who runs a line: BKM organises, a company (KPKM, KPK or KZK) operates it from its depot. */
 /**
  * Who runs a line: for BKM's lines the organiser and one of its companies (code KPKM, KPK or KZK) with its depot; for
  * another operator's own timetable (e.g. PKS Nova) just that operator, with no code or depot.

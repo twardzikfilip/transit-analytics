@@ -86,7 +86,7 @@
                 }
               </td>
               <td class="num">{{ lostTime(h.hours) }}</td>
-              <td class="num">{{ t('hotspots.minPerDay', { n: h.minutesPerDay.toFixed(1) }) }}</td>
+              <td class="num">{{ t('hotspots.minPerDay', { n: decimal(h.minutesPerDay) }) }}</td>
               <td class="num">{{ h.standstills }}</td>
               <td class="num">{{ h.vehicles }}</td>
               <td class="num">

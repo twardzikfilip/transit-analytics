@@ -15,11 +15,11 @@ import { DelayGenerationActions } from '../../store/delay-generation/delay-gener
 import { delayGenerationFeature } from '../../store/delay-generation/delay-generation.reducer';
 import { TimeWindowPicker } from '../../shared/time-window/time-window-picker';
 import { readWindow, sameQuery, windowQuery } from '../../shared/time-window/time-window';
-import { changeClass, delayText, minutesPerDay, signedChange } from './delay-scale';
+import { changeClass, lateOrEarlyText, minutesPerDay, signedChange } from './delay-scale';
 import { LineHeatmap } from './line-heatmap';
 import { MIN_MAP_RUNS, StretchMap } from './stretch-map';
 import { TripProfile } from './trip-profile';
-import { percent } from '../../shared/format/number';
+import { int, percent } from '../../shared/format/number';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { LocalDatePipe } from '../../shared/i18n/locale-pipes';
 import { t, tn } from '../../core/i18n/t';
@@ -64,6 +64,7 @@ export const DEFAULT_PRESET = '1w';
 })
 export class DelayGeneration {
   protected readonly t = t;
+  protected readonly int = int;
   protected readonly tn = tn;
   private readonly store = inject(Store);
   private readonly navigate = injectSetQuery();
@@ -143,9 +144,8 @@ export class DelayGeneration {
   );
 
   protected readonly signed = signedChange;
-  protected readonly delayText = delayText;
+  protected readonly lateOrEarlyText = lateOrEarlyText;
   protected readonly time = localTime;
-  protected readonly createdRows = CREATED_ROWS;
 
   constructor() {
     this.window$.pipe(takeUntilDestroyed()).subscribe((window) => {

@@ -153,19 +153,6 @@ details:not(.how) {
   }
 }
 
-.how {
-  font-size: 0.9rem;
-
-  summary {
-    cursor: pointer;
-    font-weight: 600;
-  }
-
-  li + li {
-    margin-top: 0.35rem;
-  }
-}
-
 .map-legend .key.depot {
   width: 22px;
   border-top: 3px dotted var(--depot);

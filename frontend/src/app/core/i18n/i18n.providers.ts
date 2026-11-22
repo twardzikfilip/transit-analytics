@@ -1,5 +1,6 @@
 import { registerLocaleData } from '@angular/common';
 import localeDe from '@angular/common/locales/de';
+import localeFr from '@angular/common/locales/fr';
 import localePl from '@angular/common/locales/pl';
 import {
   EnvironmentProviders,
@@ -14,6 +15,7 @@ import { LANGS } from './t';
 
 registerLocaleData(localePl);
 registerLocaleData(localeDe);
+registerLocaleData(localeFr);
 
 /**
  * Translations (Transloco, files in src/i18n) and the language chosen in Settings, loaded before the first page so

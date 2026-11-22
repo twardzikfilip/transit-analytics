@@ -18,6 +18,7 @@ import { HotspotMap } from './hotspot-map';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { LocalDatePipe } from '../../shared/i18n/locale-pipes';
 import { t, tn } from '../../core/i18n/t';
+import { decimal } from '../../shared/format/number';
 
 export const DEFAULT_PRESET = '1w';
 
@@ -36,6 +37,7 @@ export const FIRST_ROWS = 25;
 })
 export class Hotspots {
   protected readonly t = t;
+  protected readonly decimal = decimal;
   protected readonly tn = tn;
   private readonly store = inject(Store);
   private readonly navigate = injectSetQuery();

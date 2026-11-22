@@ -73,8 +73,8 @@
               <td class="num">{{ speedText(g.f.peakSpeed) }}</td>
               <td class="num">{{ speedText(g.f.offPeakSpeed) }}</td>
               <td class="num">{{ slowdownText(g.f) }}</td>
-              <td class="num strong">{{ delayText(g.f.delayPerKm) }}</td>
-              <td class="num">{{ delayText(g.f.peakDelayPerKm) }}</td>
+              <td class="num strong">{{ delayPerKmText(g.f.delayPerKm) }}</td>
+              <td class="num">{{ delayPerKmText(g.f.peakDelayPerKm) }}</td>
             </tr>
           }
         </tbody>
@@ -135,8 +135,8 @@
               <td>{{ h.hour }}:00</td>
               <td class="num">{{ speedText(h.laneSpeed) }}</td>
               <td class="num">{{ speedText(h.otherSpeed) }}</td>
-              <td class="num">{{ delayText(h.laneDelayPerKm) }}</td>
-              <td class="num">{{ delayText(h.otherDelayPerKm) }}</td>
+              <td class="num">{{ delayPerKmText(h.laneDelayPerKm) }}</td>
+              <td class="num">{{ delayPerKmText(h.otherDelayPerKm) }}</td>
             </tr>
           }
         </tbody>
@@ -196,7 +196,7 @@
                 {{ speedText(s.figures.peakSpeed) }}
                 <span class="muted">/ {{ speedText(s.figures.offPeakSpeed) }}</span>
               </td>
-              <td class="num">{{ delayText(s.figures.delayPerKm) }}</td>
+              <td class="num">{{ delayPerKmText(s.figures.delayPerKm) }}</td>
               <td
                 class="num"
                 [class.faster]="slowerThanOpposite(s)"
@@ -204,7 +204,7 @@
               >
                 @if (s.opposite; as o) {
                   {{ speedText(o.speed) }}
-                  <div class="muted note">{{ delayText(o.delayPerKm) }}</div>
+                  <div class="muted note">{{ delayPerKmText(o.delayPerKm) }}</div>
                 } @else {
                   <span class="muted">{{ t('busLanes.bothWays') }}</span>
                 }

@@ -1,7 +1,15 @@
 package com.transitanalytics.service;
 
+import com.transitanalytics.dto.TripAnomalyDto.Phrase;
 import com.transitanalytics.dto.TripAnomalyDto;
 import com.transitanalytics.recording.DelayOutliers;
+import com.transitanalytics.service.TripHandovers.Change;
+import com.transitanalytics.service.TripHandovers.Fate;
+import com.transitanalytics.service.TripHandovers.Handover;
+import com.transitanalytics.service.TripHandovers.Stand;
+import com.transitanalytics.service.TripHandovers.Then;
+import com.transitanalytics.service.TripShapes.Detour;
+import com.transitanalytics.service.TripShapes.Shape;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -13,7 +21,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -21,10 +28,13 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.transitanalytics.service.TripHandovers.*;
-import static com.transitanalytics.service.TripMatching.*;
-import static com.transitanalytics.service.TripShapes.*;
-import static com.transitanalytics.service.TripSummaries.*;
+import static com.transitanalytics.service.TripHandovers.hasBrigade;
+import static com.transitanalytics.service.TripHandovers.inService;
+import static com.transitanalytics.service.TripHandovers.metres;
+import static com.transitanalytics.service.TripHandovers.vehicleChange;
+import static com.transitanalytics.service.TripMatching.byBrigade;
+import static com.transitanalytics.service.TripMatching.matchReports;
+import static com.transitanalytics.service.TripMatching.withBrigades;
 
 /**
  * Judges a service day's scheduled trips against the recorded positions. Each report is matched to a trip of its
@@ -246,28 +256,29 @@ final class TripAnomalies {
             if (!settled && now.isBefore(trip.departure().plus(DUE))) {
                 return outcome(trip, Kind.PENDING);
             }
-            String sofar = settled ? "" : "So far: ";
             List<ScheduledTrip> run = byBrigade.get(trip.brigade()).stream().filter(matched::containsKey).toList();
             if (!settled && runningLate(trip, run)) {
                 return outcome(trip, Kind.PENDING);
             }
+            List<Phrase> note = new ArrayList<>();
+            if (!settled) {
+                note.add(Phrase.of("soFar"));
+            }
             if (run.isEmpty()) {
-                String note = sofar + (linesReported.contains(trip.line())
-                        ? "No bus ran brigade %s all day while recording.".formatted(trip.brigade())
-                        : "No bus reported line %s all day while recording.".formatted(trip.line()));
+                note.add(linesReported.contains(trip.line())
+                        ? Phrase.of("noBusOnBrigade", "brigade", trip.brigade())
+                        : Phrase.of("noBusOnLine", "line", trip.line()));
                 return abnormal(trip, Kind.CANCELLED, note, List.of(), null, null);
             }
             ScheduledTrip first = run.get(0);
             ScheduledTrip last = run.get(run.size() - 1);
-            String where = trip.departure().isBefore(first.departure())
-                    ? "Before the brigade's first run that day (it started late at %s)."
-                    .formatted(ServiceDay.localTime(first.departure()))
+            note.add(trip.departure().isBefore(first.departure())
+                    ? Phrase.of("beforeFirstRun", "time", ServiceDay.localTime(first.departure()))
                     : trip.departure().isAfter(last.departure())
-                    ? "After the brigade's last run that day (it finished early, at %s)."
-                    .formatted(ServiceDay.localTime(last.arrival()))
-                    : "Between the brigade's runs.";
-            Outcome missed = abnormal(trip, Kind.MISSED, sofar + where + " " + whereabouts(trip, run), List.of(), null,
-                    null);
+                    ? Phrase.of("afterLastRun", "time", ServiceDay.localTime(last.arrival()))
+                    : Phrase.of("betweenRuns"));
+            note.addAll(whereabouts(trip, run));
+            Outcome missed = abnormal(trip, Kind.MISSED, note, List.of(), null, null);
             // Not seen on the trip, but the brigade's bus that day (of its nearest run) is the one that missed it.
             return new Outcome(missed.line(), missed.departure(), missed.arrival(), missed.kind(), missed.trip(),
                     List.of(nearestBus(trip, run).vehicleId()));
@@ -296,12 +307,12 @@ final class TripAnomalies {
         }
 
         /** Where the brigade's bus (from its nearest run) was while this trip should have run. */
-        private String whereabouts(ScheduledTrip trip, List<ScheduledTrip> run) {
+        private List<Phrase> whereabouts(ScheduledTrip trip, List<ScheduledTrip> run) {
             Report anyReport = nearestBus(trip, run);
-            String bus = "Bus " + anyReport.vehicle();
+            String bus = anyReport.vehicle();
             List<Report> during = between(byVehicle.get(anyReport.vehicleId()), trip.departure(), trip.arrival());
             if (during.isEmpty()) {
-                return bus + " wasn't reporting then.";
+                return List.of(Phrase.of("busSilent", "bus", bus));
             }
             Map<String, Long> counts = during.stream().collect(Collectors.groupingBy(
                     r -> r.line() + "|" + Objects.toString(r.brigade(), ""), Collectors.counting()));
@@ -311,12 +322,17 @@ final class TripAnomalies {
             if (brigade.equals(trip.brigade())) {
                 Report r = during.get(0);
                 Integer delay = r.usableDelay();
-                return bus + " was on the brigade, reporting another of its trips"
-                        + (r.headsign() == null ? "" : " (towards " + r.headsign() + ")")
-                        + (delay == null || Math.abs(delay) < 60 ? "." : ", %d min %s.".formatted(
-                        Math.round(Math.abs(delay) / 60.0), delay > 0 ? "late" : "early"));
+                List<Phrase> phrases = new ArrayList<>();
+                phrases.add(r.headsign() == null ? Phrase.of("onOtherTrip", "bus", bus)
+                        : Phrase.of("onOtherTripTowards", "bus", bus, "to", r.headsign()));
+                if (delay != null && Math.abs(delay) >= 60) {
+                    phrases.add(Phrase.of(delay > 0 ? "itWasLate" : "itWasEarly",
+                            "n", (int) Math.round(Math.abs(delay) / 60.0)));
+                }
+                return phrases;
             }
-            return bus + " was on line " + line + (brigade.isEmpty() ? "" : " (brigade " + brigade + ")") + ".";
+            return List.of(brigade.isEmpty() ? Phrase.of("busOnLine", "bus", bus, "line", line)
+                    : Phrase.of("busOnLineBrigade", "bus", bus, "line", line, "brigade", brigade));
         }
 
         private Outcome run(ScheduledTrip trip, List<Report> reports) {
@@ -326,55 +342,54 @@ final class TripAnomalies {
             boolean started = fromIndex < START_STOPS;
             boolean finished = toIndex >= trip.size() - END_STOPS;
             Detour detour = TripShapes.detour(trip, sorted, shapes.get(trip.shapeId()));
-            String detourNote = detour == null ? "" : " Off the route for %d min, up to %d m away, after %s."
-                    .formatted(detour.minutes(), detour.meters(), detour.from());
+            List<Phrase> detourNote = detour == null ? List.of() : List.of(Phrase.of("detour",
+                    "minutes", detour.minutes(), "meters", detour.meters(), "after", detour.from()));
             Change change = vehicleChange(trip, sorted);
             Handover handover = change == null ? null : handover(trip, change, sorted);
-            String changeNote = handover == null ? "" : " " + handover.note();
+            List<Phrase> changeNote = handover == null ? List.of() : handover.note();
 
             // Judged as soon as what the bus did is clear; until then pending (a change or detour shows already).
             Outcome pending = change != null
-                    ? abnormal(trip, Kind.VEHICLE_CHANGED, ("Under way." + changeNote + detourNote).strip(), sorted,
-                    detour, handover)
+                    ? abnormal(trip, Kind.VEHICLE_CHANGED, join(Phrase.of("underWay"), changeNote, detourNote),
+                    sorted, detour, handover)
                     : detour == null ? outcome(trip, Kind.PENDING)
-                    : abnormal(trip, Kind.DETOUR, ("Under way." + detourNote).strip(), sorted, detour, null);
+                    : abnormal(trip, Kind.DETOUR, join(Phrase.of("underWay"), detourNote), sorted, detour, null);
             if (started && finished) {
                 return change != null
-                        ? abnormal(trip, Kind.VEHICLE_CHANGED, ("Run in full." + changeNote + detourNote).strip(),
+                        ? abnormal(trip, Kind.VEHICLE_CHANGED, join(Phrase.of("runInFull"), changeNote, detourNote),
                         sorted, detour, handover)
                         : detour == null ? outcome(trip, Kind.COMPLETED)
-                        : abnormal(trip, Kind.DETOUR, ("Run in full." + detourNote).strip(), sorted, detour, null);
+                        : abnormal(trip, Kind.DETOUR, join(Phrase.of("runInFull"), detourNote), sorted, detour,
+                        null);
             }
             // Only a bus reporting all along shows what it did; a gap in its reports hides it (tracking, not service).
-            List<String> notes = new ArrayList<>();
+            List<Phrase> notes = new ArrayList<>();
             Kind kind = Kind.NO_SIGNAL;
             if (!started) {
                 Report first = sorted.get(0);
                 Report before = before(byVehicle.get(first.vehicleId()), first.time());
-                String where = "heading to %s (stop %d of %d) at %s".formatted(trip.stops()[fromIndex],
-                        fromIndex + 1, trip.size(), ServiceDay.localTime(first.time()));
                 if (continuous(before, first)) {
                     kind = Kind.SHORT_TURNED;
-                    notes.add("Started midway: joined %s, coming from %s.".formatted(where, which(trip, before,
-                            "previous")));
+                    notes.add(Phrase.of("joinedMidway", heading(trip, fromIndex, first.time(),
+                            "from", which(trip, before, false))));
                 } else {
-                    notes.add("Bus %s started reporting midway, %s.".formatted(first.vehicle(), where));
+                    notes.add(Phrase.of("startedReportingMidway", heading(trip, fromIndex, first.time(),
+                            "bus", first.vehicle())));
                 }
             }
             if (!finished) {
                 // Its last report at the furthest stop it reached (later ones may be waiting there to turn).
                 Report last = sorted.stream().filter(rep -> trip.index(rep.nextSeq()) == toIndex)
                         .reduce((a, b) -> b).orElseThrow();
-                String leaving = "heading to %s (stop %d of %d) at %s".formatted(trip.stops()[toIndex], toIndex + 1,
-                        trip.size(), ServiceDay.localTime(last.time()));
                 Report next = after(byVehicle.get(last.vehicleId()), last.time());
                 if (continuous(last, next)) {
                     kind = Kind.SHORT_TURNED;
-                    notes.add("Left the trip %s and went on to %s.".formatted(leaving, which(trip, next, "next")));
+                    notes.add(Phrase.of("leftTrip", heading(trip, toIndex, last.time(),
+                            "to", which(trip, next, true))));
                 } else if (next != null && Objects.equals(next.brigade(), trip.brigade())) {
-                    notes.add("Bus %s stopped reporting %s; back at %s on %s, so it probably finished the trip."
-                            .formatted(last.vehicle(), leaving, ServiceDay.localTime(next.time()),
-                                    which(trip, next, "next")));
+                    notes.add(Phrase.of("probablyFinished", heading(trip, toIndex, last.time(),
+                            "bus", last.vehicle(), "back", ServiceDay.localTime(next.time()),
+                            "on", which(trip, next, true))));
                 } else {
                     Instant lostBy = last.time().plus(LOST_AFTER);
                     if (next == null && lostBy.isAfter(now)) {
@@ -385,37 +400,61 @@ final class TripAnomalies {
                         return outcome(trip, Kind.NOT_RECORDED);
                     }
                     kind = Kind.LOST;
-                    notes.add("Bus %s stopped reporting %s".formatted(last.vehicle(), leaving)
-                            + (next == null ? " and wasn't seen again that day."
-                            : "; seen again at %s on %s.".formatted(ServiceDay.localTime(next.time()),
-                            which(trip, next, "next"))));
+                    notes.add(next == null
+                            ? Phrase.of("lostForGood", heading(trip, toIndex, last.time(), "bus", last.vehicle()))
+                            : Phrase.of("lostSeenAgain", heading(trip, toIndex, last.time(),
+                            "bus", last.vehicle(), "back", ServiceDay.localTime(next.time()),
+                            "on", which(trip, next, true))));
                 }
             }
-            return abnormal(trip, kind, (String.join(" ", notes) + changeNote + detourNote).strip(), sorted, detour,
-                    handover);
+            return abnormal(trip, kind, join(null, notes, changeNote, detourNote), sorted, detour, handover);
+        }
+
+        /** A phrase (or none) followed by lists of phrases, as one list. */
+        @SafeVarargs
+        private static List<Phrase> join(Phrase first, List<Phrase>... rest) {
+            List<Phrase> all = new ArrayList<>();
+            if (first != null) {
+                all.add(first);
+            }
+            for (List<Phrase> part : rest) {
+                all.addAll(part);
+            }
+            return List.copyOf(all);
         }
 
         /**
-         * A change of bus in words, with where the replacement came from and what became of the replaced bus: used
-         * again only once it reports a brigade {@link #MOVED_METERS} away from where it left the trip.
+         * The values saying where on a trip a report was: the stop it was heading to ({@code stop}), its number
+         * ({@code index}) of the trip's stops ({@code total}), and when ({@code time}); then {@code more} pairs.
          */
+        private static Object[] heading(ScheduledTrip trip, int index, Instant time, Object... more) {
+            Object[] values = Arrays.copyOf(new Object[] {"stop", trip.stops()[index], "index", index + 1,
+                    "total", trip.size(), "time", ServiceDay.localTime(time)}, 8 + more.length);
+            System.arraycopy(more, 0, values, 8, more.length);
+            return values;
+        }
+
         /** A delay as "+2:05" or "-0:40". */
         private static String signed(int seconds) {
             return (seconds < 0 ? "-" : "+") + "%d:%02d".formatted(Math.abs(seconds) / 60, Math.abs(seconds) % 60);
         }
 
+        /**
+         * A change of bus in phrases, with where the replacement came from and what became of the replaced bus: used
+         * again only once it reports a brigade {@link #MOVED_METERS} away from where it left the trip.
+         */
         private Handover handover(ScheduledTrip trip, Change c, List<Report> sorted) {
             Report a = c.fromLast();
             Report b = c.toFirst();
             int stoppedAt = c.stoppedIndex(trip);
-            StringBuilder note = new StringBuilder("Bus %s stopped heading to %s (stop %d of %d) at %s; "
-                    .formatted(a.vehicle(), trip.stops()[stoppedAt], stoppedAt + 1, trip.size(),
-                            ServiceDay.localTime(c.stopped().time()))
-                    + "%d min later bus %s took over %s, heading to %s (stop %d)."
-                    .formatted(c.standMinutes(), b.vehicle(), joined(trip, c), trip.stops()[c.toIndex()],
-                            c.toIndex() + 1)
-                    + (c.delayBefore() == null || c.delayAfter() == null ? ""
-                    : " Delay %s before, %s after.".formatted(signed(c.delayBefore()), signed(c.delayAfter()))));
+            List<Phrase> note = new ArrayList<>();
+            note.add(Phrase.of("busChanged", heading(trip, stoppedAt, c.stopped().time(),
+                    "bus", a.vehicle(), "minutes", c.standMinutes(), "other", b.vehicle(), "joined", joined(trip, c),
+                    "toStop", trip.stops()[c.toIndex()], "toIndex", c.toIndex() + 1)));
+            if (c.delayBefore() != null && c.delayAfter() != null) {
+                note.add(Phrase.of("delayBeforeAfter", "before", signed(c.delayBefore()),
+                        "after", signed(c.delayAfter())));
+            }
 
             // Where the replacement came from: its last report on another brigade before.
             List<Report> bReports = byVehicle.getOrDefault(b.vehicleId(), List.of());
@@ -428,16 +467,13 @@ final class TripAnomalies {
                     origin = r;
                 }
             }
-            String originWhere = origin == null ? null : origin.line().equals(trip.line())
-                    ? "brigade %s of the same line".formatted(origin.brigade())
-                    : "line %s (brigade %s)".formatted(origin.line(), origin.brigade());
+            Phrase originWhere = origin == null ? null : where(trip, origin);
             boolean straight = origin != null && !origin.time().plus(STRAIGHT_FROM).isBefore(b.time());
             if (origin == null) {
-                note.append(" Bus %s hadn't run any other brigade that day (from the depot).".formatted(b.vehicle()));
+                note.add(Phrase.of("fromDepot", "bus", b.vehicle()));
             } else {
-                note.append((straight ? " Bus %s came straight from %s, until %s."
-                        : " Bus %s had run %s earlier that day, until %s.").formatted(b.vehicle(), originWhere,
-                        ServiceDay.localTime(origin.time())));
+                note.add(Phrase.of(straight ? "cameStraightFrom" : "hadRunEarlier", "bus", b.vehicle(),
+                        "from", originWhere, "until", ServiceDay.localTime(origin.time())));
             }
 
             // What became of the replaced bus.
@@ -452,15 +488,14 @@ final class TripAnomalies {
             if (used == null) {
                 fate = Fate.BROKEN_DOWN;
                 stand = stand(c.stopped(), a, later);
-                note.append(" ").append(standNote(a.vehicle(), stand));
+                note.add(standNote(a.vehicle(), stand));
             } else if (used.brigade().equals(trip.brigade()) && used.line().equals(trip.line())) {
                 fate = Fate.RETURNED;
-                note.append(" Bus %s was back on the brigade at %s.".formatted(a.vehicle(),
-                        ServiceDay.localTime(used.time())));
+                note.add(Phrase.of("backOnBrigade", "bus", a.vehicle(), "time", ServiceDay.localTime(used.time())));
             } else {
                 fate = Fate.REASSIGNED;
-                note.append(" Bus %s was used again on %s from %s.".formatted(a.vehicle(), where(trip, used),
-                        ServiceDay.localTime(used.time())));
+                note.add(Phrase.of("usedAgainOn", "bus", a.vehicle(), "on", where(trip, used),
+                        "time", ServiceDay.localTime(used.time())));
             }
 
             // Step by step, and the buses' time lines.
@@ -468,68 +503,66 @@ final class TripAnomalies {
             List<TripAnomalyDto.Span> spans = new ArrayList<>();
             Report first = c.fromFirst();
             int firstAt = trip.index(first.nextSeq());
-            story.add(new TripAnomalyDto.Step(first.time(), "Bus %s runs line %s towards %s, heading to %s (stop %d of %d)%s."
-                    .formatted(a.vehicle(), trip.line(), Objects.toString(trip.headsign(), trip.stops()[trip.size() - 1]),
-                            trip.stops()[firstAt], firstAt + 1, trip.size(), delayPart(first.usableDelay()))));
+            Object[] runs = heading(trip, firstAt, first.time(), "bus", a.vehicle(), "line", trip.line(),
+                    "to", Objects.toString(trip.headsign(), trip.stops()[trip.size() - 1]));
+            story.add(step(first.time(), first.usableDelay() == null ? Phrase.of("stepRuns", runs)
+                    : Phrase.of("stepRunsDelay", with(runs, "delay", signed(first.usableDelay())))));
             Instant leftAt = stand == null ? a.time() : stand.until();
             int peak = Stream.concat(Stream.of(a), later.stream())
                     .filter(r -> !r.time().isBefore(c.stopped().time()) && !r.time().isAfter(leftAt)
                             && r.delay() != null)
                     .mapToInt(Report::delay).max().orElse(Integer.MIN_VALUE);
             boolean growing = stand != null && c.delayBefore() != null && peak >= c.delayBefore() + 120;
-            story.add(new TripAnomalyDto.Step(c.stopped().time(), "Bus %s stops heading to %s (stop %d of %d%s) %s."
-                    .formatted(a.vehicle(), trip.stops()[stoppedAt], stoppedAt + 1, trip.size(),
-                            c.delayBefore() == null ? "" : "; delay " + signed(c.delayBefore()),
-                            stand == null ? "and leaves the trip"
-                                    : "and doesn't move on" + (growing
-                                    ? "; the feed's delay keeps growing, to %s by %s".formatted(signed(peak),
-                                    ServiceDay.localTime(leftAt)) : ""))));
+            Phrase then = stand == null ? Phrase.of("thenLeavesTrip")
+                    : growing ? Phrase.of("thenStaysDelayGrowing", "peak", signed(peak),
+                    "until", ServiceDay.localTime(leftAt))
+                    : Phrase.of("thenStays");
+            Object[] stops = heading(trip, stoppedAt, c.stopped().time(), "bus", a.vehicle(), "then", then);
+            story.add(step(c.stopped().time(), c.delayBefore() == null ? Phrase.of("stepStops", stops)
+                    : Phrase.of("stepStopsDelay", with(stops, "delay", signed(c.delayBefore())))));
             spans.add(new TripAnomalyDto.Span(a.vehicle(), "running", first.time(), c.stopped().time()));
             spans.add(new TripAnomalyDto.Span(a.vehicle(), "standing", c.stopped().time(), leftAt));
             if (stand != null) {
                 switch (stand.then()) {
-                    case VANISHED -> story.add(new TripAnomalyDto.Step(stand.until(),
-                            "Last report of bus %s, from the same spot: not seen again that day (switched off, or "
-                                    .formatted(a.vehicle()) + "towed with its tracker off)."));
-                    case STILL_THERE -> story.add(new TripAnomalyDto.Step(stand.until(),
-                            "Bus %s is still standing there at its latest report.".formatted(a.vehicle())));
+                    case VANISHED -> story.add(step(stand.until(), Phrase.of("stepVanished", "bus", a.vehicle())));
+                    case STILL_THERE -> story.add(step(stand.until(),
+                            Phrase.of("stepStillThere", "bus", a.vehicle())));
                     case DROVE_OFF -> {
-                        story.add(new TripAnomalyDto.Step(stand.moved(), "Bus %s moves off without running a brigade."
-                                .formatted(a.vehicle())));
-                        story.add(new TripAnomalyDto.Step(stand.lastSeen().time(),
-                                "Last report of bus %s, %s from where it stopped; not used again that day."
-                                        .formatted(a.vehicle(), distance(stand.metres()))));
+                        story.add(step(stand.moved(), Phrase.of("stepMovesOff", "bus", a.vehicle())));
+                        story.add(step(stand.lastSeen().time(), Phrase.of("stepLastSeenAway", "bus", a.vehicle(),
+                                "away", distance(stand.metres()))));
                         spans.add(new TripAnomalyDto.Span(a.vehicle(), "moving", stand.moved(),
                                 stand.lastSeen().time()));
                     }
                 }
             } else {
-                story.add(new TripAnomalyDto.Step(used.time(), fate == Fate.RETURNED
-                        ? "Bus %s is back on the brigade.".formatted(a.vehicle())
-                        : "Bus %s is used again on %s.".formatted(a.vehicle(), where(trip, used))));
+                story.add(step(used.time(), fate == Fate.RETURNED
+                        ? Phrase.of("stepBackOnBrigade", "bus", a.vehicle())
+                        : Phrase.of("stepUsedAgainOn", "bus", a.vehicle(), "on", where(trip, used))));
                 spans.add(new TripAnomalyDto.Span(a.vehicle(), "service", used.time(), used.time()));
             }
 
             // The replacement: where from, its way to the trip, and on.
             Report approach = approachStart(bReports, b, origin);
             if (origin != null) {
-                story.add(new TripAnomalyDto.Step(origin.time(), (straight ? "Bus %s leaves %s."
-                        : "Bus %s finishes %s.").formatted(b.vehicle(), originWhere)));
+                story.add(step(origin.time(), Phrase.of(straight ? "stepLeaves" : "stepFinishes",
+                        "bus", b.vehicle(), "from", originWhere)));
             }
             if (approach != null) {
-                story.add(new TripAnomalyDto.Step(approach.time(), (origin == null
-                        ? "Bus %s sets off without a brigade (from the depot), %s from where bus %s stopped."
-                        : "Bus %s heads for the trip without a brigade, %s from where bus %s stopped.")
-                        .formatted(b.vehicle(), distance((int) Math.round(metres(approach, c.stopped()))),
-                                a.vehicle())));
+                story.add(step(approach.time(), Phrase.of(origin == null ? "stepSetsOffFromDepot" : "stepHeadsForTrip",
+                        "bus", b.vehicle(), "away", distance((int) Math.round(metres(approach, c.stopped()))),
+                        "other", a.vehicle())));
                 spans.add(new TripAnomalyDto.Span(b.vehicle(), "approach", approach.time(), b.time()));
             }
-            story.add(new TripAnomalyDto.Step(b.time(), "Bus %s takes over %s, heading to %s (stop %d of %d), %s from where bus %s stopped%s.%s"
-                    .formatted(b.vehicle(), joined(trip, c), trip.stops()[c.toIndex()], c.toIndex() + 1, trip.size(),
-                            distance((int) Math.round(metres(b, c.stopped()))), a.vehicle(),
-                            delayPart(c.delayAfter()),
-                            c.standMinutes() >= 1 ? " The trip had no bus for %d min.".formatted(c.standMinutes())
-                                    : "")));
+            Object[] takes = heading(trip, c.toIndex(), b.time(), "bus", b.vehicle(), "joined", joined(trip, c),
+                    "away", distance((int) Math.round(metres(b, c.stopped()))), "other", a.vehicle());
+            List<Phrase> takeover = new ArrayList<>();
+            takeover.add(c.delayAfter() == null ? Phrase.of("stepTakesOver", takes)
+                    : Phrase.of("stepTakesOverDelay", with(takes, "delay", signed(c.delayAfter()))));
+            if (c.standMinutes() >= 1) {
+                takeover.add(Phrase.of("stepNoBusFor", "n", c.standMinutes()));
+            }
+            story.add(new TripAnomalyDto.Step(b.time(), List.copyOf(takeover)));
             Instant serviceUntil = sorted.stream().filter(r -> r.vehicleId() == b.vehicleId())
                     .map(Report::time).max(Comparator.naturalOrder()).orElse(b.time());
             ScheduledTrip next = byBrigade.getOrDefault(trip.brigade(), List.of()).stream()
@@ -537,37 +570,43 @@ final class TripAnomalies {
             List<Report> onNext = next == null ? List.of() : matched.getOrDefault(next, List.of()).stream()
                     .filter(r -> r.vehicleId() == b.vehicleId()).toList();
             if (!onNext.isEmpty()) {
-                story.add(new TripAnomalyDto.Step(onNext.get(0).time(),
-                        "Bus %s runs the brigade's next trip, towards %s (scheduled %s).".formatted(b.vehicle(),
-                                Objects.toString(next.headsign(), next.stops()[next.size() - 1]),
-                                ServiceDay.localTime(next.departure()))));
+                story.add(step(onNext.get(0).time(), Phrase.of("stepNextTrip", "bus", b.vehicle(),
+                        "to", Objects.toString(next.headsign(), next.stops()[next.size() - 1]),
+                        "time", ServiceDay.localTime(next.departure()))));
                 serviceUntil = onNext.get(onNext.size() - 1).time();
             }
             spans.add(new TripAnomalyDto.Span(b.vehicle(), "service", b.time(), serviceUntil));
             story.sort(Comparator.comparing(TripAnomalyDto.Step::at));
             return new Handover(c, fate, stand, origin == null ? null : origin.line(),
-                    origin == null ? null : origin.brigade(), note.toString(), List.copyOf(story),
+                    origin == null ? null : origin.brigade(), List.copyOf(note), List.copyOf(story),
                     spans.stream().filter(sp -> !sp.to().isBefore(sp.from())).toList());
         }
 
+        /** A step of one phrase. */
+        private static TripAnomalyDto.Step step(Instant at, Phrase phrase) {
+            return new TripAnomalyDto.Step(at, List.of(phrase));
+        }
+
+        /** Values with one more name and value. */
+        private static Object[] with(Object[] values, String name, Object value) {
+            Object[] more = Arrays.copyOf(values, values.length + 2);
+            more[values.length] = name;
+            more[values.length + 1] = value;
+            return more;
+        }
+
         /** "at the same place", "3 stops further on" or "2 stops back": where the second bus joined. */
-        private static String joined(ScheduledTrip trip, Change c) {
-            int skipped = c.skippedStops(trip);
+        private static Phrase joined(ScheduledTrip trip, Change c) {
             int back = c.stopsBack(trip);
-            return c.samePlace(trip) ? "at the same place"
-                    : back > 0 ? (back == 1 ? "1 stop back" : back + " stops back")
-                    : skipped == 1 ? "1 stop further on" : skipped + " stops further on";
+            return c.samePlace(trip) ? Phrase.of("samePlace")
+                    : back > 0 ? Phrase.of("stopsBack", "n", back)
+                    : Phrase.of("stopsFurtherOn", "n", c.skippedStops(trip));
         }
 
         /** "brigade 010-02 of the same line" or "line 12 (brigade 012-01)". */
-        private static String where(ScheduledTrip trip, Report r) {
-            return r.line().equals(trip.line()) ? "brigade " + r.brigade() + " of the same line"
-                    : "line " + r.line() + " (brigade " + r.brigade() + ")";
-        }
-
-        /** ", delay +2:05", or nothing when unknown. */
-        private static String delayPart(Integer delay) {
-            return delay == null ? "" : ", delay " + signed(delay);
+        private static Phrase where(ScheduledTrip trip, Report r) {
+            return r.line().equals(trip.line()) ? Phrase.of("sameLineBrigade", "brigade", r.brigade())
+                    : Phrase.of("lineBrigade", "line", r.line(), "brigade", r.brigade());
         }
 
         /**
@@ -623,42 +662,43 @@ final class TripAnomalies {
                     moved == null ? null : moved.time());
         }
 
-        /** What a replaced bus that wasn't used again did, in words. */
-        private String standNote(String vehicle, Stand s) {
+        /** What a replaced bus that wasn't used again did. */
+        private static Phrase standNote(String vehicle, Stand s) {
             String from = ServiceDay.localTime(s.stopped());
             String until = ServiceDay.localTime(s.until());
-            String stood = "Bus %s stood there for %d min (%s–%s)".formatted(vehicle, s.minutes(), from, until);
             return switch (s.then()) {
-                case STILL_THERE -> "Bus %s has stood there since %s (%d min, last report %s) and hasn't been used "
-                        .formatted(vehicle, from, s.minutes(), until) + "since: possibly broken down.";
-                case VANISHED -> (s.minutes() < 1
-                        ? "Bus %s stopped reporting right there".formatted(vehicle)
-                        : stood + ", then stopped reporting")
-                        + " and wasn't seen again that day (switched off, or towed with its tracker off): "
-                        + "possibly broken down.";
-                case DROVE_OFF -> (s.minutes() < 1 ? "Bus %s moved off right away".formatted(vehicle)
-                        : stood + ", then moved off") + " without running a brigade; last seen at %s, %s away. "
-                        .formatted(ServiceDay.localTime(s.lastSeen().time()), distance(s.metres()))
-                        + "Not used again that day: possibly broken down.";
+                case STILL_THERE -> Phrase.of("stoodStillThere", "bus", vehicle, "from", from, "minutes", s.minutes(),
+                        "until", until);
+                case VANISHED -> s.minutes() < 1 ? Phrase.of("silentAtOnce", "bus", vehicle)
+                        : Phrase.of("silentAfterStanding", "bus", vehicle, "minutes", s.minutes(), "from", from,
+                        "until", until);
+                case DROVE_OFF -> s.minutes() < 1
+                        ? Phrase.of("movedOffAtOnce", "bus", vehicle,
+                        "seen", ServiceDay.localTime(s.lastSeen().time()), "away", distance(s.metres()))
+                        : Phrase.of("movedOffAfterStanding", "bus", vehicle, "minutes", s.minutes(), "from", from,
+                        "until", until, "seen", ServiceDay.localTime(s.lastSeen().time()),
+                        "away", distance(s.metres()));
             };
         }
 
-        /** "800 m" or "4.2 km". */
-        private static String distance(int metres) {
-            return metres < 1000 ? (metres / 50 * 50) + " m" : String.format(Locale.ROOT, "%.1f km", metres / 1000.0);
+        /** "800 m" or "4.2 km", as a phrase so the page writes the number its way. */
+        private static Phrase distance(int metres) {
+            return metres < 1000 ? Phrase.of("metres", "n", metres / 50 * 50)
+                    : Phrase.of("kilometres", "n", Math.round(metres / 100.0) / 10.0);
         }
 
         /** "the brigade's next trip towards X", or "line 10 (brigade 010-02)": what a report was on. */
-        private static String which(ScheduledTrip trip, Report r, String nextOrPrevious) {
+        private static Phrase which(ScheduledTrip trip, Report r, boolean next) {
             if (Objects.equals(r.brigade(), trip.brigade())) {
-                return "the brigade's " + nextOrPrevious + " trip"
-                        + (r.headsign() == null ? "" : " towards " + r.headsign());
+                String key = next ? "brigadeNextTrip" : "brigadePreviousTrip";
+                return r.headsign() == null ? Phrase.of(key) : Phrase.of(key + "Towards", "to", r.headsign());
             }
-            return "line " + r.line() + (r.brigade() == null ? "" : " (brigade " + r.brigade() + ")");
+            return r.brigade() == null ? Phrase.of("line", "line", r.line())
+                    : Phrase.of("lineBrigade", "line", r.line(), "brigade", r.brigade());
         }
 
-        private Outcome abnormal(ScheduledTrip trip, Kind kind, String note, List<Report> reports, Detour detour,
-                                 Handover handover) {
+        private Outcome abnormal(ScheduledTrip trip, Kind kind, List<Phrase> note, List<Report> reports,
+                                 Detour detour, Handover handover) {
             List<String> vehicles = reports.stream().map(Report::vehicle)
                     .collect(Collectors.toCollection(LinkedHashSet::new)).stream().toList();
             Integer fromStop = null;

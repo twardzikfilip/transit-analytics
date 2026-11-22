@@ -12,7 +12,7 @@ import { BusLanesPage } from './bus-lanes';
 import { BOTH_WAYS_COLOR, ONE_WAY_COLOR, arrowPoints, mapHeading } from './lane-direction-map';
 import {
   NO_SPEED_COLOR,
-  delayText,
+  delayPerKmText,
   headingText,
   linesText,
   slowdownText,
@@ -210,10 +210,10 @@ describe('Bus lanes page', () => {
   it('formats speeds, delays, headings and lines', () => {
     expect(speedText(17.64)).toBe('17.6 km/h');
     expect(speedText(null)).toBe('–');
-    expect(delayText(4)).toBe('+4.0 s/km');
-    expect(delayText(-4)).toBe('−4.0 s/km');
-    expect(delayText(0)).toBe('0.0 s/km');
-    expect(delayText(undefined)).toBe('–');
+    expect(delayPerKmText(4)).toBe('+4.0 s/km');
+    expect(delayPerKmText(-4)).toBe('−4.0 s/km');
+    expect(delayPerKmText(0)).toBe('0.0 s/km');
+    expect(delayPerKmText(undefined)).toBe('–');
     expect(slowdownText({ ...figures(20, 0), peakSlowdown: -3.2 })).toBe('3% faster');
     expect(slowdownText({ ...figures(20, 0), peakSlowdown: 0.2 })).toBe('no slower');
     expect(slowdownText(null)).toBe('–');

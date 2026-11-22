@@ -1,3 +1,5 @@
+import { Phrase } from './trip-anomalies';
+
 /**
  * Brigades (vehicle duties): every one in the timetable (GET /api/brigades), and one brigade's day, each trip
  * scheduled with what actually ran (GET /api/brigades/{brigade}/day).
@@ -72,7 +74,7 @@ export interface BrigadeTrip {
   arrival: string;
   stops: number;
   kind: BrigadeTripKind;
-  note: string | null;
+  note: Phrase[] | null;
   /** One per bus, in order: more than one when the bus was changed. */
   runs: ActualRun[];
   missing: MissingPart[];

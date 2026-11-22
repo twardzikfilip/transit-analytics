@@ -46,8 +46,6 @@ const PANES = { fills: 410, woods: 420, lines: 430 };
   styles: `
     :host {
       display: block;
-      --map-height: 560px;
-      --map-height-mobile: 380px;
     }
     .leaflet-map ::ng-deep .place-name {
       background: transparent;

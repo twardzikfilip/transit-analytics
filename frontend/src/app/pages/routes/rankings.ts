@@ -1,5 +1,5 @@
 import { LineStats, TimePeriod } from '../../core/models/models';
-import { kmh } from '../../shared/format/number';
+import { decimal, kmh } from '../../shared/format/number';
 import { formatDelay } from '../../shared/format/time';
 import { t } from '../../core/i18n/t';
 
@@ -34,8 +34,7 @@ export const TOP = 10;
 /** "every 7.5 min", "every 25 min", "every 1 h 15 min", "every 2 h". */
 export function frequency(minutes: number): string {
   const total = Math.round(minutes);
-  if (total < 60)
-    return t('routes.rank.everyMin', { n: minutes < 10 ? minutes.toFixed(1) : total });
+  if (total < 60) return t('routes.rank.everyMin', { n: minutes < 10 ? decimal(minutes) : total });
   const h = Math.floor(total / 60);
   const rest = total % 60;
   return rest ? t('routes.rank.everyHMin', { h, m: rest }) : t('routes.rank.everyH', { h });
@@ -60,7 +59,7 @@ export function rankings(peak: string, offPeak: string, delayDays: number): Rank
         { label: t('routes.rank.shortest'), descending: false },
       ],
       value: (l) => l.lengthKm,
-      format: (v) => t('routes.rank.km', { n: v.toFixed(1) }),
+      format: (v) => t('routes.rank.km', { n: decimal(v) }),
     },
     {
       key: 'peak-speed',
@@ -93,7 +92,7 @@ export function rankings(peak: string, offPeak: string, delayDays: number): Rank
         { label: t('routes.rank.leastRegular'), descending: true },
       ],
       value: (l) => l.peakRegularityCv,
-      format: (v) => t('routes.rank.cv', { n: v.toFixed(2) }),
+      format: (v) => t('routes.rank.cv', { n: decimal(v, 2) }),
     },
     {
       key: 'peak-delay',

@@ -44,7 +44,7 @@
               {{ u.vehicle.number }}
             </button>
             <span class="muted model">{{ u.vehicle.model ?? '—' }}</span>
-            <span class="num">{{ t('fleet.hours', { n: u.hours.toFixed(1) }) }}</span>
+            <span class="num">{{ t('fleet.hours', { n: decimal(u.hours) }) }}</span>
             <span class="muted lines">{{ u.lines.join(', ') }}</span>
           </li>
         } @empty {
@@ -62,7 +62,7 @@
               {{ u.vehicle.number }}
             </button>
             <span class="muted model">{{ u.vehicle.model ?? '—' }}</span>
-            <span class="num">{{ t('fleet.hours', { n: u.hours.toFixed(1) }) }}</span>
+            <span class="num">{{ t('fleet.hours', { n: decimal(u.hours) }) }}</span>
             <span class="muted lines">{{ u.lines.join(', ') }}</span>
           </li>
         } @empty {

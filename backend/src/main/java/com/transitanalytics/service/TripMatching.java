@@ -1,6 +1,8 @@
 package com.transitanalytics.service;
 
 import com.transitanalytics.geo.Geo;
+import com.transitanalytics.service.TripAnomalies.Report;
+import com.transitanalytics.service.TripAnomalies.ScheduledTrip;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -14,7 +16,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static com.transitanalytics.service.TripAnomalies.*;
+import static com.transitanalytics.service.TripAnomalies.MATCH_TOLERANCE;
 
 /**
  * Part of {@link TripAnomalies}: which scheduled trip each report belongs to (by brigade, time, line and headsign),

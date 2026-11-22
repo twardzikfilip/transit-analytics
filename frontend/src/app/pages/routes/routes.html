@@ -48,9 +48,9 @@
             <span class="share">{{
               t('routes.laneShare', {
                 to: b.to,
-                lane: b.laneKm.toFixed(1),
-                km: b.km.toFixed(1),
-                pct: b.percent.toFixed(0),
+                lane: decimal(b.laneKm),
+                km: decimal(b.km),
+                pct: int(b.percent),
               }) + (last ? '' : ';')
             }}</span>{{ ' ' }}
           }

@@ -3,6 +3,7 @@ import { hostWidth } from '../host-width';
 import { niceTicks, segments } from '../time-series-chart/chart-geometry';
 import { clock, hourTickStep } from '../format/time';
 import { t } from '../../core/i18n/t';
+import { num } from '../format/number';
 
 /** A point at an hour of the service day (fractional; 24+ is after midnight). */
 export interface HourPoint {
@@ -57,7 +58,7 @@ export class HourChart {
   /** Spacing of the points in hours (1 = hourly), to find gaps and to label the hovered slot. */
   readonly step = input(1);
   readonly unit = input('');
-  readonly format = input<(v: number) => string>((v) => String(Math.round(v * 10) / 10));
+  readonly format = input<(v: number) => string>((v) => num(v));
   readonly label = input('');
   readonly loading = input(false);
   /** Shown when there's nothing to draw; "Nothing recorded yet." by default. */

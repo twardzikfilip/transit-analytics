@@ -22,7 +22,7 @@ export const PROBLEMS: BrigadeTripKind[] = [
 ];
 
 /** "+1:20" late, "−0:40" early, "on time" within 30 s; "–" unknown. */
-export function delayText(seconds: number | null | undefined): string {
+export function departureDelayText(seconds: number | null | undefined): string {
   if (seconds === null || seconds === undefined) return '–';
   if (Math.abs(seconds) < 30) return t('brigades.onTime');
   return (seconds > 0 ? '+' : '') + formatDelay(seconds);

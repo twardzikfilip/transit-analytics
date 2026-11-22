@@ -387,7 +387,7 @@ class SecurityWebTest {
                 List.of("103"), NOW, List.of(new FleetDto.Day(LocalDate.of(2026, 11, 16), from, 1.5,
                 List.of(new FleetDto.Run(18000, 21000, "103", "103-05", "Choroszcz")), List.of())),
                 List.of(new FleetDto.Incident("missed", LocalDate.of(2026, 11, 16), "103", "103-05", "Choroszcz",
-                        from, "Between the brigade's runs.", List.of(), List.of(), List.of())));
+                        from, List.of(TripAnomalyDto.Phrase.of("betweenRuns")), List.of(), List.of(), List.of())));
         given(fleetService.vehicle(7L, new ReportWindow(from, NOW))).willReturn(detail);
 
         mvc.perform(get("/api/fleet/vehicles/7").param("from", from.toString())
@@ -444,7 +444,8 @@ class SecurityWebTest {
 
     @Test
     void guestCanReadAbnormalTripsForAWindow() throws Exception {
-        var trip = new TripAnomalyDto.Trip("lost", "Bus 319 stopped reporting.", "012-02_P_1", "12", "012-02",
+        var trip = new TripAnomalyDto.Trip("lost",
+                List.of(TripAnomalyDto.Phrase.of("lostForGood", "bus", "319")), "012-02_P_1", "12", "012-02",
                 "Hetmańska", "Starosielce", "Hetmańska", Instant.parse("2026-11-15T08:15:00Z"),
                 Instant.parse("2026-11-15T09:00:00Z"), 25, List.of("319"), 1, 8, "Starosielce", "Gen. Fieldorfa",
                 Instant.parse("2026-11-15T08:16:00Z"), Instant.parse("2026-11-15T09:24:00Z"), 0, 120, 60, null,

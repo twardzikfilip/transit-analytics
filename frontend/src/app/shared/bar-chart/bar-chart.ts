@@ -1,5 +1,6 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 import { hostWidth } from '../host-width';
+import { num } from '../format/number';
 
 /** One bar: its key (for selection), axis label, value, and tooltip lines. */
 export interface Bar {
@@ -126,16 +127,6 @@ export function valueTicks(max: number, count = 4): number[] {
       max-width: 100%;
       overflow: visible;
     }
-    .grid {
-      stroke: var(--border);
-      stroke-width: 1;
-      shape-rendering: crispEdges;
-    }
-    .axis-label {
-      fill: var(--muted);
-      font-size: 11px;
-      font-variant-numeric: tabular-nums;
-    }
     .bar {
       fill: var(--chart-line);
     }
@@ -160,7 +151,7 @@ export class BarChart {
   /** Describes the chart for screen readers; a table view should accompany it. */
   readonly label = input.required<string>();
   /** Formats axis values, e.g. hours. */
-  readonly format = input<(value: number) => string>((v) => String(v));
+  readonly format = input<(value: number) => string>((v) => num(v, 2));
   readonly selected = input<string | number | null>(null);
   readonly selectable = input(false);
   readonly picked = output<string | number>();

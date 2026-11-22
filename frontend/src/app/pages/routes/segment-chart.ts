@@ -4,6 +4,7 @@ import { SegmentProfile } from '../../core/models/models';
 import { niceTicks } from '../../shared/time-series-chart/chart-geometry';
 import { slowestSegments } from './format';
 import { t as tr } from '../../core/i18n/t';
+import { num } from '../../shared/format/number';
 
 const HEIGHT = 220;
 const MARGIN = { top: 22, right: 16, bottom: 28, left: 44 };
@@ -55,7 +56,7 @@ export class SegmentChart {
     const ticks = niceTicks(span, Math.max(2, Math.floor(this.width() / 80)));
     return ticks
       .filter((t) => t <= span + 1e-9)
-      .map((t) => ({ x: this.x(this.firstKm() + t), text: `${t} km` }));
+      .map((t) => ({ x: this.x(this.firstKm() + t), text: `${num(t, 2)} km` }));
   });
 
   /** One bar per segment with a 1px gap on each side; very short segments keep at least 1px. */

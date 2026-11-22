@@ -5,6 +5,7 @@ import { PathLine, PathMap } from '../map/path-map';
 import { cssColor } from '../palette';
 import { IncidentTimeline } from './incident-timeline';
 import { t } from '../../core/i18n/t';
+import { phrasesText } from '../i18n/phrases';
 
 /**
  * A breakdown (a change of bus) told step by step: a time line of what each bus did, with the steps numbered on its
@@ -20,7 +21,7 @@ import { t } from '../../core/i18n/t';
       @for (s of story(); track $index) {
         <li>
           <span class="time">{{ time(s.at) }}</span>
-          {{ s.text }}
+          {{ phrasesText(s.text) }}
         </li>
       }
     </ol>
@@ -60,6 +61,7 @@ export class IncidentStory {
   /** Where each bus went over the time line; the first is the one that broke down. */
   readonly paths = input<{ vehicle: string; points: [number, number][] }[]>([]);
   protected readonly time = localTime;
+  protected readonly phrasesText = phrasesText;
 
   protected readonly lines = computed<PathLine[]>(() => {
     const colors = [cssColor('--chart-series-2', '#eb6834'), cssColor('--chart-line', '#1e88e5')];

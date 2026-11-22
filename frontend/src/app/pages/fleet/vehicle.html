@@ -16,7 +16,7 @@
           {{
             t('fleet.inServiceOn', {
               agency: d.vehicle.agency ?? '—',
-              hours: d.hours.toFixed(1),
+              hours: decimal(d.hours),
               days: tn('fleet.days', d.days.length),
             })
           }}
@@ -72,7 +72,7 @@
                 </span>
               </td>
               <td>
-                {{ i.note }}
+                {{ phrasesText(i.note) }}
                 @if (i.story.length) {
                   <button
                     type="button"

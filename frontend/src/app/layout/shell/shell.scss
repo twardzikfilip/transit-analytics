@@ -128,8 +128,11 @@ $header-height: 56px;
 
   a,
   button {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
     width: 100%;
+    white-space: nowrap;
     text-align: left;
     padding: 0.55rem 1rem;
     background: none;

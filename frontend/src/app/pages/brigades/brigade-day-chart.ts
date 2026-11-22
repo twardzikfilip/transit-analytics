@@ -8,7 +8,7 @@ import {
   NOT_SEEN_COLOR,
   actualSpan,
   busesText,
-  delayText,
+  departureDelayText,
   span,
   tripLabel,
 } from './brigade-format';
@@ -25,6 +25,7 @@ import {
   tripRows,
 } from './brigade-day-layout';
 import { t as tr } from '../../core/i18n/t';
+import { phrasesText } from '../../shared/i18n/phrases';
 
 export { CHART_HEIGHT, MIN_PX_PER_MIN, fit } from './brigade-day-layout';
 
@@ -82,10 +83,10 @@ export class BrigadeDayChart {
       scheduled: `${span(t.departure, t.arrival)} (${t.from} → ${t.to})`,
       actual: actualSpan(t),
       buses: t.runs.length ? busesText(t) : '',
-      start: delayText(first?.startDelay),
-      end: delayText(last?.endDelay),
+      start: departureDelayText(first?.startDelay),
+      end: departureDelayText(last?.endDelay),
       kind: kindLabel(t.kind),
-      note: t.note,
+      note: phrasesText(t.note),
     };
   });
 }

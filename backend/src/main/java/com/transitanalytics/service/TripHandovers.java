@@ -2,6 +2,8 @@ package com.transitanalytics.service;
 
 import com.transitanalytics.dto.TripAnomalyDto;
 import com.transitanalytics.geo.Geo;
+import com.transitanalytics.service.TripAnomalies.Report;
+import com.transitanalytics.service.TripAnomalies.ScheduledTrip;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -11,8 +13,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import static com.transitanalytics.service.TripAnomalies.*;
-import static com.transitanalytics.service.TripShapes.*;
+import static com.transitanalytics.service.TripAnomalies.CHANGE_OVERLAP;
+import static com.transitanalytics.service.TripAnomalies.CHANGE_REPORTS;
+import static com.transitanalytics.service.TripAnomalies.IN_SERVICE_DELAY_SECONDS;
+import static com.transitanalytics.service.TripAnomalies.START_STOPS;
+import static com.transitanalytics.service.TripAnomalies.after;
+import static com.transitanalytics.service.TripAnomalies.before;
 
 /**
  * Part of {@link TripAnomalies}: a trip's bus changing on the way, and what became of the bus it left.
@@ -108,10 +114,11 @@ final class TripHandovers {
     /**
      * A change of bus explained: the replaced bus's fate (and, when it wasn't used again, how it stood), where the
      * replacement came from (its last line and brigade before; null when it hadn't run another brigade that day),
-     * and the whole story in words.
+     * and the whole story in phrases.
      */
-    record Handover(Change change, Fate fate, Stand stand, String fromLine, String fromBrigade, String note,
-                    List<TripAnomalyDto.Step> story, List<TripAnomalyDto.Span> spans) {
+    record Handover(Change change, Fate fate, Stand stand, String fromLine, String fromBrigade,
+                    List<TripAnomalyDto.Phrase> note, List<TripAnomalyDto.Step> story,
+                    List<TripAnomalyDto.Span> spans) {
     }
 
     /** Reports within this distance of each other are the same place: a bus standing, or a takeover on the spot. */

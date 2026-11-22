@@ -200,8 +200,8 @@ describe('Network coverage page', () => {
       '95.0%',
       '98.0%',
     ]);
-    expect(text(el.querySelector('table.districts tfoot tr'))).toContain('13 243');
-    expect(text(el.querySelector('table.districts tr.official'))).toContain('289 217');
+    expect(text(el.querySelector('table.districts tfoot tr'))).toContain('13,243');
+    expect(text(el.querySelector('table.districts tr.official'))).toContain('289,217');
 
     const wooded = el.querySelectorAll('table.wooded tbody tr');
     expect(wooded).toHaveLength(1);
@@ -251,7 +251,7 @@ describe('Network coverage page', () => {
     expect(densityColor(463)).toBe(DENSITY_SCALE[1].color);
     expect(densityColor(2500)).toBe(DENSITY_SCALE[3].color);
     expect(densityColor(13719)).toBe(DENSITY_SCALE[5].color);
-    expect(densityStepLabel(DENSITY_SCALE[5])).toBe(`${(10000).toLocaleString('pl-PL')} and more`);
+    expect(densityStepLabel(DENSITY_SCALE[5])).toBe('10,000 and more');
     expect(labelMinKm2(14)).toBe(0);
     expect(labelMinKm2(11)).toBe(6);
     expect(asOf('2021-03-31')).toBe('2021 census');

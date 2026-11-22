@@ -547,15 +547,53 @@ app-time-window label {
   font-size: 0.8rem;
 }
 
+/* Hidden on screen, read by screen readers. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Charts (SVG): grid lines and axes, and their labels. A chart's own styles win over these. */
+svg .grid,
+svg .axis {
+  stroke: var(--border);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+svg .axis-label {
+  fill: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* "How this is calculated": the explanation folded away at the foot of a page. */
+.how {
+  font-size: 0.9rem;
+
+  summary {
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  li + li {
+    margin-top: 0.35rem;
+  }
+}
+
 /* Maps: a Leaflet map's box (pages set --map-height), and the grey base map that lets coloured data stand out. */
 .leaflet-map {
-  height: var(--map-height, 520px);
+  height: var(--map-height, 560px);
   border-radius: var(--radius);
 }
 
 @media (max-width: 600px) {
   .leaflet-map {
-    height: var(--map-height-mobile, 360px);
+    height: var(--map-height-mobile, 380px);
   }
 
   /* A phone: tighter cards, and two small figure tiles side by side rather than one per row. */

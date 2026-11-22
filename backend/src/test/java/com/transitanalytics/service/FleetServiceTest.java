@@ -127,7 +127,8 @@ class FleetServiceTest {
     }
 
     private static Outcome outcome(Kind kind, String fate, List<Long> vehicles, String departure) {
-        var trip = new TripAnomalyDto.Trip(kind.key, "note " + departure, "t" + departure, "9", "009-01", "North",
+        var trip = new TripAnomalyDto.Trip(kind.key,
+                List.of(TripAnomalyDto.Phrase.of("betweenRuns")), "t" + departure, "9", "009-01", "North",
                 "A", "E", at(departure), at(departure).plusSeconds(600), 5, List.of(), null, null, null, null, null,
                 null, null, null, null, null, null, null, null, List.of(), List.of(), fate, null, null, null, null, null, "D", null, null,
                 at(departure).plusSeconds(240), null, null, null, null, List.of(), List.of());

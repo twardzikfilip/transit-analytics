@@ -2,6 +2,7 @@ import { Breakdown, FleetVehicle, VehicleDetail, VehicleUsage } from '../../core
 import { Bar } from '../../shared/bar-chart/bar-chart';
 import { clock } from '../../shared/format/time';
 import { intlLocale, t, tn } from '../../core/i18n/t';
+import { decimal, num } from '../../shared/format/number';
 
 const DAY_MS = 86_400_000;
 
@@ -42,8 +43,8 @@ export function daysOutText(b: Breakdown): string {
   return t(b.returned ? 'fleet.backAfter' : 'fleet.notBackYet', { days });
 }
 
-/** Share in whole percent; 0 of 0 is 0. */
-export function percent(part: number, whole: number): number {
+/** A share in whole percent (67 for 2 of 3); 0 of 0 is 0. */
+export function wholePercent(part: number, whole: number): number {
   return whole > 0 ? Math.round((part / whole) * 100) : 0;
 }
 
@@ -133,7 +134,7 @@ export function dailyBars(detail: VehicleDetail): Bar[] {
       key: d.day,
       label: dayMonth(d.day),
       value: d.hours,
-      title: `${dayLabel(d.day)}: ${t('fleet.hours', { n: d.hours.toFixed(1) })}`,
+      title: `${dayLabel(d.day)}: ${t('fleet.hours', { n: decimal(d.hours) })}`,
       detail: incidents
         ? tn('fleet.abnormalTrips', incidents)
         : tn('fleet.runsCount', d.runs.length),
@@ -148,7 +149,7 @@ export function usageBars(usage: VehicleUsage[]): Bar[] {
     key: u.vehicle.id,
     label: u.vehicle.number,
     value: u.hours,
-    title: `${u.vehicle.number}: ${t('fleet.hours', { n: u.hours.toFixed(1) })}`,
+    title: `${u.vehicle.number}: ${t('fleet.hours', { n: decimal(u.hours) })}`,
     detail: [
       u.vehicle.model,
       u.lines.length
@@ -161,7 +162,7 @@ export function usageBars(usage: VehicleUsage[]): Bar[] {
 }
 
 /** "1.5 h" axis labels. */
-export const hoursAxis = (v: number) => t('fleet.hours', { n: v });
+export const hoursAxis = (v: number) => t('fleet.hours', { n: num(v) });
 
 /** A size class in words, with its lengths (as configured in the backend's classification/vehicles.yml). */
 export function vehicleClassLabel(vehicleClass: string): string {

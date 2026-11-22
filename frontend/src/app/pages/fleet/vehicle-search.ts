@@ -2,6 +2,7 @@ import { Component, computed, input, output, signal } from '@angular/core';
 import { VehicleUsage } from '../../core/models/models';
 import { searchVehicles } from './fleet-format';
 import { t } from '../../core/i18n/t';
+import { decimal } from '../../shared/format/number';
 
 /** Find a bus by number or model among the fleet's buses; choosing one emits its id. */
 @Component({
@@ -11,6 +12,7 @@ import { t } from '../../core/i18n/t';
 })
 export class VehicleSearch {
   protected readonly t = t;
+  protected readonly decimal = decimal;
   /** The fleet's buses with their hours in the window. */
   readonly usage = input.required<VehicleUsage[]>();
   readonly choose = output<number>();

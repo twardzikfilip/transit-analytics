@@ -4,7 +4,7 @@ import { DelayExample } from '../../core/models/models';
 import { hostWidth } from '../../shared/host-width';
 import { localTime } from '../../shared/format/time';
 import { niceTicks } from '../../shared/time-series-chart/chart-geometry';
-import { changeClass, delayText, signedChange } from './delay-scale';
+import { changeClass, lateOrEarlyText, signedChange } from './delay-scale';
 import { LocalDatePipe } from '../../shared/i18n/locale-pipes';
 import { t as tr } from '../../core/i18n/t';
 
@@ -39,7 +39,7 @@ export function scheduledTime(left: string, delaySeconds: number): string {
         tr('delayGen.profile.left', {
           stop: run().stops[0].stop,
           time: time(run().stops[0].left),
-          delay: delayText(run().stops[0].delaySeconds),
+          delay: lateOrEarlyText(run().stops[0].delaySeconds),
           gain: signed(run().gainSeconds),
           last: run().stops[run().stops.length - 1].stop,
         })
@@ -51,8 +51,8 @@ export function scheduledTime(left: string, delaySeconds: number): string {
       role="img"
       [attr.aria-label]="
         tr('delayGen.profile.label', {
-          from: delayText(run().stops[0].delaySeconds),
-          to: delayText(run().stops[run().stops.length - 1].delaySeconds),
+          from: lateOrEarlyText(run().stops[0].delaySeconds),
+          to: lateOrEarlyText(run().stops[run().stops.length - 1].delaySeconds),
         })
       "
     >
@@ -81,7 +81,7 @@ export function scheduledTime(left: string, delaySeconds: number): string {
       }
       @for (p of run().stops; track $index; let i = $index) {
         <circle class="dot" [attr.cx]="x(i)" [attr.cy]="y(p.delaySeconds)" r="3.5">
-          <title>{{ p.stop }}: {{ delayText(p.delaySeconds) }}</title>
+          <title>{{ p.stop }}: {{ lateOrEarlyText(p.delaySeconds) }}</title>
         </circle>
       }
     </svg>
@@ -102,7 +102,7 @@ export function scheduledTime(left: string, delaySeconds: number): string {
               <td>{{ p.stop }}</td>
               <td class="num">{{ time(p.left) }}</td>
               <td class="num muted">{{ scheduled(p.left, p.delaySeconds) }}</td>
-              <td class="num">{{ delayText(p.delaySeconds) }}</td>
+              <td class="num">{{ lateOrEarlyText(p.delaySeconds) }}</td>
               <td class="num">
                 @if (i > 0 && run().stops[i - 1].seq + 1 === p.seq) {
                   <span
@@ -249,7 +249,7 @@ export class TripProfile {
   protected readonly time = localTime;
   protected readonly scheduled = scheduledTime;
   protected readonly signed = signedChange;
-  protected readonly delayText = delayText;
+  protected readonly lateOrEarlyText = lateOrEarlyText;
 
   protected color(seconds: number): string {
     return changeClass(seconds).color;

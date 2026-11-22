@@ -4,6 +4,7 @@ import { clock, formatDelay } from '../../shared/format/time';
 import { HourBand, HourChart, HourSeries, RefLine } from '../../shared/hour-chart/hour-chart';
 import { LocalDatePipe, LocalNumberPipe } from '../../shared/i18n/locale-pipes';
 import { t as tr, tn } from '../../core/i18n/t';
+import { decimal } from '../../shared/format/number';
 
 /** A chart's data: series, band and reference lines for the hour chart. */
 interface HourChartData {
@@ -82,7 +83,7 @@ export class TravelCharts {
     refs: [],
   }));
   protected readonly minutes = (v: number) => String(Math.round(v));
-  protected readonly speed = (v: number) => (Math.round(v * 10) / 10).toFixed(1);
+  protected readonly speed = (v: number) => decimal(v);
   /** Minutes as "m:ss" (a delay chart's values are in minutes). */
   protected readonly delayMinutes = (minutes: number) => formatDelay(minutes * 60);
 }

@@ -1,4 +1,5 @@
 import { t } from '../core/i18n/t';
+import { decimal } from './format/number';
 /**
  * Regularity grades for the coefficient of variation (CV) of headways — standard deviation of the gaps between
  * departures divided by their mean; 0 = perfectly even. Bands as in the Transit Capacity and Quality of Service
@@ -24,7 +25,7 @@ export function regularityMeaning(cv: number | null): string {
   return t('regularity.grade', {
     grade: g.grade,
     meaning: gradeMeaning(g.grade),
-    cv: cv.toFixed(2),
+    cv: decimal(cv, 2),
   });
 }
 

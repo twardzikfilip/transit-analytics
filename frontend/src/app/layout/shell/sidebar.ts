@@ -60,7 +60,6 @@ export class Sidebar {
         { path: '/stops', label: 'nav.stops', icon: 'stops' },
         { path: '/trips', label: 'nav.trips', icon: 'trips' },
         { path: '/stop-times', label: 'nav.stopTimes', icon: 'stopTimes' },
-        { path: '/sources', label: 'nav.sources', icon: 'sources' },
       ],
     },
   ];

@@ -9,21 +9,8 @@
   margin: 0;
 }
 
-.how {
-  font-size: 0.9rem;
-
-  ol {
-    margin: 0.3rem 0;
-  }
-
-  summary {
-    cursor: pointer;
-    font-weight: 600;
-  }
-
-  li + li {
-    margin-top: 0.35rem;
-  }
+.how ol {
+  margin: 0.3rem 0;
 }
 
 .maps {

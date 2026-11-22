@@ -21,7 +21,7 @@ import {
   joinedAt,
   stoodLabel,
   kindLabel,
-  percent,
+  shareText,
   replacementFrom,
   signedDelay,
 } from './trip-kinds';
@@ -30,7 +30,12 @@ const trip = (kind: TripAnomalyKind, line: string, i = 0): AbnormalTrip => {
   const run = kind !== 'missed' && kind !== 'cancelled';
   return {
     kind,
-    note: `${kind} note`,
+    note: [
+      {
+        key: 'lostForGood',
+        params: { bus: '319', stop: 'Lipowa', index: 8, total: 25, time: '07:20' },
+      },
+    ],
     tripId: `${line}-0${i}_P_${i}`,
     line,
     brigade: `0${line}-0${i}`,
@@ -87,9 +92,55 @@ const trip = (kind: TripAnomalyKind, line: string, i = 0): AbnormalTrip => {
     story:
       kind === 'vehicle-changed'
         ? [
-            { at: '2026-11-17T07:01:00Z', text: 'Bus 319 runs line 9.' },
-            { at: '2026-11-17T07:10:00Z', text: "Bus 319 stops and doesn't move on." },
-            { at: '2026-11-17T07:27:00Z', text: 'Bus 412 takes over.' },
+            {
+              at: '2026-11-17T07:01:00Z',
+              text: [
+                {
+                  key: 'stepRuns',
+                  params: {
+                    bus: '319',
+                    line: '9',
+                    to: 'Dworzec',
+                    stop: 'Rynek',
+                    index: 1,
+                    total: 25,
+                  },
+                },
+              ],
+            },
+            {
+              at: '2026-11-17T07:10:00Z',
+              text: [
+                {
+                  key: 'stepStops',
+                  params: {
+                    bus: '319',
+                    stop: 'Lipowa',
+                    index: 8,
+                    total: 25,
+                    then: { key: 'thenStays', params: {} },
+                  },
+                },
+              ],
+            },
+            {
+              at: '2026-11-17T07:27:00Z',
+              text: [
+                {
+                  key: 'stepTakesOver',
+                  params: {
+                    bus: '412',
+                    joined: { key: 'stopsFurtherOn', params: { n: 2 } },
+                    stop: 'Lipowa',
+                    index: 10,
+                    total: 25,
+                    away: { key: 'kilometres', params: { n: 1.5 } },
+                    other: '319',
+                  },
+                },
+                { key: 'stepNoBusFor', params: { n: 17 } },
+              ],
+            },
           ]
         : [],
     timeline:
@@ -234,7 +285,9 @@ describe('Abnormal trips page', () => {
     expect(lost[4]).toContain('Stops 1–8 of 25');
     expect(cells[4].getAttribute('title')).toBe('Heading to Rynek … Lipowa');
     expect(lost[5]).toBe('0:00 · +2:15 · −0:40');
-    expect(lost[6]).toBe('lost note');
+    expect(lost[6]).toBe(
+      "Bus 319 stopped reporting heading to Lipowa (stop 8 of 25) at 07:20 and wasn't seen again that day.",
+    );
     const missed = [...rows[1].querySelectorAll('td')].map(text);
     expect(missed[3]).toBe('—');
     expect(missed[4]).toBe('Not run');
@@ -416,10 +469,10 @@ describe('Abnormal trips page', () => {
         ),
       ),
     ).toBe(false);
-    expect(percent(4, 3500)).toBe('0.1%');
-    expect(percent(0, 10)).toBe('0%');
-    expect(percent(1, 0)).toBe('—');
-    expect(percent(3400, 3500)).toBe('97%');
+    expect(shareText(4, 3500)).toBe('0.1%');
+    expect(shareText(0, 10)).toBe('0%');
+    expect(shareText(1, 0)).toBe('—');
+    expect(shareText(3400, 3500)).toBe('97%');
     expect(signedDelay(135)).toBe('+2:15');
     expect(signedDelay(-40)).toBe('−0:40');
     expect(signedDelay(null)).toBe('—');

@@ -50,13 +50,6 @@ svg {
   overflow: visible;
 }
 
-.grid {
-  stroke: var(--border);
-  stroke-width: 1;
-  shape-rendering: crispEdges;
-}
-
-.axis-label,
 .time {
   fill: var(--muted);
   font-size: 11px;

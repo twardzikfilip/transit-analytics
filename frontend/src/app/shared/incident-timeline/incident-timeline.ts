@@ -2,8 +2,8 @@ import { Component, computed, input } from '@angular/core';
 import { IncidentSpan, IncidentStep } from '../../core/models/models';
 import { localTime } from '../format/time';
 import { t } from '../../core/i18n/t';
+import { phrasesText } from '../i18n/phrases';
 
-/** How each kind of stretch is drawn and named in the legend. */
 /** What a bus was doing, in the legend's order; `label` is a translation key. */
 export const SPAN_KINDS: { kind: IncidentSpan['kind']; label: string }[] = [
   { kind: 'running', label: 'incident.running' },
@@ -137,7 +137,7 @@ export class IncidentTimeline {
       const left = this.position(Date.parse(s.at));
       lifted = left - previous < STEP_SPACING && !lifted;
       previous = left;
-      return { left, lift: lifted, time: localTime(s.at), text: s.text };
+      return { left, lift: lifted, time: localTime(s.at), text: phrasesText(s.text) };
     });
   });
 

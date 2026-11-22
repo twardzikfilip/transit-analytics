@@ -1,4 +1,4 @@
-import { IncidentSpan, IncidentStep } from './trip-anomalies';
+import { IncidentSpan, IncidentStep, Phrase } from './trip-anomalies';
 import { VehicleClass } from './vehicles';
 /** The fleet: how its buses were used in a time window, and one bus in detail, from recorded positions. */
 
@@ -103,7 +103,7 @@ export interface VehicleIncident {
   brigade: string;
   headsign: string | null;
   scheduledDeparture: string;
-  note: string;
+  note: Phrase[];
   /** On a breakdown: what happened step by step, and what each bus (it and its replacement) did when. */
   story: IncidentStep[];
   timeline: IncidentSpan[];
