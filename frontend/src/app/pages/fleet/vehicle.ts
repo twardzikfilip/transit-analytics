@@ -21,6 +21,7 @@ import { LocalDatePipe } from '../../shared/i18n/locale-pipes';
 import { t, tn } from '../../core/i18n/t';
 import { decimal } from '../../shared/format/number';
 import { phrasesText } from '../../shared/i18n/phrases';
+import { LineBadge } from '../../shared/line-kind/line-kinds';
 
 /**
  * One bus (/vehicles/7, its id): its runs day by day, its hours per day and the abnormal trips it was part of,
@@ -29,6 +30,7 @@ import { phrasesText } from '../../shared/i18n/phrases';
 @Component({
   selector: 'app-fleet-vehicle',
   imports: [
+    LineBadge,
     Skeleton,
     LocalDatePipe,
     TimeWindowPicker,

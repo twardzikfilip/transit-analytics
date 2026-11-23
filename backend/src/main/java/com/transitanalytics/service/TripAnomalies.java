@@ -2,6 +2,7 @@ package com.transitanalytics.service;
 
 import com.transitanalytics.dto.TripAnomalyDto.Phrase;
 import com.transitanalytics.dto.TripAnomalyDto;
+import com.transitanalytics.geo.Geo;
 import com.transitanalytics.recording.DelayOutliers;
 import com.transitanalytics.service.TripHandovers.Change;
 import com.transitanalytics.service.TripHandovers.Fate;
@@ -93,6 +94,17 @@ final class TripAnomalies {
     static final Duration STRAIGHT_FROM = Duration.ofMinutes(30);
     /** Two reports of a detour are consecutive when at most this far apart. */
     static final Duration DETOUR_REPORT_GAP = Duration.ofSeconds(90);
+    /**
+     * A bus leaving a trip for its brigade's next one, reporting all along, turned short only when it left at least
+     * this many stops before the end: the feed often moves a bus on to its next trip two or three stops early.
+     */
+    static final int SHORT_TURN_STOPS = 3;
+    /** …and when its delay was at least this much smaller on the next trip (turning short is how a bus catches up)… */
+    static final int SHORT_TURN_GAIN_SECONDS = 180;
+    /** …and it didn't come this close to the trip's last stop afterwards (it drove on to the end after all). */
+    static final double REACHED_END_METERS = 300;
+    /** The next trip's delay is its first one within this long of leaving the trip. */
+    static final Duration NEXT_DELAY_WITHIN = Duration.ofMinutes(15);
 
     private TripAnomalies() {
     }
@@ -164,16 +176,23 @@ final class TripAnomalies {
     }
 
     /**
-     * A judged trip: its line, scheduled run and outcome, and the details when it is abnormal.
+     * A judged trip: its id (unique on its day), line, scheduled run and outcome, and the details when it is
+     * abnormal.
      *
-     * @param vehicleIds the buses seen on it, in order (ids; the trip lists their numbers)
+     * @param vehicleIds the buses seen on it, in order (ids; an abnormal trip lists their numbers); for a trip not
+     *                   run, the brigade's bus that day
      */
-    record Outcome(String line, Instant departure, Instant arrival, Kind kind, TripAnomalyDto.Trip trip,
-                   List<Long> vehicleIds) {
+    record Outcome(String tripId, String line, Instant departure, Instant arrival, Kind kind,
+                   TripAnomalyDto.Trip trip, List<Long> vehicleIds) {
+    }
+
+    /** The buses of some reports, in order of first report. */
+    private static List<Long> vehicleIds(List<Report> reports) {
+        return reports.stream().map(Report::vehicleId).distinct().toList();
     }
 
     private static Outcome outcome(ScheduledTrip trip, Kind kind) {
-        return new Outcome(trip.line(), trip.departure(), trip.arrival(), kind, null, List.of());
+        return new Outcome(trip.tripId(), trip.line(), trip.departure(), trip.arrival(), kind, null, List.of());
     }
 
     // ---- Recording ------------------------------------------------------------------------------------------
@@ -280,7 +299,7 @@ final class TripAnomalies {
             note.addAll(whereabouts(trip, run));
             Outcome missed = abnormal(trip, Kind.MISSED, note, List.of(), null, null);
             // Not seen on the trip, but the brigade's bus that day (of its nearest run) is the one that missed it.
-            return new Outcome(missed.line(), missed.departure(), missed.arrival(), missed.kind(), missed.trip(),
+            return new Outcome(missed.tripId(), missed.line(), missed.departure(), missed.arrival(), missed.kind(), missed.trip(),
                     List.of(nearestBus(trip, run).vehicleId()));
         }
 
@@ -340,7 +359,13 @@ final class TripAnomalies {
             int fromIndex = sorted.stream().mapToInt(r -> trip.index(r.nextSeq())).min().orElse(0);
             int toIndex = sorted.stream().mapToInt(r -> trip.index(r.nextSeq())).max().orElse(0);
             boolean started = fromIndex < START_STOPS;
-            boolean finished = toIndex >= trip.size() - END_STOPS;
+            // Its last report at the furthest stop it reached (later ones may be waiting there to turn).
+            Report last = sorted.stream().filter(rep -> trip.index(rep.nextSeq()) == toIndex)
+                    .reduce((a, b) -> b).orElseThrow();
+            Report next = after(byVehicle.get(last.vehicleId()), last.time());
+            // Moved on to another trip, reporting all along, but not a real short turn: the feed moved it on early.
+            boolean finished = toIndex >= trip.size() - END_STOPS
+                    || continuous(last, next) && !turnedShort(trip, toIndex, last, next);
             Detour detour = TripShapes.detour(trip, sorted, shapes.get(trip.shapeId()));
             List<Phrase> detourNote = detour == null ? List.of() : List.of(Phrase.of("detour",
                     "minutes", detour.minutes(), "meters", detour.meters(), "after", detour.from()));
@@ -358,7 +383,8 @@ final class TripAnomalies {
                 return change != null
                         ? abnormal(trip, Kind.VEHICLE_CHANGED, join(Phrase.of("runInFull"), changeNote, detourNote),
                         sorted, detour, handover)
-                        : detour == null ? outcome(trip, Kind.COMPLETED)
+                        : detour == null ? new Outcome(trip.tripId(), trip.line(), trip.departure(), trip.arrival(),
+                        Kind.COMPLETED, null, vehicleIds(sorted))
                         : abnormal(trip, Kind.DETOUR, join(Phrase.of("runInFull"), detourNote), sorted, detour,
                         null);
             }
@@ -378,10 +404,6 @@ final class TripAnomalies {
                 }
             }
             if (!finished) {
-                // Its last report at the furthest stop it reached (later ones may be waiting there to turn).
-                Report last = sorted.stream().filter(rep -> trip.index(rep.nextSeq()) == toIndex)
-                        .reduce((a, b) -> b).orElseThrow();
-                Report next = after(byVehicle.get(last.vehicleId()), last.time());
                 if (continuous(last, next)) {
                     kind = Kind.SHORT_TURNED;
                     notes.add(Phrase.of("leftTrip", heading(trip, toIndex, last.time(),
@@ -408,6 +430,28 @@ final class TripAnomalies {
                 }
             }
             return abnormal(trip, kind, join(null, notes, changeNote, detourNote), sorted, detour, handover);
+        }
+
+        /**
+         * Whether a bus that left a trip heading to stop {@code toIndex} and went on reporting ({@code next} the
+         * report after its last on the trip) really turned short: it went on to its brigade's next trip (not to the
+         * depot), at least {@link #SHORT_TURN_STOPS} stops before the end, caught up at least
+         * {@link #SHORT_TURN_GAIN_SECONDS}, and didn't drive on to the trip's last stop after all.
+         */
+        private boolean turnedShort(ScheduledTrip trip, int toIndex, Report last, Report next) {
+            if (!Objects.equals(next.brigade(), trip.brigade()) || trip.size() - 1 - toIndex < SHORT_TURN_STOPS) {
+                return false;
+            }
+            Instant until = last.time().plus(NEXT_DELAY_WITHIN);
+            List<Report> afterwards = between(byVehicle.get(last.vehicleId()), next.time(), until);
+            Integer before = last.usableDelay();
+            Integer after = afterwards.stream().filter(r -> Objects.equals(r.brigade(), trip.brigade()))
+                    .map(Report::usableDelay).filter(Objects::nonNull).findFirst().orElse(null);
+            if (before == null || after == null || before - after < SHORT_TURN_GAIN_SECONDS) {
+                return false;
+            }
+            return trip.lastStop() == null || afterwards.stream().noneMatch(r ->
+                    Geo.meters(new double[] {r.lat(), r.lon()}, trip.lastStop()) <= REACHED_END_METERS);
         }
 
         /** A phrase (or none) followed by lists of phrases, as one list. */
@@ -737,8 +781,8 @@ final class TripAnomalies {
                     stand(handover, Stand::minutes), stand(handover, st -> st.then().key),
                     stand(handover, st -> st.lastSeen().time()), stand(handover, Stand::metres),
                     handover == null ? List.of() : handover.story(), handover == null ? List.of() : handover.spans());
-            return new Outcome(trip.line(), trip.departure(), trip.arrival(), kind, dto,
-                    reports.stream().map(Report::vehicleId).distinct().toList());
+            return new Outcome(trip.tripId(), trip.line(), trip.departure(), trip.arrival(), kind, dto,
+                    vehicleIds(reports));
         }
 
         /** A detail of the replaced bus's stand, or null when there is none (no change, or the bus was used again). */

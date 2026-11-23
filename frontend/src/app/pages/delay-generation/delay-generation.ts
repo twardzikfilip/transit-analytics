@@ -23,6 +23,7 @@ import { int, percent } from '../../shared/format/number';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { LocalDatePipe } from '../../shared/i18n/locale-pipes';
 import { t, tn } from '../../core/i18n/t';
+import { LineBadge } from '../../shared/line-kind/line-kinds';
 
 /** Stretches listed where delay is created, and where it is recovered. */
 export const CREATED_ROWS = 15;
@@ -58,7 +59,15 @@ export const DEFAULT_PRESET = '1w';
  */
 @Component({
   selector: 'app-delay-generation',
-  imports: [Skeleton, LocalDatePipe, LineHeatmap, StretchMap, TripProfile, TimeWindowPicker],
+  imports: [
+    LineBadge,
+    Skeleton,
+    LocalDatePipe,
+    LineHeatmap,
+    StretchMap,
+    TripProfile,
+    TimeWindowPicker,
+  ],
   templateUrl: './delay-generation.html',
   styleUrl: './delay-generation.scss',
 })

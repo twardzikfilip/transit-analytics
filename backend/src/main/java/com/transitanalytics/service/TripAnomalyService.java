@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -187,6 +188,11 @@ public class TripAnomalyService {
                 WHERE observed_at >= ? AND observed_at < ?""", Long.class, Timestamp.from(from), Timestamp.from(to))));
     }
 
+    /** Drops the days judged so far: the brigades changed ({@link RecordedBrigades}), so the days are judged again. */
+    void forgetOutcomes() {
+        days.clear();
+    }
+
     private boolean fresh(DayOutcomes cached, LocalDate day, Instant now) {
         // Night lines run past the next day's start: the day is settled once its last trip is.
         Instant lastArrival = cached.outcomes().stream().map(Outcome::arrival).max(Comparator.naturalOrder())
@@ -203,6 +209,11 @@ public class TripAnomalyService {
 
     /** As {@link #trips(LocalDate)}, of one brigade only (null: all). */
     List<ScheduledTrip> trips(LocalDate day, String brigade) {
+        return trips(day, recordedFeeds, brigade);
+    }
+
+    /** The trips of some feeds running that day, of one brigade only (null: all). */
+    List<ScheduledTrip> trips(LocalDate day, String[] feeds, String brigade) {
         record Row(long trip, String tripId, String line, String brigade, String headsign, String shapeId, int seq,
                    String stop, int departure, int arrival, double lat, double lon) {
         }
@@ -221,7 +232,7 @@ public class TripAnomalyService {
                         rs.getInt("stop_sequence"), StopPlaces.stopName(rs.getString("name")),
                         rs.getInt("departure"), rs.getInt("arrival"), rs.getDouble("latitude"),
                         rs.getDouble("longitude")),
-                Stream.concat(Stream.<Object>of((Object) recordedFeeds), Arrays.stream(brigade == null
+                Stream.concat(Stream.<Object>of((Object) feeds), Arrays.stream(brigade == null
                         ? ServiceDay.tripsOfDayArgs(day) : new Object[] {day, day.plusDays(1), brigade})).toArray());
         Map<Long, List<Row>> byTrip = new LinkedHashMap<>();
         rows.forEach(r -> byTrip.computeIfAbsent(r.trip(), k -> new ArrayList<>()).add(r));
@@ -239,9 +250,12 @@ public class TripAnomalyService {
         return trips;
     }
 
-    /** Reports on the timetable's lines in {@code [from, to)}, by vehicle and time. */
+    /**
+     * Reports on the timetable's lines in {@code [from, to)}, by vehicle and time, each with the brigade it belongs to
+     * ({@link RecordedBrigades#BRIGADE_SQL}).
+     */
     private List<Report> reports(Instant from, Instant to) {
-        return reports(from, to, null);
+        return reports(RecordedBrigades.BRIGADE_SQL, "TRUE", Timestamp.from(from), Timestamp.from(to));
     }
 
     /**
@@ -249,23 +263,45 @@ public class TripAnomalyService {
      * other brigades), or of all buses (null).
      */
     List<Report> reports(Instant from, Instant to, String brigade) {
+        return brigade == null ? reports(from, to) : reports(from, to, List.of(brigade));
+    }
+
+    /** As {@link #reports(Instant, Instant, String)}, of the buses that ran any of some brigades then. */
+    List<Report> reports(Instant from, Instant to, Collection<String> brigades) {
+        return reports(RecordedBrigades.BRIGADE_SQL, """
+                p.vehicle_id IN (SELECT p.vehicle_id FROM %s
+                                 WHERE p.observed_at >= ? AND p.observed_at < ? AND %s = ANY (?))""".formatted(
+                        RecordedBrigades.REPORTS_FROM, RecordedBrigades.BRIGADE_SQL),
+                Timestamp.from(from), Timestamp.from(to), Timestamp.from(from), Timestamp.from(to),
+                brigades.toArray(String[]::new));
+    }
+
+    /** One operator's reports in {@code [from, to)} with the brigades as the live feed names them, by vehicle and time. */
+    List<Report> liveReports(Instant from, Instant to, String agency) {
+        return reports("p.brigade", "v.agency = ?", Timestamp.from(from), Timestamp.from(to), agency);
+    }
+
+    /**
+     * Reports on the timetable's lines in a time window (the first two arguments), meeting a condition, by vehicle
+     * and time.
+     *
+     * @param brigade SQL of a report's brigade, on {@link RecordedBrigades#REPORTS_FROM}
+     */
+    private List<Report> reports(String brigade, String condition, Object... args) {
         // Filtering on observed_at alone (the hypertable's time column) gives the planner good estimates.
         return jdbc.query("""
-                SELECT p.vehicle_id, v.vehicle_number, p.observed_at, p.route_name, p.brigade, p.headsign,
+                SELECT p.vehicle_id, v.vehicle_number, p.observed_at, p.route_name, %s AS brigade, p.headsign,
                        p.delay_seconds, p.next_stop_sequence, p.latitude, p.longitude
-                FROM position_sample p JOIN vehicle v ON v.id = p.vehicle_id
-                WHERE p.observed_at >= ? AND p.observed_at < ? AND p.route_name IN (SELECT gtfs_id FROM route)%s
-                ORDER BY p.vehicle_id, p.observed_at""".formatted(brigade == null ? "" : """
-                 AND p.vehicle_id IN (SELECT vehicle_id FROM position_sample
-                                      WHERE observed_at >= ? AND observed_at < ? AND brigade = ?)"""),
+                FROM %s
+                WHERE p.observed_at >= ? AND p.observed_at < ? AND p.route_name IN (SELECT gtfs_id FROM route)
+                  AND %s
+                ORDER BY p.vehicle_id, p.observed_at""".formatted(brigade, RecordedBrigades.REPORTS_FROM, condition),
                 (rs, i) -> new Report(rs.getLong("vehicle_id"), rs.getString("vehicle_number"),
                         rs.getTimestamp("observed_at").toInstant(), rs.getString("route_name"),
                         rs.getString("brigade"), rs.getString("headsign"),
                         (Integer) rs.getObject("delay_seconds"), rs.getObject("next_stop_sequence", Integer.class),
                         rs.getDouble("latitude"), rs.getDouble("longitude")),
-                brigade == null ? new Object[] {Timestamp.from(from), Timestamp.from(to)}
-                        : new Object[] {Timestamp.from(from), Timestamp.from(to), Timestamp.from(from),
-                        Timestamp.from(to), brigade});
+                args);
     }
 
     /**

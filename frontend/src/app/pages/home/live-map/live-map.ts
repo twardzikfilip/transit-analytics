@@ -33,6 +33,8 @@ import {
   brigadeSection,
 } from '../../../shared/brigade/brigade-schedules';
 import { injectBusLanes } from '../../../shared/map/bus-lanes';
+import { LINE_KIND_COLORS, LineKinds } from '../../../shared/line-kind/line-kinds';
+import { cssColor } from '../../../shared/palette';
 import { injectCityBoundaries } from '../../../shared/map/city-boundaries';
 import { LocalDatePipe } from '../../../shared/i18n/locale-pipes';
 import { t, tn } from '../../../core/i18n/t';
@@ -58,9 +60,14 @@ export class LiveMap {
     setUp: (map) => {
       this.drawBoundaries(map);
       this.drawBusLanes(map);
+      // A popup's schedule stays as the reader left it, open or folded, as the popup redraws every 5 s.
+      map.getContainer().addEventListener('toggle', (event) => this.rememberToggle(event), true);
     },
   });
-  private readonly markers = new Map<string, L.CircleMarker>();
+  /** Brigades whose schedule the reader opened in a popup. */
+  private readonly openSchedules = new Set<string>();
+  private readonly markers = new Map<string, { marker: L.Marker; html: string }>();
+  private readonly kinds = inject(LineKinds);
 
   protected readonly positions = this.store.selectSignal(livePositionsFeature.selectAll);
   protected readonly count = this.store.selectSignal(livePositionsFeature.selectTotal);
@@ -100,8 +107,11 @@ export class LiveMap {
   );
 
   /** Legend. */
-  protected readonly delayStops = DELAY_STOPS;
-  protected readonly noDelayColor = NO_DELAY_COLOR;
+  /** Delays with a ring: over a minute late. */
+  protected readonly lateStops = DELAY_STOPS.filter((s) => s.seconds > LATE_RING_SECONDS);
+  protected readonly kindLegend = (['urban', 'suburban', 'regional', 'night_urban'] as const).map(
+    (kind) => ({ token: LINE_KIND_COLORS[kind].token, label: `live.kinds.${kind}` }),
+  );
   protected readonly lineTypes = LINE_TYPES;
   protected readonly boundaries = [
     BOUNDARY_STYLES.city,
@@ -146,7 +156,8 @@ export class LiveMap {
 
   private showSchedule(brigade: string): void {
     for (const p of this.visible()) {
-      if (p.brigade === brigade) this.markers.get(p.vehicleNumber)?.setPopupContent(this.popup(p));
+      if (p.brigade === brigade)
+        this.markers.get(p.vehicleNumber)?.marker.setPopupContent(this.popup(p));
     }
   }
 
@@ -157,7 +168,23 @@ export class LiveMap {
   }
 
   private popup(p: LivePosition): string {
-    return popup(p, p.brigade ? this.schedules.peek(p.brigade) : undefined);
+    return popup(
+      p,
+      p.brigade ? this.schedules.peek(p.brigade) : undefined,
+      !!p.brigade && this.openSchedules.has(p.brigade),
+    );
+  }
+
+  private rememberToggle(event: Event): void {
+    const details = event.target;
+    if (!(details instanceof HTMLDetailsElement) || !details.dataset['brigade']) return;
+    const brigade = details.dataset['brigade'];
+    if (details.open) this.openSchedules.add(brigade);
+    else this.openSchedules.delete(brigade);
+    // The popup grew or shrank: lay it out again, and pan the map so all of it shows.
+    for (const { marker } of this.markers.values()) {
+      if (marker.isPopupOpen()) marker.getPopup()!.update();
+    }
   }
 
   private render(positions: LivePosition[]): void {
@@ -166,40 +193,64 @@ export class LiveMap {
     for (const p of positions) {
       seen.add(p.vehicleNumber);
       const latLng: L.LatLngExpression = [p.latitude, p.longitude];
-      // Fill: delay. No outline: a shadow (.live-vehicle in styles.scss) lifts each vehicle off the map.
-      const style = { fillColor: delayColor(p.delaySeconds) };
+      const html = badgeHtml(p, this.kindColor(p));
       const existing = this.markers.get(p.vehicleNumber);
       if (existing) {
-        existing.setLatLng(latLng).setStyle(style).setPopupContent(this.popup(p));
-        existing.off('popupopen').on('popupopen', () => this.loadSchedule(p.brigade));
+        existing.marker.setLatLng(latLng).setPopupContent(this.popup(p));
+        if (existing.html !== html) {
+          existing.marker.setIcon(badgeIcon(html));
+          existing.html = html;
+        }
+        existing.marker.off('popupopen').on('popupopen', () => this.loadSchedule(p.brigade));
       } else {
-        const marker = L.circleMarker(latLng, {
-          radius: 7,
-          ...style,
-          stroke: false,
-          fillOpacity: 0.9,
-          className: 'live-vehicle',
-        })
+        const marker = L.marker(latLng, { icon: badgeIcon(html), keyboard: false })
           .bindPopup(this.popup(p), { maxWidth: 320 })
-          .bindTooltip(escapeHtml(p.routeName ?? p.vehicleNumber), {
-            direction: 'top',
-            offset: [0, -6],
-          })
+          .bindTooltip(escapeHtml(p.vehicleNumber), { direction: 'top', offset: [0, -10] })
           .on('popupopen', () => this.loadSchedule(p.brigade))
           .addTo(this.host.map);
-        this.markers.set(p.vehicleNumber, marker);
+        this.markers.set(p.vehicleNumber, { marker, html });
       }
     }
-    for (const [id, marker] of this.markers) {
+    for (const [id, { marker }] of this.markers) {
       if (!seen.has(id)) {
         marker.remove();
         this.markers.delete(id);
       }
     }
   }
+
+  /** The colour of the vehicle's kind of line; grey when it reports no line. */
+  private kindColor(p: LivePosition): string {
+    if (p.subtype) {
+      const kind = LINE_KIND_COLORS[p.subtype];
+      return cssColor(kind.token, kind.fallback);
+    }
+    return this.kinds.color(p.routeName) ?? NO_DELAY_COLOR;
+  }
 }
 
-function popup(p: LivePosition, schedule: ScheduleState | undefined): string {
+/** Over this many seconds late, a badge has a ring in its delay's colour. */
+export const LATE_RING_SECONDS = 60;
+
+/**
+ * A vehicle's badge: its line (its number when it reports none) in its kind's colour, an arrow pointing its way when
+ * the feed gives a bearing, and a ring in its delay's colour when over a minute late.
+ */
+export function badgeHtml(p: LivePosition, kindColor: string): string {
+  const late = p.delaySeconds !== null && p.delaySeconds > LATE_RING_SECONDS;
+  const arrow =
+    p.bearing === null || p.bearing === undefined
+      ? ''
+      : `<span class="arrow" style="transform: rotate(${Math.round(p.bearing)}deg)"></span>`;
+  const style = `--kind: ${kindColor}${late ? `; --delay: ${delayColor(p.delaySeconds)}` : ''}`;
+  return `<span class="pill${late ? ' late' : ''}" style="${style}">${arrow}${escapeHtml(p.routeName ?? p.vehicleNumber)}</span>`;
+}
+
+function badgeIcon(html: string): L.DivIcon {
+  return L.divIcon({ html, className: 'live-bus', iconSize: [0, 0] });
+}
+
+function popup(p: LivePosition, schedule: ScheduleState | undefined, open: boolean): string {
   const line = [p.routeName, p.headsign]
     .filter(Boolean)
     .map((v) => escapeHtml(v!))
@@ -217,7 +268,7 @@ function popup(p: LivePosition, schedule: ScheduleState | undefined): string {
     : '';
   return (
     `<strong>${line || escapeHtml(p.vehicleNumber)}</strong><br>${vehicle}<br>${delay(p.delaySeconds)}${nextStop}${seen}` +
-    brigadeSection(p.brigade, schedule, new Date(), true)
+    brigadeSection(p.brigade, schedule, new Date(), true, open)
   );
 }
 

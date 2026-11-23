@@ -152,7 +152,7 @@
               (keydown.enter)="chooseLine(line() === l.line ? null : l.line)"
             >
               <td>
-                <strong>{{ l.line }}</strong>
+                <span class="route-badge" [appLineBadge]="l.line">{{ l.line }}</span>
               </td>
               <td class="num">{{ l.runs }}</td>
               <td class="num">

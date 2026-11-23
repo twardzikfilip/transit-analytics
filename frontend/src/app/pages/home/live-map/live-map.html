@@ -66,15 +66,22 @@
 <div #map class="map"></div>
 <div class="legend muted" [attr.aria-label]="t('live.mapLegend')">
   <span class="group">
-    {{ t('live.delay') }}
-    @for (s of delayStops; track s.seconds) {
+    {{ t('live.lineKinds') }}
+    @for (k of kindLegend; track k.label) {
       <span class="item"
-        ><span class="dot" [style.background]="s.color"></span>{{ t(s.label) }}</span
+        ><span class="pill-swatch" [style.background]="'var(' + k.token + ')'"></span
+        >{{ t(k.label) }}</span
       >
     }
-    <span class="item"
-      ><span class="dot" [style.background]="noDelayColor"></span>{{ t('live.unknown') }}</span
-    >
+  </span>
+  <span class="group">
+    {{ t('live.delayRing') }}
+    @for (s of lateStops; track s.seconds) {
+      <span class="item"
+        ><span class="ring" [style.border-color]="s.color"></span>{{ t(s.label) }}</span
+      >
+    }
+    <span class="item">{{ t('live.noRing') }}</span>
   </span>
   <span class="group">
     {{ t('live.linesOnMap') }}

@@ -94,6 +94,7 @@
               @for (l of c.lines; track l) {
                 <a
                   class="route-badge"
+                  [appLineBadge]="l"
                   [class.partial]="!c.throughLines.includes(l)"
                   [attr.title]="t(c.throughLines.includes(l) ? 'corridors.all' : 'corridors.part')"
                   [routerLink]="['/routes/route', l]"

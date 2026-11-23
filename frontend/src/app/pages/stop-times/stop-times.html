@@ -31,9 +31,7 @@
   </div>
 } @else {
   <p class="muted">
-    {{ t('timetable.allStopTimes1') }} <a routerLink="/trips">{{ t('nav.trips') }}</a>{{
-      t('timetable.allStopTimes2')
-    }}
+    {{ t('timetable.allStopTimes') }}
     <a routerLink="/stops">{{ t('nav.stops') }}</a>.
   </p>
 }
@@ -71,22 +69,14 @@
             </td>
           }
           <td>
-            <span class="route-badge" [style.--route-color]="routeColor(st.routeColor)">{{
-              st.routeName
-            }}</span>
+            <span class="route-badge" [appLineBadge]="st.routeName">{{ st.routeName }}</span>
           </td>
           <td>
             <a [routerLink]="[]" [queryParams]="{ tripId: st.tripId, stopId: null, page: null }">{{
               st.stopHeadsign ?? st.tripHeadsign ?? '—'
             }}</a>
           </td>
-          <td class="num">
-            <a
-              [routerLink]="['/trips']"
-              [queryParams]="{ serviceId: st.serviceId, routeId: st.routeId }"
-              >{{ st.serviceId }}</a
-            >
-          </td>
+          <td class="num">{{ st.serviceId }}</td>
           <td class="num">{{ st.stopSequence }}</td>
           <td class="muted">{{ boarding(st) ?? '' }}</td>
         </tr>

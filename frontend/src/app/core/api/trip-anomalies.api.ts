@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { TripAnomalyReport, WindowQuery } from '../models/models';
+import { FaultyTrackers, TripAnomalyReport, WindowQuery } from '../models/models';
 import { windowParams } from './window-params';
 
 /** Abnormal trips: scheduled trips not run, run only partly, or off their route. */
@@ -14,5 +14,10 @@ export class TripAnomalyApi {
     return this.http.get<TripAnomalyReport>('/api/trip-anomalies', {
       params: windowParams(window),
     });
+  }
+
+  /** Buses whose tracker probably fails, over the last week. */
+  faultyTrackers(): Observable<FaultyTrackers> {
+    return this.http.get<FaultyTrackers>('/api/trip-anomalies/faulty-trackers');
   }
 }

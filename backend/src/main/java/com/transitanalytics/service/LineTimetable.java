@@ -151,7 +151,7 @@ public class LineTimetable {
         List<Object> args = new ArrayList<>(List.of(route.getId()));
         args.addAll(services);
         List<TripRow> trips = jdbc.query("""
-                SELECT t.id, %s AS duty,
+                SELECT t.id, CASE WHEN %s THEN %s END AS duty,
                        coalesce(t.direction, 0) AS direction, t.shape_id, t.headsign,
                        extract(epoch FROM min(st.departure_time)::interval)::int AS start_s,
                        extract(epoch FROM max(st.arrival_time)::interval)::int AS end_s,
@@ -162,15 +162,15 @@ public class LineTimetable {
                        (array_agg(s.longitude ORDER BY st.stop_sequence))[1] AS first_lon,
                        (array_agg(s.latitude ORDER BY st.stop_sequence DESC))[1] AS last_lat,
                        (array_agg(s.longitude ORDER BY st.stop_sequence DESC))[1] AS last_lon,
-                       t.direction IS NULL AS no_direction, t.block_id IS NULL AS no_block
+                       t.direction IS NULL AS no_direction
                 FROM trip t JOIN stop_time st ON st.trip_id = t.id JOIN stop s ON s.id = st.stop_id
                 WHERE t.route_id = ? AND t.service_id IN (%s)
                 GROUP BY t.id
-                ORDER BY t.id""".formatted(ServiceDay.BRIGADE_SQL, placeholders(services.size())),
+                ORDER BY t.id""".formatted(ServiceDay.NAMED_BRIGADE_SQL, ServiceDay.BRIGADE_SQL,
+                        placeholders(services.size())),
                 (rs, i) -> {
                     noDirection[0] &= rs.getBoolean("no_direction");
-                    // Brigades are named in the city's timetable (trip ids); in another feed only by block ids.
-                    noBrigades[0] &= rs.getBoolean("no_block") && !TimetableFeed.MAIN.equals(route.getFeed());
+                    noBrigades[0] &= rs.getString("duty") == null;
                     return new TripRow(rs.getLong("id"), rs.getString("duty"), rs.getInt("direction"),
                         rs.getString("shape_id"), rs.getString("headsign"), rs.getInt("start_s"), rs.getInt("end_s"),
                         rs.getObject("km") == null ? null : rs.getDouble("km"), rs.getInt("stops"),

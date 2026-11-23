@@ -36,8 +36,7 @@
             <a
               class="route-badge"
               [routerLink]="['/routes/route', l.line]"
-              [style.--route-color]="l.color ? '#' + l.color : null"
-              [style.--route-text-color]="l.textColor ? '#' + l.textColor : null"
+              [appLineBadge]="l.line"
               >{{ l.line }}</a
             >
             <span class="value">{{ l.value }}</span>

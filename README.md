@@ -47,7 +47,7 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
 | JWT lifetime | `JWT_EXPIRATION_MINUTES` | `480` |
 | CORS origins | `CORS_ALLOWED_ORIGINS` | `http://localhost:4200` |
 | zbiorkom.live API base URL | `ZBIORKOM_BASE_URL` | `https://api.zbiorkom.live/api6-open` |
-| Białystok bounding box (`minLon,minLat,maxLon,maxLat`) | `ZBIORKOM_BIALYSTOK_BBOX` | `22.921150,53.016270,23.382496,53.243687` |
+| Białystok bounding box (`minLon,minLat,maxLon,maxLat`) | `ZBIORKOM_BIALYSTOK_BBOX` | `22.45,52.88,23.48,53.44` |
 | Białystok GTFS feed (zip) | `GTFS_BIALYSTOK_URL` | `https://komunikacja.bialystok.pl/cms/File/download/gtfs/google_transit.zip` |
 | transit-recorder address (Live map) | `RECORDER_URL` | `http://localhost:8081` |
 | Password of the recorder's database role | `RECORDER_DB_PASSWORD` | `transit_recorder` |
@@ -187,7 +187,10 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   usual route within 600 m of it), for a map. Each change is also told step by
   step (`story`: what each bus did when, in time order) with a time line per bus (`timeline`: running, standing,
   moving off, on its way without the brigade, on the brigade)),
-  short-turned (the bus, reporting all along, joined midway or left before the end), no signal (it stopped
+  short-turned (the bus, reporting all along, joined midway, or turned back onto its brigade's next trip at least 3
+  stops before the end, 3 min or more less late there, and wasn't seen near the trip's last stop afterwards; the feed
+  often moves a bus on to its next trip two or three stops early, and a bus that only went off to the depot or drove
+  on to the end ran in full), no signal (it stopped
   reporting partway but was back for its brigade's next trip), lost (it stopped reporting midway and didn't come
   back within 15 min), missed (not run while the brigade ran other trips; with where the brigade's bus was instead)
   and cancelled (no bus on the brigade all day). Trips during gaps in recording (3+ minutes without any report)
@@ -196,8 +199,34 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   `text` are lists of phrases, `{key, params}`: the page writes them in the reader's language from `tripNotes.<key>`
   in its translations (`shared/i18n/phrases.ts`); a value is text, a number or another phrase. Each finished
   service day is judged once; the running day again after a minute. The last month is judged at startup in the background.
-- `GET /api/brigades?date=&agency=` — the brigades of an agency (default: the city's, BKM) on a service day (default:
-  today's): each with its lines, trip count and first and last times, plus the agencies whose timetables name brigades.
+- `GET /api/trip-anomalies/faulty-trackers` — buses whose tracker probably fails: over the last 7 days, no-signal
+  trips on 3 days or more, 5 trips or more, and at least 10% of the trips the bus ran (fewer is chance). Each with its
+  no-signal and all trips, days, lines and the latest one. Worked out again every 10 minutes. Lines that ran out of
+  the recording area before it was enlarged show up here until those days are a week old.
+- `GET /api/trip-runs?from=&to=&q=&page=` — Trips: every trip of the timetable scheduled to run (for any part) in the
+  window, in departure order, 50 a page; of a window longer than 24 h, its last 24 h (`shownFrom`). Each with its
+  outcome as on Abnormal trips, what ran as on the brigade's day (each bus's part, from which stop to which, when),
+  the bus's delay and speed about every minute while it ran (speed averaged over the minute; over 100 km/h is a GPS
+  jump), and where it stood still on the way for 3 min or more (within 40 m; not waiting at the first stop or
+  arrived at the last), with how much later it was afterwards; its stops with when each was due and when a bus
+  passed it (its first report heading beyond the stop), and its average speed (the way its buses drove over the time
+  it took, stops and waits included; gaps over 3 min and GPS jumps left out). `q` finds a bus by its number (the trips it ran), a
+  brigade or a line (exactly), or part of a destination. The outcomes are Abnormal trips' when it has the day
+  current; else the page's brigades are judged on their own, from the day's reports of their buses.
+- `GET /api/trip-runs/{date}/{brigade}/{tripId}` — one trip in detail, asked for when it is opened: every report of
+  its buses while they ran it (about every 10 s) with its delay and speed — 0 when the bus stood still (moved under
+  5 m, or 0.4 m/s over a longer interval: GPS jitter), else the average over 15 s either side; none for a bus's first
+  report, after a 2 min gap or across a GPS jump — the trip's route shape, and its stops with where they are and how
+  long a bus halted within 50 m of each (the stop's pole is often across a junction from where buses halt): its steps
+  there under 7 km/h, as reports come every 10 s, longer than a short halt (to about 10 s); 0 when every step there was
+  12 km/h or more; null when that can't be told. 404 when the brigade
+  has no such trip that day.
+- `GET /api/routes/subtypes` — every line of the timetable by name with its kind (`urban`, `suburban`,
+  `night_urban`, `regional`), for colouring line labels.
+- `GET /api/brigades?date=&agency=` — the brigades of an operator (default: the city's, BKM) on a service day (default:
+  today's): each with all its lines (a brigade with any trip of the agency is listed), trip count and first and last
+  times, plus every operator: the city's agency (`BKM`), and each other operator's feed as one (`wschodexpress`).
+  Other operators' brigades are learnt from the recordings (see below).
 - `GET /api/brigades/{brigade}/day?date=` — a brigade's day: each trip as scheduled with what actually ran (a part per
   bus, from the first to the last stop it was seen heading to, timed by the reported delays), the parts not run (lost,
   missed, cancelled, turned short, skipped at a bus change) or not seen (the bus stopped reporting), its outcome as on
@@ -304,10 +333,24 @@ the others alone too). Imported with `POST /api/gtfs/<key>/import` and again eve
   the feed doesn't have is said rather than guessed: without brigades there are no brigades or depot runs; trips
   without a direction get one from where they start; stops without a fare zone are zone 1 inside the city limits and
   2 outside. Its timetable is the weekday the line has the most trips (its feed has a service per date). Line classes
-  (geometry, capacity) and Network coverage are the city's lines only. On Brigades each feed's agency is listed (key
-  `<feed>-<agency id>`, e.g. `wschodexpress-1`); these feeds name no brigades. On Abnormal trips their trips are
-  "not recorded" (the live feed's brigades don't match their trips), and a feed whose buses aren't on the live feed
-  (no `agency`: PKS Nova) is left out, as nothing can be recorded for it. The Stops page shows each stop's timetable.
+  (geometry, capacity) and Network coverage are the city's lines only. On Brigades each feed is one operator (key: the feed,
+  e.g. `wschodexpress`, shown by its short name; Wschód Express's five agencies are the municipalities ordering its
+  lines, and one bus runs lines of two of them; a former `wschodexpress-1` link opens it), and a feed whose buses aren't on the live feed (no `agency`: PKS
+  Nova) is left out of Abnormal trips, as nothing can be recorded for it. The Stops page shows each stop's timetable.
+- **Brigades learnt from the recordings** (`service/RecordedBrigades`, `BrigadeLearning`): these feeds name no
+  brigades (no block ids), but their buses report brigade numbers on the live feed. The numbers repeat from line to
+  line ("1" on line 400 and "1" on line 414 are different buses), and a bus runs some lines together under one number
+  (414, 415 and 416). So a brigade is a number on a group of lines (the lines one bus ran under it on some day,
+  joined), named after the group's first line: `414-1`, `451-20`, `700-T1`. Each recorded report is matched to its
+  line's trip by time (as Abnormal trips does), and a trip was run that day by the bus and number with most reports on
+  it (3 at least). The feeds give every date its own trips, so what is learnt is the brigade of a *run* (the line's
+  trip between two stops at a time of day, on a weekday, Saturday or Sunday): the brigade that ran it on most of the
+  last 28 days. Every trip of that run, also on the dates ahead, belongs to it (`trip_brigade`); each live number on a
+  line has its brigade (`recorded_brigade_line`), so reports are read with the timetable's brigades. Learnt again
+  every night (`app.recorded-brigades.refresh-cron`), after a feed's import and at startup. With them these lines
+  have brigades as the city's have: on Brigades (a brigade's day, scheduled and run), Abnormal trips, and the line's
+  brigades and depot runs on Routes. A run never seen run (e.g. Wschód Express lines 404, 468–470, which no bus
+  reports) has no brigade; the live map's brigade popups still name the live number.
 
 ### Vehicle position history (time series)
 
@@ -480,10 +523,15 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
 - Startup bundle: telemetry (the OpenTelemetry SDK) loads as its own chunk right after startup, and the NgRx
   devtools are only in development builds (`store-devtools.prod.ts` replaces them in production).
 - `pages` — login, settings (theme; GTFS import for admins), sources (where the data comes from; "Data sources" in the header menu), and:
-- Home: the live map on top (Leaflet/OSM; a `livePositions` load every 5 s, markers drawn from the store; filled by
-  delay, outlined by kind of line: urban blue, suburban black, regional magenta; its own filters by operator and delay,
-  in the URL as `?mapAgency=` and `?mapMinDelay=`, with a reset; the popup shows the brigade and its remaining runs
-  today; the city limits and centre are drawn under the buses). It always shows now: no time window changes it.
+- Home: buses with a possibly faulty tracker first (a tile with a red border while any bus is listed: each bus links
+  to its page, with its no-signal trips of all it ran, the days, its lines and the latest), then the live map
+  (Leaflet/OSM; a `livePositions` load every 5 s, markers drawn from the store). Each bus is a pill-shaped badge with
+  its line number in its kind's colour, an arrow pointing its way when the feed gives a bearing, and a ring in the
+  delay's colour when over a minute late (none on time, up to a minute late, or not known). Its own filters by
+  operator, kind of line and delay, in the URL as `?mapAgency=`, `?mapLineType=` and `?mapMinDelay=`, with a reset;
+  the popup shows the brigade and, folded away under it until clicked, its remaining runs today (kept open or
+  folded as the popup redraws every 5 s); the city limits and centre are drawn under the buses. It
+  always shows now: no time window changes it.
   Below it, the recorded positions with their own time window, operator (`?agency=`, BKM by default, `all` for every
   operator) and line: vehicles running and mean delay every 10 s (each poll) for windows up to an hour, else every
   minute or coarser (SVG line charts with a hover/keyboard tooltip and a table view), running now / most at once /
@@ -552,7 +600,7 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
   the most (overall or on a chosen stretch) with a chart and table of how their delay built up stop by stop, and
   its brigades. Window, part of the day and line are kept in the URL (`?part=`, `?line=`). Store slice
   `delayGeneration`, registered by its lazy route.
-- Brigades: every brigade of an agency (BKM by default; `?agency=`) in rows by line, with a search by name or line.
+- Brigades: every brigade of an operator (BKM by default; `?agency=`, e.g. `wschodexpress`; other operators by their short name) in rows by line, with a search by name or line.
   Choosing one opens its page, `/brigades/103-05` (a former `?brigade=` link leads there too; title "Brigade 103-05"; the way back is a chevron at the
   left of the header), with only the day (`?date=`, today's service day by default) at the top. Tiles sum the
   day up; a timeline shows every scheduled trip in turn (consecutive trips alternate BKM light blue and green, labelled with
@@ -574,8 +622,26 @@ Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixt
   Fleet. Each detour gets a map on a line of its own under its trip: the usual route around it in blue, the bus's
   path in orange with its reports as dots. Store slice
   `tripAnomalies`, registered by its lazy route.
-- Timetable pages (read-only): Trips (filter by route, direction, service, headsign) → Stop times of a trip;
-  Stops (search, zone) → departure board of a stop. Filters and the page number live in the URL, so every view can be
+- Trips: every trip scheduled in the time window (the last hour by default; preset windows up to 12 hours refresh
+  every minute), 50 a page, each on one time axis shared by the list: the scheduled bar over what ran, coloured by
+  the bus's delay along the way (on time, 3, 6, 10+ min), parts not run hatched red and not seen grey, where the bus
+  stood still 3+ min outlined, and marks for a change of bus (⇄), a turn short of the end (↩), a lost bus (✕) and a
+  detour (↷). A search box finds a bus, a brigade, a line or a destination (`?q=`). Opening a trip (`?trip=`) shows it
+  on its own axis with the bus's delay and its speed over the whole trip in two charts (the delay per minute; the speed, once the trip's detail is in, from
+  every report, so a halt shows as a drop to 0) (hover for the values at a
+  moment), its average speed, its longest halts at stops, what happened on the way in words, and a link to the brigade's day. Each stop is a
+  tick on the scheduled bar (when due) and a dot on the delay and speed lines (where the bus passed it); hovering one
+  shows its name, times and how long the bus stood there, and a guide down the charts, so it's clear between which stops delay grew or the bus stood. A Map button beside the actual bar
+  (`?map=1`) shows the trip on a map: its route in grey and the bus's path over it, coloured by its delay the same
+  way (hover a stretch for the time, bus and delay), its stops (hover one for its name, when it was due and when
+  the bus passed it, and how long it stood there), and where it set off and was last seen. Store slice `tripRuns`, registered by
+  its lazy route. Its time lines are pure functions in `trip-layout.ts`. The former timetable list of trips is gone;
+  Routes links a line's trips here (`/trips?q=103`).
+- Line labels everywhere (Routes, its map and table, Corridors, Stop times, Abnormal trips, Delay generation,
+  Brigades, a bus's page, Trips, the live map) take their kind's colour: indigo urban (#4b0082), green suburban
+  (#03bf03), blue regional (#0021ff), black night lines (`--line-*` in `styles.scss`; `LineBadge` and `LineKinds` in `shared/line-kind`, which
+  ask `/api/routes/subtypes` once and classify a line not in the timetable by its name).
+- Timetable pages (read-only): Stop times of a trip; Stops (search, zone) → departure board of a stop. Filters and the page number live in the URL, so every view can be
   linked and the back button works.
 
 ```bash

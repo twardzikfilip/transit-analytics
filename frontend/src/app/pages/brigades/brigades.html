@@ -22,7 +22,7 @@
     {{ t('brigades.agency') }}
     <select [value]="agency()" (change)="setAgency($any($event.target).value)">
       @for (a of list()?.agencies ?? []; track a.id) {
-        <option [value]="a.id" [selected]="a.id === agency()">{{ a.name }}</option>
+        <option [value]="a.id" [selected]="a.id === agency()">{{ operatorName(a) }}</option>
       }
     </select>
   </label>
@@ -40,7 +40,14 @@
     }
     <dl class="brigade-lines">
       @for (g of byLine(); track g.line) {
-        <dt>{{ t('brigades.lineX', { line: g.line }) }}</dt>
+        <dt>
+          <span
+            class="route-badge"
+            [appLineBadge]="g.line"
+            [attr.aria-label]="t('brigades.lineX', { line: g.line })"
+            >{{ g.line }}</span
+          >
+        </dt>
         <dd>
           <ul class="brigade-chips">
             @for (b of g.brigades; track b.brigade) {

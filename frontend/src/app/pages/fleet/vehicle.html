@@ -60,7 +60,8 @@
               <td class="nowrap">{{ dayLabel(i.day) }}</td>
               <td>{{ time(i.scheduledDeparture) }}</td>
               <td class="nowrap">
-                {{ i.line }} <span class="muted">{{ i.brigade }}</span>
+                <span class="route-badge" [appLineBadge]="i.line">{{ i.line }}</span>
+                <span class="muted">{{ i.brigade }}</span>
               </td>
               <td>
                 <span

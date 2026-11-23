@@ -1,10 +1,14 @@
 import { Component } from '@angular/core';
 import { t } from '../../core/i18n/t';
 
-/** A source: its id (its texts are `sources.<id>.name`, `.gives`, `.usedOn`, `.refreshed`) and its address. */
+/**
+ * A source: its id (its texts are `sources.<id>.name`, `.gives`, `.usedOn`, `.refreshed`, and `.detail` when
+ * `detail` is set) and its address.
+ */
 interface Source {
   id: string;
   url: string | null;
+  detail?: boolean;
 }
 
 /** Where the app's data comes from, one line each. */
@@ -33,7 +37,12 @@ interface Source {
                   {{ t('sources.' + s.id + '.name') }}
                 }
               </td>
-              <td>{{ t('sources.' + s.id + '.gives') }}</td>
+              <td>
+                {{ t('sources.' + s.id + '.gives') }}
+                @if (s.detail) {
+                  <p class="muted detail" [innerHTML]="t('sources.' + s.id + '.detail')"></p>
+                }
+              </td>
               <td>{{ t('sources.' + s.id + '.usedOn') }}</td>
               <td class="muted">{{ t('sources.' + s.id + '.refreshed') }}</td>
             </tr>
@@ -48,6 +57,10 @@ interface Source {
       font-weight: 600;
       white-space: nowrap;
     }
+    .detail {
+      margin: 0.4rem 0 0;
+      font-size: 0.85rem;
+    }
     .note {
       margin-top: 0.75rem;
       font-size: 0.85rem;
@@ -57,7 +70,7 @@ interface Source {
 export class Sources {
   protected readonly t = t;
   protected readonly sources: Source[] = [
-    { id: 'zbiorkom', url: 'https://zbiorkom.live' },
+    { id: 'zbiorkom', url: 'https://zbiorkom.live', detail: true },
     { id: 'bkm', url: 'https://komunikacja.bialystok.pl' },
     { id: 'pks', url: 'https://files.girlc.at/gtfs/pks_nova_suprasl.zip' },
     { id: 'wschodexpress', url: 'https://files.girlc.at/gtfs/wschod_express.zip' },

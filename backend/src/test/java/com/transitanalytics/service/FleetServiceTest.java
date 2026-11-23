@@ -132,7 +132,7 @@ class FleetServiceTest {
                 "A", "E", at(departure), at(departure).plusSeconds(600), 5, List.of(), null, null, null, null, null,
                 null, null, null, null, null, null, null, null, List.of(), List.of(), fate, null, null, null, null, null, "D", null, null,
                 at(departure).plusSeconds(240), null, null, null, null, List.of(), List.of());
-        return new Outcome("9", at(departure), at(departure).plusSeconds(600), kind, trip, vehicles);
+        return new Outcome("t" + departure, "9", at(departure), at(departure).plusSeconds(600), kind, trip, vehicles);
     }
 
     @Test
@@ -142,7 +142,7 @@ class FleetServiceTest {
         Outcome tookOver = outcome(Kind.VEHICLE_CHANGED, "broken-down", List.of(2L, 1L), "09:00");
         Outcome missed = outcome(Kind.MISSED, null, List.of(1L), "10:00");
         Outcome lost = outcome(Kind.LOST, null, List.of(1L), "11:00");
-        Outcome completed = new Outcome("9", at("12:00"), at("12:10"), Kind.COMPLETED, null, List.of());
+        Outcome completed = new Outcome("t", "9", at("12:00"), at("12:10"), Kind.COMPLETED, null, List.of());
 
         assertThat(FleetService.brokeDown(brokeDown)).isTrue();
         assertThat(FleetService.brokeDown(reassigned)).isFalse();

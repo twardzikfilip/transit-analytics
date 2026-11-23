@@ -1,6 +1,7 @@
 package com.transitanalytics.service;
 
 import com.transitanalytics.domain.CityTime;
+import com.transitanalytics.domain.TimetableFeed;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -26,11 +27,22 @@ final class ServiceDay {
         return hour < DAY_START_HOUR ? hour + 24 : hour;
     }
 
+    private static final String LEARNT_BRIGADE = "(SELECT b.brigade FROM trip_brigade b WHERE b.trip_id = t.id)";
+
     /**
-     * The brigade (vehicle duty) of a trip, in SQL on {@code trip t}: its block id, else the trip id's prefix, as in
-     * this feed (103-05_P_1349_… is brigade 103-05). Live feeds name brigades the same way.
+     * The brigade (vehicle duty) of a trip, in SQL on {@code trip t}: its block id, else the brigade learnt from the
+     * recordings ({@link RecordedBrigades}), else the trip id's prefix, as in the city's timetable (103-05_P_1349_… is
+     * brigade 103-05; live positions name BKM's brigades the same way). A trip of another feed without either is
+     * a brigade of its own (its id); {@link #NAMED_BRIGADE_SQL} tells them apart.
      */
-    static final String BRIGADE_SQL = "coalesce(t.block_id, split_part(t.gtfs_id, '_', 1))";
+    static final String BRIGADE_SQL = "coalesce(t.block_id, " + LEARNT_BRIGADE + ", split_part(t.gtfs_id, '_', 1))";
+
+    /**
+     * SQL on {@code trip t}: whether {@link #BRIGADE_SQL} names a real brigade: in the city's timetable (trip ids), by
+     * a block id, or learnt from the recordings.
+     */
+    static final String NAMED_BRIGADE_SQL = "(t.feed = '" + TimetableFeed.MAIN + "' OR t.block_id IS NOT NULL OR "
+            + LEARNT_BRIGADE + " IS NOT NULL)";
 
     /** SQL: whether a date (an SQL expression of type date) is a weekday, Monday to Friday. */
     static String weekdaySql(String date) {

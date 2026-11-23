@@ -152,3 +152,27 @@ export interface TripAnomalyReport {
   /** The latest scheduled departure first. */
   trips: AbnormalTrip[];
 }
+
+/** Buses whose tracker probably fails, over the last days (GET /api/trip-anomalies/faulty-trackers). */
+export interface FaultyTrackers {
+  from: string;
+  to: string;
+  /** A bus is listed with no-signal trips on `minDays` days or more, `minTrips` of them, `minSharePercent` of its trips. */
+  minDays: number;
+  minTrips: number;
+  minSharePercent: number;
+  /** Most no-signal trips first. */
+  trackers: FaultyTracker[];
+}
+
+export interface FaultyTracker {
+  vehicleId: number;
+  bus: string;
+  /** Trips it ran with parts missing: it stopped reporting partway and was back later. */
+  noSignalTrips: number;
+  /** Trips it ran in all. */
+  trips: number;
+  days: number;
+  lastNoSignal: string;
+  lines: string[];
+}

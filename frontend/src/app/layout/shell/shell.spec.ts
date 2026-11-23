@@ -56,6 +56,7 @@ describe('Shell', () => {
     expect([...operation.querySelectorAll('a')].map(text)).toEqual([
       'Brigades',
       'Fleet',
+      'Trips',
       'Abnormal trips',
     ]);
     const hrefs = [...network.querySelectorAll('a')].map((a) => a.getAttribute('href'));

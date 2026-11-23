@@ -35,7 +35,8 @@ public final class TripAnomalyDto {
      * @param vehicleChanged run in full, but by two buses: one ran part of it and another of the brigade took over
      * @param noSignal     the bus stopped reporting partway (started reporting late, or came back only on its
      *                     brigade's next trip): most likely run, but unseen
-     * @param shortTurned  run only partly: the bus, reporting all along, joined midway or left before the end
+     * @param shortTurned  run only partly: the bus, reporting all along, joined midway, or turned back at least 3
+     *                     stops before the end onto its brigade's next trip, catching up 3 min or more
      * @param lost         the bus disappeared midway while recording went on
      * @param missed       not run, while the brigade's bus ran other trips that day
      * @param cancelled    not run, and no bus ran the brigade at all that day
@@ -103,6 +104,30 @@ public final class TripAnomalyDto {
                        String joinStop, Integer skippedStops, Instant changeAt, Integer stoodMinutes,
                        String stoodThen, Instant stoodLastSeen, Integer stoodLastSeenMeters, List<Step> story,
                        List<Span> timeline) {
+    }
+
+    /**
+     * Buses whose tracker probably fails, over a recent stretch of days.
+     *
+     * @param minDays      a bus is listed with no-signal trips on at least this many days, {@code minTrips} of them
+     *                     or more, and at least {@code minSharePercent} of the trips it ran
+     * @param trackers     most no-signal trips first
+     */
+    public record FaultyTrackers(Instant from, Instant to, int minDays, int minTrips, int minSharePercent,
+                                 List<FaultyTracker> trackers) {
+    }
+
+    /**
+     * A bus whose tracker probably fails.
+     *
+     * @param noSignalTrips trips it ran with parts missing (it stopped reporting and was back later)
+     * @param trips         trips it ran in all (in full or in part)
+     * @param days          days with such trips
+     * @param lastNoSignal  the scheduled departure of the latest one
+     * @param lines         the lines they were on
+     */
+    public record FaultyTracker(long vehicleId, String bus, int noSignalTrips, int trips, int days,
+                                Instant lastNoSignal, List<String> lines) {
     }
 
     /** One step of what happened at a change of bus, in phrases. */

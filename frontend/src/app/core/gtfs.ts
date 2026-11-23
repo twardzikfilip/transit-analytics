@@ -25,8 +25,3 @@ export function boardingRule(type: number | null): string | null {
       return null;
   }
 }
-
-/** Route colours are "#RRGGBB" or null; fall back to the theme accent. */
-export function routeColor(color: string | null): string | null {
-  return color && /^#[0-9a-f]{6}$/i.test(color) ? color : null;
-}

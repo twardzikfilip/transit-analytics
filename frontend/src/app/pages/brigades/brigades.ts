@@ -2,20 +2,22 @@ import { Component, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { BrigadeRef } from '../../core/models/models';
+import { BrigadeAgency, BrigadeRef } from '../../core/models/models';
 import { injectSetQuery } from '../../shared/url-query';
 import { BrigadesActions } from '../../store/brigades/brigades.actions';
 import { brigadesFeature } from '../../store/brigades/brigades.reducer';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { t } from '../../core/i18n/t';
+import { LineBadge } from '../../shared/line-kind/line-kinds';
 
 /**
- * Brigades: every brigade of an agency (BKM at first; ?agency=X), any in the timetable, in rows by line. Choosing one
+ * Brigades: every brigade of an operator (BKM at first; ?agency=X: the city's agency, or another operator's feed),
+ * any in the timetable or learnt from the recordings, in rows by line. Choosing one
  * opens its own page ({@link BrigadePage}), where its day is chosen.
  */
 @Component({
   selector: 'app-brigades',
-  imports: [Skeleton],
+  imports: [LineBadge, Skeleton],
   templateUrl: './brigades.html',
   styleUrl: './brigades.scss',
 })
@@ -28,8 +30,9 @@ export class BrigadesPage {
 
   protected readonly list = this.store.selectSignal(brigadesFeature.selectList);
   protected readonly loadingList = this.store.selectSignal(brigadesFeature.selectLoadingList);
+  /** The operator listed: as the answer has it (a former agency key in the URL becomes its operator's). */
   protected readonly agency = computed(
-    () => this.params().get('agency') ?? this.list()?.agency ?? '',
+    () => this.list()?.agency ?? this.params().get('agency') ?? '',
   );
   /** What's typed in the search box, to show the matching brigades. */
   protected readonly search = signal('');
@@ -52,6 +55,16 @@ export class BrigadesPage {
         this.store.dispatch(BrigadesActions.loadList({ agency }));
       }
     });
+  }
+
+  /**
+   * An operator's name: another operator's timetable by its short name (Wschód Express), as its agencies are the
+   * municipalities ordering its lines; else as the timetable names it.
+   */
+  protected operatorName(a: BrigadeAgency): string {
+    const key = `timetable.feeds.${a.id}`;
+    const name = t(key);
+    return name === key ? a.name : name;
   }
 
   /** "103-05 · line 103", for the search list. */

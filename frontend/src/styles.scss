@@ -39,15 +39,17 @@ $lightblue_bkm: #2393ca;
   --shadow-float: 0 4px 12px rgb(0 0 0 / 15%);
   /* Chart series colour; validated against the chart surface for each mode. */
   --chart-line: #1e88e5;
-  /* More chart series (categorical slots 2 and 3), and line colours by subtype. */
+  /* More chart series (categorical slots 2 and 3). */
   --chart-series-2: #eb6834;
   --chart-series-3: #1baf7a;
   /* Bus lanes in charts: the primary colour, as the map band (BUS_LANE_STYLE in palette.ts). */
   --bus-lane: var(--primary);
-  --line-urban: #2a78d6;
-  --line-suburban: #1baf7a;
-  --line-night: #c8102e;
-  --line-regional: #eb6834;
+  /* Lines by kind (badges, maps): indigo urban, green suburban, blue regional, black night lines, with white line
+     numbers. shared/line-kind/line-kinds.ts has them for code. */
+  --line-urban: #4b0082;
+  --line-suburban: #03bf03;
+  --line-night: #111111;
+  --line-regional: #0021ff;
   /* Depot runs: always paired with a "Depot run" label. */
   --depot: #eda100;
   --depot-soft: #fdf1d3;
@@ -80,10 +82,11 @@ $lightblue_bkm: #2393ca;
   --chart-series-2: #d95926;
   --chart-series-3: #199e70;
   --bus-lane: var(--primary);
-  --line-urban: #3987e5;
-  --line-suburban: #199e70;
-  --line-night: #d81530;
-  --line-regional: #d6781c;
+  --line-urban: #4b0082;
+  --line-suburban: #03bf03;
+  --line-night: #000000;
+  --line-regional: #0021ff;
+  --badge-edge: rgb(255 255 255 / 25%);
   --depot: #c98500;
   --depot-soft: #3a2f14;
   --strong-mix: #fff;
@@ -313,6 +316,8 @@ table.data-table {
   min-width: 2.4em;
   padding: 0.1rem 0.45rem;
   border-radius: 4px;
+  /* A thin light edge: the night lines' black stays visible on the dark theme's surface. */
+  box-shadow: inset 0 0 0 1px var(--badge-edge, transparent);
   background: var(--route-color, var(--accent));
   color: var(--route-text-color, #fff);
   font-weight: 600;
@@ -461,6 +466,11 @@ app-time-window label {
     margin-top: 0.5rem;
     padding-top: 0.4rem;
     border-top: 1px solid var(--border);
+  }
+
+  /* Folded away until the brigade's name is clicked. */
+  details.brigade summary {
+    cursor: pointer;
   }
 
   ol.runs {
@@ -691,6 +701,42 @@ svg .axis-label {
 }
 
 /* Vehicles on the live map (Home): no outline, a soft shadow to lift them off the map and apart from each other. */
-.leaflet-interactive.live-vehicle {
-  filter: drop-shadow(0 1px 3px rgb(0 0 0 / 70%));
+/* A bus on the live map: a pill in its line kind's colour with the line number, a compass arrow for its heading, and
+   a ring in its delay's colour when over a minute late. The icon box is 0×0 at the position; the pill is centred on
+   it. */
+.live-bus {
+  overflow: visible;
+}
+
+.live-bus .pill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--kind);
+  color: #fff;
+  font:
+    700 11px/14px system-ui,
+    sans-serif;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 60%);
+}
+
+.live-bus .pill.late {
+  outline: 3px solid var(--delay);
+}
+
+.live-bus .arrow {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-left: -2px;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 8px solid #fff;
 }

@@ -10,6 +10,7 @@ import { LineChooser } from './line-chooser';
 import { periodsText, ranked, rankings } from './rankings';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { t } from '../../core/i18n/t';
+import { LineBadge } from '../../shared/line-kind/line-kinds';
 
 /**
  * Routes: every line, a row per kind of line and a column per geometry; choosing one opens its page
@@ -18,7 +19,7 @@ import { t } from '../../core/i18n/t';
  */
 @Component({
   selector: 'app-routes-overview',
-  imports: [Skeleton, LineChooser, RouterLink],
+  imports: [LineBadge, Skeleton, LineChooser, RouterLink],
   templateUrl: './routes-overview.html',
   styleUrl: './routes-overview.scss',
 })

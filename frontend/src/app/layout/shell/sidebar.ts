@@ -45,6 +45,7 @@ export class Sidebar {
       items: [
         { path: '/brigades', label: 'nav.brigades', icon: 'brigades' },
         { path: '/vehicles', label: 'nav.fleet', icon: 'fleet' },
+        { path: '/trips', label: 'nav.trips', icon: 'trips' },
         { path: '/trip-anomalies', label: 'nav.tripAnomalies', icon: 'tripAnomalies' },
       ],
     },
@@ -58,7 +59,6 @@ export class Sidebar {
         { path: '/corridors', label: 'nav.corridors', icon: 'corridors' },
         { path: '/network-coverage', label: 'nav.networkCoverage', icon: 'networkCoverage' },
         { path: '/stops', label: 'nav.stops', icon: 'stops' },
-        { path: '/trips', label: 'nav.trips', icon: 'trips' },
         { path: '/stop-times', label: 'nav.stopTimes', icon: 'stopTimes' },
       ],
     },

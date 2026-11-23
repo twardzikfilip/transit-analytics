@@ -463,7 +463,7 @@ describe('Live map (Home)', () => {
     });
   });
 
-  it("colours vehicles by delay, with no outline but a shadow, and shows the rest of the brigade's day", async () => {
+  it("draws each bus as its line in its kind's colour, ringed when late, pointing its way, and shows the rest of the brigade's day", async () => {
     useSvgMaps();
     const now = Date.now();
     const at = (minutes: number) => new Date(now + minutes * 60_000).toISOString();
@@ -482,28 +482,56 @@ describe('Live map (Home)', () => {
         runs: [run('103', -90, -50), run('103', -10, 30), run('103', 40, 80)],
       }),
     );
-    const { el, fixture } = renderPage(LiveMap, live(position('230', 600)), {}, [
-      { provide: BrigadeApi, useValue: { schedule } },
-    ]);
+    const onTime = {
+      ...position('231', 30, 'BKM', null),
+      routeName: '5',
+      bearing: null,
+      subtype: null,
+    };
+    const { el, fixture, store } = renderPage(
+      LiveMap,
+      live({ ...position('230', 600), subtype: 'suburban' }, onTime),
+      {},
+      [{ provide: BrigadeApi, useValue: { schedule } }],
+    );
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const marker = el.querySelector('path.leaflet-interactive') as SVGPathElement;
-    expect(marker.getAttribute('fill')).toBe('#d7301f');
-    expect(marker.getAttribute('stroke')).toBe('none');
-    expect(marker.classList).toContain('live-vehicle');
-    expect(text(el.querySelector('.legend'))).not.toContain('Suburban');
+    const [late, early] = [...el.querySelectorAll<HTMLElement>('.live-bus .pill')];
+    expect(text(late)).toBe('103');
+    expect(late.style.getPropertyValue('--kind')).toBe('#03bf03');
+    expect(late.classList).toContain('late');
+    expect(late.style.getPropertyValue('--delay')).toBe('#d7301f');
+    expect(late.querySelector('.arrow')!.getAttribute('style')).toContain('rotate(90deg)');
+    // On time: no ring; no bearing: no arrow; a line not classified: by its name (5: urban).
+    expect(text(early)).toBe('5');
+    expect(early.classList).not.toContain('late');
+    expect(early.querySelector('.arrow')).toBeNull();
+    expect(early.style.getPropertyValue('--kind')).toBe('#4b0082');
+    expect(text(el.querySelector('.legend'))).toContain('Suburban');
 
     // The city limits and centre are drawn under the vehicles, and don't take clicks.
     expect(el.querySelectorAll('.leaflet-city-boundaries-pane path')).toHaveLength(2);
 
-    marker.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    late.parentElement!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(schedule).toHaveBeenCalledWith('103-01', undefined);
     const popup = el.querySelector('.leaflet-popup-content')!;
-    expect(text(popup.querySelector('.brigade > strong'))).toBe('Brigade 103-01');
+    // The schedule is folded away under the brigade's name.
+    const details = popup.querySelector<HTMLDetailsElement>('details.brigade')!;
+    expect(text(details.querySelector('summary strong'))).toBe('Brigade 103-01');
+    expect(details.open).toBe(false);
     const runs = [...popup.querySelectorAll('ol.runs li')];
     expect(runs).toHaveLength(2);
     expect(runs[0].classList).toContain('now');
+
+    // Opened, it stays open as the positions refresh and the popup is redrawn.
+    details.open = true;
+    details.dispatchEvent(new Event('toggle'));
+    store.setState(live({ ...position('230', 660), subtype: 'suburban' }, onTime));
+    fixture.detectChanges();
+    const redrawn = el.querySelector<HTMLDetailsElement>('.leaflet-popup-content details.brigade')!;
+    expect(redrawn).not.toBe(details);
+    expect(redrawn.open).toBe(true);
   });
 });
 
@@ -853,7 +881,7 @@ describe('Routes page', () => {
     expect(text(el.querySelector('app-travel-charts'))).toContain('109 full runs');
     const links = [...el.querySelectorAll('.line-links a')] as HTMLAnchorElement[];
     expect(links.map(text)).toEqual(['Trips', 'Timetable on the website ↗']);
-    expect(links[0].getAttribute('href')).toBe('/trips?routeId=2');
+    expect(links[0].getAttribute('href')).toBe('/trips?q=103');
     expect(links[1].href).toBe('https://komunikacja.bialystok.pl/#/route/103');
   });
 

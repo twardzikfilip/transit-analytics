@@ -7,8 +7,10 @@ import org.springframework.stereotype.Component;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * The subtype of a line by its name, as live feeds name lines: the route's stored subtype (which may have been set by
@@ -38,6 +40,11 @@ public class LineSubtypes {
         String name = line.strip();
         RouteSubtype subtype = stored().get(name);
         return subtype != null ? subtype : RouteSubtype.classify(name);
+    }
+
+    /** Every line of the timetable by name, with its subtype. */
+    public Map<String, RouteSubtype> all() {
+        return Collections.unmodifiableMap(new TreeMap<>(stored()));
     }
 
     private Map<String, RouteSubtype> stored() {

@@ -68,7 +68,7 @@ class FleetIntegrationTest {
                 List.of(new TripAnomalyDto.Span("IT-FA", "standing", local("08:00"), local("08:20"))));
         TripAnomalyService trips = mock(TripAnomalyService.class);
         when(trips.outcomes(any(), any())).thenReturn(List.of(
-                new Outcome("IT1", local("07:30"), local("08:10"), Kind.VEHICLE_CHANGED, trip, List.of(a, b))));
+                new Outcome("IT1-1", "IT1", local("07:30"), local("08:10"), Kind.VEHICLE_CHANGED, trip, List.of(a, b))));
         Instant now = local("12:00").plus(Duration.ofDays(3));
         var fleet = new FleetService(jdbc, Clock.fixed(now, ZoneOffset.UTC), trips);
 

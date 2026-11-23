@@ -1,7 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { boardingRule, formatGtfsTime, routeColor } from '../../core/gtfs';
+import { boardingRule, formatGtfsTime } from '../../core/gtfs';
 import { StopTime } from '../../core/models/models';
 import { Pager, rowNumber } from '../../shared/pager/pager';
 import { listQuery } from '../../shared/list-query';
@@ -9,10 +9,11 @@ import { StopTimesActions } from '../../store/stop-times/stop-times.actions';
 import { stopTimesFeature } from '../../store/stop-times/stop-times.reducer';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { t } from '../../core/i18n/t';
+import { LineBadge } from '../../shared/line-kind/line-kinds';
 
 @Component({
   selector: 'app-stop-times',
-  imports: [Skeleton, RouterLink, Pager],
+  imports: [LineBadge, Skeleton, RouterLink, Pager],
   templateUrl: './stop-times.html',
 })
 export class StopTimes {
@@ -47,7 +48,6 @@ export class StopTimes {
   });
 
   protected readonly formatTime = formatGtfsTime;
-  protected readonly routeColor = routeColor;
 
   protected boarding(st: StopTime): string | null {
     const pickup = boardingRule(st.pickupType);

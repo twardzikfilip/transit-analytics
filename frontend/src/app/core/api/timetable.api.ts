@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { GtfsImportResult, Route, Stop, StopTime, Trip } from '../models/models';
+import { GtfsImportResult, Route, Stop, StopTime } from '../models/models';
 import { CrudApiService } from './crud-api.service';
 
 @Injectable({ providedIn: 'root' })
@@ -15,13 +15,6 @@ export class RouteApi extends CrudApiService<Route, unknown> {
 export class StopApi extends CrudApiService<Stop, unknown> {
   constructor() {
     super('/api/stops');
-  }
-}
-
-@Injectable({ providedIn: 'root' })
-export class TripApi extends CrudApiService<Trip, unknown> {
-  constructor() {
-    super('/api/trips');
   }
 }
 

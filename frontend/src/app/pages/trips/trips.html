@@ -1,117 +1,177 @@
-<div class="list-filters">
-  <label>
-    {{ t('timetable.route') }}
-    <select
-      [value]="query.get('routeId')"
-      (change)="query.setFilters({ routeId: $any($event.target).value })"
-    >
-      <option value="">{{ t('timetable.allRoutes') }}</option>
-      @for (route of routes(); track route.id) {
-        <option [value]="route.id" [selected]="query.get('routeId') === '' + route.id">
-          {{ route.name }}
-        </option>
-      }
-    </select>
-  </label>
-  <label>
-    {{ t('timetable.direction') }}
-    <select
-      [value]="query.get('direction')"
-      (change)="query.setFilters({ direction: $any($event.target).value })"
-    >
-      <option value="">{{ t('timetable.both') }}</option>
-      <option value="0">{{ t('timetable.outbound') }}</option>
-      <option value="1">{{ t('timetable.inbound') }}</option>
-    </select>
-  </label>
-  <label>
-    {{ t('timetable.headsign') }}
-    <input
-      type="search"
-      [placeholder]="t('timetable.headsignExample')"
-      [value]="query.get('q')"
-      (input)="onSearch($any($event.target).value)"
-    />
-  </label>
-  @if (query.get('serviceId'); as service) {
-    <span class="chip"
-      >{{ t('timetable.serviceX', { service: service }) }}
-      <button
-        type="button"
-        (click)="query.setFilters({ serviceId: null })"
-        [attr.aria-label]="t('timetable.clearService')"
-      >
-        ×
-      </button></span
-    >
+<div class="page-header">
+  @if (result(); as r) {
+    <span class="muted">
+      {{
+        t('trips.scheduledWindow', {
+          from: r.shownFrom | date: 'd MMM, HH:mm',
+          to: r.to | date: 'd MMM, HH:mm',
+        })
+      }}
+    </span>
   }
 </div>
 
-<div class="card data-table-wrap">
-  <table class="data-table" [class.loading]="loading()">
-    <thead>
-      <tr>
-        <th class="index">#</th>
-        <th>{{ t('timetable.route') }}</th>
-        <th>{{ t('timetable.headsign') }}</th>
-        <th>{{ t('timetable.direction') }}</th>
-        <th>{{ t('timetable.service') }}</th>
-        <th>{{ t('timetable.variant') }}</th>
-        <th>{{ t('timetable.access') }}</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      @for (trip of trips(); track trip.id; let i = $index) {
-        <tr>
-          <td class="index">{{ index(i) }}</td>
-          <td>
-            <a
-              class="route-badge"
-              [style.--route-color]="routeColor(trip.routeColor)"
-              [routerLink]="[]"
-              [queryParams]="{ routeId: trip.routeId, page: null }"
-              queryParamsHandling="merge"
-              >{{ trip.routeName }}</a
-            >
-          </td>
-          <td>{{ trip.headsign ?? '—' }}</td>
-          <td class="num">{{ trip.direction ?? '—' }}</td>
-          <td class="num">
-            <a
-              [routerLink]="[]"
-              [queryParams]="{ serviceId: trip.serviceId, page: null }"
-              queryParamsHandling="merge"
-              >{{ trip.serviceId }}</a
-            >
-          </td>
-          <td>{{ trip.shortName ?? '—' }}</td>
-          <td>
-            @if (trip.wheelchairAccessible === 1) {
-              <span [title]="t('timetable.wheelchair')">♿</span>
-            }
-            @if (trip.bikesAllowed === 1) {
-              <span [title]="t('timetable.bikes')">🚲</span>
-            }
-          </td>
-          <td class="num">
-            <a [routerLink]="['/stop-times']" [queryParams]="{ tripId: trip.id }">{{
-              t('timetable.stopTimes')
-            }}</a>
-          </td>
-        </tr>
-      } @empty {
-        <tr>
-          <td colspan="8" class="muted">
-            @if (loading()) {
-              <app-skeleton [count]="10" [label]="t('timetable.loadingTrips')" />
-            } @else {
-              {{ t('timetable.noTrips') }}
-            }
-          </td>
-        </tr>
-      }
-    </tbody>
-  </table>
+<app-time-window [defaultPreset]="defaultPreset" [reset]="['page', 'trip', 'map']">
+  <label class="search">
+    {{ t('trips.search') }}
+    <input
+      type="search"
+      [placeholder]="t('trips.searchExample')"
+      [value]="q()"
+      (input)="onSearch($any($event.target).value)"
+    />
+  </label>
+  @if (refreshing()) {
+    <span class="muted">{{ t('trips.refreshes') }}</span>
+  }
+  @if (loading()) {
+    <span class="muted" role="status">{{ t('common.loading') }}</span>
+  }
+</app-time-window>
+
+@if (cut()) {
+  <p class="muted note">{{ t('trips.lastDay') }}</p>
+}
+
+<div class="legend muted" [attr.aria-label]="t('trips.legend')">
+  <span class="item"><span class="bar scheduled"></span>{{ t('trips.scheduled') }}</span>
+  <span class="item">
+    {{ t('trips.ranDelay') }}
+    @for (s of delayStops; track s.seconds) {
+      <span class="bar" [style.background]="s.color"></span>{{ t(s.label) }}
+    }
+  </span>
+  <span class="item"
+    ><svg width="22" height="10" aria-hidden="true">
+      <rect width="22" height="10" fill="url(#lane-not-run)" [attr.stroke]="notRun" /></svg
+    >{{ t('trips.notRun') }}</span
+  >
+  <span class="item"
+    ><svg width="22" height="10" aria-hidden="true">
+      <rect width="22" height="10" fill="url(#lane-not-seen)" [attr.stroke]="notSeen" /></svg
+    >{{ t('trips.notSeen') }}</span
+  >
+  <span class="item"><span class="bar stood"></span>{{ t('trips.stood') }}</span>
+  <span class="item"
+    ><span class="mark" [style.background]="change">⇄</span>{{ t('trips.changed') }}</span
+  >
+  <span class="item"
+    ><span class="mark" [style.background]="notRun">↩</span>{{ t('trips.turnedShort') }}</span
+  >
+  <span class="item"
+    ><span class="mark" [style.background]="notRun">✕</span>{{ t('trips.lost') }}</span
+  >
+  <span class="item"
+    ><span class="mark" [style.background]="change">↷</span>{{ t('trips.detour') }}</span
+  >
 </div>
-<app-pager [page]="page()" noun="pager.trips" (pageChange)="query.setPage($event)" />
+
+<app-trip-lane-patterns />
+
+@if (result(); as r) {
+  <section class="card list" [class.loading]="loading()" [attr.aria-label]="t('trips.list')">
+    @if (span(); as s) {
+      <div class="row axis" aria-hidden="true">
+        <span></span>
+        <app-trip-axis [from]="s[0]" [to]="s[1]" />
+      </div>
+      @for (run of r.trips; track key(run)) {
+        <div class="trip" [class.open]="open() === key(run)">
+          <button
+            type="button"
+            class="row"
+            [attr.aria-expanded]="open() === key(run)"
+            (click)="toggle(run)"
+          >
+            <span class="info">
+              <span class="first">
+                <span class="time"
+                  >{{ time(run.trip.departure) }}–{{ time(run.trip.arrival) }}</span
+                >
+                <span class="route-badge" [appLineBadge]="run.trip.line">{{ run.trip.line }}</span>
+                <span class="to">→ {{ run.trip.headsign ?? run.trip.to }}</span>
+              </span>
+              <span class="second muted">
+                {{ t('trips.brigadeX', { brigade: run.brigade }) }} ·
+                {{ t('trips.busX', { buses: busesText(run.trip) }) }}
+                @if (run.trip.runs.length) {
+                  · {{ delayText(run.trip.runs[0].startDelay) }}
+                }
+                <span class="tag" [class.danger]="problem(run)">{{
+                  kindLabel(run.trip.kind)
+                }}</span>
+              </span>
+            </span>
+            <app-trip-lane [run]="run" [from]="s[0]" [to]="s[1]" />
+          </button>
+          @if (open() === key(run)) {
+            <div class="detail">
+              <app-trip-detail
+                [run]="run"
+                [detail]="detail()"
+                [mapShown]="mapShown()"
+                (toggleMap)="toggleMap()"
+              />
+              @if (mapShown()) {
+                <app-trip-map [run]="run" [detail]="detail()" />
+              }
+              <div class="facts">
+                @let d = delaySummary(run);
+                <p>
+                  {{
+                    t('trips.delays', {
+                      start: delayText(d.start),
+                      end: delayText(d.end),
+                      max: delayText(d.max),
+                    })
+                  }}
+                </p>
+                @if (run.averageKmh !== null) {
+                  <p class="stat">
+                    {{ t('trips.averageSpeed') }} <strong>{{ run.averageKmh }} km/h</strong>{{ ' '
+                    }}<span class="muted">{{ t('trips.averageSpeedNote') }}</span>
+                  </p>
+                }
+                @if (detail(); as d) {
+                  @if (halts(d.stops); as longest) {
+                    @if (longest.length) {
+                      <p class="halts">
+                        {{ t('trips.halts') }}
+                        @for (h of longest; track h.index; let last = $last) {
+                          <strong>{{ h.name }}</strong> {{ minutes(h.dwellSeconds)
+                          }}{{ last ? '' : ' · ' }}
+                        }
+                      </p>
+                    }
+                  }
+                }
+                @if (phrasesText(run.trip.note); as note) {
+                  <p>{{ note }}</p>
+                }
+                @if (events(run); as list) {
+                  @if (list.length) {
+                    <ul class="events">
+                      @for (e of list; track $index) {
+                        <li>{{ e.text }}</li>
+                      }
+                    </ul>
+                  }
+                }
+                <a
+                  [routerLink]="['/brigades', run.brigade]"
+                  [queryParams]="{ date: run.serviceDay }"
+                  >{{ t('trips.brigadeDay', { brigade: run.brigade }) }}</a
+                >
+              </div>
+            </div>
+          }
+        </div>
+      }
+    } @else {
+      <p class="muted empty">{{ r.q ? t('trips.noneFound', { q: r.q }) : t('trips.none') }}</p>
+    }
+  </section>
+  <app-pager [page]="pageMeta()" noun="pager.trips" (pageChange)="setPage($event)" />
+} @else if (loading()) {
+  <app-skeleton kind="lines" [count]="10" [label]="t('trips.loading')" />
+}

@@ -229,7 +229,7 @@ export class RoutesPage {
   private drawRoute(detail: LineDetail): void {
     const layers = this.host.layer;
     layers.clearLayers();
-    const color = cssColor(this.colorVar(detail.subtype), '#2a78d6');
+    const color = cssColor(this.colorVar(detail.subtype), '#4b0082');
     const depotColor = cssColor('--depot', '#eda100');
     const ordered = [...detail.variants].sort(
       (a, b) => (a.kind === 'main' ? 1 : 0) - (b.kind === 'main' ? 1 : 0),

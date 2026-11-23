@@ -35,9 +35,9 @@ class TripAnomaliesTest {
     private static final Recording RECORDING = recording();
     private static final Instant NOON = at("12:00");
 
-    private static Instant at(String hhmm) {
-        return ServiceDay.gtfsTimeZero(DAY).plusSeconds(
-                Integer.parseInt(hhmm.substring(0, 2)) * 3600L + Integer.parseInt(hhmm.substring(3)) * 60L);
+    /** "HH:mm" or "HH:mm:ss" on the day. */
+    private static Instant at(String time) {
+        return ServiceDay.gtfsTimeZero(DAY).plusSeconds(java.time.LocalTime.parse(time).toSecondOfDay());
     }
 
     private static Recording recording() {
@@ -125,8 +125,9 @@ class TripAnomaliesTest {
         reports.addAll(drive(1, detour, 4));
         // 07:30: bus 1 is seen on line 10 meanwhile.
         reports.add(new Report(1, "V1", at("07:35"), "10", "010-01", "Rynek", 0, 3, 53.2, 23.2));
-        reports.addAll(drive(1, shortTurn, 0, 1, 2));
-        Report lastOn = drive(1, shortTurn, 2).get(2);
+        // 07:45: 4 min late, it turns heading to B, 3 stops before the end, and runs its next trip on time.
+        reports.addAll(late(drive(1, shortTurn, 0, 1), 240));
+        Report lastOn = drive(1, shortTurn, 1).get(2);
         reports.add(new Report(1, "V1", lastOn.time().plusSeconds(20), "9", "009-01", "Zajezdnia", 0, 0, 53.0, LON));
         reports.addAll(drive(3, lost, 0, 1, 2));
         reports.addAll(drive(4, noSignal, 0, 1, 2));
@@ -158,16 +159,16 @@ class TripAnomaliesTest {
                 .isEqualTo("Between the brigade's runs. Bus V1 was on line 10 (brigade 010-01).");
         assertThat(outcomes.get(missed.tripId()).vehicleIds()).as("the brigade's bus that day").containsExactly(1L);
         assertThat(outcomes.get(detour.tripId()).vehicleIds()).containsExactly(1L);
-        assertThat(outcomes.get(full.tripId()).vehicleIds()).as("normal trips aren't listed").isEmpty();
+        assertThat(outcomes.get(full.tripId()).vehicleIds()).containsExactly(1L);
 
         TripAnomalyDto.Trip s = outcomes.get(shortTurn.tripId()).trip();
         assertThat(s.fromStop()).isEqualTo(1);
-        assertThat(s.toStop()).isEqualTo(3);
-        assertThat(s.coveredTo()).isEqualTo("C");
+        assertThat(s.toStop()).isEqualTo(2);
+        assertThat(s.coveredTo()).isEqualTo("D");
         assertThat(EnglishPhrases.text(s.note()))
-                .isEqualTo("Left the trip heading to C (stop 3 of 5) at 07:47 and went on to the "
+                .isEqualTo("Left the trip heading to D (stop 2 of 5) at 07:45 and went on to the "
                 + "brigade's next trip towards Zajezdnia.");
-        assertThat(s.startDelay()).isZero();
+        assertThat(s.startDelay()).isEqualTo(240);
 
         assertThat(EnglishPhrases.text(outcomes.get(cancelled.tripId()).trip().note()))
                 .isEqualTo("No bus ran brigade 009-02 all day while recording.");
@@ -183,6 +184,41 @@ class TripAnomaliesTest {
         assertThat(summary).isEqualTo(new TripAnomalyDto.Summary(10, 8, 2, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0));
         assertThat(TripSummaries.lines(all)).singleElement()
                 .isEqualTo(new TripAnomalyDto.LineCounts("9", 8, 2, 1, 0, 1, 1, 1, 1, 1));
+    }
+
+    /** The same reports, with a delay. */
+    private static List<Report> late(List<Report> reports, int delay) {
+        return reports.stream().map(r -> new Report(r.vehicleId(), r.vehicle(), r.time(), r.line(), r.brigade(),
+                r.headsign(), delay, r.nextSeq(), r.lat(), r.lon())).toList();
+    }
+
+    @Test
+    void aBusMovedOnToItsNextTripEarlyFinishedItsTrip() {
+        // Each bus is last seen on its trip heading to B, 3 stops before the end, then on the brigade's next trip.
+        ScheduledTrip early = trip("009-01", "North", "07:00");
+        ScheduledTrip noGain = trip("009-02", "North", "07:00");
+        ScheduledTrip toDepot = trip("009-03", "North", "07:00");
+        ScheduledTrip drivesOn = new ScheduledTrip("009-04_07:00", "9", "009-04", "North", at("07:00"),
+                at("07:08"), new int[] {0, 1, 2, 3, 4}, NAMES, new int[] {0, 120, 240, 360, 480}, "S",
+                new double[] {53.112, LON});
+        List<Report> reports = new ArrayList<>();
+        // Bus 1: its delay hardly changes on the next trip: the feed moved it on early.
+        reports.addAll(late(drive(1, early, 0, 1), 240));
+        reports.add(new Report(1, "V1", at("07:02:40"), "9", "009-01", "South", 180, 4, 53.104, LON));
+        // Bus 2: as bus 1, without a delay on the next trip to compare.
+        reports.addAll(late(drive(2, noGain, 0, 1), 240));
+        reports.add(new Report(2, "V2", at("07:02:40"), "9", "009-02", "South", null, 4, 53.104, LON));
+        // Bus 3: off to the depot, without its brigade.
+        reports.addAll(late(drive(3, toDepot, 0, 1), 240));
+        reports.add(new Report(3, "V3", at("07:02:40"), "9", null, "Zajezdnia", 0, 4, 53.104, LON));
+        // Bus 4: on time on the next trip, but it drives on to the last stop first.
+        reports.addAll(late(drive(4, drivesOn, 0, 1), 240));
+        reports.add(new Report(4, "V4", at("07:02:40"), "9", "009-04", "South", 0, 4, 53.104, LON));
+        reports.add(new Report(4, "V4", at("07:05:00"), "9", "009-04", "South", 0, 4, 53.1119, LON));
+
+        Map<String, Outcome> outcomes = judge(List.of(early, noGain, toDepot, drivesOn), reports, NOON);
+
+        assertThat(outcomes.values()).extracting(Outcome::kind).containsOnly(Kind.COMPLETED);
     }
 
     @Test

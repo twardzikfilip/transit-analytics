@@ -238,8 +238,6 @@
     "over": "> {{n}} min",
     "reset": "Réinitialiser les filtres",
     "mapLegend": "Légende de la carte",
-    "delay": "Retard",
-    "unknown": "inconnu",
     "linesOnMap": "Lignes sur la carte",
     "liveData": "Données en direct :",
     "typeLines": "lignes {{type}}",
@@ -259,7 +257,16 @@
     "delayUnknown": "Retard inconnu",
     "onTime": "À l'heure",
     "late": "{{delay}} de retard",
-    "early": "{{delay}} d'avance"
+    "early": "{{delay}} d'avance",
+    "lineKinds": "Ligne",
+    "kinds": {
+      "urban": "Urbaine",
+      "suburban": "Périurbaine",
+      "regional": "Régionale",
+      "night_urban": "Nocturne"
+    },
+    "delayRing": "Retard (contour)",
+    "noRing": "Sans contour : à l'heure, jusqu'à une minute de retard, ou inconnu"
   },
   "history": {
     "title": "Positions enregistrées",
@@ -318,7 +325,7 @@
     "brigade": "Service",
     "agency": "Exploitant",
     "search": "Rechercher : service ou ligne, p. ex. 103-05 ou 103",
-    "noBrigades": "L'horaire de cet exploitant ne nomme pas les services.",
+    "noBrigades": "Aucun service : l'horaire de cet exploitant n'en nomme pas, et aucun n'a pu être déduit des positions enregistrées de ses bus.",
     "lineX": "Ligne {{line}}",
     "describe": "{{brigade}} · ligne {{lines}}",
     "loadingBrigades": "Chargement des services",
@@ -505,7 +512,7 @@
       "cancelled": "Non effectuée : aucun bus n'a assuré le service ce jour-là.",
       "missed": "Non effectuée, alors que le bus du service a assuré d'autres courses ce jour-là.",
       "lost": "Le bus a cessé d'émettre en cours de route et n'est pas revenu sur son service.",
-      "short-turned": "Effectuée en partie seulement : le bus, émettant tout du long, a rejoint la course en route ou l'a quittée avant la fin.",
+      "short-turned": "Effectuée en partie seulement : le bus, émettant tout du long, l'a rejointe en cours de route ou a fait demi-tour au moins 3 arrêts avant la fin, avec 3+ min de retard en moins sur sa course suivante.",
       "detour": "Effectuée en entier, mais hors de l'itinéraire (à plus de 150 m) pendant un moment.",
       "vehicle-changed": "Effectuée en entier, mais par deux bus : l'un en a fait une partie et un autre bus du service a pris le relais en route (en général une panne).",
       "no-signal": "Le bus a cessé d'émettre en cours de route (ou a commencé tard) mais était là pour sa course suivante : très probablement effectuée, sans être vue."
@@ -850,23 +857,8 @@
     "noStopsMatch": "Aucun arrêt ne correspond.",
     "noStopsYet": "Aucun arrêt pour le moment. Importez un horaire dans les Paramètres.",
     "route": "Ligne",
-    "allRoutes": "Toutes les lignes",
-    "direction": "Sens",
-    "both": "Les deux",
-    "outbound": "Aller (0)",
-    "inbound": "Retour (1)",
-    "headsign": "Destination",
-    "headsignExample": "p. ex. Dworzec",
-    "serviceX": "Calendrier {{service}}",
-    "clearService": "Retirer le filtre de calendrier",
     "service": "Calendrier",
-    "variant": "Variante",
-    "access": "Accès",
-    "wheelchair": "Accessible en fauteuil roulant",
-    "bikes": "Vélos autorisés",
     "stopTimes": "Horaires aux arrêts",
-    "loadingTrips": "Chargement des courses",
-    "noTrips": "Aucune course ne correspond.",
     "tripX": "Course {{trip}}",
     "clearTrip": "Retirer le filtre de course",
     "stopX": "Arrêt {{stop}}",
@@ -890,8 +882,7 @@
       "2": "sur appel à l'exploitant",
       "3": "sur demande"
     },
-    "allStopTimes1": "Tous les horaires de toutes les courses. Ouvrez-les pour une course depuis",
-    "allStopTimes2": ", ou en tableau des départs depuis",
+    "allStopTimes": "Tous les horaires aux arrêts de toutes les courses. Ouvrez-les comme tableau des départs depuis",
     "feed": "Horaires",
     "feeds": {
       "bialystok": "BKM",
@@ -912,7 +903,8 @@
       "name": "zbiorkom.live",
       "gives": "Positions des véhicules en direct, retards, services et modèles, toutes les 10 s ; enregistrés dans la base de données.",
       "usedOn": "Accueil, Flotte, Services, Courses anormales, Points d'immobilisation, Couloirs de bus, Formation des retards, Lignes",
-      "refreshed": "En continu"
+      "refreshed": "En continu",
+      "detail": "Seuls les bus à l'intérieur d'un rectangle sont enregistrés : <code>22.45,52.88,23.48,53.44</code> (ouest, sud, est, nord). C'est le plus petit qui contient tous les arrêts des quatre horaires, avec environ&nbsp;2&nbsp;km de marge de chaque côté pour les boucles de retournement, les trajets vers le dépôt et les déviations. Ses arrêts les plus éloignés, tous de Wschód Express : à l'ouest Kołodzieje (ligne 470), à l'est Kołpaki I (475), au sud Kaniuki II (474), au nord Uścianek (469). Un horaire avec des arrêts plus loin demande de l'agrandir (<code>ZBIORKOM_BIALYSTOK_BBOX</code>)."
     },
     "bkm": {
       "name": "Horaire BKM (GTFS)",
@@ -1541,5 +1533,83 @@
     "stepTakesOverDelay": "Le bus {{bus}} prend le relais {{joined}}, en direction de l'arrêt {{stop}} ({{index}} sur {{total}}), à {{away}} de l'endroit où le bus {{other}} s'est arrêté, retard {{delay}}.",
     "stepNoBusFor": "La course est restée sans bus pendant {{n}} min.",
     "stepNextTrip": "Le bus {{bus}} assure la course suivante du service, vers {{to}} (prévue à {{time}})."
+  },
+  "home": {
+    "trackers": {
+      "title": "Bus au traceur peut-être défaillant",
+      "rule": "Bus qui ont cessé d'émettre en cours de course {{days}} jours ou plus la semaine dernière ({{trips}}+ courses, {{share}} %+ de leurs courses) : vérifiez leur traceur. Leurs trous relèvent du suivi, pas du service.",
+      "trips": "{{n}} sur {{of}} courses ({{share}})",
+      "days": {
+        "one": "sur {{count}} jour",
+        "many": "sur {{count}} jours",
+        "other": "sur {{count}} jours"
+      },
+      "last": "dernière {{when}}",
+      "none": "Aucun bus n'a perdu son signal en course à répétition la semaine dernière.",
+      "loading": "Chargement des bus au traceur peut-être défaillant"
+    }
+  },
+  "trips": {
+    "scheduledWindow": "Courses prévues {{from}} – {{to}}",
+    "search": "Rechercher",
+    "searchExample": "Bus, service, ligne ou destination",
+    "refreshes": "Se met à jour chaque minute",
+    "lastDay": "La période dépasse une journée : ses 24 dernières heures sont listées.",
+    "legend": "Légende",
+    "scheduled": "Prévu",
+    "ran": "Effectué",
+    "ranDelay": "Effectué, selon le retard :",
+    "notRun": "Non effectué",
+    "notSeen": "Non vu",
+    "stood": "Arrêt de 3+ min",
+    "changed": "Changement de bus",
+    "turnedShort": "Écourtée",
+    "lost": "Bus perdu",
+    "detour": "Déviation",
+    "list": "Courses",
+    "brigadeX": "Service {{brigade}}",
+    "busX": "bus {{buses}}",
+    "delays": "Départ {{start}}, dernier relevé {{end}}, au plus {{max}}.",
+    "brigadeDay": "La journée du service {{brigade}}",
+    "noneFound": "Aucune course de la période ne correspond à « {{q}} ».",
+    "none": "Aucune course prévue sur la période.",
+    "loading": "Chargement des courses",
+    "stoodTitle": "Arrêté {{minutes}} min en direction de {{stop}}",
+    "events": {
+      "changed": "{{time}} : bus {{from}} remplacé par {{to}} à {{stop}}.",
+      "stood": "{{time}} : le bus {{bus}} est resté arrêté {{minutes}} min en direction de {{stop}} (retard {{growth}}).",
+      "lost": "{{time}} : le bus a été perdu en direction de {{stop}} (arrêt {{index}} sur {{total}}).",
+      "shortTurned": "{{time}} : la course s'est terminée avant la fin, en direction de {{stop}} (arrêt {{index}} sur {{total}})."
+    },
+    "detail": {
+      "label": "Ligne {{line}} : retard et vitesse pendant la course",
+      "delay": "Retard, min",
+      "speed": "Vitesse, km/h",
+      "bus": "Bus {{bus}}",
+      "delayAt": "Retard : {{delay}}",
+      "speedAt": "Vitesse : {{kmh}} km/h",
+      "headingTo": "En direction de {{stop}} (arrêt {{index}} sur {{total}})"
+    },
+    "map": {
+      "short": "Carte",
+      "button": "Afficher la course sur la carte, colorée selon le retard",
+      "loading": "Chargement du trajet de la course",
+      "none": "Aucun bus n'a été vu sur cette course : pas de trajet à afficher.",
+      "label": "Ligne {{line}} sur la carte, colorée selon le retard",
+      "route": "Itinéraire",
+      "start": "Départ {{time}}, bus {{bus}}, {{delay}}",
+      "end": "Dernier relevé sur la course {{time}}, bus {{bus}}, {{delay}}"
+    },
+    "averageSpeed": "Vitesse moyenne",
+    "averageSpeedNote": "sur toute la course, arrêts et attentes compris",
+    "stops": {
+      "index": "Arrêt {{index}} sur {{total}}",
+      "due": "Prévu {{time}}",
+      "passed": "Passé {{time}} ({{delay}})",
+      "notSeen": "Passage non vu",
+      "stood": "Arrêté {{time}} à l'arrêt",
+      "noStop": "Ne s'est pas arrêté"
+    },
+    "halts": "Plus longs arrêts aux arrêts :"
   }
 }
