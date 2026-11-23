@@ -232,8 +232,6 @@
     "over": "> {{n}} min",
     "reset": "Reset filters",
     "mapLegend": "Map legend",
-    "delay": "Delay",
-    "unknown": "unknown",
     "linesOnMap": "Lines on the map",
     "liveData": "Live data:",
     "typeLines": "{{type}} lines",
@@ -253,7 +251,16 @@
     "delayUnknown": "Delay unknown",
     "onTime": "On time",
     "late": "{{delay}} late",
-    "early": "{{delay}} early"
+    "early": "{{delay}} early",
+    "lineKinds": "Line",
+    "kinds": {
+      "urban": "Urban",
+      "suburban": "Suburban",
+      "regional": "Regional",
+      "night_urban": "Night"
+    },
+    "delayRing": "Delay (ring)",
+    "noRing": "No ring: on time, up to a minute late, or not known"
   },
   "history": {
     "title": "Recorded positions",
@@ -310,9 +317,9 @@
   },
   "brigades": {
     "brigade": "Brigade",
-    "agency": "Agency",
+    "agency": "Operator",
     "search": "Search: brigade or line, e.g. 103-05 or 103",
-    "noBrigades": "This operator's timetable doesn't name brigades.",
+    "noBrigades": "No brigades: this operator's timetable doesn't name them, and none could be learnt from its recorded buses.",
     "lineX": "Line {{line}}",
     "describe": "{{brigade}} · line {{lines}}",
     "loadingBrigades": "Loading the brigades",
@@ -494,7 +501,7 @@
       "cancelled": "Not run: no bus ran the brigade at all that day.",
       "missed": "Not run, while the brigade's bus ran other trips that day.",
       "lost": "The bus stopped reporting midway and didn't come back to its brigade.",
-      "short-turned": "Run only partly: the bus, reporting all along, joined midway or left before the end.",
+      "short-turned": "Run only partly: the bus, reporting all along, joined midway, or left more than 3 stops before the end (within the last 3, only turning onto its next trip 3+ min less late).",
       "detour": "Run in full, but off its route (over 150 m away) for a while.",
       "vehicle-changed": "Run in full, but by two buses: one ran part of it and another bus of the brigade took over midway (a breakdown, typically).",
       "no-signal": "The bus stopped reporting partway (or started late) but was back for its next trip: most likely run, unseen."
@@ -838,23 +845,8 @@
     "noStopsMatch": "No stops match.",
     "noStopsYet": "No stops yet. Import a timetable in Settings.",
     "route": "Route",
-    "allRoutes": "All routes",
-    "direction": "Direction",
-    "both": "Both",
-    "outbound": "Outbound (0)",
-    "inbound": "Inbound (1)",
-    "headsign": "Headsign",
-    "headsignExample": "e.g. Dworzec",
-    "serviceX": "Service {{service}}",
-    "clearService": "Clear service filter",
     "service": "Service",
-    "variant": "Variant",
-    "access": "Access",
-    "wheelchair": "Wheelchair accessible",
-    "bikes": "Bikes allowed",
     "stopTimes": "Stop times",
-    "loadingTrips": "Loading the trips",
-    "noTrips": "No trips match.",
     "tripX": "Trip {{trip}}",
     "clearTrip": "Clear trip filter",
     "stopX": "Stop {{stop}}",
@@ -878,8 +870,7 @@
       "2": "phone the agency",
       "3": "on request"
     },
-    "allStopTimes1": "All stop times of all trips. Open them for one trip from",
-    "allStopTimes2": ", or as a departure board from",
+    "allStopTimes": "All stop times of all trips. Open them as a departure board from",
     "feed": "Timetable",
     "feeds": {
       "bialystok": "BKM",
@@ -900,7 +891,8 @@
       "name": "zbiorkom.live",
       "gives": "Live vehicle positions, delays, brigades and models, every 10 s; recorded into the database.",
       "usedOn": "Home, Fleet, Brigades, Abnormal trips, Stop hotspots, Bus lanes, Delay generation, Routes",
-      "refreshed": "Continuously"
+      "refreshed": "Continuously",
+      "detail": "Only the buses inside a rectangle are recorded: <code>22.45,52.88,23.48,53.44</code> (west, south, east, north). It is the smallest one holding every stop of the four timetables, with about&nbsp;2&nbsp;km to spare on each side for turning loops, depot runs and detours. Its furthest stops, all of Wschód Express: west Kołodzieje (line 470), east Kołpaki I (475), south Kaniuki II (474), north Uścianek (469). A timetable with stops further out needs it widened (<code>ZBIORKOM_BIALYSTOK_BBOX</code>)."
     },
     "bkm": {
       "name": "BKM timetable (GTFS)",
@@ -1523,5 +1515,82 @@
     "stepTakesOverDelay": "Bus {{bus}} takes over {{joined}}, heading to {{stop}} (stop {{index}} of {{total}}), {{away}} from where bus {{other}} stopped, delay {{delay}}.",
     "stepNoBusFor": "The trip had no bus for {{n}} min.",
     "stepNextTrip": "Bus {{bus}} runs the brigade's next trip, towards {{to}} (scheduled {{time}})."
+  },
+  "home": {
+    "trackers": {
+      "title": "Buses with a possibly faulty tracker",
+      "rule": "Buses that stopped reporting partway through their trips on {{days}} or more days of the last week ({{trips}}+ trips, {{share}}%+ of the trips they ran): check their trackers. Their gaps are tracking, not service.",
+      "trips": "{{n}} of {{of}} trips ({{share}})",
+      "days": {
+        "one": "on {{count}} day",
+        "other": "on {{count}} days"
+      },
+      "last": "latest {{when}}",
+      "none": "No bus lost its signal on trips again and again in the last week.",
+      "loading": "Loading buses with possibly faulty trackers"
+    }
+  },
+  "trips": {
+    "scheduledWindow": "Trips scheduled {{from}} – {{to}}",
+    "search": "Search",
+    "searchExample": "Bus, brigade, line or destination",
+    "refreshes": "Refreshes every minute",
+    "lastDay": "The window is longer than a day: the last 24 hours of it are listed.",
+    "legend": "Legend",
+    "scheduled": "Scheduled",
+    "ran": "Ran",
+    "ranDelay": "Ran, by delay:",
+    "notRun": "Not run",
+    "notSeen": "Not seen",
+    "stood": "Stood still 3+ min",
+    "changed": "Bus changed",
+    "turnedShort": "Turned short",
+    "lost": "Bus lost",
+    "detour": "Detour",
+    "list": "Trips",
+    "brigadeX": "Brigade {{brigade}}",
+    "busX": "bus {{buses}}",
+    "delays": "Set off {{start}}, last seen {{end}}, at most {{max}}.",
+    "brigadeDay": "The day of brigade {{brigade}}",
+    "noneFound": "No trip in the window matches “{{q}}”.",
+    "none": "No trips scheduled in the window.",
+    "loading": "Loading trips",
+    "stoodTitle": "Stood still {{minutes}} min heading to {{stop}}",
+    "events": {
+      "changed": "{{time}}: bus {{from}} replaced by {{to}} at {{stop}}.",
+      "stood": "{{time}}: bus {{bus}} stood still {{minutes}} min heading to {{stop}} (delay {{growth}}).",
+      "lost": "{{time}}: the bus was lost heading to {{stop}} (stop {{index}} of {{total}}).",
+      "shortTurned": "{{time}}: the trip ended short, heading to {{stop}} (stop {{index}} of {{total}})."
+    },
+    "detail": {
+      "label": "Line {{line}}: delay and speed over the trip",
+      "delay": "Delay, min",
+      "speed": "Speed, km/h",
+      "bus": "Bus {{bus}}",
+      "delayAt": "Delay: {{delay}}",
+      "speedAt": "Speed: {{kmh}} km/h",
+      "headingTo": "Heading to {{stop}} (stop {{index}} of {{total}})"
+    },
+    "map": {
+      "short": "Map",
+      "button": "Show the trip on the map, coloured by delay",
+      "loading": "Loading the trip's path",
+      "none": "No bus was seen on this trip, so there is no path to show.",
+      "label": "Line {{line}} on the map, coloured by delay",
+      "route": "Route",
+      "start": "Set off {{time}}, bus {{bus}}, {{delay}}",
+      "end": "Last seen on the trip {{time}}, bus {{bus}}, {{delay}}"
+    },
+    "averageSpeed": "Average speed",
+    "averageSpeedNote": "over the whole trip, stops and waits included",
+    "stops": {
+      "index": "Stop {{index}} of {{total}}",
+      "due": "Due {{time}}",
+      "passed": "Passed {{time}} ({{delay}})",
+      "notSeen": "Not seen passing",
+      "stood": "Stood {{time}} at the stop",
+      "noStop": "Didn't stop"
+    },
+    "halts": "Longest halts at stops:"
   }
 }

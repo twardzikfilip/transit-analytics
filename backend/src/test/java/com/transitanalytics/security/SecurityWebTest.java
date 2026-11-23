@@ -8,6 +8,7 @@ import com.transitanalytics.dto.LineStatsDto;
 import com.transitanalytics.dto.LivePositionDto;
 import com.transitanalytics.dto.PositionHistoryDto;
 import com.transitanalytics.dto.TripAnomalyDto;
+import com.transitanalytics.dto.TripRunDto;
 import com.transitanalytics.dto.VehicleDto;
 import com.transitanalytics.dto.FleetDto;
 import com.transitanalytics.gtfs.GtfsFeedService;
@@ -27,7 +28,9 @@ import com.transitanalytics.service.LineStatsService;
 import com.transitanalytics.service.FleetService;
 import com.transitanalytics.service.ReportWindow;
 import com.transitanalytics.service.ReportWindows;
+import com.transitanalytics.service.FaultyTrackers;
 import com.transitanalytics.service.TripAnomalyService;
+import com.transitanalytics.service.TripRunService;
 import com.transitanalytics.service.VehicleService;
 
 import com.transitanalytics.web.BrigadeController;
@@ -38,6 +41,7 @@ import com.transitanalytics.web.HotspotController;
 import com.transitanalytics.web.LineStatsController;
 import com.transitanalytics.web.PositionHistoryController;
 import com.transitanalytics.web.TripAnomalyController;
+import com.transitanalytics.web.TripRunController;
 import com.transitanalytics.web.VehicleController;
 import com.transitanalytics.web.FleetController;
 import com.transitanalytics.web.ZbiorkomController;
@@ -86,8 +90,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(controllers = {AuthController.class, VehicleController.class, ZbiorkomController.class,
         GtfsController.class, PositionHistoryController.class,
         LineStatsController.class, FleetController.class, BrigadeController.class, HotspotController.class,
-        DelayGenerationController.class, TripAnomalyController.class, BoundaryController.class,
-        NetworkCoverageController.class})
+        DelayGenerationController.class, TripAnomalyController.class, TripRunController.class,
+        BoundaryController.class, NetworkCoverageController.class})
 @Import({SecurityConfig.class, JwtAuthFilter.class, JwtService.class, SecurityWebTest.Metrics.class})
 @TestPropertySource(properties = {
         "app.jwt.secret=test-secret-test-secret-test-secret-123456",
@@ -177,6 +181,12 @@ class SecurityWebTest {
 
     @MockitoBean
     NetworkCoverageService networkCoverageService;
+
+    @MockitoBean
+    FaultyTrackers faultyTrackers;
+
+    @MockitoBean
+    TripRunService tripRunService;
 
     @Test
     void loginReturnsToken() throws Exception {
@@ -464,6 +474,33 @@ class SecurityWebTest {
         mvc.perform(get("/api/trip-anomalies").param("from", NOW.toString()).param("to", from.toString())
                 .header("Authorization", bearer("guest", "GUEST"))).andExpect(status().isBadRequest());
         mvc.perform(get("/api/trip-anomalies")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void guestCanReadTheTripsOfAWindowAndTheFaultyTrackers() throws Exception {
+        Instant from = NOW.minusSeconds(3600);
+        given(tripRunService.page(new ReportWindow(from, NOW), "230", 1)).willReturn(
+                new TripRunDto.Page(from, NOW, from, "230", 51, 1, 50, List.of()));
+        mvc.perform(get("/api/trip-runs").param("from", from.toString()).param("to", NOW.toString())
+                        .param("q", "230").param("page", "1").header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(51));
+        mvc.perform(get("/api/trip-runs")).andExpect(status().isUnauthorized());
+        given(tripRunService.detail(LocalDate.of(2026, 11, 23), "103-05", "t1")).willReturn(new TripRunDto.Detail(
+                "t1", List.of(new TripRunDto.DetailPoint(from, "230", 53.1, 23.1, 60, 0)),
+                List.of(new double[] {53.1, 23.1}), List.of(new TripRunDto.DetailStop(1, "Rynek", 53.1, 23.1, 35))));
+        mvc.perform(get("/api/trip-runs/2026-11-23/103-05/t1").header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.points[0].delay").value(60))
+                .andExpect(jsonPath("$.route[0][0]").value(53.1))
+                .andExpect(jsonPath("$.stops[0].name").value("Rynek"))
+                .andExpect(jsonPath("$.stops[0].dwellSeconds").value(35));
+
+        given(faultyTrackers.faultyTrackers()).willReturn(new TripAnomalyDto.FaultyTrackers(from, NOW, 3, 5, 10,
+                List.of(new TripAnomalyDto.FaultyTracker(46, "046", 43, 129, 4, from, List.of("6")))));
+        mvc.perform(get("/api/trip-anomalies/faulty-trackers").header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.trackers[0].bus").value("046"));
     }
 
     @Test

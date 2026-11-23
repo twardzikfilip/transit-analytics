@@ -92,5 +92,10 @@ describe('brigade schedules', () => {
     expect(html).toContain('Brigade 103-&#60;5&#62;');
     expect(html).toContain('rest of that day');
     expect(html.match(/<li/g)).toHaveLength(2);
+    // Folded away under the brigade's name, unless asked open.
+    expect(html).toMatch(/^<details class="brigade" data-brigade="103-&#60;5&#62;"><summary>/);
+    expect(brigadeSection('103-05', state(runs), at, false, true)).toContain(
+      '<details class="brigade" data-brigade="103-05" open>',
+    );
   });
 });

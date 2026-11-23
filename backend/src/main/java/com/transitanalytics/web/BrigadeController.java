@@ -32,11 +32,15 @@ public class BrigadeController {
     }
 
     @Operation(summary = "Every brigade in the timetable",
-            description = "An agency's brigades, whatever day they run, each with the lines it runs; and every agency "
-                    + "to choose from (one whose timetable doesn't name brigades has none). The agency defaults to the city's (BKM).")
+            description = "An operator's brigades, whatever day they run, each with all the lines it runs; and every "
+                    + "operator to choose from: the city's agency, and each other operator's timetable as one. "
+                    + "Brigades other operators' timetables don't name are learnt from the recorded positions "
+                    + "(414-1: live brigade 1 on lines 414–416); an operator with neither has none. The operator "
+                    + "defaults to the city's (BKM).")
     @GetMapping
     public BrigadeDto.BrigadeList brigades(
-            @Parameter(description = "Agency's timetable id, e.g. BKM; default the city's")
+            @Parameter(description = "Operator: the city's agency id (BKM, the default) or another operator's "
+                    + "feed (wschodexpress)")
             @RequestParam(required = false) String agency) {
         return days.brigades(agency);
     }

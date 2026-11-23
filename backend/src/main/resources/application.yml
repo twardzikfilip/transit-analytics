@@ -57,7 +57,9 @@ app:
     connect-timeout: 3s
     read-timeout: 10s
     bialystok:
-      bbox: ${ZBIORKOM_BIALYSTOK_BBOX:22.921150,53.016270,23.382496,53.243687}
+      # Every stop and route shape of the timetables (BKM, Wschód Express up to Trzcianne and Krypno, Turośń
+      # Kościelna, PKS Nova) with 1.5–2 km to spare: buses outside the box aren't recorded.
+      bbox: ${ZBIORKOM_BIALYSTOK_BBOX:22.45,52.88,23.48,53.44}
       # Lines left out everywhere (not stored, archived or shown): the cemetery lines C1, C2, … run around
       # All Saints' Day.
       excluded-lines: "^C[0-9]+$"
@@ -91,6 +93,10 @@ app:
         url: ${GTFS_TUROSN_KOSCIELNA_URL:https://files.girlc.at/gtfs/turosn_koscielna.zip}
         agency: TUROSN
     extra-refresh-cron: "0 50 4 * * *"
+  # Brigades of the other operators' lines, learnt from the recorded positions (their timetables don't name them):
+  # learnt again every night once the service day is over, after each import of their feeds and at startup.
+  recorded-brigades:
+    refresh-cron: "0 15 3 * * *"
 
 springdoc:
   api-docs:

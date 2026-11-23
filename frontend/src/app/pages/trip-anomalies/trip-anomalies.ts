@@ -33,6 +33,7 @@ import { Skeleton } from '../../shared/skeleton/skeleton';
 import { LocalDatePipe } from '../../shared/i18n/locale-pipes';
 import { t, tn } from '../../core/i18n/t';
 import { phrasesText } from '../../shared/i18n/phrases';
+import { LineBadge } from '../../shared/line-kind/line-kinds';
 
 /** Rows of the trips table shown at first, and added by "Show more". */
 export const PAGE_ROWS = 50;
@@ -57,7 +58,7 @@ export function refreshes(w: TimeWindow): boolean {
  */
 @Component({
   selector: 'app-trip-anomalies',
-  imports: [Skeleton, LocalDatePipe, TimeWindowPicker, PathMap],
+  imports: [LineBadge, Skeleton, LocalDatePipe, TimeWindowPicker, PathMap],
   templateUrl: './trip-anomalies.html',
   styleUrl: './trip-anomalies.scss',
 })

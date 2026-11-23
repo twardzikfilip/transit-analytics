@@ -78,7 +78,7 @@
     </div>
     <nav class="line-links" [attr.aria-label]="t('routes.more')">
       @if (d.id !== null) {
-        <a [routerLink]="['/trips']" [queryParams]="{ routeId: d.id }">{{ t('routes.trips') }}</a>
+        <a [routerLink]="['/trips']" [queryParams]="{ q: d.line }">{{ t('routes.trips') }}</a>
       }
       @if (d.url) {
         <a [href]="d.url" target="_blank" rel="noopener">{{ t('routes.onWebsite') }}</a>

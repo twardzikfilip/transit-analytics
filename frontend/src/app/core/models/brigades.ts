@@ -5,9 +5,11 @@ import { Phrase } from './trip-anomalies';
  * scheduled with what actually ran (GET /api/brigades/{brigade}/day).
  */
 
+/** An operator to list brigades of: the city's agency, or another operator's whole timetable (feed). */
 export interface BrigadeAgency {
-  /** The agency's timetable id, e.g. "BKM". */
+  /** The city's agency id ("BKM"), or another operator's feed ("wschodexpress"). */
   id: string;
+  /** As the timetable names it (another feed: its agencies' names). */
   name: string;
 }
 

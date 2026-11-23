@@ -244,8 +244,6 @@
     "over": "> {{n}} min",
     "reset": "Wyczyść filtry",
     "mapLegend": "Legenda mapy",
-    "delay": "Opóźnienie",
-    "unknown": "nieznane",
     "linesOnMap": "Linie na mapie",
     "liveData": "Dane na żywo:",
     "typeLines": "linie {{type}}",
@@ -265,7 +263,16 @@
     "delayUnknown": "Opóźnienie nieznane",
     "onTime": "Punktualnie",
     "late": "{{delay}} spóźnienia",
-    "early": "{{delay}} przed czasem"
+    "early": "{{delay}} przed czasem",
+    "lineKinds": "Linia",
+    "kinds": {
+      "urban": "Miejska",
+      "suburban": "Podmiejska",
+      "regional": "Regionalna",
+      "night_urban": "Nocna"
+    },
+    "delayRing": "Opóźnienie (obwódka)",
+    "noRing": "Bez obwódki: na czas, do minuty spóźnienia lub nieznane"
   },
   "history": {
     "title": "Zapisane pozycje",
@@ -324,7 +331,7 @@
     "brigade": "Brygada",
     "agency": "Przewoźnik",
     "search": "Szukaj: brygada lub linia, np. 103-05 lub 103",
-    "noBrigades": "Rozkład tego przewoźnika nie podaje brygad.",
+    "noBrigades": "Brak brygad: rozkład tego przewoźnika ich nie podaje, a z nagranych pozycji jego autobusów nie udało się ich ustalić.",
     "lineX": "Linia {{line}}",
     "describe": "{{brigade}} · linia {{lines}}",
     "loadingBrigades": "Wczytywanie brygad",
@@ -516,7 +523,7 @@
       "cancelled": "Niewykonany: żaden autobus nie obsługiwał tej brygady tego dnia.",
       "missed": "Niewykonany, choć autobus brygady wykonywał tego dnia inne kursy.",
       "lost": "Autobus przestał nadawać w trakcie kursu i nie wrócił na brygadę.",
-      "short-turned": "Wykonany tylko częściowo: autobus, nadając cały czas, dołączył w trakcie lub zjechał przed końcem.",
+      "short-turned": "Przejechany tylko częściowo: autobus, nadający cały czas, dołączył w połowie albo zjechał z kursu więcej niż 3 przystanki przed końcem (na ostatnich 3 tylko zawracając na następny kurs o 3+ min mniej spóźniony).",
       "detour": "Wykonany w całości, ale przez jakiś czas poza trasą (ponad 150 m od niej).",
       "vehicle-changed": "Wykonany w całości, ale przez dwa autobusy: jeden przejechał część, a inny autobus brygady przejął kurs w trakcie (zwykle awaria).",
       "no-signal": "Autobus przestał nadawać w trakcie (lub zaczął późno), ale wrócił na następny kurs: najpewniej kurs się odbył, choć go nie widać."
@@ -862,23 +869,8 @@
     "noStopsMatch": "Brak pasujących przystanków.",
     "noStopsYet": "Brak przystanków. Zaimportuj rozkład w Ustawieniach.",
     "route": "Linia",
-    "allRoutes": "Wszystkie linie",
-    "direction": "Kierunek",
-    "both": "Oba",
-    "outbound": "Tam (0)",
-    "inbound": "Z powrotem (1)",
-    "headsign": "Kierunek jazdy",
-    "headsignExample": "np. Dworzec",
-    "serviceX": "Kalendarz {{service}}",
-    "clearService": "Usuń filtr kalendarza",
     "service": "Kalendarz",
-    "variant": "Wariant",
-    "access": "Dostępność",
-    "wheelchair": "Dostępny dla wózków",
-    "bikes": "Rowery dozwolone",
     "stopTimes": "Godziny odjazdów",
-    "loadingTrips": "Wczytywanie kursów",
-    "noTrips": "Brak pasujących kursów.",
     "tripX": "Kurs {{trip}}",
     "clearTrip": "Usuń filtr kursu",
     "stopX": "Przystanek {{stop}}",
@@ -902,8 +894,7 @@
       "2": "telefonicznie u przewoźnika",
       "3": "na żądanie"
     },
-    "allStopTimes1": "Wszystkie godziny odjazdów wszystkich kursów. Otwórz je dla jednego kursu w zakładce",
-    "allStopTimes2": " albo jako tablicę odjazdów w zakładce",
+    "allStopTimes": "Wszystkie godziny odjazdów wszystkich kursów. Otwórz je jako tablicę odjazdów z",
     "feed": "Rozkład",
     "feeds": {
       "bialystok": "BKM",
@@ -924,7 +915,8 @@
       "name": "zbiorkom.live",
       "gives": "Pozycje pojazdów na żywo, opóźnienia, brygady i modele, co 10 s; zapisywane do bazy danych.",
       "usedOn": "Start, Tabor, Brygady, Nietypowe kursy, Miejsca przestojów, Buspasy, Narastanie opóźnień, Linie",
-      "refreshed": "Na bieżąco"
+      "refreshed": "Na bieżąco",
+      "detail": "Zapisywane są tylko autobusy wewnątrz prostokąta: <code>22.45,52.88,23.48,53.44</code> (zachód, południe, wschód, północ). To najmniejszy prostokąt, który mieści wszystkie przystanki czterech rozkładów, z zapasem ok.&nbsp;2&nbsp;km z każdej strony na pętle, zjazdy do zajezdni i objazdy. Najdalsze przystanki, wszystkie Wschód Expressu: na zachodzie Kołodzieje (linia 470), na wschodzie Kołpaki I (475), na południu Kaniuki II (474), na północy Uścianek (469). Rozkład z przystankami dalej wymaga jego poszerzenia (<code>ZBIORKOM_BIALYSTOK_BBOX</code>)."
     },
     "bkm": {
       "name": "Rozkład BKM (GTFS)",
@@ -1559,5 +1551,84 @@
     "stepTakesOverDelay": "Autobus {{bus}} przejmuje kurs {{joined}}, w drodze do przystanku {{stop}} ({{index}} z {{total}}), {{away}} od miejsca, gdzie stanął autobus {{other}}, opóźnienie {{delay}}.",
     "stepNoBusFor": "Kurs był bez autobusu przez {{n}} min.",
     "stepNextTrip": "Autobus {{bus}} jedzie następnym kursem brygady, w kierunku {{to}} (planowo {{time}})."
+  },
+  "home": {
+    "trackers": {
+      "title": "Autobusy z możliwie wadliwym nadajnikiem",
+      "rule": "Autobusy, które przestawały nadawać w trakcie kursów w {{days}} lub więcej dni ostatniego tygodnia ({{trips}}+ kursów, {{share}}%+ ich kursów): sprawdź ich nadajniki. Ich luki to problem śledzenia, nie kursowania.",
+      "trips": "{{n}} z {{of}} kursów ({{share}})",
+      "days": {
+        "one": "w {{count}} dniu",
+        "few": "w {{count}} dniach",
+        "many": "w {{count}} dniach",
+        "other": "w {{count}} dniach"
+      },
+      "last": "ostatnio {{when}}",
+      "none": "W ostatnim tygodniu żaden autobus nie tracił sygnału na kursach raz po raz.",
+      "loading": "Wczytywanie autobusów z możliwie wadliwym nadajnikiem"
+    }
+  },
+  "trips": {
+    "scheduledWindow": "Kursy zaplanowane {{from}} – {{to}}",
+    "search": "Szukaj",
+    "searchExample": "Autobus, brygada, linia lub kierunek",
+    "refreshes": "Odświeża się co minutę",
+    "lastDay": "Okno jest dłuższe niż doba: pokazano jego ostatnie 24 godziny.",
+    "legend": "Legenda",
+    "scheduled": "Planowo",
+    "ran": "Przejechał",
+    "ranDelay": "Przejechał, wg opóźnienia:",
+    "notRun": "Nieprzejechany",
+    "notSeen": "Niewidoczny",
+    "stood": "Postój 3+ min",
+    "changed": "Zmiana autobusu",
+    "turnedShort": "Skrócony",
+    "lost": "Autobus zniknął",
+    "detour": "Objazd",
+    "list": "Kursy",
+    "brigadeX": "Brygada {{brigade}}",
+    "busX": "autobus {{buses}}",
+    "delays": "Wyjazd {{start}}, ostatnio {{end}}, najwięcej {{max}}.",
+    "brigadeDay": "Dzień brygady {{brigade}}",
+    "noneFound": "Żaden kurs w oknie nie pasuje do „{{q}}”.",
+    "none": "Brak kursów zaplanowanych w oknie.",
+    "loading": "Wczytywanie kursów",
+    "stoodTitle": "Stał {{minutes}} min, jadąc do {{stop}}",
+    "events": {
+      "changed": "{{time}}: autobus {{from}} zastąpiony przez {{to}} przy {{stop}}.",
+      "stood": "{{time}}: autobus {{bus}} stał {{minutes}} min, jadąc do {{stop}} (opóźnienie {{growth}}).",
+      "lost": "{{time}}: autobus zniknął, jadąc do {{stop}} (przystanek {{index}} z {{total}}).",
+      "shortTurned": "{{time}}: kurs skrócony, jadąc do {{stop}} (przystanek {{index}} z {{total}})."
+    },
+    "detail": {
+      "label": "Linia {{line}}: opóźnienie i prędkość w trakcie kursu",
+      "delay": "Opóźnienie, min",
+      "speed": "Prędkość, km/h",
+      "bus": "Autobus {{bus}}",
+      "delayAt": "Opóźnienie: {{delay}}",
+      "speedAt": "Prędkość: {{kmh}} km/h",
+      "headingTo": "Jedzie do {{stop}} (przystanek {{index}} z {{total}})"
+    },
+    "map": {
+      "short": "Mapa",
+      "button": "Pokaż kurs na mapie, w kolorach opóźnienia",
+      "loading": "Wczytywanie trasy kursu",
+      "none": "Na tym kursie nie widziano żadnego autobusu, więc nie ma trasy do pokazania.",
+      "label": "Linia {{line}} na mapie, w kolorach opóźnienia",
+      "route": "Trasa",
+      "start": "Wyjazd {{time}}, autobus {{bus}}, {{delay}}",
+      "end": "Ostatnio na kursie {{time}}, autobus {{bus}}, {{delay}}"
+    },
+    "averageSpeed": "Średnia prędkość",
+    "averageSpeedNote": "na całym kursie, z postojami",
+    "stops": {
+      "index": "Przystanek {{index}} z {{total}}",
+      "due": "Planowo {{time}}",
+      "passed": "Minął {{time}} ({{delay}})",
+      "notSeen": "Nie widziano przejazdu",
+      "stood": "Stał na przystanku {{time}}",
+      "noStop": "Nie zatrzymał się"
+    },
+    "halts": "Najdłuższe postoje na przystankach:"
   }
 }

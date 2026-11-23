@@ -32,4 +32,12 @@ describe('Sources page', () => {
     expect(el.querySelector('a[href$="wschod_express.zip"]')).not.toBeNull();
     expect(el.querySelector('a[href$="turosn_koscielna.zip"]')).not.toBeNull();
   });
+
+  it('says which area zbiorkom.live is recorded in, under its source', () => {
+    const el = renderPage(Sources, {}).el;
+    const row = el.querySelector('a[href="https://zbiorkom.live"]')!.closest('tr')!;
+    const detail = row.querySelector('.detail');
+    expect(text(detail?.querySelector('code'))).toBe('22.45,52.88,23.48,53.44');
+    expect(text(detail)).toContain('Kołodzieje (line 470)');
+  });
 });

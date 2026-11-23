@@ -57,25 +57,6 @@ export interface Stop {
   platformCode: string | null;
 }
 
-/** One run of a route (GTFS trip). */
-export interface Trip {
-  id: number;
-  gtfsId: string;
-  routeId: number;
-  routeName: string;
-  routeColor: string | null;
-  serviceId: string;
-  headsign: string | null;
-  shortName: string | null;
-  /** GTFS direction_id: 0 or 1. */
-  direction: number | null;
-  blockId: string | null;
-  shapeId: string | null;
-  /** GTFS: 0 = unknown, 1 = accessible, 2 = not accessible. */
-  wheelchairAccessible: number | null;
-  bikesAllowed: number | null;
-}
-
 /** When a trip calls at a stop (GTFS stop_time). Times are "HH:MM:SS" and may exceed 24:00:00. */
 export interface StopTime {
   id: number;

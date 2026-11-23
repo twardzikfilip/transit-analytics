@@ -87,14 +87,16 @@ export class BrigadeSchedules {
 }
 
 /**
- * Popup section: the brigade and what is left of its day at `at`, the run under way first. `today` words it for
- * the live map; otherwise for a past moment (replays).
+ * Popup section: the brigade and what is left of its day at `at`, the run under way first, folded away under the
+ * brigade's name until opened (`open`: shown open). `today` words it for the live map; otherwise for a past moment
+ * (replays). The runs are a `<details class="brigade" data-brigade="…">`, so a map can keep it open as it redraws.
  */
 export function brigadeSection(
   brigade: string | null,
   state: ScheduleState | undefined,
   at: Date,
   today: boolean,
+  open = false,
 ): string {
   if (!brigade) return '';
   const title = `<div class="brigade"><strong>${escapeHtml(t('brigadeTip.brigade', { brigade }))}</strong>`;
@@ -114,5 +116,10 @@ export function brigadeSection(
     )
     .join('');
   const rest = escapeHtml(t(today ? 'brigadeTip.restOfToday' : 'brigadeTip.restOfThatDay'));
-  return `${title} <span class="muted">· ${rest}</span><ol class="runs">${rows}</ol></div>`;
+  const name = escapeHtml(t('brigadeTip.brigade', { brigade }));
+  return (
+    `<details class="brigade" data-brigade="${escapeHtml(brigade)}"${open ? ' open' : ''}>` +
+    `<summary><strong>${name}</strong> <span class="muted">· ${rest}</span></summary>` +
+    `<ol class="runs">${rows}</ol></details>`
+  );
 }

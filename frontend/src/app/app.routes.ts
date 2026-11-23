@@ -41,6 +41,11 @@ export const routes: Routes = [
           import('./pages/brigades/brigades.routes').then((m) => m.BRIGADES_ROUTES),
       },
       {
+        path: 'trips',
+        title: 'titles.trips',
+        loadChildren: () => import('./pages/trips/trips.routes').then((m) => m.TRIPS_ROUTES),
+      },
+      {
         path: 'trip-anomalies',
         title: 'titles.tripAnomalies',
         loadChildren: () =>

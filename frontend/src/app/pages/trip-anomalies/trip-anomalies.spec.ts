@@ -276,7 +276,7 @@ describe('Abnormal trips page', () => {
     const cells = rows[0].querySelectorAll('td');
     const lost = [...cells].map(text);
     expect(text(cells[0].querySelector('.tag'))).toBe('Lost');
-    expect(text(cells[1].querySelector('strong'))).toBe('12');
+    expect(text(cells[1].querySelector('.route-badge'))).toBe('12');
     expect(text(cells[1].querySelector('div'))).toBe('012-00');
     expect(text(cells[2].querySelector('div'))).toBe('25 stops');
     expect(cells[2].getAttribute('title')).toBe('Trip 12-00_P_0');

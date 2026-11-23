@@ -1,3 +1,5 @@
+import { RouteSubtype } from '../core/models/models';
+
 /**
  * Labels here are translation keys (shown with t()).
  *
@@ -128,6 +130,18 @@ export const DENSITY_SCALE: { min: number; max: number | null; color: string }[]
 ];
 export const DENSITY_NONE = { fill: '#f1f3f5', line: '#9aa1a9' } as const;
 export const DENSITY_UNKNOWN = { fill: WHITE, line: NEUTRAL_GREY } as const;
+
+/**
+ * Each kind of line's colour (badges, maps), kept in step with the --line-* tokens in styles.scss: a token in styles.scss (light and dark), and its value before styles load. */
+export const LINE_KIND_COLORS: Record<RouteSubtype, { token: string; fallback: string }> = {
+  urban: { token: '--line-urban', fallback: '#4b0082' },
+  suburban: { token: '--line-suburban', fallback: '#03bf03' },
+  regional: { token: '--line-regional', fallback: '#0021ff' },
+  night_urban: { token: '--line-night', fallback: '#111111' },
+};
+
+/** Line numbers on a line kind's colour. */
+export const LINE_TEXT_COLOR = '#fff';
 
 /** BKM's colours, as $green_bkm and $lightblue_bkm (--green-bkm, --lightblue-bkm) in styles.scss. */
 export const GREEN_BKM = '#4cb034';

@@ -15,3 +15,4 @@ export * from './bus-lanes';
 export * from './brigades';
 export * from './geo';
 export * from './network-coverage';
+export * from './trip-runs';

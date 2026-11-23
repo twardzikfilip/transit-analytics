@@ -41,7 +41,12 @@ import { DepotRuns } from './depot-runs';
 import { leafletHost } from '../../shared/map/leaflet-host';
 import { injectBusLanes } from '../../shared/map/bus-lanes';
 import { injectCityBoundaries } from '../../shared/map/city-boundaries';
-import { BOUNDARY_STYLES, BUS_LANE_STYLE, VARIANT_COLORS } from '../../shared/palette';
+import {
+  BOUNDARY_STYLES,
+  BUS_LANE_STYLE,
+  LINE_KIND_COLORS,
+  VARIANT_COLORS,
+} from '../../shared/palette';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { LocalDatePipe, LocalNumberPipe } from '../../shared/i18n/locale-pipes';
 import { t, tn } from '../../core/i18n/t';
@@ -229,7 +234,7 @@ export class RoutesPage {
   private drawRoute(detail: LineDetail): void {
     const layers = this.host.layer;
     layers.clearLayers();
-    const color = cssColor(this.colorVar(detail.subtype), '#2a78d6');
+    const color = cssColor(this.colorVar(detail.subtype), LINE_KIND_COLORS.urban.fallback);
     const depotColor = cssColor('--depot', '#eda100');
     const ordered = [...detail.variants].sort(
       (a, b) => (a.kind === 'main' ? 1 : 0) - (b.kind === 'main' ? 1 : 0),

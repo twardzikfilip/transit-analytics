@@ -1,7 +1,13 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { LineDetail, LinePerformance, LineRef, LineStatsReport } from '../models/models';
+import {
+  LineDetail,
+  LinePerformance,
+  LineRef,
+  LineStatsReport,
+  RouteSubtype,
+} from '../models/models';
 
 /** Per-line statistics from the weekday timetable. */
 @Injectable({ providedIn: 'root' })
@@ -16,6 +22,11 @@ export class LineStatsApi {
 @Injectable({ providedIn: 'root' })
 export class LineDetailApi {
   private readonly http = inject(HttpClient);
+
+  /** Every line of the timetable by name, with its kind. */
+  subtypes(): Observable<Record<string, RouteSubtype>> {
+    return this.http.get<Record<string, RouteSubtype>>('/api/routes/subtypes');
+  }
 
   lines(): Observable<LineRef[]> {
     return this.http.get<LineRef[]>('/api/lines');

@@ -96,7 +96,7 @@
                 (keydown.enter)="setLine(line() === l.line ? null : l.line)"
               >
                 <td>
-                  <strong>{{ l.line }}</strong>
+                  <span class="route-badge" [appLineBadge]="l.line">{{ l.line }}</span>
                 </td>
                 <td class="num">{{ l.judged }}</td>
                 <td class="num">{{ shareText(l.completed, l.judged) }}</td>
@@ -204,7 +204,7 @@
                 </div>
               </td>
               <td class="nowrap">
-                <strong>{{ trip.line }}</strong>
+                <span class="route-badge" [appLineBadge]="trip.line">{{ trip.line }}</span>
                 <div class="muted small">{{ trip.brigade ?? '—' }}</div>
               </td>
               <td class="trip" [title]="t('anomalies.tripId', { id: trip.tripId })">

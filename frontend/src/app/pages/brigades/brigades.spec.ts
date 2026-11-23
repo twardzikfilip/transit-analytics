@@ -81,6 +81,7 @@ const LIST: BrigadeList = {
   agencies: [
     { id: 'BKM', name: 'BKM' },
     { id: 'X', name: 'Other' },
+    { id: 'wschodexpress', name: 'Gmina Dobrzyniewo Duże, Gmina Zabłudów' },
   ],
   brigades: [
     { brigade: '103-05', lines: ['103'] },
@@ -170,17 +171,20 @@ describe('Brigades page', () => {
       expect.objectContaining({ brigade: expect.anything() }),
     );
     // One row per line, lines in natural order; every brigade shown.
-    expect([...el.querySelectorAll('.brigade-lines dt')].map(text)).toEqual([
-      'Line 16',
-      'Line 103',
-    ]);
+    const lines = [...el.querySelectorAll('.brigade-lines dt .route-badge')];
+    expect(lines.map(text)).toEqual(['16', '103']);
+    expect(lines.map((l) => l.getAttribute('aria-label'))).toEqual(['Line 16', 'Line 103']);
     expect([...el.querySelectorAll('.brigade-chips button')].map(text)).toEqual([
       '016-02',
       '103-05',
     ]);
     expect(el.querySelectorAll('datalist option')).toHaveLength(2);
     expect(text(el.querySelector('datalist option'))).toContain('line 103');
-    expect([...el.querySelectorAll('select option')].map(text)).toEqual(['BKM', 'Other']);
+    expect([...el.querySelectorAll('select option')].map(text)).toEqual([
+      'BKM',
+      'Other',
+      'Wschód Express',
+    ]);
     // No day to pick until a brigade is chosen: the list is every brigade, whatever day it runs.
     expect(el.querySelector('input[type=date]')).toBeNull();
     expect(el.querySelector('.controls input[type=search]')).not.toBeNull();

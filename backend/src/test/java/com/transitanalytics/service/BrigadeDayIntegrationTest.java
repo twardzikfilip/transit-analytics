@@ -2,6 +2,7 @@ package com.transitanalytics.service;
 
 import com.transitanalytics.DbIntegrationTest;
 import com.transitanalytics.dto.BrigadeDto;
+import com.transitanalytics.dto.TripRunDto;
 import com.transitanalytics.recording.PositionSampleWriter;
 import com.transitanalytics.zbiorkom.FeedPosition;
 import org.junit.jupiter.api.Test;
@@ -17,6 +18,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Monday 5 January 2099, 09:00: brigade ITB-01 of line IT-BD (agency IT-BDA) with three trips: run in full by bus A,
@@ -85,10 +87,11 @@ class BrigadeDayIntegrationTest {
         assertThat(list.brigades()).extracting(BrigadeDto.BrigadeRef::brigade).containsExactly("ITB-01", "ITB-02");
         assertThat(list.brigades().get(0).lines()).containsExactly("IT-BD");
         assertThat(service.brigades("IT-NONE").agency()).as("unknown: the main agency").isNotEqualTo("IT-NONE");
-        BrigadeDto.BrigadeList unnamed = service.brigades("it-IT-BXA");
+        BrigadeDto.BrigadeList unnamed = service.brigades("it");
         assertThat(unnamed.agencies()).as("every agency is offered").extracting(BrigadeDto.Agency::id)
-                .contains("IT-BDA", "it-IT-BXA");
-        assertThat(unnamed.agency()).isEqualTo("it-IT-BXA");
+                .contains("IT-BDA", "it");
+        assertThat(unnamed.agency()).isEqualTo("it");
+        assertThat(service.brigades("it-IT-BXA").agency()).as("a former key of one of its agencies").isEqualTo("it");
         assertThat(unnamed.brigades()).as("its timetable names no brigades").isEmpty();
 
         BrigadeDto.Day day = service.day("ITB-01", DAY);
@@ -118,6 +121,44 @@ class BrigadeDayIntegrationTest {
 
         assertThat(service.day("ITB-77", DAY).trips()).as("no such brigade").isEmpty();
         assertThat(service.today()).isEqualTo(DAY);
+
+        // The same trips on Trips: all of the window, or those a search names.
+        var trips = new TripRunService(jdbc, anomalies, Clock.fixed(local("09:00:00"), ZoneOffset.UTC));
+        ReportWindow morning = new ReportWindow(local("06:30:00"), local("09:00:00"));
+        TripRunDto.Page all = trips.page(morning, null, 0);
+        assertThat(all.trips()).filteredOn(r -> r.brigade().startsWith("ITB"))
+                .extracting(r -> r.trip().tripId() + "=" + r.trip().kind())
+                .containsExactly("ITB-01_IT_BD_1=completed", "ITB-02_IT_BD_1=cancelled", "ITB-01_IT_BD_2=lost",
+                        "ITB-01_IT_BD_3=completed");
+        TripRunDto.Trip ran = all.trips().get(0);
+        assertThat(ran.serviceDay()).isEqualTo(DAY);
+        assertThat(ran.samples()).isNotEmpty().allSatisfy(p -> assertThat(p.bus()).isEqualTo("IT-BD-A"));
+        assertThat(ran.samples().get(0).delay()).isEqualTo(60);
+        assertThat(trips.page(morning, "it-bd-b", 0).trips()).as("a bus, whatever the case")
+                .extracting(r -> r.trip().tripId()).containsExactly("ITB-01_IT_BD_3");
+        assertThat(trips.page(morning, "ITB-02", 0).trips()).as("a brigade")
+                .extracting(r -> r.trip().tripId()).containsExactly("ITB-02_IT_BD_1");
+        assertThat(trips.page(morning, "nowhere", 0).total()).isZero();
+        assertThat(trips.page(morning, null, 50_000_000).trips()).as("a page far past the end").isEmpty();
+        TripRunDto.Page week = trips.page(new ReportWindow(local("09:00:00").minusSeconds(7 * 86_400),
+                local("09:00:00")), "ITB-01", 0);
+        assertThat(week.shownFrom()).as("its last day").isEqualTo(local("09:00:00").minusSeconds(86_400));
+        assertThat(week.total()).isEqualTo(3);
+
+        // The first trip on a map: bus A's reports while it ran it, with its delay, and the route.
+        TripRunDto.Detail path = trips.detail(DAY, "ITB-01", "ITB-01_IT_BD_1");
+        assertThat(path.points()).isNotEmpty().allSatisfy(p -> {
+            assertThat(p.bus()).isEqualTo("IT-BD-A");
+            assertThat(p.delay()).isEqualTo(60);
+        });
+        assertThat(path.route()).isNotEmpty();
+        assertThat(path.points()).as("standing between reports at the same place").anySatisfy(p -> assertThat(p.kmh()).isZero());
+        assertThat(path.stops()).extracting(TripRunDto.DetailStop::name)
+                .containsExactly("IT-BD 1", "IT-BD 2", "IT-BD 3", "IT-BD 4");
+        assertThat(ran.stops()).hasSize(4).allSatisfy(s -> assertThat(s.passed()).isNotNull());
+        assertThat(ran.stops().get(0).scheduled()).isEqualTo(local("07:00:00"));
+        assertThat(ran.stops()).extracting(TripRunDto.StopTime::scheduled).isSorted();
+        assertThatThrownBy(() -> trips.detail(DAY, "ITB-01", "nope")).isInstanceOf(NotFoundException.class);
     }
 
     /**

@@ -232,8 +232,6 @@
     "over": "> {{n}} Min.",
     "reset": "Filter zurücksetzen",
     "mapLegend": "Kartenlegende",
-    "delay": "Verspätung",
-    "unknown": "unbekannt",
     "linesOnMap": "Linien auf der Karte",
     "liveData": "Live-Daten:",
     "typeLines": "{{type}}",
@@ -253,7 +251,16 @@
     "delayUnknown": "Verspätung unbekannt",
     "onTime": "Pünktlich",
     "late": "{{delay}} verspätet",
-    "early": "{{delay}} zu früh"
+    "early": "{{delay}} zu früh",
+    "lineKinds": "Linie",
+    "kinds": {
+      "urban": "Stadt",
+      "suburban": "Vorort",
+      "regional": "Regional",
+      "night_urban": "Nacht"
+    },
+    "delayRing": "Verspätung (Rand)",
+    "noRing": "Kein Rand: pünktlich, bis eine Minute verspätet oder unbekannt"
   },
   "history": {
     "title": "Aufgezeichnete Positionen",
@@ -312,7 +319,7 @@
     "brigade": "Umlauf",
     "agency": "Verkehrsunternehmen",
     "search": "Suche: Umlauf oder Linie, z. B. 103-05 oder 103",
-    "noBrigades": "Der Fahrplan dieses Verkehrsunternehmens nennt keine Umläufe.",
+    "noBrigades": "Keine Umläufe: Der Fahrplan dieses Verkehrsunternehmens nennt keine, und aus den aufgezeichneten Positionen seiner Busse ließen sich keine ermitteln.",
     "lineX": "Linie {{line}}",
     "describe": "{{brigade}} · Linie {{lines}}",
     "loadingBrigades": "Umläufe werden geladen",
@@ -494,7 +501,7 @@
       "cancelled": "Nicht gefahren: An dem Tag fuhr überhaupt kein Bus den Umlauf.",
       "missed": "Nicht gefahren, während der Bus des Umlaufs an dem Tag andere Fahrten fuhr.",
       "lost": "Der Bus meldete sich unterwegs nicht mehr und kehrte nicht zu seinem Umlauf zurück.",
-      "short-turned": "Nur teilweise gefahren: Der Bus, der durchgehend meldete, stieg unterwegs ein oder verließ die Fahrt vor dem Ende.",
+      "short-turned": "Nur teilweise gefahren: Der Bus, der durchgehend meldete, stieg unterwegs ein oder verließ die Fahrt mehr als 3 Haltestellen vor dem Ende (auf den letzten 3 nur, wenn er auf seine nächste Fahrt wendete und 3+ Min. weniger verspätet war).",
       "detour": "Vollständig gefahren, aber eine Zeit lang abseits der Strecke (über 150 m entfernt).",
       "vehicle-changed": "Vollständig gefahren, aber von zwei Bussen: Einer fuhr einen Teil, ein anderer Bus des Umlaufs übernahm unterwegs (meist ein Ausfall).",
       "no-signal": "Der Bus meldete sich unterwegs nicht mehr (oder begann spät), war aber zur nächsten Fahrt zurück: höchstwahrscheinlich gefahren, nur nicht gesehen."
@@ -838,23 +845,8 @@
     "noStopsMatch": "Keine passenden Haltestellen.",
     "noStopsYet": "Noch keine Haltestellen. Importiere einen Fahrplan in den Einstellungen.",
     "route": "Linie",
-    "allRoutes": "Alle Linien",
-    "direction": "Richtung",
-    "both": "Beide",
-    "outbound": "Hinfahrt (0)",
-    "inbound": "Rückfahrt (1)",
-    "headsign": "Fahrtziel",
-    "headsignExample": "z. B. Dworzec",
-    "serviceX": "Verkehrstage {{service}}",
-    "clearService": "Verkehrstage-Filter entfernen",
     "service": "Verkehrstage",
-    "variant": "Variante",
-    "access": "Zugang",
-    "wheelchair": "Rollstuhlgerecht",
-    "bikes": "Fahrräder erlaubt",
     "stopTimes": "Haltezeiten",
-    "loadingTrips": "Fahrten werden geladen",
-    "noTrips": "Keine passenden Fahrten.",
     "tripX": "Fahrt {{trip}}",
     "clearTrip": "Fahrt-Filter entfernen",
     "stopX": "Haltestelle {{stop}}",
@@ -878,8 +870,7 @@
       "2": "telefonisch beim Unternehmen",
       "3": "bei Bedarf"
     },
-    "allStopTimes1": "Alle Haltezeiten aller Fahrten. Öffne sie für eine Fahrt unter",
-    "allStopTimes2": " oder als Abfahrtstafel unter",
+    "allStopTimes": "Alle Haltezeiten aller Fahrten. Als Abfahrtstafel über",
     "feed": "Fahrplan",
     "feeds": {
       "bialystok": "BKM",
@@ -900,7 +891,8 @@
       "name": "zbiorkom.live",
       "gives": "Live-Fahrzeugpositionen, Verspätungen, Umläufe und Modelle, alle 10 s; in die Datenbank aufgezeichnet.",
       "usedOn": "Start, Fahrzeugflotte, Umläufe, Auffällige Fahrten, Standzeit-Hotspots, Busspuren, Verspätungsentstehung, Linien",
-      "refreshed": "Laufend"
+      "refreshed": "Laufend",
+      "detail": "Aufgezeichnet werden nur die Busse innerhalb eines Rechtecks: <code>22.45,52.88,23.48,53.44</code> (West, Süd, Ost, Nord). Es ist das kleinste, das alle Haltestellen der vier Fahrpläne enthält, mit etwa&nbsp;2&nbsp;km Reserve auf jeder Seite für Wendeschleifen, Depotfahrten und Umleitungen. Seine äußersten Haltestellen, alle von Wschód Express: im Westen Kołodzieje (Linie 470), im Osten Kołpaki I (475), im Süden Kaniuki II (474), im Norden Uścianek (469). Ein Fahrplan mit Haltestellen weiter draußen erfordert, es zu vergrößern (<code>ZBIORKOM_BIALYSTOK_BBOX</code>)."
     },
     "bkm": {
       "name": "BKM-Fahrplan (GTFS)",
@@ -1523,5 +1515,82 @@
     "stepTakesOverDelay": "Bus {{bus}} übernimmt {{joined}}, unterwegs zur Haltestelle {{stop}} ({{index}} von {{total}}), {{away}} von der Stelle, an der Bus {{other}} hielt, Verspätung {{delay}}.",
     "stepNoBusFor": "Die Fahrt war {{n}} min ohne Bus.",
     "stepNextTrip": "Bus {{bus}} fährt die nächste Fahrt des Umlaufs, Richtung {{to}} (planmäßig {{time}})."
+  },
+  "home": {
+    "trackers": {
+      "title": "Busse mit möglicherweise defektem Sender",
+      "rule": "Busse, die an {{days}} oder mehr Tagen der letzten Woche mitten auf Fahrten aufhörten zu melden ({{trips}}+ Fahrten, {{share}} %+ ihrer Fahrten): Sender prüfen. Ihre Lücken betreffen die Ortung, nicht den Betrieb.",
+      "trips": "{{n}} von {{of}} Fahrten ({{share}})",
+      "days": {
+        "one": "an {{count}} Tag",
+        "other": "an {{count}} Tagen"
+      },
+      "last": "zuletzt {{when}}",
+      "none": "Kein Bus hat in der letzten Woche auf Fahrten immer wieder das Signal verloren.",
+      "loading": "Busse mit möglicherweise defektem Sender werden geladen"
+    }
+  },
+  "trips": {
+    "scheduledWindow": "Geplante Fahrten {{from}} – {{to}}",
+    "search": "Suche",
+    "searchExample": "Bus, Umlauf, Linie oder Ziel",
+    "refreshes": "Aktualisiert sich jede Minute",
+    "lastDay": "Das Zeitfenster ist länger als ein Tag: Die letzten 24 Stunden werden gezeigt.",
+    "legend": "Legende",
+    "scheduled": "Geplant",
+    "ran": "Gefahren",
+    "ranDelay": "Gefahren, nach Verspätung:",
+    "notRun": "Nicht gefahren",
+    "notSeen": "Nicht gesehen",
+    "stood": "Stillstand 3+ Min.",
+    "changed": "Buswechsel",
+    "turnedShort": "Vorzeitig gewendet",
+    "lost": "Bus verschwunden",
+    "detour": "Umleitung",
+    "list": "Fahrten",
+    "brigadeX": "Umlauf {{brigade}}",
+    "busX": "Bus {{buses}}",
+    "delays": "Abfahrt {{start}}, zuletzt {{end}}, höchstens {{max}}.",
+    "brigadeDay": "Der Tag von Umlauf {{brigade}}",
+    "noneFound": "Keine Fahrt im Zeitfenster passt zu „{{q}}“.",
+    "none": "Keine Fahrten im Zeitfenster geplant.",
+    "loading": "Fahrten werden geladen",
+    "stoodTitle": "{{minutes}} Min. Stillstand auf dem Weg nach {{stop}}",
+    "events": {
+      "changed": "{{time}}: Bus {{from}} ersetzt durch {{to}} bei {{stop}}.",
+      "stood": "{{time}}: Bus {{bus}} stand {{minutes}} Min. auf dem Weg nach {{stop}} (Verspätung {{growth}}).",
+      "lost": "{{time}}: Der Bus verschwand auf dem Weg nach {{stop}} (Haltestelle {{index}} von {{total}}).",
+      "shortTurned": "{{time}}: Die Fahrt endete vorzeitig, auf dem Weg nach {{stop}} (Haltestelle {{index}} von {{total}})."
+    },
+    "detail": {
+      "label": "Linie {{line}}: Verspätung und Geschwindigkeit während der Fahrt",
+      "delay": "Verspätung, Min.",
+      "speed": "Geschwindigkeit, km/h",
+      "bus": "Bus {{bus}}",
+      "delayAt": "Verspätung: {{delay}}",
+      "speedAt": "Geschwindigkeit: {{kmh}} km/h",
+      "headingTo": "Auf dem Weg nach {{stop}} (Haltestelle {{index}} von {{total}})"
+    },
+    "map": {
+      "short": "Karte",
+      "button": "Fahrt auf der Karte zeigen, nach Verspätung gefärbt",
+      "loading": "Weg der Fahrt wird geladen",
+      "none": "Auf dieser Fahrt wurde kein Bus gesehen, daher gibt es keinen Weg.",
+      "label": "Linie {{line}} auf der Karte, nach Verspätung gefärbt",
+      "route": "Strecke",
+      "start": "Abfahrt {{time}}, Bus {{bus}}, {{delay}}",
+      "end": "Zuletzt auf der Fahrt {{time}}, Bus {{bus}}, {{delay}}"
+    },
+    "averageSpeed": "Durchschnittsgeschwindigkeit",
+    "averageSpeedNote": "über die ganze Fahrt, mit Halten und Wartezeiten",
+    "stops": {
+      "index": "Haltestelle {{index}} von {{total}}",
+      "due": "Planmäßig {{time}}",
+      "passed": "Passiert {{time}} ({{delay}})",
+      "notSeen": "Nicht beim Passieren gesehen",
+      "stood": "Stand {{time}} an der Haltestelle",
+      "noStop": "Hielt nicht"
+    },
+    "halts": "Längste Halte an Haltestellen:"
   }
 }

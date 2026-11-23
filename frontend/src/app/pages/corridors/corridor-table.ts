@@ -5,6 +5,7 @@ import { regularityGrade, regularityMeaning } from '../../shared/regularity';
 import { CorridorSortKey, DEFAULT_SORT, nextCorridorSort, sortCorridors } from './sort';
 import { LocalNumberPipe } from '../../shared/i18n/locale-pipes';
 import { t } from '../../core/i18n/t';
+import { LineBadge } from '../../shared/line-kind/line-kinds';
 
 /**
  * The corridors in a sortable table (busiest first): stops (expandable), lines (outlined when running only part of
@@ -12,7 +13,7 @@ import { t } from '../../core/i18n/t';
  */
 @Component({
   selector: 'app-corridor-table',
-  imports: [LocalNumberPipe, RouterLink],
+  imports: [LineBadge, LocalNumberPipe, RouterLink],
   templateUrl: './corridor-table.html',
   styleUrl: './corridor-table.scss',
 })
