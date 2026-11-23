@@ -108,7 +108,7 @@
             <div class="detail">
               <app-trip-detail
                 [run]="run"
-                [detail]="detail()"
+                [detail]="detail() ?? null"
                 [mapShown]="mapShown()"
                 (toggleMap)="toggleMap()"
               />

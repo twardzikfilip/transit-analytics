@@ -139,6 +139,7 @@ class BrigadeDayIntegrationTest {
         assertThat(trips.page(morning, "ITB-02", 0).trips()).as("a brigade")
                 .extracting(r -> r.trip().tripId()).containsExactly("ITB-02_IT_BD_1");
         assertThat(trips.page(morning, "nowhere", 0).total()).isZero();
+        assertThat(trips.page(morning, null, 50_000_000).trips()).as("a page far past the end").isEmpty();
         TripRunDto.Page week = trips.page(new ReportWindow(local("09:00:00").minusSeconds(7 * 86_400),
                 local("09:00:00")), "ITB-01", 0);
         assertThat(week.shownFrom()).as("its last day").isEqualTo(local("09:00:00").minusSeconds(86_400));

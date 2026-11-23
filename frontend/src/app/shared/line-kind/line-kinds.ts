@@ -1,15 +1,7 @@
 import { Directive, Injectable, computed, inject, input, signal } from '@angular/core';
 import { LineDetailApi } from '../../core/api/api.services';
 import { RouteSubtype } from '../../core/models/models';
-import { cssColor } from '../palette';
-
-/** Each kind of line's colour: a token in styles.scss (light and dark), and its value before styles load. */
-export const LINE_KIND_COLORS: Record<RouteSubtype, { token: string; fallback: string }> = {
-  urban: { token: '--line-urban', fallback: '#4b0082' },
-  suburban: { token: '--line-suburban', fallback: '#03bf03' },
-  regional: { token: '--line-regional', fallback: '#0021ff' },
-  night_urban: { token: '--line-night', fallback: '#111111' },
-};
+import { LINE_KIND_COLORS, LINE_TEXT_COLOR, cssColor } from '../palette';
 
 /**
  * A line's kind by its name alone, as the backend's default: N1… night, 400–499 and 700 regional, other numbers from
@@ -65,11 +57,12 @@ export class LineKinds {
   selector: '[appLineBadge]',
   host: {
     '[style.--route-color]': 'color()',
-    '[style.--route-text-color]': '"#fff"',
+    '[style.--route-text-color]': 'textColor',
   },
 })
 export class LineBadge {
   private readonly kinds = inject(LineKinds);
   readonly appLineBadge = input<string | null | undefined>(null);
   protected readonly color = computed(() => this.kinds.cssVar(this.appLineBadge()));
+  protected readonly textColor = LINE_TEXT_COLOR;
 }

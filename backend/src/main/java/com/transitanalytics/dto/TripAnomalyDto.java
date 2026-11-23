@@ -35,8 +35,9 @@ public final class TripAnomalyDto {
      * @param vehicleChanged run in full, but by two buses: one ran part of it and another of the brigade took over
      * @param noSignal     the bus stopped reporting partway (started reporting late, or came back only on its
      *                     brigade's next trip): most likely run, but unseen
-     * @param shortTurned  run only partly: the bus, reporting all along, joined midway, or turned back at least 3
-     *                     stops before the end onto its brigade's next trip, catching up 3 min or more
+     * @param shortTurned  run only partly: the bus, reporting all along, joined midway, or left more than 3 stops
+     *                     before the end (within the last 3, only turning onto its brigade's next trip 3 min or
+     *                     more less late)
      * @param lost         the bus disappeared midway while recording went on
      * @param missed       not run, while the brigade's bus ran other trips that day
      * @param cancelled    not run, and no bus ran the brigade at all that day

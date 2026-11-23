@@ -501,7 +501,7 @@
       "cancelled": "Not run: no bus ran the brigade at all that day.",
       "missed": "Not run, while the brigade's bus ran other trips that day.",
       "lost": "The bus stopped reporting midway and didn't come back to its brigade.",
-      "short-turned": "Run only partly: the bus, reporting all along, joined midway, or turned back at least 3 stops before the end and was 3+ min less late on its next trip.",
+      "short-turned": "Run only partly: the bus, reporting all along, joined midway, or left more than 3 stops before the end (within the last 3, only turning onto its next trip 3+ min less late).",
       "detour": "Run in full, but off its route (over 150 m away) for a while.",
       "vehicle-changed": "Run in full, but by two buses: one ran part of it and another bus of the brigade took over midway (a breakdown, typically).",
       "no-signal": "The bus stopped reporting partway (or started late) but was back for its next trip: most likely run, unseen."

@@ -24,6 +24,7 @@ import {
   BOUNDARY_STYLES,
   BUS_LANE_STYLE,
   DELAY_STOPS,
+  LINE_KIND_COLORS,
   NO_DELAY_COLOR,
   delayColor,
 } from '../../../shared/palette';
@@ -33,7 +34,7 @@ import {
   brigadeSection,
 } from '../../../shared/brigade/brigade-schedules';
 import { injectBusLanes } from '../../../shared/map/bus-lanes';
-import { LINE_KIND_COLORS, LineKinds } from '../../../shared/line-kind/line-kinds';
+import { LineKinds } from '../../../shared/line-kind/line-kinds';
 import { cssColor } from '../../../shared/palette';
 import { injectCityBoundaries } from '../../../shared/map/city-boundaries';
 import { LocalDatePipe } from '../../../shared/i18n/locale-pipes';
@@ -66,7 +67,10 @@ export class LiveMap {
   });
   /** Brigades whose schedule the reader opened in a popup. */
   private readonly openSchedules = new Set<string>();
-  private readonly markers = new Map<string, { marker: L.Marker; html: string }>();
+  private readonly markers = new Map<
+    string,
+    { marker: L.Marker; html: string; position: LivePosition }
+  >();
   private readonly kinds = inject(LineKinds);
 
   protected readonly positions = this.store.selectSignal(livePositionsFeature.selectAll);
@@ -179,11 +183,14 @@ export class LiveMap {
     const details = event.target;
     if (!(details instanceof HTMLDetailsElement) || !details.dataset['brigade']) return;
     const brigade = details.dataset['brigade'];
+    // A redraw drawing it as it already was (some browsers fire toggle for that too): nothing changed.
+    if (details.open === this.openSchedules.has(brigade)) return;
     if (details.open) this.openSchedules.add(brigade);
     else this.openSchedules.delete(brigade);
-    // The popup grew or shrank: lay it out again, and pan the map so all of it shows.
-    for (const { marker } of this.markers.values()) {
-      if (marker.isPopupOpen()) marker.getPopup()!.update();
+    // Redraw the popup as the reader left it (Leaflet lays a popup out from its content, not the page), and pan the
+    // map so all of it shows.
+    for (const { marker, position } of this.markers.values()) {
+      if (marker.isPopupOpen()) marker.setPopupContent(this.popup(position));
     }
   }
 
@@ -197,6 +204,7 @@ export class LiveMap {
       const existing = this.markers.get(p.vehicleNumber);
       if (existing) {
         existing.marker.setLatLng(latLng).setPopupContent(this.popup(p));
+        existing.position = p;
         if (existing.html !== html) {
           existing.marker.setIcon(badgeIcon(html));
           existing.html = html;
@@ -208,7 +216,7 @@ export class LiveMap {
           .bindTooltip(escapeHtml(p.vehicleNumber), { direction: 'top', offset: [0, -10] })
           .on('popupopen', () => this.loadSchedule(p.brigade))
           .addTo(this.host.map);
-        this.markers.set(p.vehicleNumber, { marker, html });
+        this.markers.set(p.vehicleNumber, { marker, html, position: p });
       }
     }
     for (const [id, { marker }] of this.markers) {

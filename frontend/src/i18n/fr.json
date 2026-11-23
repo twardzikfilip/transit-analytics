@@ -512,7 +512,7 @@
       "cancelled": "Non effectuée : aucun bus n'a assuré le service ce jour-là.",
       "missed": "Non effectuée, alors que le bus du service a assuré d'autres courses ce jour-là.",
       "lost": "Le bus a cessé d'émettre en cours de route et n'est pas revenu sur son service.",
-      "short-turned": "Effectuée en partie seulement : le bus, émettant tout du long, l'a rejointe en cours de route ou a fait demi-tour au moins 3 arrêts avant la fin, avec 3+ min de retard en moins sur sa course suivante.",
+      "short-turned": "Effectuée en partie seulement : le bus, émettant tout du long, l'a rejointe en cours de route ou l'a quittée plus de 3 arrêts avant la fin (sur les 3 derniers, seulement en faisant demi-tour vers sa course suivante avec 3+ min de retard en moins).",
       "detour": "Effectuée en entier, mais hors de l'itinéraire (à plus de 150 m) pendant un moment.",
       "vehicle-changed": "Effectuée en entier, mais par deux bus : l'un en a fait une partie et un autre bus du service a pris le relais en route (en général une panne).",
       "no-signal": "Le bus a cessé d'émettre en cours de route (ou a commencé tard) mais était là pour sa course suivante : très probablement effectuée, sans être vue."

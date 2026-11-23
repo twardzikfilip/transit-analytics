@@ -95,13 +95,15 @@ final class TripAnomalies {
     /** Two reports of a detour are consecutive when at most this far apart. */
     static final Duration DETOUR_REPORT_GAP = Duration.ofSeconds(90);
     /**
-     * A bus leaving a trip for its brigade's next one, reporting all along, turned short only when it left at least
-     * this many stops before the end: the feed often moves a bus on to its next trip two or three stops early.
+     * A bus that left a trip within this many stops of the end, reporting all along, finished it (the feed often moves
+     * a bus on to its next trip two or three stops early, or it goes off to the depot from there), unless it really
+     * turned short: onto its brigade's next trip, with its delay at least {@link #SHORT_TURN_GAIN_SECONDS} smaller
+     * there, and not seen at the last stop afterwards. Leaving earlier is a short turn, unless it drove on to the end.
      */
     static final int SHORT_TURN_STOPS = 3;
-    /** …and when its delay was at least this much smaller on the next trip (turning short is how a bus catches up)… */
+    /** …at least this much smaller delay on the next trip (turning short is how a bus catches up)… */
     static final int SHORT_TURN_GAIN_SECONDS = 180;
-    /** …and it didn't come this close to the trip's last stop afterwards (it drove on to the end after all). */
+    /** …and it came this close to the trip's last stop afterwards: it drove on to the end after all. */
     static final double REACHED_END_METERS = 300;
     /** The next trip's delay is its first one within this long of leaving the trip. */
     static final Duration NEXT_DELAY_WITHIN = Duration.ofMinutes(15);
@@ -184,6 +186,18 @@ final class TripAnomalies {
      */
     record Outcome(String tripId, String line, Instant departure, Instant arrival, Kind kind,
                    TripAnomalyDto.Trip trip, List<Long> vehicleIds) {
+    }
+
+    /**
+     * A trip's key among a day's outcomes: its id with its line, as feeds' trip ids are only unique within the feed.
+     */
+    static String key(ScheduledTrip trip) {
+        return trip.line() + "|" + trip.tripId();
+    }
+
+    /** An outcome's key, as {@link #key(ScheduledTrip)}. */
+    static String key(Outcome outcome) {
+        return outcome.line() + "|" + outcome.tripId();
     }
 
     /** The buses of some reports, in order of first report. */
@@ -363,9 +377,11 @@ final class TripAnomalies {
             Report last = sorted.stream().filter(rep -> trip.index(rep.nextSeq()) == toIndex)
                     .reduce((a, b) -> b).orElseThrow();
             Report next = after(byVehicle.get(last.vehicleId()), last.time());
-            // Moved on to another trip, reporting all along, but not a real short turn: the feed moved it on early.
+            // Moved on, reporting all along, near the end or driving on to it, but not a real short turn: the feed
+            // moved it on to its next trip early, or it went off to the depot from the last stops.
             boolean finished = toIndex >= trip.size() - END_STOPS
-                    || continuous(last, next) && !turnedShort(trip, toIndex, last, next);
+                    || continuous(last, next) && !turnedShort(trip, toIndex, last, next)
+                    && (trip.size() - 1 - toIndex <= SHORT_TURN_STOPS || reachedEnd(trip, last));
             Detour detour = TripShapes.detour(trip, sorted, shapes.get(trip.shapeId()));
             List<Phrase> detourNote = detour == null ? List.of() : List.of(Phrase.of("detour",
                     "minutes", detour.minutes(), "meters", detour.meters(), "after", detour.from()));
@@ -434,9 +450,9 @@ final class TripAnomalies {
 
         /**
          * Whether a bus that left a trip heading to stop {@code toIndex} and went on reporting ({@code next} the
-         * report after its last on the trip) really turned short: it went on to its brigade's next trip (not to the
-         * depot), at least {@link #SHORT_TURN_STOPS} stops before the end, caught up at least
-         * {@link #SHORT_TURN_GAIN_SECONDS}, and didn't drive on to the trip's last stop after all.
+         * report after its last on the trip) really turned short, near the end ({@link #SHORT_TURN_STOPS}): it went
+         * on to its brigade's next trip (not to the depot), caught up at least {@link #SHORT_TURN_GAIN_SECONDS}, and
+         * didn't drive on to the trip's last stop after all.
          */
         private boolean turnedShort(ScheduledTrip trip, int toIndex, Report last, Report next) {
             if (!Objects.equals(next.brigade(), trip.brigade()) || trip.size() - 1 - toIndex < SHORT_TURN_STOPS) {
@@ -450,7 +466,16 @@ final class TripAnomalies {
             if (before == null || after == null || before - after < SHORT_TURN_GAIN_SECONDS) {
                 return false;
             }
-            return trip.lastStop() == null || afterwards.stream().noneMatch(r ->
+            return !reachedEnd(trip, last);
+        }
+
+        /**
+         * Whether the bus came within {@link #REACHED_END_METERS} of the trip's last stop within
+         * {@link #NEXT_DELAY_WITHIN} of its last report on the trip: it drove on to the end after all.
+         */
+        private boolean reachedEnd(ScheduledTrip trip, Report last) {
+            return trip.lastStop() != null && between(byVehicle.get(last.vehicleId()), last.time(),
+                    last.time().plus(NEXT_DELAY_WITHIN)).stream().anyMatch(r ->
                     Geo.meters(new double[] {r.lat(), r.lon()}, trip.lastStop()) <= REACHED_END_METERS);
         }
 

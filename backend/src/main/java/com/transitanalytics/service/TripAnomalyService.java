@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
 /** Abnormal trips: scheduled trips not run, run only partly, lost, or off their route. */
@@ -46,6 +47,11 @@ public class TripAnomalyService {
     private final Clock clock;
     /** Each service day's outcomes, and when they were computed; a day long over is kept as it is. */
     private final Map<LocalDate, DayOutcomes> days = new ConcurrentHashMap<>();
+    /**
+     * Bumped whenever the days are forgotten ({@link #forgetOutcomes}): a day judged before that, with the old
+     * brigades, isn't kept.
+     */
+    private final AtomicLong generation = new AtomicLong();
     private final RecentCache<ReportWindow, TripAnomalyDto.Report> reports;
     private volatile Shapes shapes;
 
@@ -129,8 +135,11 @@ public class TripAnomalyService {
         if (cached != null && fresh(cached, day, now)) {
             return cached.outcomes();
         }
+        long judgedIn = generation.get();
         List<Outcome> outcomes = judge(day, now);
-        days.put(day, new DayOutcomes(now, outcomes));
+        if (generation.get() == judgedIn) {
+            days.put(day, new DayOutcomes(now, outcomes));
+        }
         LocalDate oldest = ServiceDay.serviceDay(now).minusDays(ServiceDayCache.KEEP_DAYS);
         days.keySet().removeIf(d -> d.isBefore(oldest));
         return outcomes;
@@ -190,6 +199,7 @@ public class TripAnomalyService {
 
     /** Drops the days judged so far: the brigades changed ({@link RecordedBrigades}), so the days are judged again. */
     void forgetOutcomes() {
+        generation.incrementAndGet();
         days.clear();
     }
 

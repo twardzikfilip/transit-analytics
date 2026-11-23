@@ -501,7 +501,7 @@
       "cancelled": "Nicht gefahren: An dem Tag fuhr überhaupt kein Bus den Umlauf.",
       "missed": "Nicht gefahren, während der Bus des Umlaufs an dem Tag andere Fahrten fuhr.",
       "lost": "Der Bus meldete sich unterwegs nicht mehr und kehrte nicht zu seinem Umlauf zurück.",
-      "short-turned": "Nur teilweise gefahren: Der Bus, der durchgehend meldete, stieg unterwegs ein oder wendete mindestens 3 Haltestellen vor dem Ende und war auf der nächsten Fahrt 3+ Min. weniger verspätet.",
+      "short-turned": "Nur teilweise gefahren: Der Bus, der durchgehend meldete, stieg unterwegs ein oder verließ die Fahrt mehr als 3 Haltestellen vor dem Ende (auf den letzten 3 nur, wenn er auf seine nächste Fahrt wendete und 3+ Min. weniger verspätet war).",
       "detour": "Vollständig gefahren, aber eine Zeit lang abseits der Strecke (über 150 m entfernt).",
       "vehicle-changed": "Vollständig gefahren, aber von zwei Bussen: Einer fuhr einen Teil, ein anderer Bus des Umlaufs übernahm unterwegs (meist ein Ausfall).",
       "no-signal": "Der Bus meldete sich unterwegs nicht mehr (oder begann spät), war aber zur nächsten Fahrt zurück: höchstwahrscheinlich gefahren, nur nicht gesehen."

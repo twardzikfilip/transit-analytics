@@ -77,9 +77,9 @@ export function stopTooltip(
   selector: 'app-trip-map',
   imports: [Skeleton],
   template: `
-    @if (!detail()) {
+    @if (detail() === undefined) {
       <app-skeleton kind="lines" [count]="3" [label]="t('trips.map.loading')" />
-    } @else if (!detail()!.points.length) {
+    } @else if (detail() && !detail()!.points.length) {
       <p class="muted">{{ t('trips.map.none') }}</p>
     }
     <div
@@ -136,8 +136,8 @@ export class TripMap {
   readonly run = input.required<TripRun>();
   protected readonly delayStops = DELAY_STOPS;
 
-  /** The trip in detail, from the page (null while it loads, or after a failure, shown as a toast). */
-  readonly detail = input<TripRunDetail | null>(null);
+  /** The trip in detail, from the page: undefined while it loads; null when there is none (a failure: a toast). */
+  readonly detail = input<TripRunDetail | null | undefined>(undefined);
   private readonly mapEl = viewChild.required<ElementRef<HTMLDivElement>>('map');
   private readonly host = leafletHost(() => this.mapEl().nativeElement, { grey: true });
 

@@ -222,6 +222,41 @@ class TripAnomaliesTest {
     }
 
     @Test
+    void aBusLeavingFarFromTheEndTurnedShortUnlessItDroveOnToTheEnd() {
+        // Eight stops north, 330 m apart, 1 min each; each bus is last seen heading to the 2nd, 6 stops before the end.
+        int[] seqs = {0, 1, 2, 3, 4, 5, 6, 7};
+        String[] names = {"A", "B", "C", "D", "E", "F", "G", "H"};
+        int[] offsets = {0, 60, 120, 180, 240, 300, 360, 420};
+        java.util.function.Function<String, ScheduledTrip> trip = brigade -> new ScheduledTrip(brigade + "_07:00", "9",
+                brigade, "North", at("07:00"), at("07:07"), seqs, names, offsets, "S", new double[] {53.121, LON});
+        ScheduledTrip toDepot = trip.apply("009-01");
+        ScheduledTrip noDelays = trip.apply("009-02");
+        ScheduledTrip drivesOn = trip.apply("009-03");
+        List<Report> reports = new ArrayList<>();
+        for (long bus = 1; bus <= 3; bus++) {
+            ScheduledTrip t = bus == 1 ? toDepot : bus == 2 ? noDelays : drivesOn;
+            Integer delay = bus == 2 ? null : 240;
+            for (int seq = 0; seq <= 1; seq++) {
+                for (int k = 0; k < 3; k++) {
+                    reports.add(new Report(bus, "V" + bus, t.scheduledAt(seq).plusSeconds(k * 20L), "9", t.brigade(),
+                            "North", delay, seq, 53.10 + seq * 0.003, LON));
+                }
+            }
+        }
+        // Bus 1 drives off to the depot without its brigade; bus 2 goes on to its next trip, the feed giving no delay;
+        // bus 3 goes on to its next trip but reaches the last stop first.
+        reports.add(new Report(1, "V1", at("07:01:50"), "9", null, "Zajezdnia", 0, 0, 53.09, LON));
+        reports.add(new Report(2, "V2", at("07:01:50"), "9", "009-02", "South", null, 0, 53.104, LON));
+        reports.add(new Report(3, "V3", at("07:01:50"), "9", "009-03", "South", 0, 0, 53.104, LON));
+        reports.add(new Report(3, "V3", at("07:06:00"), "9", "009-03", "South", 0, 0, 53.1209, LON));
+
+        Map<String, Outcome> outcomes = judge(List.of(toDepot, noDelays, drivesOn), reports, NOON);
+
+        assertThat(outcomes.values()).extracting(Outcome::kind)
+                .containsExactly(Kind.SHORT_TURNED, Kind.SHORT_TURNED, Kind.COMPLETED);
+    }
+
+    @Test
     void tellsShortTurnsFromLateStartsAndKeepsTripsPendingWhileTheBusRunsLate() {
         ScheduledTrip first = trip("009-01", "North", "07:00");
         ScheduledTrip second = trip("009-01", "South", "07:15");

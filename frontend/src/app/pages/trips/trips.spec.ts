@@ -6,7 +6,7 @@ import { Trips, readQuery, refreshes, tripKey } from './trips';
 import { convertToParamMap } from '@angular/router';
 import { readWindow } from '../../shared/time-window/time-window';
 import { localTime } from '../../shared/format/time';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { TripRunApi } from '../../core/api/api.services';
 import { useSvgMaps } from '../../testing/page-testing';
 import { delayPath, stopTooltip } from './trip-map';
@@ -244,6 +244,19 @@ describe('Trips page', () => {
     expect(el.querySelector('.detail .map-button')!.getAttribute('aria-pressed')).toBe('true');
     expect(el.querySelector('app-trip-map .map')).not.toBeNull();
     expect(detail).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows no map placeholder once the trip's detail has failed (the failure is a toast)", () => {
+    useSvgMaps();
+    const r = run();
+    const { el } = renderPage(
+      Trips,
+      stateAfter(tripRunsFeature, TripRunsActions.loaded({ page: page([r]) })),
+      { trip: tripKey(r), map: '1' },
+      [{ provide: TripRunApi, useValue: { detail: () => throwError(() => new Error('500')) } }],
+    );
+    expect(el.querySelector('app-trip-map')).not.toBeNull();
+    expect(el.querySelector('app-trip-map app-skeleton')).toBeNull();
   });
 
   it('colours the path between reports by the delay at the first, broken where the bus changes or vanished', () => {

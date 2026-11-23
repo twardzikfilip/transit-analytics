@@ -187,10 +187,10 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   usual route within 600 m of it), for a map. Each change is also told step by
   step (`story`: what each bus did when, in time order) with a time line per bus (`timeline`: running, standing,
   moving off, on its way without the brigade, on the brigade)),
-  short-turned (the bus, reporting all along, joined midway, or turned back onto its brigade's next trip at least 3
-  stops before the end, 3 min or more less late there, and wasn't seen near the trip's last stop afterwards; the feed
-  often moves a bus on to its next trip two or three stops early, and a bus that only went off to the depot or drove
-  on to the end ran in full), no signal (it stopped
+  short-turned (the bus, reporting all along, joined midway, or left the trip more than 3 stops before the end and
+  didn't drive on to it; within the last 3 stops only when it turned onto its brigade's next trip, 3 min or more less
+  late there, and wasn't seen near the last stop afterwards: the feed often moves a bus on to its next trip two or
+  three stops early, and buses go off to the depot from there), no signal (it stopped
   reporting partway but was back for its brigade's next trip), lost (it stopped reporting midway and didn't come
   back within 15 min), missed (not run while the brigade ran other trips; with where the brigade's bus was instead)
   and cancelled (no bus on the brigade all day). Trips during gaps in recording (3+ minutes without any report)

@@ -106,7 +106,7 @@ public class TripRunService {
         });
         List<Candidate> listed = candidates.stream().filter(c -> c.named() || ran.containsKey(c)).toList();
 
-        int first = Math.min(page * PAGE_SIZE, listed.size());
+        int first = (int) Math.min((long) page * PAGE_SIZE, listed.size());
         List<Candidate> shown = listed.subList(first, Math.min(first + PAGE_SIZE, listed.size()));
         Map<Candidate, TripRunDto.Trip> built = new HashMap<>(ran);
         built.putAll(build(shown.stream().filter(c -> !ran.containsKey(c)).toList(), days, now));
@@ -378,14 +378,14 @@ public class TripRunService {
                     TripMatching.withBrigades(reports));
             Map<String, Outcome> outcomes = new HashMap<>();
             for (Outcome o : anomalies.currentOutcomes(day).orElseGet(() -> anomalies.judge(trips, reports, day, now))) {
-                outcomes.put(o.tripId(), o);
+                outcomes.put(TripAnomalies.key(o), o);
             }
             for (Candidate c : wanted) {
                 ScheduledTrip trip = c.trip();
                 List<Report> on = matched.getOrDefault(trip, List.of()).stream()
                         .sorted(Comparator.comparing(Report::time)).toList();
                 BrigadeDto.Trip run = BrigadeDayService.trip(trip,
-                        outcomes.get(trip.tripId()), on,
+                        outcomes.get(TripAnomalies.key(trip)), on,
                         byBrigade.get(trip.brigade()).get(0));
                 List<Report> running = running(on, run.runs());
                 built.put(c, new TripRunDto.Trip(day, trip.brigade(), run, samples(trip, running),

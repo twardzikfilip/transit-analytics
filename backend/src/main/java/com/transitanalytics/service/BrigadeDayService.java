@@ -116,14 +116,14 @@ public class BrigadeDayService {
         // (judging the whole day takes a while), from the same reports.
         Map<String, Outcome> outcomes = new HashMap<>();
         for (Outcome o : anomalies.currentOutcomes(day).orElseGet(() -> anomalies.judge(trips, reports, day, now))) {
-            outcomes.put(o.tripId(), o);
+            outcomes.put(TripAnomalies.key(o), o);
         }
         Map<ScheduledTrip, List<Report>> matched = TripMatching.matchReports(TripMatching.byBrigade(trips),
                 TripMatching.withBrigades(reports));
 
         List<BrigadeDto.Trip> result = new ArrayList<>();
         for (ScheduledTrip trip : trips) {
-            result.add(trip(trip, outcomes.get(trip.tripId()),
+            result.add(trip(trip, outcomes.get(TripAnomalies.key(trip)),
                     matched.getOrDefault(trip, List.of()), trips.get(0)));
         }
         return new BrigadeDto.Day(brigade, day, summary(result), result);

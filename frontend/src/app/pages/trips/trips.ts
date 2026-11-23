@@ -106,23 +106,27 @@ export class Trips {
   private readonly openRun = computed(
     () => this.result()?.trips.find((r) => tripKey(r) === this.open()) ?? null,
   );
+  /** The trip whose detail is shown. */
+  private shownKey: string | null = null;
   /**
-   * The open trip in detail (every report, its stops with how long the bus stood), asked for once per trip opened;
-   * null while it loads, or after a failure (a toast).
+   * The open trip in detail (every report, its stops with how long the bus stood): undefined while it loads, null
+   * when none (no trip open, or the request failed: a toast). Asked for again with each refresh of the list, keeping
+   * what is shown until the answer comes, so a trip under way keeps up.
    */
   protected readonly detail = toSignal(
     toObservable(this.openRun).pipe(
-      distinctUntilChanged((a, b) => (a && tripKey(a)) === (b && tripKey(b))),
-      switchMap((run) =>
-        run
-          ? this.api.detail(run).pipe(
-              startWith(null),
-              catchError(() => of(null)),
-            )
-          : of(null),
-      ),
+      switchMap((run) => {
+        if (!run) {
+          this.shownKey = null;
+          return of(null);
+        }
+        const opened = tripKey(run) !== this.shownKey;
+        this.shownKey = tripKey(run);
+        const answer = this.api.detail(run).pipe(catchError(() => of(null)));
+        return opened ? answer.pipe(startWith(undefined)) : answer;
+      }),
     ),
-    { initialValue: null as TripRunDetail | null },
+    { initialValue: null as TripRunDetail | null | undefined },
   );
   /** The open trip's map (?map=1). */
   protected readonly mapShown = computed(() => this.params().get('map') === '1');
