@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -23,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class FleetServiceTest {
 
     private static final LocalDate DAY = LocalDate.of(2026, 11, 16);
+    private static final Instant HOUR = Instant.parse("2026-11-16T09:00:00Z");
     private static final Vehicle A = new Vehicle(1, "230", "Solaris Urbino 12", "BKM", VehicleClass.MAXI);
     private static final Vehicle B = new Vehicle(2, "9", "Solaris Urbino 12", "BKM", VehicleClass.MAXI);
     private static final Vehicle C = new Vehicle(3, "1050", null, "TUROSN", null);
@@ -52,8 +54,9 @@ class FleetServiceTest {
     @Test
     void sumsUsePerVehicleWithDaysAndLinesInLineOrder() {
         List<Usage> usage = FleetService.usage(List.of(
-                new Segment(A, DAY, "103", 3600), new Segment(A, DAY, "11", 1800),
-                new Segment(A, DAY.plusDays(1), "103", 3600), new Segment(B, DAY, "9", 600)));
+                new Segment(A.id(), DAY, HOUR, "103", 3600), new Segment(A.id(), DAY, HOUR, "11", 1800),
+                new Segment(A.id(), DAY.plusDays(1), HOUR, "103", 3600), new Segment(B.id(), DAY, HOUR, "9", 600),
+                new Segment(999, DAY, HOUR, "9", 600)), Map.of(A.id(), A, B.id(), B));
 
         assertThat(usage).extracting(u -> u.vehicle().number()).containsExactly("230", "9");
         assertThat(usage.get(0).hours()).isEqualTo(2.5);

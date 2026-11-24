@@ -21,6 +21,7 @@ import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -63,12 +64,28 @@ public class BusLaneReportService {
     /** Figures over less than this many km driven aren't given. */
     static final double MIN_KM = 0.5;
 
+    /** A bucket's length. */
+    static final Duration SLOT = Duration.ofMinutes(30);
+    /**
+     * A bucket is a half hour (its slot, on the city's clock, in its service day): it fills with the hops starting
+     * in it (each at most {@link #MAX_HOP_SECONDS} long). A window takes the buckets starting in it.
+     */
+    static final ServiceDayCache.Rows<Bucket> ROWS = new ServiceDayCache.Rows<>(Bucket::start,
+            b -> b.start().plus(SLOT), Duration.ofSeconds(MAX_HOP_SECONDS), Duration.ZERO, SLOT);
+
     /**
      * One service day's hops on one stretch, half-hour of the day and kind of day. {@code stretch}: the stretch's id
      * on its bus lane; {@code -2 - id} on the same street the other way, without a lane; -1 elsewhere.
      */
     record Bucket(LocalDate day, int stretch, int slot, boolean weekday, double meters, double seconds,
                   double delayMeters, double delaySeconds, Set<String> lines) {
+
+        /** When its half hour starts (slots before the day's start hour are after midnight). */
+        Instant start() {
+            LocalTime time = LocalTime.ofSecondOfDay(slot * SLOT.toSeconds());
+            LocalDate date = time.getHour() < ServiceDay.DAY_START_HOUR ? day.plusDays(1) : day;
+            return date.atTime(time).atZone(ServiceDay.ZONE).toInstant();
+        }
     }
 
     private final JdbcTemplate jdbc;
@@ -186,7 +203,8 @@ public class BusLaneReportService {
         if (current == null || daysVersion != snapshot.version()) {
             synchronized (this) {
                 if (days == null || daysVersion != snapshot.version()) {
-                    days = new ServiceDayCache<>(clock, (from, to) -> query(from, to, snapshot));
+                    days = new ServiceDayCache<>(clock, (from, to) -> query(from, to, snapshot), ROWS,
+                            ServiceDayCache.positionCount(jdbc));
                     daysVersion = snapshot.version();
                 }
                 current = days;

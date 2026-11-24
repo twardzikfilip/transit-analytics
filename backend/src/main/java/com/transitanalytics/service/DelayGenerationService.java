@@ -24,6 +24,17 @@ public class DelayGenerationService {
     /** Two passages further apart than this aren't consecutive (missing data). */
     static final Duration MAX_POLL_GAP = Duration.ofMinutes(3);
 
+    /**
+     * A run starts at its first passage; passages at most {@link DelayGeneration#MAX_GAP_SECONDS} apart join it. A
+     * passage needs the report before it (at most {@link #MAX_POLL_GAP} earlier), so a run's query starts that much
+     * before the gap before it; and a run shows only from its {@link DelayGeneration#MIN_PASSAGES}th passage on.
+     */
+    static final ServiceDayCache.Rows<Run> ROWS = new ServiceDayCache.Rows<>(
+            r -> Instant.ofEpochSecond(r.times()[0]), r -> Instant.ofEpochSecond(r.times()[r.size() - 1]),
+            Duration.ofSeconds(DelayGeneration.MAX_GAP_SECONDS),
+            Duration.ofSeconds(DelayGeneration.MAX_GAP_SECONDS).plus(MAX_POLL_GAP).plusMinutes(1),
+            Duration.ofSeconds((long) (DelayGeneration.MIN_PASSAGES - 1) * DelayGeneration.MAX_GAP_SECONDS));
+
     private final JdbcTemplate jdbc;
     private final Clock clock;
     private final ServiceDayCache<Run> runs;
@@ -35,7 +46,7 @@ public class DelayGenerationService {
     public DelayGenerationService(JdbcTemplate jdbc, Clock clock) {
         this.jdbc = jdbc;
         this.clock = clock;
-        this.runs = new ServiceDayCache<>(clock, this::query);
+        this.runs = new ServiceDayCache<>(clock, this::query, ROWS, ServiceDayCache.positionCount(jdbc));
         this.windowRuns = new RecentCache<>(clock, CACHE_FOR, 8);
         this.networks = new RecentCache<>(clock, CACHE_FOR, 8);
         this.lines = new RecentCache<>(clock, CACHE_FOR, 16);

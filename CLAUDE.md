@@ -40,7 +40,8 @@ with `backend/recorder/upgrade.sh`, which leaves no gap. Check it with `curl -s 
 `docker` group), so ask the user to run `docker` commands.
 
 Before calling a change done:
-- Backend: `cd backend && INTEGRATION_TESTS=true ./gradlew check` (needs the database up; coverage floor 90%).
+- Backend: `cd backend && INTEGRATION_TESTS=true ./gradlew check` (needs the database up, and the `transit_test`
+  database the tests use: README, "Tests"; coverage floor 90%).
   To run some tests: `./gradlew :test --tests '*Name*'` (`:test`, the root project; plain `test` also runs the
   subprojects, where the filter fails).
 - Frontend: `cd frontend && npx ng test --watch=false`, `npx ng build`, `npx prettier --check src`.
