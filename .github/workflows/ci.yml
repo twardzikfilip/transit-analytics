@@ -42,6 +42,8 @@ jobs:
     env:
       INTEGRATION_TESTS: "true"
       DB_URL: jdbc:postgresql://localhost:5432/transit
+      # The service's database is CI's own, so the tests use it too (locally they use transit_test).
+      TEST_DB_URL: jdbc:postgresql://localhost:5432/transit
       # The recorder would poll the live feed and the apps export telemetry; the tests switch both off, this keeps it
       # that way.
       RECORDING_ENABLED: "false"

@@ -58,7 +58,7 @@ class BusLaneReportIntegrationTest {
                  "highway":"secondary","forward":1,"backward":0,"points":[[53.115,23.175],[53.115,23.185]]}]}""");
         BusLanes lanes = new BusLanes(new BusLaneProperties(file.toString(), "-", List.of(), null, 1, 15, 45, null),
                 RestClient.create(), JsonMapper.builder().build(), Clock.systemUTC());
-        var service = new BusLaneReportService(jdbc, transaction, lanes, Clock.systemUTC());
+        var service = new BusLaneReportService(jdbc, transaction, lanes, Clock.systemUTC(), DaySummaries.none());
         new TimetableFixture(jdbc, "IT_BL").route("IT-B1", "IT-B1");
 
         // East on the lane at 07:00 (peak): 67 m every 20 s, 12 km/h, 10 s more late each time.

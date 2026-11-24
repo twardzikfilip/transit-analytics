@@ -46,6 +46,11 @@ app:
   # visit doesn't wait. Integration tests turn it off.
   warm-up:
     enabled: ${WARM_UP_ENABLED:true}
+  # Store reports' rows of days that are over (table day_summary), so a restart needn't work them out again.
+  day-summaries:
+    enabled: ${DAY_SUMMARIES_ENABLED:true}
+    # Drops the days with positions stored since (after a spool or archive replay).
+    check-cron: "0 30 6 * * *"
   jwt:
     # Dev default only — override with JWT_SECRET (min 32 bytes) in any real environment.
     secret: ${JWT_SECRET:dev-only-secret-change-me-please-0123456789abcdef}

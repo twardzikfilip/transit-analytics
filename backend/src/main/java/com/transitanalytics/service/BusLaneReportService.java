@@ -1,5 +1,6 @@
 package com.transitanalytics.service;
 
+import com.transitanalytics.buslanes.BusLane;
 import com.transitanalytics.buslanes.BusLaneMatcher;
 import com.transitanalytics.buslanes.BusLaneStretches;
 import com.transitanalytics.buslanes.BusLanes;
@@ -12,7 +13,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.util.DigestUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -21,8 +24,10 @@ import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -63,27 +68,55 @@ public class BusLaneReportService {
     /** Figures over less than this many km driven aren't given. */
     static final double MIN_KM = 0.5;
 
+    /** A bucket's length. */
+    static final Duration SLOT = Duration.ofMinutes(30);
+    /**
+     * A bucket is a half hour (its slot, on the city's clock, in its service day): it fills with the hops starting
+     * in it (each at most {@link #MAX_HOP_SECONDS} long). A window takes the buckets starting in it.
+     */
+    static final ServiceDayCache.Rows<Bucket> ROWS = new ServiceDayCache.Rows<>(Bucket::start,
+            b -> b.start().plus(SLOT), Duration.ofSeconds(MAX_HOP_SECONDS), Duration.ZERO, SLOT);
+
     /**
      * One service day's hops on one stretch, half-hour of the day and kind of day. {@code stretch}: the stretch's id
      * on its bus lane; {@code -2 - id} on the same street the other way, without a lane; -1 elsewhere.
      */
     record Bucket(LocalDate day, int stretch, int slot, boolean weekday, double meters, double seconds,
                   double delayMeters, double delaySeconds, Set<String> lines) {
+
+        /** When its half hour starts (slots before the day's start hour are after midnight). */
+        Instant start() {
+            LocalTime time = LocalTime.ofSecondOfDay(slot * SLOT.toSeconds());
+            LocalDate date = time.getHour() < ServiceDay.DAY_START_HOUR ? day.plusDays(1) : day;
+            return date.atTime(time).atZone(ServiceDay.ZONE).toInstant();
+        }
     }
+
+    /** Raised whenever what is worked out for a day changes: stored days are out of date then. */
+    private static final String LOGIC = "1";
 
     private final JdbcTemplate jdbc;
     private final TransactionTemplate transaction;
     private final BusLanes lanes;
     private final Clock clock;
+    private final DaySummaries summaries;
     private final RecentCache<String, BusLaneDto.Report> cache;
     private volatile ServiceDayCache<Bucket> days;
     private volatile int daysVersion;
 
-    public BusLaneReportService(JdbcTemplate jdbc, TransactionTemplate transaction, BusLanes lanes, Clock clock) {
+    public BusLaneReportService(JdbcTemplate jdbc, TransactionTemplate transaction, BusLanes lanes, Clock clock,
+                                DaySummaries summaries) {
         this.jdbc = jdbc;
         this.transaction = transaction;
         this.lanes = lanes;
         this.clock = clock;
+        this.summaries = summaries;
+        summaries.onOutdated("bus-lanes", day -> {
+            ServiceDayCache<Bucket> current = days;
+            if (current != null) {
+                current.forget(day);
+            }
+        });
         this.cache = new RecentCache<>(clock, CACHE_FOR, 16);
     }
 
@@ -186,13 +219,28 @@ public class BusLaneReportService {
         if (current == null || daysVersion != snapshot.version()) {
             synchronized (this) {
                 if (days == null || daysVersion != snapshot.version()) {
-                    days = new ServiceDayCache<>(clock, (from, to) -> query(from, to, snapshot));
+                    String fingerprint = fingerprint(snapshot);
+                    days = new ServiceDayCache<>(clock, (from, to) -> query(from, to, snapshot), ROWS,
+                            ServiceDayCache.positionCount(jdbc),
+                            summaries.store("bus-lanes", () -> fingerprint, Bucket.class));
                     daysVersion = snapshot.version();
                 }
                 current = days;
             }
         }
         return current;
+    }
+
+    /** Of the lanes as they are (a refresh that finds the same lanes changes nothing) and how hops are matched. */
+    private String fingerprint(BusLanes.Snapshot snapshot) {
+        StringBuilder text = new StringBuilder();
+        for (BusLane lane : snapshot.data().lanes()) {
+            text.append(lane.id()).append(' ').append(lane.forward()).append(' ').append(lane.backward());
+            lane.points().forEach(p -> text.append(' ').append(Arrays.toString(p)));
+            text.append('\n');
+        }
+        text.append(lanes.properties().matchMeters()).append(' ').append(lanes.properties().matchAngle());
+        return LOGIC + ":" + DigestUtils.md5DigestAsHex(text.toString().getBytes(StandardCharsets.UTF_8));
     }
 
     /** The hops in {@code [from, to)} (at most a service day), summed per stretch, half-hour and kind of day. */

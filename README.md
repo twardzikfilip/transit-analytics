@@ -84,8 +84,23 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
 - **Time windows.** Every report over recorded positions (position history, Fleet, hotspots, delay generation,
   abnormal trips) takes `from` and `to` (ISO-8601 instants, `to` exclusive). Both are optional: `to` defaults to now,
   and without `from` the window starts at the first recorded position (*all time*). `from` after `to` is a 400.
-  Answers for the same window are kept for a minute or two; service days that are over are computed once and kept
-  for 92 days.
+  Answers for the same window are kept for a minute or two (two requests for one window at once compute it once).
+  Service days that are over are computed once and kept for 92 days; a window that cuts a day takes from the whole
+  day what starts inside it, so its edges round to what the report counts in: a standstill or run where it starts,
+  a bus-lane half hour, a Fleet hour. The running day is read in pieces: what is finished is kept, and each refresh
+  reads only from the oldest standstill, run or bucket still going on, giving what reading the whole day gives (the
+  whole day is read again if positions are stored late in the part kept, e.g. after a database outage). Abnormal
+  trips, Trips and brigades keep the running day's reports in memory the same way.
+  Days that are over are also stored in the database (table `day_summary`, about 2 MB a day: standstills, delay runs,
+  bus-lane half hours, Fleet hours and trip outcomes), so a restart reads them instead of the positions. They are
+  worked out one at a time. A stored day is worked out again when the report's logic or the bus
+  lanes change, or when positions of it turn up later (checked every night at 06:30). Trip outcomes also need the
+  timetable, whose imports drop past trips: a stored day's outcomes stay when some of its trips are gone, and neither
+  an import nor newly learnt brigades change them. The other reports can always be worked out again from the
+  positions; **don't empty the table by hand**, old days' trip outcomes would be lost. Nothing is stored with less than
+  5 GB free on the backend's disk, with a table over 1 GB, or with `DAY_SUMMARIES_ENABLED=false`.
+- `DELETE /api/admin/day-summaries?from=&to=&report=` (admin): drops stored days (service days, both included) of one
+  report (`hotspots`, `delay-generation`, `bus-lanes`, `fleet`, `trip-outcomes`) or of all, to work them out again (trip outcomes are kept until they have been).
 - Routes (`{line}` is the route's GTFS id, e.g. `103`):
   - `GET /api/lines` — all lines in numeric order, with their subtype, `geometry` and `capacityClass` (see
     *Vehicle and line classes*): the timetable's, and the lines only seen on the live feed (other operators' regional
@@ -476,6 +491,14 @@ Every test run writes a JaCoCo coverage report to `build/reports/jacoco/test/` (
 `jacocoTestReport.xml` for CI). Unit tests alone cover about 54% of lines; with the database tests about 95%.
 `check` fails below 50% of lines, or below 90% when `INTEGRATION_TESTS=true` (as in CI).
 Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixture` inserts a small timetable.
+They run against their own database, `transit_test` on the same server (`TEST_DB_URL` to change it; CI points it at
+its own `transit`), never the one the recorder writes to. Roles belong to the whole server, so the tests keep their
+passwords while migrating (`SharedRoles`). Create it once:
+
+```bash
+PGPASSWORD=transit psql -h localhost -U transit postgres -c "CREATE DATABASE transit_test"
+PGPASSWORD=transit psql -h localhost -U transit transit_test -c "CREATE EXTENSION IF NOT EXISTS timescaledb"
+```
 
 ## Frontend
 

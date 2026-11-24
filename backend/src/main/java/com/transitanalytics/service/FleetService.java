@@ -52,7 +52,12 @@ public class FleetService {
     static final Duration BREAK = Duration.ofMinutes(30);
     /** Each report counts as in service until the bus's next one, up to this long (gaps in the feed don't count). */
     static final Duration REPORT_COUNTS_FOR = Duration.ofMinutes(1);
+    /** A report is polled at most this long after it was made (seconds; on 23 Nov 2026 at most 4.6 minutes). */
+    static final Duration POLLED_AFTER = Duration.ofMinutes(15);
     static final String UNKNOWN_MODEL = "unknown";
+
+    /** Raised whenever what is worked out for a day changes: stored days are out of date then. */
+    private static final String LOGIC = "1";
 
     private final JdbcTemplate jdbc;
     private final Clock clock;
@@ -60,11 +65,13 @@ public class FleetService {
     private final ServiceDayCache<Segment> segments;
     private final RecentCache<ReportWindow, Figures> figures;
 
-    public FleetService(JdbcTemplate jdbc, Clock clock, TripAnomalyService trips) {
+    public FleetService(JdbcTemplate jdbc, Clock clock, TripAnomalyService trips, DaySummaries summaries) {
         this.jdbc = jdbc;
         this.clock = clock;
         this.trips = trips;
-        this.segments = new ServiceDayCache<>(clock, this::query);
+        this.segments = new ServiceDayCache<>(clock, this::query, ROWS, ServiceDayCache.positionCount(jdbc),
+                summaries.store("fleet", () -> LOGIC, Segment.class));
+        summaries.onOutdated("fleet", segments::forget);
         this.figures = new RecentCache<>(clock, CACHE_FOR, 8);
     }
 
@@ -85,9 +92,20 @@ public class FleetService {
         return figures.get(window, () -> figures(window)).report(agencies);
     }
 
-    /** Time on one line of one vehicle on one service day. */
-    record Segment(Vehicle vehicle, LocalDate day, String line, double seconds) {
+    /**
+     * Time on one line of one vehicle (its id: its number, model and class are looked up when the figures are made,
+     * as they change) in one hour (from {@code hour}) of one service day.
+     */
+    record Segment(long vehicleId, LocalDate day, Instant hour, String line, double seconds) {
     }
+
+    /**
+     * A segment is an hour: it fills with the reports in it (each counting until the next, at most
+     * {@link #REPORT_COUNTS_FOR}). A window takes the hours starting in it. Hours go by when reports were polled, the
+     * query by when they were made: up to {@link #POLLED_AFTER} earlier.
+     */
+    static final ServiceDayCache.Rows<Segment> ROWS = new ServiceDayCache.Rows<>(Segment::hour,
+            s -> s.hour().plus(Duration.ofHours(1)), REPORT_COUNTS_FOR, POLLED_AFTER, Duration.ofHours(1));
 
     /** A window's figures for all operators. */
     record Figures(Instant from, Instant to, List<Vehicle> fleet, List<Usage> usage, List<Breakdown> breakdowns) {
@@ -185,7 +203,7 @@ public class FleetService {
         Map<Long, Vehicle> byId = vehicles.stream().collect(Collectors.toMap(Vehicle::id, v -> v));
         List<Vehicle> fleet = jdbc.queryForList("SELECT id FROM vehicle WHERE type = 'BUS'", Long.class).stream()
                 .map(byId::get).filter(Objects::nonNull).toList();
-        return new Figures(window.from(), window.to(), fleet, usage(segments.get(window.from(), window.to())),
+        return new Figures(window.from(), window.to(), fleet, usage(segments.get(window.from(), window.to()), byId),
                 breakdowns(trips.outcomes(window.from(), window.to()), byId));
     }
 
@@ -195,10 +213,10 @@ public class FleetService {
                         rs.getString("agency"), vehicleClass(rs.getString("vehicle_class"))));
     }
 
-    static List<Usage> usage(List<Segment> segments) {
-        Map<Long, List<Segment>> byVehicle = segments.stream()
-                .collect(Collectors.groupingBy(s -> s.vehicle().id(), LinkedHashMap::new, Collectors.toList()));
-        return byVehicle.values().stream().map(list -> new Usage(list.get(0).vehicle(),
+    static List<Usage> usage(List<Segment> segments, Map<Long, Vehicle> vehicles) {
+        Map<Long, List<Segment>> byVehicle = segments.stream().filter(s -> vehicles.containsKey(s.vehicleId()))
+                .collect(Collectors.groupingBy(Segment::vehicleId, LinkedHashMap::new, Collectors.toList()));
+        return byVehicle.values().stream().map(list -> new Usage(vehicles.get(list.get(0).vehicleId()),
                         round(list.stream().mapToDouble(Segment::seconds).sum() / 3600, 1),
                         (int) list.stream().map(Segment::day).distinct().count(),
                         list.stream().map(Segment::line).collect(Collectors.toCollection(() -> new TreeSet<>(LINE_ORDER)))
@@ -218,17 +236,15 @@ public class FleetService {
                 spans AS (
                     SELECT *, date_part('epoch', least(lead(poll) OVER (PARTITION BY vehicle_id ORDER BY poll),
                                                       poll + interval '%3$d seconds') - poll) AS seconds,
-                           ((poll AT TIME ZONE '%1$s') - interval '%2$d hours')::date AS day
+                           ((poll AT TIME ZONE '%1$s') - interval '%2$d hours')::date AS day,
+                           date_trunc('hour', poll) AS hour
                     FROM r)
-                SELECT s.vehicle_id, s.day, s.route_name, sum(s.seconds) AS seconds,
-                       v.vehicle_number, v.model, v.agency, v.vehicle_class
-                FROM spans s JOIN vehicle v ON v.id = s.vehicle_id
-                GROUP BY s.vehicle_id, s.day, s.route_name, v.vehicle_number, v.model, v.agency, v.vehicle_class"""
+                SELECT vehicle_id, day, hour, route_name, sum(seconds) AS seconds
+                FROM spans
+                GROUP BY vehicle_id, day, hour, route_name"""
                         .formatted(ZONE.getId(), DAY_START_HOUR, REPORT_COUNTS_FOR.toSeconds()),
-                (rs, i) -> new Segment(
-                        new Vehicle(rs.getLong("vehicle_id"), rs.getString("vehicle_number"), rs.getString("model"),
-                                rs.getString("agency"), vehicleClass(rs.getString("vehicle_class"))),
-                        rs.getObject("day", LocalDate.class), rs.getString("route_name"), rs.getDouble("seconds")),
+                (rs, i) -> new Segment(rs.getLong("vehicle_id"), rs.getObject("day", LocalDate.class),
+                        rs.getTimestamp("hour").toInstant(), rs.getString("route_name"), rs.getDouble("seconds")),
                 Timestamp.from(from), Timestamp.from(to));
     }
 

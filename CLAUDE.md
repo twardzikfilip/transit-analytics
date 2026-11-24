@@ -36,11 +36,14 @@ Dev users: `guest`/`guest`, `admin`/`admin`.
 **The recorder must keep running.** It stores the live positions all the time, and a gap is lost data. It runs in
 Docker (`restart: unless-stopped`; Docker starts at boot), separately from any dev session. Never stop it; upgrade it
 with `backend/recorder/upgrade.sh`, which leaves no gap. Check it with `curl -s localhost:8081/actuator/health`
-(`recording.lastStored` should be seconds old). Claude can't reach the Docker socket here (the user isn't in the
-`docker` group), so ask the user to run `docker` commands.
+(`recording.lastStored` should be seconds old). Never run a bare
+`docker compose up` while it runs: that can recreate it (after a reboot, `docker start` the stopped containers). Its
+folders `backend/data/raw` and `backend/data/spool` must belong to the user it runs as (1000), or polls aren't
+archived while the health still says UP: look for errors in `docker logs transit-recorder`.
 
 Before calling a change done:
-- Backend: `cd backend && INTEGRATION_TESTS=true ./gradlew check` (needs the database up; coverage floor 90%).
+- Backend: `cd backend && INTEGRATION_TESTS=true ./gradlew check` (needs the database up, and the `transit_test`
+  database the tests use: README, "Tests"; coverage floor 90%).
   To run some tests: `./gradlew :test --tests '*Name*'` (`:test`, the root project; plain `test` also runs the
   subprojects, where the filter fails).
 - Frontend: `cd frontend && npx ng test --watch=false`, `npx ng build`, `npx prettier --check src`.
