@@ -3,6 +3,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Icon } from '../../shared/icons/icon';
 import { IconName } from '../../shared/icons/icons';
 import { t } from '../../core/i18n/t';
+import { APP_VERSION } from '../../core/version';
 
 interface NavItem {
   path: string;
@@ -36,6 +37,7 @@ export class Sidebar {
   /** On a desktop, narrowed to its icons; remembered in this browser. */
   protected readonly collapsed = signal(readCollapsed());
   protected readonly t = t;
+  protected readonly version = APP_VERSION;
 
   /** The sidebar: Home on its own, then day-to-day operation, then the network and its timetable. */
   protected readonly navGroups: NavGroup[] = [

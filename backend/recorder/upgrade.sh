@@ -6,6 +6,8 @@
 # too: it is stopped the same way, which frees port 8081 for the container.
 #
 #   backend/recorder/upgrade.sh          (from anywhere in the repository; needs Docker access)
+#   backend/recorder/upgrade.sh 1.0.1    on the server: that released version, from the registry (docker-compose.prod.yml;
+#                                        then also kept as RECORDER_VERSION in .env)
 set -euo pipefail
 cd "$(dirname "$0")/../.."          # repository root, where docker-compose.yml is
 
@@ -24,9 +26,18 @@ for dir in backend/data/raw backend/data/spool; do
   fi
 done
 
-echo "Building the new version…"
-(cd backend && ./gradlew -q :recorder:bootJar)
-docker compose build -q recorder
+if [ $# -gt 0 ]; then
+  export COMPOSE_FILE=docker-compose.prod.yml RECORDER_VERSION=$1
+  grep -qs "^APP_VERSION=" .env || { echo "No .env of a server here: this isn't the server (README, \"Hosting\")." >&2; exit 1; }
+  echo "Getting version $1…"
+  docker compose pull -q recorder
+else
+  # On the server, building here would replace the released recorder with docker-compose.yml's.
+  ! grep -qs "^APP_VERSION=" .env || { echo "This is the server (.env): give a released version, e.g. upgrade.sh 1.0.1" >&2; exit 1; }
+  echo "Building the new version…"
+  (cd backend && ./gradlew -q :recorder:bootJar)
+  docker compose build -q recorder
+fi
 
 echo "Starting it next to the running one (port 8082)…"
 docker rm -f transit-recorder-next > /dev/null 2>&1 || true
@@ -59,4 +70,5 @@ if ! wait_healthy 8081 60; then
   docker logs --tail 50 transit-recorder >&2
   exit 1
 fi
+[ $# -eq 0 ] || sed -i "s/^RECORDER_VERSION=.*/RECORDER_VERSION=$1/" .env
 echo "Done: transit-recorder runs the new version on port 8081 (the temporary one is removed)."

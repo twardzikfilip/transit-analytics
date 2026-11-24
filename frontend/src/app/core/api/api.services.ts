@@ -12,3 +12,4 @@ export * from './bus-lanes.api';
 export * from './brigades.api';
 export * from './network-coverage.api';
 export * from './trip-runs.api';
+export * from './version.api';

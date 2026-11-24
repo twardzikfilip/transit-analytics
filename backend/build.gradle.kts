@@ -6,7 +6,9 @@ plugins {
 }
 
 group = "com.transitanalytics"
-version = "0.0.1-SNAPSHOT"
+// The app's version, shared with the frontend (tools/version.sh).
+val release = file("../VERSION").readText().trim().split(" ")  // version and release date
+version = release[0]
 
 java {
 	toolchain {
@@ -49,6 +51,20 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-validation-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+// The version and its release date in /actuator/info. Without the build time, so an unchanged build stays up to date.
+springBoot {
+	buildInfo {
+		excludes = setOf("time")
+		properties {
+			additional = mapOf("released" to release[1])
+		}
+	}
+}
+
+tasks.bootJar {
+	archiveFileName = "transit-backend.jar"
 }
 
 tasks.withType<Test> {

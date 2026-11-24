@@ -56,6 +56,7 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
 
 ### API
 
+- `GET /api/version` → `{backend, recorder}`, each `{version, released}`: the versions running (`recorder` null when it doesn't answer)
 - `POST /api/auth/login` `{username, password}` → `{token, username, role}`; `GET /api/auth/me`
 - CRUD (`GET` list paged with `?page=&size=&sort=`, `GET /{id}`, `POST`, `PUT /{id}`, `DELETE /{id}`) on
   `/api/vehicles`, `/api/users`, `/api/roles`, and the timetable (GTFS) tables
@@ -545,7 +546,7 @@ PGPASSWORD=transit psql -h localhost -U transit transit_test -c "CREATE EXTENSIO
   (`?range=1w`, or `?from=…&to=…` in local time, and `?agency=`).
 - Startup bundle: telemetry (the OpenTelemetry SDK) loads as its own chunk right after startup, and the NgRx
   devtools are only in development builds (`store-devtools.prod.ts` replaces them in production).
-- `pages` — login, settings (theme; GTFS import for admins), sources (where the data comes from; "Data sources" in the header menu), and:
+- `pages` — login, settings (theme; versions; GTFS import for admins), sources (where the data comes from; "Data sources" in the header menu), and:
 - Home: buses with a possibly faulty tracker first (a tile with a red border while any bus is listed: each bus links
   to its page, with its no-signal trips of all it ran, the days, its lines and the latest), then the live map
   (Leaflet/OSM; a `livePositions` load every 5 s, markers drawn from the store). Each bus is a pill-shaped badge with
@@ -674,6 +675,36 @@ npm run test:coverage   # once, with coverage of all of src/app (report in cover
                         # fails below the thresholds in angular.json (test options)
 npm run build
 ```
+
+## Versions
+
+Two, each raised on its own (semantic versions: patch for a fix, minor for a feature, major for a change that needs
+something done by hand):
+
+| Version | Of | File |
+|---|---|---|
+| app | backend and frontend, released together | `VERSION` (and `frontend/package.json`) |
+| recorder | transit-recorder | `backend/recorder/VERSION` |
+
+Each file has the version and its release date (the day it was set). `tools/version.sh` shows both; `tools/version.sh app 1.1.0` or `recorder 1.0.1` sets one; CI runs `check`, which fails
+when the files disagree. A change in `backend/zbiorkom-feed` is in both apps, so it raises both. A release is a tag on
+`main`: `app-v1.1.0` or `recorder-v1.0.1`. The sidebar shows the app's version; Settings both with their release dates, and tells when the server has a newer
+one than the open page; each app also has its own in `/actuator/info` (the backend's needs a sign-in).
+
+## Hosting
+
+A server runs released images with `docker-compose.prod.yml`: PostgreSQL, transit-recorder, the backend, and Caddy with
+the frontend (`frontend/Caddyfile`). Only Caddy's ports 80 and 443 are public; it serves the pages and passes `/api` on
+to the backend. No telemetry is sent. A release's tag builds the images (`.github/workflows/release.yml`), for ARM and
+x86, as `ghcr.io/twardzikfilip/transit-{backend,frontend,recorder}:<version>`; new packages are private until made
+public on GitHub.
+
+On the server: clone the repository, `cp .env.example .env` and fill it in, create `backend/data/raw` and
+`backend/data/spool` (owned by `RECORDER_UID`), then `docker compose -f docker-compose.prod.yml up -d postgres` and restore
+the data **before** starting the recorder. Later:
+
+- app: set `APP_VERSION` in `.env`, then `docker compose -f docker-compose.prod.yml up -d --no-deps backend frontend`;
+- recorder: `backend/recorder/upgrade.sh 1.0.1`, which leaves no gap. Never a bare `up`, which could recreate it.
 
 ## Continuous integration
 

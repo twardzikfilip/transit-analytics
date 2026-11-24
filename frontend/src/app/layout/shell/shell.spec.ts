@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { ApiActivity } from '../../core/api/activity';
 import { PageBack } from '../../core/title/page-back';
 import { PageTitle } from '../../core/title/page-title';
+import { APP_VERSION } from '../../core/version';
 import { Shell } from './shell';
 
 describe('Shell', () => {
@@ -15,6 +16,8 @@ describe('Shell', () => {
     expect([...el.querySelectorAll('aside nav a')].map((a) => a.getAttribute('href'))).toContain(
       '/corridors',
     );
+
+    expect(text(el.querySelector('aside .version'))).toBe(`v${APP_VERSION}`);
 
     const toggle = el.querySelector('button.hamburger') as HTMLButtonElement;
     toggle.click();

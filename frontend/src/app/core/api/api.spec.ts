@@ -14,6 +14,7 @@ import {
   PositionHistoryApi,
   FleetApi,
   RouteApi,
+  VersionApi,
   ZbiorkomApi,
 } from './api.services';
 
@@ -41,6 +42,11 @@ describe('API clients', () => {
     expect(req.request.params.get('agency')).toBe('BKM');
     expect(req.request.params.has('model')).toBe(false);
     expect(req.request.params.has('q')).toBe(false);
+  });
+
+  it('asks for the versions', () => {
+    TestBed.inject(VersionApi).versions().subscribe();
+    expect(http.expectOne({ method: 'GET', url: '/api/version' })).toBeTruthy();
   });
 
   it('reads, creates, updates and deletes one item by id', () => {

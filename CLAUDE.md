@@ -77,6 +77,8 @@ Before calling a change done:
   components expose `protected readonly t = t`; where a template already uses `t` as a loop variable, import it as
   `tr`). Long explanations with markup go through `[innerHTML]`. Use the `date`/`number` pipes from
   `shared/i18n/locale-pipes.ts`, not Angular's.
+- **Versions:** the app's (`VERSION`) and the recorder's (`backend/recorder/VERSION`) are set with `tools/version.sh`
+  (README, "Versions"); a change in `zbiorkom-feed` raises both.
 - **Docs:** keep `README.md` in step with behaviour (API section, frontend pages section).
 - Code comments and UI text: plain English, short sentences; say what something is and why, not a history of changes.
 

@@ -1,8 +1,13 @@
 import { GtfsImportActions } from '../../store/gtfs-import/gtfs-import.actions';
 import { gtfsImportFeature } from '../../store/gtfs-import/gtfs-import.reducer';
+import { VersionsActions } from '../../store/versions/versions.actions';
+import { versionsFeature } from '../../store/versions/versions.reducer';
+import { APP_VERSION } from '../../core/version';
+import { Versions } from '../../core/models/models';
 import { TestBed } from '@angular/core/testing';
 import { Language } from '../../core/i18n/language';
 import { renderPage, signedIn, stateAfter, text } from '../../testing/page-testing';
+import '../../core/i18n/i18n.providers'; // registers the languages' locales
 import { Settings } from './settings';
 
 const cells = (row: Element) => [...row.children].map(text);
@@ -22,6 +27,7 @@ describe('Settings page', () => {
   it('lets admins import the timetable and shows what was loaded', () => {
     const { el, store } = renderPage(Settings, {
       ...signedIn('ADMIN'),
+      ...stateAfter(versionsFeature),
       ...stateAfter(gtfsImportFeature, GtfsImportActions.importSuccess({ result })),
     });
 
@@ -39,6 +45,7 @@ describe('Settings page', () => {
   it('shows a running import and a failure', () => {
     const running = renderPage(Settings, {
       ...signedIn('ADMIN'),
+      ...stateAfter(versionsFeature),
       ...stateAfter(gtfsImportFeature, GtfsImportActions.importBialystok()),
     }).el;
     expect((running.querySelector('button.primary') as HTMLButtonElement).disabled).toBe(true);
@@ -48,6 +55,7 @@ describe('Settings page', () => {
   it('leaves a failed import to the toast: nothing of it on the page', () => {
     const failed = renderPage(Settings, {
       ...signedIn('ADMIN'),
+      ...stateAfter(versionsFeature),
       ...stateAfter(
         gtfsImportFeature,
         GtfsImportActions.importFailure({ error: 'Feed unavailable' }),
@@ -60,10 +68,11 @@ describe('Settings page', () => {
   it('hides the import from guests', () => {
     const guest = renderPage(Settings, {
       ...signedIn('GUEST'),
+      ...stateAfter(versionsFeature),
       ...stateAfter(gtfsImportFeature),
     }).el;
     expect(guest.querySelector('.gtfs')).toBeNull();
-    expect([...guest.querySelectorAll('dd')].map(text)).toEqual([
+    expect([...guest.querySelectorAll('div.card dd')].map(text)).toEqual([
       'ann',
       'GUEST',
       'Light Dark',
@@ -71,10 +80,38 @@ describe('Settings page', () => {
     ]);
   });
 
+  it('shows the versions, and says so when the server has another than this page', () => {
+    const shown = (versions: Versions) =>
+      [
+        ...renderPage(Settings, {
+          ...signedIn('GUEST'),
+          ...stateAfter(gtfsImportFeature),
+          ...stateAfter(versionsFeature, VersionsActions.loaded({ versions })),
+        }).el.querySelectorAll('.versions dd'),
+      ].map(text);
+    const app = expect.stringMatching(new RegExp(`^${APP_VERSION} · released \\w+ \\d+, \\d{4}$`));
+
+    expect(
+      shown({
+        backend: { version: APP_VERSION, released: '2026-11-24' },
+        recorder: { version: '4.5.6', released: '2026-11-20' },
+      }),
+    ).toEqual([app, '4.5.6 · released Nov 20, 2026']);
+    TestBed.resetTestingModule();
+    expect(
+      shown({ backend: { version: '99.0.0', released: '2026-12-01' }, recorder: null }),
+    ).toEqual([
+      app,
+      '99.0.0 · reload the page to get this version',
+      "unknown (it doesn't answer, or is older than versions)",
+    ]);
+  });
+
   it('switches the language in a dropdown of flags and native names, at once and remembered', async () => {
     localStorage.removeItem('language');
     const { el, render } = renderPage(Settings, {
       ...signedIn('GUEST'),
+      ...stateAfter(versionsFeature),
       ...stateAfter(gtfsImportFeature),
     });
     const button = el.querySelector('app-language-picker button.current') as HTMLButtonElement;
@@ -115,6 +152,7 @@ describe('Settings page', () => {
   it('switches between the light and dark theme, light by default', () => {
     const { el, render } = renderPage(Settings, {
       ...signedIn('GUEST'),
+      ...stateAfter(versionsFeature),
       ...stateAfter(gtfsImportFeature),
     });
     const [light, dark] = [
