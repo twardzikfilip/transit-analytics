@@ -248,20 +248,38 @@ final class TripAnomalies {
      */
     static List<Outcome> judge(List<ScheduledTrip> trips, List<Report> reports, Recording recording,
                                Map<String, Shape> shapes, Instant now) {
+        return judge(trips, reports, recording, shapes, now, Set.of(), Set.of()).outcomes();
+    }
+
+    /** Outcomes, and the lines with a trip some bus ran (as far as known). */
+    record Judged(List<Outcome> outcomes, Set<String> linesMatched) {
+    }
+
+    /**
+     * As {@link #judge(List, List, Recording, Map, Instant)}, for some brigades' trips of the day, with the reports of
+     * the buses that ran them.
+     *
+     * @param otherLinesReported lines reported that day by any bus
+     * @param otherLinesMatched  lines with a trip some bus ran, known from the day's other brigades
+     */
+    static Judged judge(List<ScheduledTrip> trips, List<Report> reports, Recording recording,
+                        Map<String, Shape> shapes, Instant now, Set<String> otherLinesReported,
+                        Set<String> otherLinesMatched) {
         Map<String, List<ScheduledTrip>> byBrigade = byBrigade(trips);
         List<Report> filled = withBrigades(reports);
         Map<ScheduledTrip, List<Report>> matched = matchReports(byBrigade, filled);
         Map<Long, List<Report>> byVehicle = new HashMap<>();
-        Set<String> linesReported = new HashSet<>();
+        Set<String> linesReported = new HashSet<>(otherLinesReported);
         for (Report r : filled) {
             byVehicle.computeIfAbsent(r.vehicleId(), k -> new ArrayList<>()).add(r);
             linesReported.add(r.line());
         }
-        Set<String> linesMatched = matched.keySet().stream().map(ScheduledTrip::line).collect(Collectors.toSet());
+        Set<String> linesMatched = new HashSet<>(otherLinesMatched);
+        matched.keySet().forEach(t -> linesMatched.add(t.line()));
 
         Context context = new Context(byBrigade, matched, byVehicle, recording, shapes, now, linesReported,
                 linesMatched);
-        return trips.stream().map(context::judge).toList();
+        return new Judged(trips.stream().map(context::judge).toList(), linesMatched);
     }
 
     private record Context(Map<String, List<ScheduledTrip>> byBrigade, Map<ScheduledTrip, List<Report>> matched,

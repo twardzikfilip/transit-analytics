@@ -89,7 +89,8 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   day what starts inside it, so its edges round to what the report counts in: a standstill or run where it starts,
   a bus-lane half hour, a Fleet hour. The running day is read in pieces: what is finished is kept, and each refresh
   reads only from the oldest standstill, run or bucket still going on, giving what reading the whole day gives (the
-  whole day is read again if positions are stored late in the part kept, e.g. after a database outage).
+  whole day is read again if positions are stored late in the part kept, e.g. after a database outage). Abnormal
+  trips, Trips and brigades keep the running day's reports in memory the same way.
 - Routes (`{line}` is the route's GTFS id, e.g. `103`):
   - `GET /api/lines` — all lines in numeric order, with their subtype, `geometry` and `capacityClass` (see
     *Vehicle and line classes*): the timetable's, and the lines only seen on the live feed (other operators' regional
