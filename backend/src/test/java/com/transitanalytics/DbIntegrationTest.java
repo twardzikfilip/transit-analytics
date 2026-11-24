@@ -13,6 +13,9 @@ import java.lang.annotation.Target;
 /**
  * A test against the real database with the full application context, plus a position writer to record test data:
  * telemetry export, the startup warm-ups and street routing (an outside service) are off. Runs only with INTEGRATION_TESTS=true (and the database up). Add {@code @Transactional} to roll test data back.
+ * <p>
+ * It uses its own database, {@code transit_test} on the same server ({@code TEST_DB_URL} to change it), never the one
+ * the recorder writes to: what a test leaves behind can't mix with the recordings.
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
@@ -25,7 +28,8 @@ import java.lang.annotation.Target;
         "app.warm-up.enabled=false",
         "app.map.routing.enabled=false",
         "app.bus-lanes.refresh-cron=-",
-        "app.bus-lanes.file="
+        "app.bus-lanes.file=",
+        "spring.datasource.url=${TEST_DB_URL:jdbc:postgresql://localhost:5432/transit_test}"
 })
 @EnabledIfEnvironmentVariable(named = "INTEGRATION_TESTS", matches = "true")
 public @interface DbIntegrationTest {
