@@ -38,8 +38,8 @@ Docker (`restart: unless-stopped`; Docker starts at boot), separately from any d
 with `backend/recorder/upgrade.sh`, which leaves no gap. Check it with `curl -s localhost:8081/actuator/health`
 (`recording.lastStored` should be seconds old). Never run a bare
 `docker compose up` while it runs: that can recreate it (after a reboot, `docker start` the stopped containers). Its
-folders `backend/data/raw` and `backend/data/spool` must belong to the user it runs as (1000), or polls aren't
-archived while the health still says UP: look for errors in `docker logs transit-recorder`.
+folders `backend/data/raw` and `backend/data/spool` must belong to the user it runs as (1000), or polls
+aren't archived (the health says so from recorder 1.0.0 on).
 
 Before calling a change done:
 - Backend: `cd backend && INTEGRATION_TESTS=true ./gradlew check` (needs the database up, and the `transit_test`

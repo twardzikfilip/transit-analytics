@@ -6,11 +6,17 @@
 	header {
 		X-Content-Type-Options nosniff
 		X-Frame-Options DENY
+		Content-Security-Policy "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"
+		# Browsers only use this over HTTPS.
+		Strict-Transport-Security max-age=31536000
 		Referrer-Policy strict-origin-when-cross-origin
 		-Server
 	}
 
 	handle /api/* {
+		request_body {
+			max_size 1MB
+		}
 		reverse_proxy {$BACKEND:backend:8080}
 	}
 

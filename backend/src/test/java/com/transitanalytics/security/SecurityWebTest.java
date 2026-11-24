@@ -62,6 +62,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -84,6 +85,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -92,7 +94,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         LineStatsController.class, FleetController.class, BrigadeController.class, HotspotController.class,
         DelayGenerationController.class, TripAnomalyController.class, TripRunController.class,
         BoundaryController.class, NetworkCoverageController.class})
-@Import({SecurityConfig.class, JwtAuthFilter.class, JwtService.class, SecurityWebTest.Metrics.class})
+@Import({SecurityConfig.class, JwtAuthFilter.class, JwtService.class, LoginAttempts.class,
+        SecurityWebTest.Metrics.class})
 @TestPropertySource(properties = {
         "app.jwt.secret=test-secret-test-secret-test-secret-123456",
         "app.jwt.expiration-minutes=5",
@@ -204,13 +207,35 @@ class SecurityWebTest {
 
     @Test
     void badCredentialsReturn401() throws Exception {
+        double before = loginCount("failure");
         given(authenticationManager.authenticate(any())).willThrow(new BadCredentialsException("bad"));
 
         mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"admin\",\"password\":\"wrong\"}"))
                 .andExpect(status().isUnauthorized());
 
-        assertThat(loginCount("failure")).isEqualTo(1.0);
+        assertThat(loginCount("failure")).isEqualTo(before + 1);
+    }
+
+    @Test
+    void tooManyFailedLoginsFromAnAddressWait() throws Exception {
+        given(authenticationManager.authenticate(any())).willThrow(new BadCredentialsException("bad"));
+        for (int i = 0; i < LoginAttempts.MAX_FAILURES; i++) {
+            mvc.perform(loginFrom("203.0.113.9")).andExpect(status().isUnauthorized());
+        }
+        mvc.perform(loginFrom("203.0.113.9")).andExpect(status().isTooManyRequests())
+                .andExpect(header().exists("Retry-After"))
+                .andExpect(jsonPath("$.detail").value("Too many failed logins; try again in 15 min"));
+        mvc.perform(loginFrom("203.0.113.10")).andExpect(status().isUnauthorized());
+    }
+
+    private static MockHttpServletRequestBuilder loginFrom(String address) {
+        return post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"admin\",\"password\":\"wrong\"}")
+                .with(request -> {
+                    request.setRemoteAddr(address);
+                    return request;
+                });
     }
 
     @Test

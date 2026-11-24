@@ -10,8 +10,8 @@ import java.time.Duration;
 import java.time.Instant;
 
 /**
- * Whether recording works: during recording hours, a poll in the last minute that stored its positions (or was
- * spooled for later). Docker's health check and the upgrade script wait on it.
+ * Whether recording works: during recording hours, a poll in the last minute that was archived and stored its
+ * positions (or was spooled for later; without the archive nothing can be). Docker's health check and the upgrade script wait on it.
  */
 @Component("recording")
 public class RecordingHealth implements HealthIndicator {
@@ -41,6 +41,7 @@ public class RecordingHealth implements HealthIndicator {
         Instant now = clock.instant();
         Instant polled = recorder.lastPoll();
         Instant stored = recorder.lastStored();
+        Instant archived = recorder.lastArchived();
         Health.Builder health = Health.up();
         if (properties.enabled() && !properties.importMode() && window.contains(now)) {
             Instant since = now.minus(MAX_SILENCE);
@@ -50,11 +51,13 @@ public class RecordingHealth implements HealthIndicator {
                 health = Health.down().withDetail("reason", "no poll in the last minute");
             } else if (!warmingUp && (stored == null || stored.isBefore(since)) && spool.size() == 0) {
                 health = Health.down().withDetail("reason", "nothing stored in the last minute");
+            } else if (!warmingUp && (archived == null || archived.isBefore(since))) {
+                health = Health.down().withDetail("reason", "nothing archived in the last minute");
             }
         } else {
             health.withDetail("recording", "outside recording hours or off");
         }
         return health.withDetail("lastPoll", String.valueOf(polled)).withDetail("lastStored", String.valueOf(stored))
-                .withDetail("spooled", spool.size()).build();
+                .withDetail("lastArchived", String.valueOf(archived)).withDetail("spooled", spool.size()).build();
     }
 }
