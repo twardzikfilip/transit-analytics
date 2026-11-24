@@ -145,6 +145,14 @@ class BrigadeDayIntegrationTest {
         assertThat(week.shownFrom()).as("its last day").isEqualTo(local("09:00:00").minusSeconds(86_400));
         assertThat(week.total()).isEqualTo(3);
 
+        // A brigade's whole day: exactly its trips, as the window's list gives them.
+        TripRunDto.Day wholeDay = trips.day(DAY, "ITB-01");
+        assertThat(wholeDay.serviceDay()).isEqualTo(DAY);
+        assertThat(wholeDay.trips()).usingRecursiveComparison()
+                .isEqualTo(all.trips().stream().filter(r -> r.brigade().equals("ITB-01")).toList());
+        assertThat(trips.day(null, "ITB-01").serviceDay()).as("today's").isEqualTo(DAY);
+        assertThat(trips.day(DAY, "nope").trips()).isEmpty();
+
         // The first trip on a map: bus A's reports while it ran it, with its delay, and the route.
         TripRunDto.Detail path = trips.detail(DAY, "ITB-01", "ITB-01_IT_BD_1");
         assertThat(path.points()).isNotEmpty().allSatisfy(p -> {

@@ -11,6 +11,7 @@ import {
   LineDetailApi,
   LineStatsApi,
   TripAnomalyApi,
+  TripRunApi,
   PositionHistoryApi,
   FleetApi,
   RouteApi,
@@ -42,6 +43,16 @@ describe('API clients', () => {
     expect(req.request.params.get('agency')).toBe('BKM');
     expect(req.request.params.has('model')).toBe(false);
     expect(req.request.params.has('q')).toBe(false);
+  });
+
+  it("asks for a brigade's day of trips, today's without a date", () => {
+    const api = TestBed.inject(TripRunApi);
+    api.day('103-05', '2026-11-23').subscribe();
+    api.day('103-05', null).subscribe();
+    expect(http.expectOne('/api/trip-runs/day?brigade=103-05&date=2026-11-23').request.method).toBe(
+      'GET',
+    );
+    http.expectOne('/api/trip-runs/day?brigade=103-05');
   });
 
   it('asks for the versions', () => {

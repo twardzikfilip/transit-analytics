@@ -359,7 +359,7 @@
     "busChanged": "autobus zmieniał się w ciągu dnia",
     "oneBus": "jeden autobus przez cały dzień",
     "scheduledAndActual": "Rozkład i rzeczywistość",
-    "chartIntro": "Każdy kurs według rozkładu (na przemian w dwóch kolorach), a pod nim to, co faktycznie pojechało: pasek dla każdego autobusu, z jego numerem i opóźnieniem przy odjeździe. Najedź na kurs, by zobaczyć szczegóły; kliknij, by znaleźć go w tabeli.",
+    "chartIntro": "Każdy kurs według rozkładu (na przemian w dwóch kolorach), a pod nim to, co faktycznie pojechało: pasek dla każdego autobusu, z jego numerem i opóźnieniem przy odjeździe. Najedź na kurs, by zobaczyć szczegóły; kliknij, by otworzyć go na liście.",
     "legend": {
       "scheduled": "Kursy z rozkładu, na przemian",
       "actual": "Rzeczywisty przejazd, pasek na autobus",
@@ -372,15 +372,6 @@
       "slant": "Od planowego do faktycznego startu"
     },
     "everyTrip": "Wszystkie kursy",
-    "col": {
-      "scheduled": "Rozkład",
-      "towards": "Linia → kierunek",
-      "ran": "Faktycznie",
-      "setOff": "Odjazd",
-      "lastSeen": "Ostatnio widziany",
-      "bus": "Autobus",
-      "outcome": "Wynik"
-    },
     "notRunPart": "Niewykonane: przystanki {{from}}–{{to}} ({{when}})",
     "notSeenPart": "Niewidoczny: przystanki {{from}}–{{to}} ({{when}})",
     "how": "Jak to jest liczone",

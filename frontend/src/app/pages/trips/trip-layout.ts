@@ -37,7 +37,7 @@ export function timeScale(from: number, to: number, left: number, right: number)
  * The span the list's shared axis covers: the window listed, widened to every trip's scheduled and actual times
  * (a trip in the window may start before it or end after it), with five minutes either side.
  */
-export function listSpan(page: TripRunPage): [number, number] {
+export function listSpan(page: Pick<TripRunPage, 'trips' | 'shownFrom' | 'to'>): [number, number] {
   const times = page.trips.flatMap((r) => tripTimes(r));
   const from = Math.min(Date.parse(page.shownFrom), ...times) - 5 * MINUTE;
   const to = Math.max(Date.parse(page.to), ...times) + 5 * MINUTE;

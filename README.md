@@ -229,6 +229,8 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   it took, stops and waits included; gaps over 3 min and GPS jumps left out). `q` finds a bus by its number (the trips it ran), a
   brigade or a line (exactly), or part of a destination. The outcomes are Abnormal trips' when it has the day
   current; else the page's brigades are judged on their own, from the day's reports of their buses.
+- `GET /api/trip-runs/day?brigade=&date=` — one brigade's trips of a service day (today's without `date`), each as in the
+  list above, all of them in departure order; `{serviceDay, brigade, trips}`.
 - `GET /api/trip-runs/{date}/{brigade}/{tripId}` — one trip in detail, asked for when it is opened: every report of
   its buses while they ran it (about every 10 s) with its delay and speed — 0 when the bus stood still (moved under
   5 m, or 0.4 m/s over a longer interval: GPS jitter), else the average over 15 s either side; none for a bus's first
@@ -631,7 +633,9 @@ PGPASSWORD=transit psql -h localhost -U transit transit_test -c "CREATE EXTENSIO
   time, line and destination) and, under each, what actually ran: a bar per bus labelled with the bus and how late it
   set off, a dashed line from the scheduled to the actual start, parts not run hatched red, parts the bus wasn't seen on
   hatched grey, markers for a bus change, a lost trip and a detour, and outlines for trips without data or still to
-  come. Hover a trip for details; a table lists every trip with the same.
+  come. Hover a trip for details. Below, every trip of the day in the Trips page's list (`app-trip-list`, shared;
+  `GET /api/trip-runs/day`): open one for its delay, speed, halts and map (`?trip=`, `?map=1`); it is marked on the
+  timeline, and choosing a trip there opens it in the list. Loaded again every minute while the brigade is out.
 - Network coverage: for each walking distance (400, 500, 600 m), tiles with the share of the city within it of the
   nearest bus stop, with and without the woods and the Biała valley, and a map (rolls up to its title) of the area
   near a stop with the woods hatched green and the valley hatched light blue; the woods and the valley's stretches

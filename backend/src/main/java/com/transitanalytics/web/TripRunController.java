@@ -43,6 +43,16 @@ public class TripRunController {
         return trips.page(windows.resolve(from, to), q, Math.max(0, page));
     }
 
+    @Operation(summary = "A brigade's trips on a service day, each with what ran",
+            description = "Every trip of one brigade from the service day's start to its end (its night trips after "
+                    + "03:00 too), in departure order, not paged; each as in the list of a time window.")
+    @GetMapping("/day")
+    public TripRunDto.Day day(
+            @Parameter(description = "Brigade, e.g. 103-05") @RequestParam String brigade,
+            @Parameter(description = "Service day, e.g. 2026-11-23; today's when absent") @RequestParam(required = false) LocalDate date) {
+        return trips.day(date, brigade);
+    }
+
     @Operation(summary = "One trip in detail: every report, speed, and the stops with how long the bus stood",
             description = "Every report of the buses on one trip while they ran it (as on the brigade's day), with "
                     + "how late each was and its speed (0 standing still: under 5 m, or 0.4 m/s, since the report "

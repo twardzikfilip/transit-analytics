@@ -24,6 +24,10 @@ public final class TripRunDto {
         public static final int MAX_HOURS = 24;
     }
 
+    /** A brigade's trips on a service day, in departure order; none when it doesn't run then. */
+    public record Day(LocalDate serviceDay, String brigade, List<Trip> trips) {
+    }
+
     /**
      * A scheduled trip and how it ran.
      *

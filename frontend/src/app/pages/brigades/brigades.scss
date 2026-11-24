@@ -150,19 +150,9 @@
   transform: rotate(35deg);
 }
 
-.trips {
-  .time {
-    white-space: nowrap;
-  }
-
-  .note {
-    font-size: 0.8rem;
-  }
-
-  .outcome.problem {
-    color: var(--danger);
-    font-weight: 600;
-  }
+.list-title {
+  margin: 1.25rem 0 0.5rem;
+  font-size: 1.1rem;
 }
 
 .how ul {

@@ -15,6 +15,13 @@ export interface TripRunPage {
   trips: TripRun[];
 }
 
+/** A brigade's trips on a service day (GET /api/trip-runs/day), in departure order. */
+export interface TripRunDay {
+  serviceDay: string;
+  brigade: string;
+  trips: TripRun[];
+}
+
 /** A scheduled trip and how it ran. */
 export interface TripRun {
   /** yyyy-MM-dd; trips after midnight belong to the day before. */

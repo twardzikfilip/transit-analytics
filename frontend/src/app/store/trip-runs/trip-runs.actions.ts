@@ -1,5 +1,5 @@
 import { createActionGroup, props } from '@ngrx/store';
-import { TripRunPage, TripRunQuery } from '../../core/models/models';
+import { TripRunDay, TripRunPage, TripRunQuery } from '../../core/models/models';
 
 export const TripRunsActions = createActionGroup({
   source: 'Trip Runs',
@@ -7,5 +7,8 @@ export const TripRunsActions = createActionGroup({
     Load: props<{ query: TripRunQuery }>(),
     Loaded: props<{ page: TripRunPage }>(),
     Failure: props<{ error: string }>(),
+    'Load Day': props<{ brigade: string; date: string | null }>(),
+    'Day Loaded': props<{ day: TripRunDay }>(),
+    'Day Failure': props<{ error: string }>(),
   },
 });

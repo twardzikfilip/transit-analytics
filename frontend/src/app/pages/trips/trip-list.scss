@@ -1,0 +1,158 @@
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.8rem;
+
+  .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .bar {
+    display: inline-block;
+    width: 1.2rem;
+    height: 0.6rem;
+    border-radius: 2px;
+  }
+
+  .bar.scheduled {
+    background: var(--border);
+  }
+
+  .bar.stood {
+    border: 1.5px solid var(--fg);
+  }
+
+  .mark {
+    display: inline-grid;
+    place-items: center;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+  }
+}
+
+.list {
+  padding: 0.5rem 0.75rem;
+  transition: opacity 0.15s;
+
+  &.loading {
+    opacity: 0.55;
+  }
+}
+
+/* Each trip: what it is on the left, its time line on the right; the lanes share one axis. */
+.row {
+  display: grid;
+  grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.axis {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
+}
+
+.trip {
+  border-top: 1px solid var(--border);
+}
+
+button.row {
+  padding: 0.3rem 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--hover);
+  }
+}
+
+.trip.open button.row {
+  background: var(--accent-soft);
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.first {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.time {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.to {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.second {
+  font-size: 0.8rem;
+
+  .tag {
+    margin-left: 0.3rem;
+    background: var(--hover);
+  }
+
+  .tag.danger {
+    background: var(--danger);
+  }
+}
+
+.detail {
+  padding: 0.5rem 0 1rem;
+}
+
+.facts {
+  font-size: 0.85rem;
+
+  p {
+    margin: 0.4rem 0;
+  }
+}
+
+.events {
+  margin: 0.4rem 0;
+  padding-left: 1.2rem;
+}
+
+.empty {
+  margin: 0.5rem 0;
+}
+
+/* A phone: the time line under what the trip is. */
+@media (max-width: 700px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .axis > span {
+    display: none;
+  }
+}

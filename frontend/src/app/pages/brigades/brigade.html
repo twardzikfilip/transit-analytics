@@ -81,66 +81,17 @@
       </ul>
     </section>
 
-    <section class="card">
-      <h2>{{ t('brigades.everyTrip') }}</h2>
-      <div class="data-table-wrap">
-        <table class="data-table clickable trips">
-          <thead>
-            <tr>
-              <th class="num">#</th>
-              <th>{{ t('brigades.col.scheduled') }}</th>
-              <th>{{ t('brigades.col.towards') }}</th>
-              <th>{{ t('brigades.col.ran') }}</th>
-              <th class="num">{{ t('brigades.col.setOff') }}</th>
-              <th class="num">{{ t('brigades.col.lastSeen') }}</th>
-              <th>{{ t('brigades.col.bus') }}</th>
-              <th>{{ t('brigades.col.outcome') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (trip of d.trips; track trip.tripId; let i = $index) {
-              <tr
-                [attr.data-index]="i"
-                [class.selected]="selected() === i"
-                [attr.aria-selected]="selected() === i"
-                tabindex="0"
-                (click)="selected.set(selected() === i ? null : i)"
-                (keydown.enter)="selected.set(selected() === i ? null : i)"
-              >
-                <td class="num">{{ i + 1 }}</td>
-                <td class="time">{{ span(trip.departure, trip.arrival) }}</td>
-                <td>{{ tripLabel(trip) }}</td>
-                <td class="time">{{ actualSpan(trip) }}</td>
-                <td class="num">{{ departureDelayText(trip.runs[0]?.startDelay) }}</td>
-                <td class="num">
-                  {{ departureDelayText(trip.runs[trip.runs.length - 1]?.endDelay) }}
-                </td>
-                <td>{{ busesText(trip) }}</td>
-                <td>
-                  <span class="outcome" [class.problem]="problems.includes(trip.kind)">{{
-                    kindLabel(trip.kind)
-                  }}</span>
-                  @if (trip.note?.length) {
-                    <div class="muted note">{{ phrasesText(trip.note) }}</div>
-                  }
-                  @for (m of trip.missing; track $index) {
-                    <div class="muted note">
-                      {{
-                        t(m.why === 'not-run' ? 'brigades.notRunPart' : 'brigades.notSeenPart', {
-                          from: m.fromStop,
-                          to: m.toStop,
-                          when: span(m.from, m.to),
-                        })
-                      }}
-                    </div>
-                  }
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    </section>
+    <h2 class="list-title">{{ t('brigades.everyTrip') }}</h2>
+    @if (tripDay(); as td) {
+      <app-trip-list
+        [trips]="td.trips"
+        [span]="tripSpan()"
+        [loading]="loadingTrips()"
+        [brigadeLink]="false"
+      />
+    } @else if (loadingTrips()) {
+      <app-skeleton kind="lines" [count]="10" [label]="t('trips.loading')" />
+    }
 
     <details class="card how">
       <summary>{{ t('brigades.how') }}</summary>
