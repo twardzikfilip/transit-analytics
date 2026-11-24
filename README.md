@@ -692,16 +692,16 @@ something done by hand):
 
 Each file has the version and its release date (the day it was set). `tools/version.sh` shows both; `tools/version.sh app 1.1.0` or `recorder 1.0.1` sets one; CI runs `check`, which fails
 when the files disagree. A change in `backend/zbiorkom-feed` is in both apps, so it raises both. A release is a tag on
-`main`: `app-v1.1.0` or `recorder-v1.0.1`. The sidebar shows the app's version; Settings both with their release dates, and tells when the server has a newer
+`main`: `app-v1.1.0` or `recorder-v1.0.1` (made by the Release workflow). The sidebar shows the app's version; Settings both with their release dates, and tells when the server has a newer
 one than the open page; each app also has its own in `/actuator/info` (the backend's needs a sign-in).
 
 ## Hosting
 
 A server runs released images with `docker-compose.prod.yml`: PostgreSQL, transit-recorder, the backend, and Caddy with
 the frontend (`frontend/Caddyfile`). Only Caddy's ports 80 and 443 are public; it serves the pages and passes `/api` on
-to the backend. No telemetry is sent. A release's tag builds the images (`.github/workflows/release.yml`), for ARM and
-x86, as `ghcr.io/twardzikfilip/transit-{backend,frontend,recorder}:<version>`; new packages are private until made
-public on GitHub.
+to the backend. No telemetry is sent. A release builds
+the images (below), for ARM and x86, as `ghcr.io/twardzikfilip/transit-{backend,frontend,recorder}:<version>`. How the server
+was set up: [docs/server-setup.md](docs/server-setup.md).
 
 With `ENVIRONMENT=production` (set there) the backend doesn't start with a secret or password from the repository, and
 gives `admin` and `guest` the passwords in `.env` (`ProductionSecrets`). Ten failed logins from one address within 15
@@ -712,8 +712,26 @@ On the server: clone the repository, make `.env` with `tools/server-env.sh <doma
 `backend/data/spool` (owned by `RECORDER_UID`), then `docker compose -f docker-compose.prod.yml up -d postgres` and restore
 the data **before** starting the recorder. Later:
 
-- app: set `APP_VERSION` in `.env`, then `docker compose -f docker-compose.prod.yml up -d --no-deps backend frontend`;
-- recorder: `backend/recorder/upgrade.sh 1.0.1`, which leaves no gap. Never a bare `up`, which could recreate it.
+- a new version: the Release workflow (below), or on the server `tools/deploy.sh app 1.1.0` / `recorder 1.0.1`;
+- never a bare `docker compose up`, which could recreate the recorder or the database.
+
+## Releases
+
+From a change to the server:
+
+1. A branch, a pull request (CI tests it), merge into `main`.
+2. **Actions → Release → Run workflow**, or `gh workflow run release.yml -f bump=minor` (patch, minor or major).
+
+The release tests `main` again, raises the version of what changed since its last release (`tools/release.sh`: the app,
+the recorder, or both; documents and tests don't count), commits and tags it, builds the images, puts them on the server
+and writes release notes. With `-f deploy=false` it stops before the server.
+
+**Back to an older version:** Actions → Deploy, or `gh workflow run deploy.yml -f what=app -f version=1.0.0`.
+
+On the server `tools/deploy.sh` backs the database up (the last 3 are kept in `~/backups`), starts the new version and
+goes back by itself when it isn't healthy. The database isn't taken back: a migration that older code can't live with
+needs the backup. GitHub's key may run only that script; it, the address and the host key are secrets of the environment
+`production`.
 
 ## Continuous integration
 

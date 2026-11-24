@@ -8,3 +8,6 @@
 
 # The server's settings and secrets.
 /.env
+
+# What a release raised (tools/release.sh).
+/release.out

@@ -1,29 +1,89 @@
-# A tag app-v1.2.0 or recorder-v1.0.1 on main builds that release's images (for ARM and x86 servers) and puts them in
-# GitHub's registry: transit-backend and transit-frontend, or transit-recorder. See README, "Versions".
+# The button from main to the server: Actions → Release → Run workflow (or: gh workflow run release.yml -f bump=minor).
+# Tests main, raises the version of what changed since its last release, tags it, builds its images (ARM and x86) into
+# GitHub's registry, puts it on the server and writes the release notes. See README, "Releases".
 name: Release
 
 on:
-  push:
-    tags: ["app-v*", "recorder-v*"]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "patch: a fix; minor: a feature; major: something has to be done by hand"
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+      what:
+        description: "auto: what changed since its last release"
+        type: choice
+        options: [auto, app, recorder, both]
+        default: auto
+      deploy:
+        description: "Put it on the server"
+        type: boolean
+        default: true
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
-  images:
+  test:
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/ci.yml
+
+  version:
+    needs: test
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    outputs:
+      app: ${{ steps.raise.outputs.app }}
+      recorder: ${{ steps.raise.outputs.recorder }}
+      commit: ${{ steps.raise.outputs.commit }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: The tag is the version, and on main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Raise the versions and tag
+        id: raise
+        env:
+          BUMP: ${{ inputs.bump }}
+          WHAT: ${{ inputs.what }}
         run: |
-          tools/version.sh check "$GITHUB_REF_NAME"
-          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
-          echo "VERSION=${GITHUB_REF_NAME##*-v}" >> "$GITHUB_ENV"
-          echo "REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+          tools/release.sh "$WHAT" "$BUMP"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add VERSION backend/recorder/VERSION frontend/package.json frontend/package-lock.json
+          tags=()
+          if grep -q '^app=' release.out; then tags+=("app-v$(sed -n 's/^app=//p' release.out)"); fi
+          if grep -q '^recorder=' release.out; then tags+=("recorder-v$(sed -n 's/^recorder=//p' release.out)"); fi
+          git commit -q -m "Release ${tags[*]}"
+          for tag in "${tags[@]}"; do tools/version.sh check "$tag"; git tag "$tag"; done
+          git push --atomic origin HEAD:main "${tags[@]}"
+          cat release.out >> "$GITHUB_OUTPUT"
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  images:
+    needs: version
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      packages: write
+    env:
+      APP: ${{ needs.version.outputs.app }}
+      RECORDER: ${{ needs.version.outputs.recorder }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.version.outputs.commit }}
+      - run: echo "REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -38,21 +98,57 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Recorder image
-        if: startsWith(github.ref_name, 'recorder-v')
+        if: env.RECORDER != ''
         run: |
           (cd backend && ./gradlew :recorder:bootJar --no-daemon)
-          docker buildx build --platform linux/arm64,linux/amd64 --push -t "$REGISTRY/transit-recorder:$VERSION" backend/recorder
+          docker buildx build --platform linux/arm64,linux/amd64 --push -t "$REGISTRY/transit-recorder:$RECORDER" backend/recorder
 
       - uses: actions/setup-node@v4
-        if: startsWith(github.ref_name, 'app-v')
+        if: env.APP != ''
         with:
           node-version: "22"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - name: Backend and frontend images
-        if: startsWith(github.ref_name, 'app-v')
+        if: env.APP != ''
         run: |
           (cd backend && ./gradlew :bootJar --no-daemon)
           (cd frontend && npm ci && npx ng build)
-          docker buildx build --platform linux/arm64,linux/amd64 --push -t "$REGISTRY/transit-backend:$VERSION" backend
-          docker buildx build --platform linux/arm64,linux/amd64 --push -t "$REGISTRY/transit-frontend:$VERSION" frontend
+          docker buildx build --platform linux/arm64,linux/amd64 --push -t "$REGISTRY/transit-backend:$APP" backend
+          docker buildx build --platform linux/arm64,linux/amd64 --push -t "$REGISTRY/transit-frontend:$APP" frontend
+
+  notes:
+    needs: [version, images]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - if: needs.version.outputs.recorder != ''
+        run: gh release create "recorder-v${{ needs.version.outputs.recorder }}" --verify-tag --latest=false --generate-notes --title "Recorder ${{ needs.version.outputs.recorder }}"
+      - if: needs.version.outputs.app != ''
+        run: gh release create "app-v${{ needs.version.outputs.app }}" --verify-tag --generate-notes --title "App ${{ needs.version.outputs.app }}"
+
+  # The app first: it migrates the database the recorder writes to.
+  deploy-app:
+    needs: [version, images]
+    if: inputs.deploy && needs.version.outputs.app != ''
+    uses: ./.github/workflows/deploy.yml
+    with:
+      what: app
+      version: ${{ needs.version.outputs.app }}
+    secrets: inherit
+
+  deploy-recorder:
+    needs: [version, images, deploy-app]
+    if: >-
+      !cancelled() && inputs.deploy && needs.images.result == 'success' && needs.version.outputs.recorder != ''
+      && (needs.deploy-app.result == 'success' || needs.deploy-app.result == 'skipped')
+    uses: ./.github/workflows/deploy.yml
+    with:
+      what: recorder
+      version: ${{ needs.version.outputs.recorder }}
+    secrets: inherit
