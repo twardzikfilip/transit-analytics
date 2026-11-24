@@ -26,7 +26,11 @@ import {
 } from './brigade-format';
 import { t } from '../../core/i18n/t';
 import { PageBack } from '../../core/title/page-back';
-import { BrigadePage } from './brigade';
+import { BrigadePage, underWay } from './brigade';
+import { tripRunsFeature } from '../../store/trip-runs/trip-runs.reducer';
+import { TripRunsActions } from '../../store/trip-runs/trip-runs.actions';
+import { TripRun } from '../../core/models/trip-runs';
+import { TripRunApi } from '../../core/api/trip-runs.api';
 import { BrigadesPage, groupByLine } from './brigades';
 
 const at = (hhmm: string) => `2026-11-18T${hhmm}:00Z`;
@@ -233,12 +237,77 @@ describe('Brigade page', () => {
     expect(text(el.querySelector('.tiles'))).toContain('209, 486');
     expect(text(el.querySelector('.tiles'))).toContain('the bus changed during the day');
     expect(el.querySelector('app-brigade-day-chart svg')).not.toBeNull();
-    const rows = el.querySelectorAll('table.trips tbody tr');
+  });
+
+  const tripRun = (trip: BrigadeTrip): TripRun => ({
+    serviceDay: '2026-11-18',
+    brigade: '103-05',
+    trip,
+    samples: [],
+    stands: [],
+    stops: [],
+    averageKmh: null,
+  });
+  const withTrips = (query: Record<string, string> = {}, tripsOf = '103-05') =>
+    renderPage(
+      BrigadePage,
+      {
+        ...stateAfter(brigadesFeature, BrigadesActions.dayLoaded({ day: day() })),
+        ...stateAfter(
+          tripRunsFeature,
+          TripRunsActions.dayLoaded({
+            day: { serviceDay: '2026-11-18', brigade: tripsOf, trips: day().trips.map(tripRun) },
+          }),
+        ),
+      },
+      { date: '2026-11-18', ...query },
+      [{ provide: TripRunApi, useValue: { detail: () => of(null) } }],
+      { brigade: '103-05' },
+    );
+
+  it("lists the day's trips as the Trips page does, the open one in the URL and marked on the chart", () => {
+    const { el, store } = withTrips();
+    expect(store.dispatch).toHaveBeenCalledWith(
+      TripRunsActions.loadDay({ brigade: '103-05', date: '2026-11-18' }),
+    );
+    const rows = el.querySelectorAll('app-trip-list .trip');
     expect(rows).toHaveLength(4);
     expect(text(rows[1])).toContain('209 → 486');
-    expect(text(rows[1].querySelector('.outcome.problem'))).toBe('Bus changed');
-    expect(text(rows[2])).toContain('Not run: stops 9–20');
-    expect(text(rows[3].querySelector('.outcome'))).toBe('Upcoming');
+    expect(text(rows[1].querySelector('.tag.danger'))).toBe('Bus changed');
+    expect(text(rows[3].querySelector('.tag'))).toBe('Upcoming');
+    expect(el.querySelector('app-trip-detail')).toBeNull();
+    TestBed.resetTestingModule();
+
+    const third = day().trips[2].tripId;
+    const open = withTrips({ trip: `${third}@2026-11-18` }).el;
+    expect(open.querySelectorAll('app-trip-detail')).toHaveLength(1);
+    expect(text(open.querySelector('.facts'))).toContain('Not run: stops 9–20');
+    expect(open.querySelector('.facts a'), 'no link to this very page').toBeNull();
+    expect(open.querySelectorAll('app-brigade-day-chart .trip.chosen')).toHaveLength(1);
+  });
+
+  it("opens a trip chosen on the chart, and doesn't list another brigade's trips", () => {
+    const { el, fixture } = withTrips();
+    const navigate = vi
+      .spyOn(fixture.debugElement.injector.get(Router), 'navigate')
+      .mockResolvedValue(true);
+    el.querySelectorAll('app-brigade-day-chart g.trip')[1].dispatchEvent(new MouseEvent('click'));
+    expect(navigate.mock.calls[0][1]?.queryParams).toEqual({
+      trip: `${day().trips[1].tripId}@2026-11-18`,
+      map: null,
+    });
+    TestBed.resetTestingModule();
+    expect(withTrips({}, '016-02').el.querySelector('app-trip-list')).toBeNull();
+  });
+
+  it('keeps up with the day only while the brigade is out', () => {
+    const times = day().trips.flatMap((x) => [Date.parse(x.departure), Date.parse(x.arrival)]);
+    const [first, last] = [Math.min(...times), Math.max(...times)];
+    expect(underWay(day(), first - 1)).toBe(false);
+    expect(underWay(day(), first)).toBe(true);
+    expect(underWay(day(), last + 30 * 60_000)).toBe(true);
+    expect(underWay(day(), last + 61 * 60_000)).toBe(false);
+    expect(underWay(null, first)).toBe(false);
   });
 
   it("doesn't show a previous brigade's day while another loads", () => {

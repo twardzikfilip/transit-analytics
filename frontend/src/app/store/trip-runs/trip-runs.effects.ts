@@ -22,3 +22,20 @@ export const load = createEffect(
     ),
   { functional: true },
 );
+
+/** Loads a brigade's day; another brigade or day (or a refresh) cancels the one still loading. */
+export const loadDay = createEffect(
+  (actions$ = inject(Actions), api = inject(TripRunApi)) =>
+    actions$.pipe(
+      ofType(TripRunsActions.loadDay),
+      switchMap(({ brigade, date }) =>
+        api.day(brigade, date).pipe(
+          map((day) => TripRunsActions.dayLoaded({ day })),
+          catchError((err: HttpErrorResponse) =>
+            of(TripRunsActions.dayFailure({ error: errorMessage(err) })),
+          ),
+        ),
+      ),
+    ),
+  { functional: true },
+);

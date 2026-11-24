@@ -114,6 +114,21 @@ public class TripRunService {
                 shown.stream().map(built::get).toList());
     }
 
+    /**
+     * A brigade's trips on a service day, as {@link #page} gives them.
+     *
+     * @param day null: today's service day
+     */
+    public TripRunDto.Day day(LocalDate day, String brigade) {
+        Instant now = clock.instant();
+        LocalDate serviceDay = day == null ? ServiceDay.serviceDay(now) : day;
+        List<ScheduledTrip> trips = anomalies.trips(serviceDay, brigade);
+        List<Candidate> candidates = trips.stream().sorted(Comparator.comparing(ScheduledTrip::departure))
+                .map(trip -> new Candidate(serviceDay, trip, true)).toList();
+        Map<Candidate, TripRunDto.Trip> built = build(candidates, Map.of(serviceDay, trips), now);
+        return new TripRunDto.Day(serviceDay, brigade, candidates.stream().map(built::get).toList());
+    }
+
     private record Candidate(LocalDate day, ScheduledTrip trip, boolean named) {
     }
 

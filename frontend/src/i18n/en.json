@@ -347,7 +347,7 @@
     "busChanged": "the bus changed during the day",
     "oneBus": "one bus all day",
     "scheduledAndActual": "Scheduled and actual",
-    "chartIntro": "Each trip as scheduled (alternating colours) and, under it, what ran: a bar per bus, labelled with the bus and how late it set off. Hover a trip for its details; click it to find it in the table.",
+    "chartIntro": "Each trip as scheduled (alternating colours) and, under it, what ran: a bar per bus, labelled with the bus and how late it set off. Hover a trip for its details; click it to open it in the list.",
     "legend": {
       "scheduled": "Scheduled trips, alternating",
       "actual": "Actual run, a bar per bus",
@@ -360,15 +360,6 @@
       "slant": "Scheduled to actual start"
     },
     "everyTrip": "Every trip",
-    "col": {
-      "scheduled": "Scheduled",
-      "towards": "Line → towards",
-      "ran": "Ran",
-      "setOff": "Set off",
-      "lastSeen": "Last seen",
-      "bus": "Bus",
-      "outcome": "Outcome"
-    },
     "notRunPart": "Not run: stops {{from}}–{{to}} ({{when}})",
     "notSeenPart": "Not seen: stops {{from}}–{{to}} ({{when}})",
     "how": "How this is worked out",

@@ -511,6 +511,13 @@ class SecurityWebTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.total").value(51));
         mvc.perform(get("/api/trip-runs")).andExpect(status().isUnauthorized());
+        given(tripRunService.day(LocalDate.of(2026, 11, 23), "103-05")).willReturn(
+                new TripRunDto.Day(LocalDate.of(2026, 11, 23), "103-05", List.of()));
+        mvc.perform(get("/api/trip-runs/day").param("brigade", "103-05").param("date", "2026-11-23")
+                        .header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.serviceDay").value("2026-11-23"));
+        mvc.perform(get("/api/trip-runs/day").param("brigade", "103-05")).andExpect(status().isUnauthorized());
         given(tripRunService.detail(LocalDate.of(2026, 11, 23), "103-05", "t1")).willReturn(new TripRunDto.Detail(
                 "t1", List.of(new TripRunDto.DetailPoint(from, "230", 53.1, 23.1, 60, 0)),
                 List.of(new double[] {53.1, 23.1}), List.of(new TripRunDto.DetailStop(1, "Rynek", 53.1, 23.1, 35))));

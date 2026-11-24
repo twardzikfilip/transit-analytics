@@ -347,7 +347,7 @@
     "busChanged": "der Bus wechselte im Laufe des Tages",
     "oneBus": "ein Bus den ganzen Tag",
     "scheduledAndActual": "Geplant und tatsächlich",
-    "chartIntro": "Jede Fahrt laut Fahrplan (abwechselnd in zwei Farben) und darunter, was tatsächlich fuhr: ein Balken pro Bus, beschriftet mit dem Bus und seiner Abfahrtsverspätung. Fahre über eine Fahrt für Details; klicke, um sie in der Tabelle zu finden.",
+    "chartIntro": "Jede Fahrt laut Fahrplan (abwechselnd in zwei Farben) und darunter, was tatsächlich fuhr: ein Balken pro Bus, beschriftet mit dem Bus und seiner Abfahrtsverspätung. Fahre über eine Fahrt für Details; klicke, um sie in der Liste zu öffnen.",
     "legend": {
       "scheduled": "Geplante Fahrten, abwechselnd",
       "actual": "Tatsächliche Fahrt, ein Balken pro Bus",
@@ -360,15 +360,6 @@
       "slant": "Von geplanter zu tatsächlicher Abfahrt"
     },
     "everyTrip": "Alle Fahrten",
-    "col": {
-      "scheduled": "Geplant",
-      "towards": "Linie → Richtung",
-      "ran": "Gefahren",
-      "setOff": "Abfahrt",
-      "lastSeen": "Zuletzt gesehen",
-      "bus": "Bus",
-      "outcome": "Ergebnis"
-    },
     "notRunPart": "Nicht gefahren: Haltestellen {{from}}–{{to}} ({{when}})",
     "notSeenPart": "Nicht gesehen: Haltestellen {{from}}–{{to}} ({{when}})",
     "how": "Wie das berechnet wird",

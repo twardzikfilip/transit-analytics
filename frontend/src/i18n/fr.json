@@ -353,7 +353,7 @@
     "busChanged": "le bus a changé dans la journée",
     "oneBus": "un seul bus toute la journée",
     "scheduledAndActual": "Prévu et réalisé",
-    "chartIntro": "Chaque course prévue (en couleurs alternées) et, en dessous, ce qui a circulé : une barre par bus, avec le bus et son retard au départ. Survolez une course pour les détails ; cliquez pour la retrouver dans le tableau.",
+    "chartIntro": "Chaque course prévue (en couleurs alternées) et, en dessous, ce qui a circulé : une barre par bus, avec le bus et son retard au départ. Survolez une course pour les détails ; cliquez pour l'ouvrir dans la liste.",
     "legend": {
       "scheduled": "Courses prévues, en alternance",
       "actual": "Course réalisée, une barre par bus",
@@ -366,15 +366,6 @@
       "slant": "Du départ prévu au départ réel"
     },
     "everyTrip": "Toutes les courses",
-    "col": {
-      "scheduled": "Prévu",
-      "towards": "Ligne → direction",
-      "ran": "Réalisé",
-      "setOff": "Départ",
-      "lastSeen": "Dernier relevé",
-      "bus": "Bus",
-      "outcome": "Résultat"
-    },
     "notRunPart": "Non effectué : arrêts {{from}}–{{to}} ({{when}})",
     "notSeenPart": "Non vu : arrêts {{from}}–{{to}} ({{when}})",
     "how": "Comment c'est calculé",

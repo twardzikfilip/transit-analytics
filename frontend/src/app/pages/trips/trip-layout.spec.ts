@@ -82,13 +82,8 @@ describe('Trip layout', () => {
 
   it('spans the list from the window or the earliest trip, five minutes either side', () => {
     const [from, to] = listSpan({
-      from: at('14:05'),
       to: at('14:15'),
       shownFrom: at('14:05'),
-      q: null,
-      total: 1,
-      page: 0,
-      size: 50,
       trips: [trip('completed')],
     });
     expect(from).toBe(ms('13:55'));

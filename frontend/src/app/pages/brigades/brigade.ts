@@ -1,40 +1,38 @@
-import { Component, ElementRef, computed, effect, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { Component, ElementRef, computed, effect, inject } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
+import { interval } from 'rxjs';
+import { BrigadeDay } from '../../core/models/models';
 import { injectBackLink } from '../../core/title/page-back';
-import { formatDelay, localTime } from '../../shared/format/time';
 import { injectSetQuery } from '../../shared/url-query';
 import { BrigadesActions } from '../../store/brigades/brigades.actions';
 import { brigadesFeature } from '../../store/brigades/brigades.reducer';
+import { TripRunsActions } from '../../store/trip-runs/trip-runs.actions';
+import { tripRunsFeature } from '../../store/trip-runs/trip-runs.reducer';
+import { listSpan } from '../trips/trip-layout';
+import { REFRESH_MS, TripList } from '../trips/trip-list';
 import { BrigadeDayChart } from './brigade-day-chart';
-import {
-  PROBLEMS,
-  kindLabel,
-  actualSpan,
-  busesText,
-  departureDelayText,
-  share,
-  span,
-  tripLabel,
-} from './brigade-format';
+import { departureDelayText, share } from './brigade-format';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { t } from '../../core/i18n/t';
-import { phrasesText } from '../../shared/i18n/phrases';
+
+/** A brigade's day keeps changing this long after its last trip (late buses, judging). */
+const SETTLES_MS = 60 * 60_000;
 
 /**
  * One brigade on one service day (/brigades/103-05?date=2026-11-18; without a date, today's): its trips as
- * scheduled and, under each, what actually ran: when, by which bus, how late, and what wasn't run.
+ * scheduled and, under each, what actually ran: when, by which bus, how late, and what wasn't run; then
+ * every trip as on the Trips page.
  */
 @Component({
   selector: 'app-brigade',
-  imports: [Skeleton, BrigadeDayChart],
+  imports: [Skeleton, BrigadeDayChart, TripList],
   templateUrl: './brigade.html',
   styleUrl: './brigades.scss',
 })
 export class BrigadePage {
   protected readonly t = t;
-  protected readonly phrasesText = phrasesText;
   private readonly store = inject(Store);
   private readonly router = inject(Router);
   private readonly navigate = injectSetQuery();
@@ -56,19 +54,33 @@ export class BrigadePage {
     const d = this.day();
     return d && d.brigade === this.brigade() ? d : null;
   });
-  /** The trip chosen on the chart or in the table. */
-  protected readonly selected = signal<number | null>(null);
+  private readonly loadedTrips = this.store.selectSignal(tripRunsFeature.selectDay);
+  protected readonly loadingTrips = this.store.selectSignal(tripRunsFeature.selectLoadingDay);
+  /** The same day's trips as on the Trips page; null while another brigade's or day's are in the store. */
+  protected readonly tripDay = computed(() => {
+    const trips = this.loadedTrips();
+    const d = this.shown();
+    return trips && d && trips.brigade === d.brigade && trips.serviceDay === d.serviceDay
+      ? trips
+      : null;
+  });
+  /** The list's time axis: the brigade's day, from its first trip to its last. */
+  protected readonly tripSpan = computed(() => {
+    const trips = this.tripDay()?.trips ?? [];
+    return trips.length
+      ? listSpan({ trips, shownFrom: trips[0].trip.departure, to: trips[0].trip.arrival })
+      : null;
+  });
+  /** The trip open in the list (?trip=), marked on the chart. */
+  protected readonly selected = computed(() => {
+    const open = this.params().get('trip');
+    const d = this.shown();
+    const i = d?.trips.findIndex((trip) => `${trip.tripId}@${d.serviceDay}` === open) ?? -1;
+    return i < 0 ? null : i;
+  });
 
-  protected readonly kindLabel = kindLabel;
   protected readonly departureDelayText = departureDelayText;
-  protected readonly formatDelay = formatDelay;
-  protected readonly span = span;
-  protected readonly actualSpan = actualSpan;
-  protected readonly busesText = busesText;
-  protected readonly tripLabel = tripLabel;
   protected readonly share = share;
-  protected readonly localTime = localTime;
-  protected readonly problems = PROBLEMS;
 
   constructor() {
     injectBackLink('nav.backToBrigades', () => this.back());
@@ -79,14 +91,27 @@ export class BrigadePage {
       const key = `${brigade}|${date}`;
       if (brigade && key !== loaded) {
         loaded = key;
-        this.selected.set(null);
-        this.store.dispatch(BrigadesActions.loadDay({ brigade, date }));
+        this.load();
       }
     });
+    // While the brigade is out, every minute, as the Trips page.
+    interval(REFRESH_MS)
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => {
+        if (underWay(this.shown(), Date.now())) this.load();
+      });
+  }
+
+  /** The brigade's day, and its trips for the list. */
+  private load(): void {
+    const brigade = this.brigade();
+    const date = this.params().get('date');
+    this.store.dispatch(BrigadesActions.loadDay({ brigade, date }));
+    this.store.dispatch(TripRunsActions.loadDay({ brigade, date }));
   }
 
   protected setDate(date: string): void {
-    if (date) this.navigate({ date });
+    if (date) this.navigate({ date, trip: null, map: null });
   }
 
   /** Back to every brigade of the same agency (the header's back button). */
@@ -95,13 +120,26 @@ export class BrigadePage {
     void this.router.navigate(['/brigades'], { queryParams: agency ? { agency } : {} });
   }
 
-  /** Chosen on the chart: its row in the table. */
+  /** Chosen on the chart: opened in the list, or closed. */
   protected chooseTrip(i: number): void {
-    this.selected.set(this.selected() === i ? null : i);
+    const d = this.shown();
+    if (!d) return;
+    const key = `${d.trips[i].tripId}@${d.serviceDay}`;
+    const opens = this.selected() !== i;
+    this.navigate({ trip: opens ? key : null, map: null });
+    if (!opens) return;
     setTimeout(() =>
-      (this.host.nativeElement as HTMLElement)
-        .querySelector(`tr[data-index="${i}"]`)
+      [...(this.host.nativeElement as HTMLElement).querySelectorAll('[data-trip]')]
+        .find((row) => row.getAttribute('data-trip') === key)
         ?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' }),
     );
   }
+}
+
+/** Whether a brigade is out, or its last trip may not be judged yet: its day still changes. */
+export function underWay(day: BrigadeDay | null, now: number): boolean {
+  if (!day?.trips.length) return false;
+  const first = Math.min(...day.trips.map((trip) => Date.parse(trip.departure)));
+  const last = Math.max(...day.trips.map((trip) => Date.parse(trip.arrival)));
+  return now >= first && now <= last + SETTLES_MS;
 }
