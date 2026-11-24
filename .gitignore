@@ -5,3 +5,6 @@
 
 # Recorded data (raw zbiorkom snapshots); can be large.
 /backend/data/
+
+# The server's settings and secrets.
+/.env

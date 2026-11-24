@@ -7,6 +7,10 @@ plugins {
 	id("io.spring.dependency-management")
 }
 
+// Its own version, apart from the app's (tools/version.sh).
+val release = file("VERSION").readText().trim().split(" ")  // version and release date
+version = release[0]
+
 java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(17)
@@ -33,6 +37,16 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-flyway")
 	testImplementation("org.flywaydb:flyway-database-postgresql")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+// The version and its release date in /actuator/info. Without the build time, so an unchanged build stays up to date.
+springBoot {
+	buildInfo {
+		excludes = setOf("time")
+		properties {
+			additional = mapOf("released" to release[1])
+		}
+	}
 }
 
 // The backend's migrations, for the database tests only (the recorder never migrates the real database).

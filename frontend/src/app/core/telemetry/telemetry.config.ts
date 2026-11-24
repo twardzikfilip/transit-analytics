@@ -1,10 +1,12 @@
 import { isDevMode } from '@angular/core';
+import { APP_VERSION } from '../version';
 
 /** Single place to tune browser telemetry. Change `endpoint` and `sampleRatio` for production. */
 export const telemetryConfig = {
-  enabled: true,
+  /** Only in development: the server has no collector. */
+  enabled: isDevMode(),
   serviceName: 'transit-frontend',
-  serviceVersion: '0.0.0',
+  serviceVersion: APP_VERSION,
   environment: isDevMode() ? 'local' : 'production',
   /** OTLP/HTTP base URL. In dev, `/otlp` is proxied to the collector (see proxy.conf.json). */
   endpoint: '/otlp',

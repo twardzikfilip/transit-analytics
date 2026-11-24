@@ -1,12 +1,16 @@
-import { KeyValuePipe } from '@angular/common';
+import { KeyValuePipe, formatDate } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { HasRoleDirective } from '../../core/auth/has-role.directive';
 import { authFeature } from '../../store/auth/auth.reducer';
 import { GtfsImportActions } from '../../store/gtfs-import/gtfs-import.actions';
 import { gtfsImportFeature } from '../../store/gtfs-import/gtfs-import.reducer';
+import { VersionsActions } from '../../store/versions/versions.actions';
+import { versionsFeature } from '../../store/versions/versions.reducer';
+import { APP_RELEASED, APP_VERSION } from '../../core/version';
+import { Skeleton } from '../../shared/skeleton/skeleton';
 import { ThemeSwitch } from './theme-switch';
-import { t } from '../../core/i18n/t';
+import { angularLocale, t } from '../../core/i18n/t';
 import { LocalDatePipe, LocalNumberPipe } from '../../shared/i18n/locale-pipes';
 import { LanguagePicker } from './language-picker';
 
@@ -19,6 +23,7 @@ import { LanguagePicker } from './language-picker';
     KeyValuePipe,
     ThemeSwitch,
     LanguagePicker,
+    Skeleton,
   ],
   template: `
     <div class="card">
@@ -34,6 +39,34 @@ import { LanguagePicker } from './language-picker';
       </dl>
       <p class="muted">{{ t('settings.remembered') }}</p>
     </div>
+
+    <section class="card versions">
+      <h2>{{ t('settings.versions') }}</h2>
+      <dl>
+        <dt>{{ t('settings.versionApp') }}</dt>
+        <dd>{{ appVersion }} · {{ released(appReleased) }}</dd>
+        @if (versions(); as v) {
+          @if (v.backend.version !== appVersion) {
+            <dt>{{ t('settings.versionServer') }}</dt>
+            <dd>{{ v.backend.version }} · {{ t('settings.versionReload') }}</dd>
+          }
+          <dt>{{ t('settings.versionRecorder') }}</dt>
+          <dd>
+            @if (v.recorder; as r) {
+              {{ r.version }}
+              @if (r.released) {
+                · {{ released(r.released) }}
+              }
+            } @else {
+              {{ t('settings.versionUnknown') }}
+            }
+          </dd>
+        } @else if (loadingVersions()) {
+          <dt>{{ t('settings.versionRecorder') }}</dt>
+          <dd><app-skeleton kind="lines" [count]="1" /></dd>
+        }
+      </dl>
+    </section>
 
     <section *appHasRole="'ADMIN'" class="card gtfs">
       <h2>{{ t('settings.gtfsTitle') }}</h2>
@@ -89,6 +122,10 @@ import { LanguagePicker } from './language-picker';
     dd {
       margin: 0;
     }
+    .versions dl {
+      margin-bottom: 0;
+    }
+    .versions,
     .gtfs {
       margin-top: 1rem;
       h2 {
@@ -116,11 +153,25 @@ export class Settings {
   protected readonly username = this.store.selectSignal(authFeature.selectUsername);
   protected readonly role = this.store.selectSignal(authFeature.selectRole);
 
+  protected readonly appVersion = APP_VERSION;
+  protected readonly appReleased = APP_RELEASED;
+  protected readonly versions = this.store.selectSignal(versionsFeature.selectVersions);
+  protected readonly loadingVersions = this.store.selectSignal(versionsFeature.selectLoading);
+
   protected readonly running = this.store.selectSignal(gtfsImportFeature.selectRunning);
   protected readonly result = this.store.selectSignal(gtfsImportFeature.selectResult);
 
+  constructor() {
+    this.store.dispatch(VersionsActions.load());
+  }
+
   /** Keep the server's table order instead of sorting by name. */
   protected readonly keepOrder = () => 0;
+
+  /** "released Nov 24, 2026", in the language shown. */
+  protected released(day: string): string {
+    return t('settings.released', { date: formatDate(day, 'mediumDate', angularLocale()) });
+  }
 
   protected importBialystok(): void {
     this.store.dispatch(GtfsImportActions.importBialystok());

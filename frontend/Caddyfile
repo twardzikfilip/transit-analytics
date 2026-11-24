@@ -1,0 +1,38 @@
+# The only part reachable from outside: the pages, and /api passed on to the backend. Everything else of the backend
+# (API docs, actuator) isn't passed on. With a domain as SITE_ADDRESS, Caddy gets and renews its HTTPS certificate.
+{$SITE_ADDRESS::80} {
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	handle /api/* {
+		reverse_proxy {$BACKEND:backend:8080}
+	}
+
+	handle {
+		root * /srv
+		# A page's address (e.g. /hotspots) is the app's; a missing script or file is a 404.
+		@page {
+			not file
+			not path_regexp \.[a-z0-9]+$
+		}
+		rewrite @page /index.html
+		# Files with a hash in their name never change; the page itself is asked for every time, so a new version shows.
+		@hashed {
+			file
+			path_regexp -[A-Za-z0-9_-]{8}\.(js|css)$
+		}
+		@changing not {
+			file
+			path_regexp -[A-Za-z0-9_-]{8}\.(js|css)$
+		}
+		header @changing Cache-Control no-cache
+		header @hashed Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+}

@@ -1,0 +1,95 @@
+# The server: PostgreSQL, transit-recorder, backend, and Caddy with the frontend, from released images (README,
+# "Hosting"). Settings and secrets are in .env next to this file (from .env.example). Only Caddy is reachable from
+# outside. Not for a development machine: the recorder there is docker-compose.yml's.
+name: transit
+
+services:
+  postgres:
+    image: timescale/timescaledb-ha:pg17.11-ts2.31.0
+    container_name: transit-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: transit
+      POSTGRES_USER: transit
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set it in .env}
+    # For a server with 12 GB and 2 cores, shared with the rest.
+    command: >-
+      postgres -c shared_buffers=1GB -c effective_cache_size=4GB -c work_mem=30MB
+      -c max_parallel_workers_per_gather=1
+    shm_size: 256mb
+    mem_limit: 4g
+    volumes:
+      - tsdata:/home/postgres/pgdata/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U transit -d transit"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  recorder:
+    image: ghcr.io/twardzikfilip/transit-recorder:${RECORDER_VERSION:?set it in .env}
+    container_name: transit-recorder
+    restart: unless-stopped
+    user: "${RECORDER_UID:-1000}:${RECORDER_GID:-1000}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment: &no-telemetry
+      MANAGEMENT_TRACING_EXPORT_ENABLED: "false"
+      MANAGEMENT_LOGGING_EXPORT_ENABLED: "false"
+      MANAGEMENT_OTLP_METRICS_EXPORT_ENABLED: "false"
+      ENVIRONMENT: production
+      DB_URL: jdbc:postgresql://postgres:5432/transit
+      DB_USER: transit_recorder
+      DB_PASSWORD: ${RECORDER_DB_PASSWORD:?set it in .env}
+    ports:
+      - "127.0.0.1:8081:8081"   # health and upgrades, on the server itself only
+    volumes:
+      - ./backend/data/raw:/data/raw
+      - ./backend/data/spool:/data/spool
+    mem_limit: 768m
+    stop_grace_period: 20s
+
+  backend:
+    image: ghcr.io/twardzikfilip/transit-backend:${APP_VERSION:?set it in .env}
+    container_name: transit-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *no-telemetry
+      DB_USER: transit
+      DB_PASSWORD: ${DB_PASSWORD:?set it in .env}
+      RECORDER_DB_PASSWORD: ${RECORDER_DB_PASSWORD:?set it in .env}
+      GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD:?set it in .env}
+      JWT_SECRET: ${JWT_SECRET:?set it in .env}
+      RECORDER_URL: http://recorder:8081
+      API_DOCS_ENABLED: "false"
+      CORS_ALLOWED_ORIGINS: https://${SITE_ADDRESS:?set it in .env}
+    volumes:
+      - backendconfig:/app/config   # refreshed bus lanes
+    mem_limit: 4g
+
+  frontend:
+    image: ghcr.io/twardzikfilip/transit-frontend:${APP_VERSION:?set it in .env}
+    container_name: transit-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?set it in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - caddydata:/data     # certificates: keep them
+      - caddyconfig:/config
+    mem_limit: 256m
+
+volumes:
+  tsdata:
+  backendconfig:
+  caddydata:
+  caddyconfig:
