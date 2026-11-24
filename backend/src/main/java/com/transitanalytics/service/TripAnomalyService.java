@@ -60,14 +60,30 @@ public class TripAnomalyService {
     private volatile Shapes shapes;
     /** The running day's reports, kept in memory and read in pieces. */
     private final RecentReports recent;
+    /** Raised whenever the judging changes: stored days are out of date then. */
+    private static final String LOGIC = "1";
+    private final DaySummaries summaries;
+    private final DaySummaries.Store<Outcome> stored;
 
-    public TripAnomalyService(JdbcTemplate jdbc, Clock clock, GtfsProperties feeds) {
+    public TripAnomalyService(JdbcTemplate jdbc, Clock clock, GtfsProperties feeds, DaySummaries summaries) {
         this.jdbc = jdbc;
         this.clock = clock;
         this.recordedFeeds = recordedFeeds(feeds);
         this.reports = new RecentCache<>(clock, CACHE_FOR, 16);
         this.recent = new RecentReports(clock, this::readReports, this::readMinutes,
                 ServiceDayCache.positionCount(jdbc));
+        this.summaries = summaries;
+        this.stored = summaries.store("trip-outcomes", this::fingerprint, Outcome.class);
+        summaries.onOutdated(days::remove);
+    }
+
+    /**
+     * Of the learnt brigades on lines. Not of the timetable: a day that is over stays as judged, as imports drop its
+     * trips.
+     */
+    private String fingerprint() {
+        return LOGIC + ":" + jdbc.queryForObject("SELECT md5(coalesce(string_agg(x::text, ',' ORDER BY x::text), ''))"
+                + " FROM recorded_brigade_line x", String.class);
     }
 
     /**
@@ -147,10 +163,33 @@ public class TripAnomalyService {
         if (cached != null && fresh(cached, day, now)) {
             return cached.outcomes();
         }
+        if (!ServiceDay.start(day.plusDays(1)).plus(ServiceDayCache.DAY_SETTLES).isBefore(clock.instant())) {
+            return judgeAndKeep(day, now);
+        }
+        // The day is over: stored, or judged (one day at a time, as it takes seconds), as of now whatever the window.
+        return load(day).orElseGet(() -> summaries.compute(
+                () -> load(day).orElseGet(() -> judgeAndKeep(day, clock.instant()))));
+    }
+
+    /** A day's stored outcomes, kept in memory from now on. */
+    private Optional<List<Outcome>> load(LocalDate day) {
+        long readIn = generation.get();
+        Optional<List<Outcome>> outcomes = stored.load(day);
+        outcomes.filter(o -> generation.get() == readIn)
+                .ifPresent(o -> days.put(day, new DayOutcomes(clock.instant(), o)));
+        return outcomes;
+    }
+
+    private List<Outcome> judgeAndKeep(LocalDate day, Instant now) {
         long judgedIn = generation.get();
+        long positions = summaries.positions(day);
         List<Outcome> outcomes = judge(day, now);
         if (generation.get() == judgedIn) {
-            days.put(day, new DayOutcomes(now, outcomes));
+            DayOutcomes judged = new DayOutcomes(now, outcomes);
+            days.put(day, judged);
+            if (settled(judged, day)) {
+                stored.save(day, outcomes, positions);
+            }
         }
         LocalDate oldest = ServiceDay.serviceDay(now).minusDays(ServiceDayCache.KEEP_DAYS);
         days.keySet().removeIf(d -> d.isBefore(oldest));
@@ -298,12 +337,17 @@ public class TripAnomalyService {
     }
 
     private boolean fresh(DayOutcomes cached, LocalDate day, Instant now) {
+        return settled(cached, day) || cached.computed().plus(CACHE_FOR).isAfter(now);
+    }
+
+    /** Whether all the day's trips were settled when it was judged. */
+    private static boolean settled(DayOutcomes cached, LocalDate day) {
         // Night lines run past the next day's start: the day is settled once its last trip is.
         Instant lastArrival = cached.outcomes().stream().map(Outcome::arrival).max(Comparator.naturalOrder())
                 .filter(a -> a.isAfter(ServiceDay.start(day.plusDays(1))))
                 .orElse(ServiceDay.start(day.plusDays(1)));
         Instant settled = lastArrival.plus(TripAnomalies.SETTLE).plus(TripAnomalies.LOST_AFTER);
-        return cached.computed().isAfter(settled) || cached.computed().plus(CACHE_FOR).isAfter(now);
+        return cached.computed().isAfter(settled);
     }
 
     /** The trips of the timetable services running that day, with their stops. */

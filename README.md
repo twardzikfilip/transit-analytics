@@ -91,6 +91,14 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   reads only from the oldest standstill, run or bucket still going on, giving what reading the whole day gives (the
   whole day is read again if positions are stored late in the part kept, e.g. after a database outage). Abnormal
   trips, Trips and brigades keep the running day's reports in memory the same way.
+  Days that are over are also stored in the database (table `day_summary`, about 2 MB a day: standstills, delay runs,
+  bus-lane half hours, Fleet hours and trip outcomes), so a restart reads them instead of the positions. They are
+  worked out one at a time. A stored day is worked out again when the report's logic, the bus lanes or the lines'
+  learnt brigades change, or when positions of it turn up later (checked every night at 06:30). A timetable import
+  doesn't change it: imports drop past trips. Nothing is stored with less than 5 GB of disk free, or with
+  `DAY_SUMMARIES_ENABLED=false`. The table is only a cache: emptying it loses nothing.
+- `DELETE /api/admin/day-summaries?from=&to=&report=` (admin): drops stored days (service days, both included) of one
+  report (`hotspots`, `delay-generation`, `bus-lanes`, `fleet`, `trip-outcomes`) or of all, to work them out again.
 - Routes (`{line}` is the route's GTFS id, e.g. `103`):
   - `GET /api/lines` — all lines in numeric order, with their subtype, `geometry` and `capacityClass` (see
     *Vehicle and line classes*): the timetable's, and the lines only seen on the live feed (other operators' regional

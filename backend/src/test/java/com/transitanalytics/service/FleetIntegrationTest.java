@@ -70,7 +70,7 @@ class FleetIntegrationTest {
         when(trips.outcomes(any(), any())).thenReturn(List.of(
                 new Outcome("IT1-1", "IT1", local("07:30"), local("08:10"), Kind.VEHICLE_CHANGED, trip, List.of(a, b))));
         Instant now = local("12:00").plus(Duration.ofDays(3));
-        var fleet = new FleetService(jdbc, Clock.fixed(now, ZoneOffset.UTC), trips);
+        var fleet = new FleetService(jdbc, Clock.fixed(now, ZoneOffset.UTC), trips, DaySummaries.none());
 
         ReportWindow day = new ReportWindow(local("03:00"), local("03:00").plus(Duration.ofDays(1)));
         FleetDto.Report report = fleet.report(day, Set.of(OPERATOR));

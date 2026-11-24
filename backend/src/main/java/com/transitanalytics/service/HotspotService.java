@@ -43,15 +43,20 @@ public class HotspotService {
             s -> s.start().plusMillis(Math.round(s.seconds() * 1000)), Duration.ofSeconds(MAX_PAIR_SECONDS),
             Duration.ofSeconds(2 * MAX_PAIR_SECONDS), Duration.ZERO);
 
+    /** Raised whenever what is worked out for a day changes: stored days are out of date then. */
+    private static final String LOGIC = "1";
+
     private final JdbcTemplate jdbc;
     private final Clock clock;
     private final ServiceDayCache<Standstill> standstills;
     private final RecentCache<String, HotspotDto.Report> cache;
 
-    public HotspotService(JdbcTemplate jdbc, Clock clock) {
+    public HotspotService(JdbcTemplate jdbc, Clock clock, DaySummaries summaries) {
         this.jdbc = jdbc;
         this.clock = clock;
-        this.standstills = new ServiceDayCache<>(clock, this::query, ROWS, ServiceDayCache.positionCount(jdbc));
+        this.standstills = new ServiceDayCache<>(clock, this::query, ROWS, ServiceDayCache.positionCount(jdbc),
+                summaries.store("hotspots", () -> LOGIC, Standstill.class));
+        summaries.onOutdated(standstills::forget);
         this.cache = new RecentCache<>(clock, CACHE_FOR, 16);
     }
 

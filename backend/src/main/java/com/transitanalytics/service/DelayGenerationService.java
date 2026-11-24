@@ -35,6 +35,9 @@ public class DelayGenerationService {
             Duration.ofSeconds(DelayGeneration.MAX_GAP_SECONDS).plus(MAX_POLL_GAP).plusMinutes(1),
             Duration.ofSeconds((long) (DelayGeneration.MIN_PASSAGES - 1) * DelayGeneration.MAX_GAP_SECONDS));
 
+    /** Raised whenever what is worked out for a day changes: stored days are out of date then. */
+    private static final String LOGIC = "1";
+
     private final JdbcTemplate jdbc;
     private final Clock clock;
     private final ServiceDayCache<Run> runs;
@@ -43,10 +46,12 @@ public class DelayGenerationService {
     private final RecentCache<ReportWindow, DelayGenerationDto.Report> networks;
     private final RecentCache<String, DelayGenerationDto.LineReport> lines;
 
-    public DelayGenerationService(JdbcTemplate jdbc, Clock clock) {
+    public DelayGenerationService(JdbcTemplate jdbc, Clock clock, DaySummaries summaries) {
         this.jdbc = jdbc;
         this.clock = clock;
-        this.runs = new ServiceDayCache<>(clock, this::query, ROWS, ServiceDayCache.positionCount(jdbc));
+        this.runs = new ServiceDayCache<>(clock, this::query, ROWS, ServiceDayCache.positionCount(jdbc),
+                summaries.store("delay-generation", () -> LOGIC, Run.class));
+        summaries.onOutdated(runs::forget);
         this.windowRuns = new RecentCache<>(clock, CACHE_FOR, 8);
         this.networks = new RecentCache<>(clock, CACHE_FOR, 8);
         this.lines = new RecentCache<>(clock, CACHE_FOR, 16);

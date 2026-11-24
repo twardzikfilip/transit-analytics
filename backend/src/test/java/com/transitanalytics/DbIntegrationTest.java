@@ -26,6 +26,7 @@ import java.lang.annotation.Target;
         "management.otlp.metrics.export.enabled=false",
         "management.logging.export.enabled=false",
         "app.warm-up.enabled=false",
+        "app.day-summaries.enabled=false",
         "app.map.routing.enabled=false",
         "app.bus-lanes.refresh-cron=-",
         "app.bus-lanes.file=",

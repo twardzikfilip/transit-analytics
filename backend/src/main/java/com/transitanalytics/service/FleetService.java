@@ -54,17 +54,22 @@ public class FleetService {
     static final Duration REPORT_COUNTS_FOR = Duration.ofMinutes(1);
     static final String UNKNOWN_MODEL = "unknown";
 
+    /** Raised whenever what is worked out for a day changes: stored days are out of date then. */
+    private static final String LOGIC = "1";
+
     private final JdbcTemplate jdbc;
     private final Clock clock;
     private final TripAnomalyService trips;
     private final ServiceDayCache<Segment> segments;
     private final RecentCache<ReportWindow, Figures> figures;
 
-    public FleetService(JdbcTemplate jdbc, Clock clock, TripAnomalyService trips) {
+    public FleetService(JdbcTemplate jdbc, Clock clock, TripAnomalyService trips, DaySummaries summaries) {
         this.jdbc = jdbc;
         this.clock = clock;
         this.trips = trips;
-        this.segments = new ServiceDayCache<>(clock, this::query, ROWS, ServiceDayCache.positionCount(jdbc));
+        this.segments = new ServiceDayCache<>(clock, this::query, ROWS, ServiceDayCache.positionCount(jdbc),
+                summaries.store("fleet", () -> LOGIC, Segment.class));
+        summaries.onOutdated(segments::forget);
         this.figures = new RecentCache<>(clock, CACHE_FOR, 8);
     }
 

@@ -81,7 +81,7 @@ class RecordedBrigadesIntegrationTest {
         Clock tuesday = Clock.fixed(local("09:00:00").plusSeconds(86_400), ZoneOffset.UTC);
         var feeds = new GtfsProperties(null, null, null, new GtfsProperties.Feed(null, "City", null),
                 Map.of("it", new GtfsProperties.Feed(null, "Test feed", "ITX")), null);
-        var anomalies = new TripAnomalyService(jdbc, tuesday, feeds);
+        var anomalies = new TripAnomalyService(jdbc, tuesday, feeds, DaySummaries.none());
         new RecordedBrigades(jdbc, transaction, anomalies, feeds, tuesday).learn("it");
 
         assertThat(jdbc.queryForList("""

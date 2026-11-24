@@ -23,7 +23,7 @@ import java.util.function.Function;
  *   only from the oldest row still going on. If positions are stored late in the part already kept (e.g. spooled
  *   during a database outage), the day is read again whole.</li>
  * </ul>
- * Days older than {@link #KEEP_DAYS} are dropped (an "all time" window reads them again).
+ * Days older than {@link #KEEP_DAYS} are dropped (an "all time" window reads them again, stored or not).
  *
  * @param <T> a row
  */
@@ -61,12 +61,14 @@ public final class ServiceDayCache<T> {
     private final Rows<T> rows;
     /** Counts the positions recorded in {@code [from, to)}: what tells late positions in the running day. */
     private final BiFunction<Instant, Instant, Long> positions;
+    /** Stored days; null: none. */
+    private final DaySummaries.Store<T> store;
     private final Map<LocalDate, List<T>> days = new ConcurrentHashMap<>();
     private final Map<LocalDate, Running> running = new ConcurrentHashMap<>();
 
     /** Rows without a time: a window's cut days are read again. */
     public ServiceDayCache(Clock clock, BiFunction<Instant, Instant, List<T>> query) {
-        this(clock, query, null, null);
+        this(clock, query, null, null, null);
     }
 
     /**
@@ -76,10 +78,17 @@ public final class ServiceDayCache<T> {
      */
     public ServiceDayCache(Clock clock, BiFunction<Instant, Instant, List<T>> query, Rows<T> rows,
                            BiFunction<Instant, Instant, Long> positions) {
+        this(clock, query, rows, positions, null);
+    }
+
+    /** As above, with days that are over kept in {@code store} too. */
+    ServiceDayCache(Clock clock, BiFunction<Instant, Instant, List<T>> query, Rows<T> rows,
+                    BiFunction<Instant, Instant, Long> positions, DaySummaries.Store<T> store) {
         this.clock = clock;
         this.query = query;
         this.rows = rows;
         this.positions = positions;
+        this.store = store;
     }
 
     /** The rows in {@code [from, to)}, day by day. */
@@ -102,7 +111,8 @@ public final class ServiceDayCache<T> {
             List<T> dayRows;
             if (settled) {
                 running.remove(day);
-                dayRows = days.computeIfAbsent(day, d -> query.apply(start, end));
+                dayRows = days.computeIfAbsent(day, d -> store == null ? query.apply(start, end)
+                        : store.day(d, () -> query.apply(start, end)));
             } else {
                 dayRows = running.computeIfAbsent(day, Running::new).rows(now);
             }
@@ -121,6 +131,12 @@ public final class ServiceDayCache<T> {
         days.keySet().removeIf(d -> d.isBefore(oldest));
         running.keySet().removeIf(d -> d.isBefore(oldest));
         return all;
+    }
+
+    /** Drops what is kept of a day: positions of it were stored late. */
+    void forget(LocalDate day) {
+        days.remove(day);
+        running.remove(day);
     }
 
     /** Counts the positions recorded in {@code [from, to)} (tens of milliseconds for a day: the time index). */
