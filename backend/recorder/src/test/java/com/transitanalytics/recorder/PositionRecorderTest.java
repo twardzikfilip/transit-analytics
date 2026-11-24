@@ -85,6 +85,7 @@ class PositionRecorderTest {
         assertThat(meters.get("transit.recording.vehicles").gauge().value()).isEqualTo(2.0);
         assertThat(recorder.lastPoll()).isEqualTo(NOON);
         assertThat(recorder.lastStored()).isEqualTo(NOON);
+        assertThat(recorder.lastArchived()).isEqualTo(NOON);
         // The Live map gets these positions, without asking the feed again.
         assertThat(recorder.live().positions()).isEqualTo(positions);
         verify(feed, times(1)).fetchRaw();
@@ -118,6 +119,7 @@ class PositionRecorderTest {
 
         assertThat(recorder.pollIfDue()).isTrue();
         verify(writer).write(anyList(), eq(NOON));
+        assertThat(recorder.lastArchived()).isNull();
         clock.advance(Duration.ofSeconds(10));
         assertThat(recorder.pollIfDue()).isTrue();
         verify(spool, never()).add(any(), any());

@@ -48,12 +48,18 @@ class LiveAndHealthTest {
         given(recorder.lastPoll()).willReturn(now.minusSeconds(5));
         assertThat(health.health().getDetails()).containsEntry("reason", "nothing stored in the last minute");
         given(spool.size()).willReturn(3);
+        assertThat(health.health().getDetails()).as("can't be kept without the archive")
+                .containsEntry("reason", "nothing archived in the last minute");
+        given(recorder.lastArchived()).willReturn(now.minusSeconds(5));
         assertThat(health.health().getStatus()).as("kept in the spool").isEqualTo(Status.UP);
         given(spool.size()).willReturn(0);
         given(recorder.lastStored()).willReturn(now.minusSeconds(5));
         Health up = health.health();
         assertThat(up.getStatus()).isEqualTo(Status.UP);
-        assertThat(up.getDetails()).containsKeys("lastPoll", "lastStored", "spooled");
+        assertThat(up.getDetails()).containsKeys("lastPoll", "lastStored", "lastArchived", "spooled");
+
+        given(recorder.lastArchived()).willReturn(now.minusSeconds(90));
+        assertThat(health.health().getStatus()).as("stored, but not archived").isEqualTo(Status.DOWN);
     }
 
     @Test

@@ -699,7 +699,12 @@ to the backend. No telemetry is sent. A release's tag builds the images (`.githu
 x86, as `ghcr.io/twardzikfilip/transit-{backend,frontend,recorder}:<version>`; new packages are private until made
 public on GitHub.
 
-On the server: clone the repository, `cp .env.example .env` and fill it in, create `backend/data/raw` and
+With `ENVIRONMENT=production` (set there) the backend doesn't start with a secret or password from the repository, and
+gives `admin` and `guest` the passwords in `.env` (`ProductionSecrets`). Ten failed logins from one address within 15
+minutes make it wait (429, `LoginAttempts`). The recorder's health is DOWN when nothing was stored *or archived* for
+a minute.
+
+On the server: clone the repository, make `.env` with `tools/server-env.sh <domain>`, create `backend/data/raw` and
 `backend/data/spool` (owned by `RECORDER_UID`), then `docker compose -f docker-compose.prod.yml up -d postgres` and restore
 the data **before** starting the recorder. Later:
 

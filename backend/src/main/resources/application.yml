@@ -42,6 +42,12 @@ spring:
       recorder_db_password: ${RECORDER_DB_PASSWORD:transit_recorder}
 
 app:
+  # "production": no default secrets or passwords (ProductionSecrets).
+  environment: ${ENVIRONMENT:local}
+  # In production, what the seeded users' passwords (admin/admin, guest/guest) are replaced with.
+  seed-passwords:
+    admin: ${ADMIN_PASSWORD:}
+    guest: ${GUEST_PASSWORD:}
   # Precompute the slow reports (Abnormal trips, delay generation, ...) in the background at startup, so the first
   # visit doesn't wait. Integration tests turn it off.
   warm-up:

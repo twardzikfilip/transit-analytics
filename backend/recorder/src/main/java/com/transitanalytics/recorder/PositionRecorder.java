@@ -51,6 +51,7 @@ public class PositionRecorder {
     private final AtomicInteger lastVehicles = new AtomicInteger();
     private volatile Instant lastPoll;
     private volatile Instant lastStored;
+    private volatile Instant lastArchived;
     private volatile LiveSnapshot latest;
 
     public PositionRecorder(BialystokFeed feed, PositionSampleWriter writer, RawArchive archive, Spool spool,
@@ -112,6 +113,7 @@ public class PositionRecorder {
         Path file = null;
         try {
             file = archive.write(SOURCE, fetchedAt, raw);
+            lastArchived = fetchedAt;
         } catch (RuntimeException ex) {
             log.error("Archiving the response failed (it is still stored if the database takes it): {}",
                     ex.getMessage());
@@ -172,6 +174,11 @@ public class PositionRecorder {
     /** When the last poll was attempted; null before the first. */
     public Instant lastPoll() {
         return lastPoll;
+    }
+
+    /** When a response was last archived; null before the first. */
+    public Instant lastArchived() {
+        return lastArchived;
     }
 
     /** When positions were last stored; null before the first. */
