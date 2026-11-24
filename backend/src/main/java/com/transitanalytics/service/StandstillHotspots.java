@@ -6,10 +6,9 @@ import com.transitanalytics.dto.HotspotDto.LineTime;
 import com.transitanalytics.geo.Geo;
 
 import java.time.Instant;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -67,31 +66,27 @@ final class StandstillHotspots {
         final int unvisited = 0;
         final int noise = -1;
         int[] label = new int[points.size()];
+        int[] near = new int[points.size()];
+        int[] queue = new int[points.size()];
         int cluster = 0;
         for (int i = 0; i < points.size(); i++) {
             if (label[i] != unvisited) {
                 continue;
             }
-            List<Integer> neighbours = grid.nearIndexes(points.get(i).lat(), points.get(i).lon(), EPS_METERS);
-            if (neighbours.size() < MIN_POINTS) {
+            int found = grid.near(points.get(i).lat(), points.get(i).lon(), EPS_METERS, near);
+            if (found < MIN_POINTS) {
                 label[i] = noise;
                 continue;
             }
             cluster++;
             label[i] = cluster;
-            Deque<Integer> queue = new ArrayDeque<>(neighbours);
-            while (!queue.isEmpty()) {
-                int j = queue.pop();
-                if (label[j] == noise) {
-                    label[j] = cluster; // a border point
-                }
-                if (label[j] != unvisited) {
-                    continue;
-                }
-                label[j] = cluster;
-                List<Integer> more = grid.nearIndexes(points.get(j).lat(), points.get(j).lon(), EPS_METERS);
-                if (more.size() >= MIN_POINTS) {
-                    queue.addAll(more);
+            // Points are labelled when they join the queue, so each is in it once.
+            int queued = enqueue(near, found, label, cluster, queue, 0);
+            while (queued > 0) {
+                Standstill p = points.get(queue[--queued]);
+                int more = grid.near(p.lat(), p.lon(), EPS_METERS, near);
+                if (more >= MIN_POINTS) {
+                    queued = enqueue(near, more, label, cluster, queue, queued);
                 }
             }
         }
@@ -102,6 +97,26 @@ final class StandstillHotspots {
             }
         }
         return new ArrayList<>(byCluster.values());
+    }
+
+    /**
+     * Labels the points found with the cluster unless they are in one, and queues those not looked at yet (a point
+     * taken for noise before is a border point: its neighbours are too few).
+     *
+     * @return how many are queued now
+     */
+    private static int enqueue(int[] found, int count, int[] label, int cluster, int[] queue, int queued) {
+        int size = queued;
+        for (int k = 0; k < count; k++) {
+            int j = found[k];
+            if (label[j] == 0) {
+                queue[size++] = j;
+            }
+            if (label[j] <= 0) {
+                label[j] = cluster;
+            }
+        }
+        return size;
     }
 
     /** The hotspots, the most time lost first; clusters with fewer than {@link #MIN_VEHICLES} vehicles are left out. */
@@ -183,23 +198,24 @@ final class StandstillHotspots {
     /** Points in square cells of a fixed size, for finding the ones near a place without comparing with all. */
     static final class Grid<T> {
         private final List<T> items;
-        private final ToDoubleFunction<T> lat;
-        private final ToDoubleFunction<T> lon;
+        private final double[] lats;
+        private final double[] lons;
         private final double cell;
         private final double mPerDegLon;
-        private final Map<Long, List<Integer>> cells = new HashMap<>();
+        private final Map<Long, int[]> cells = new HashMap<>();
 
         Grid(List<T> items, ToDoubleFunction<T> lat, ToDoubleFunction<T> lon, double cellMeters) {
             this.items = items;
-            this.lat = lat;
-            this.lon = lon;
+            this.lats = items.stream().mapToDouble(lat).toArray();
+            this.lons = items.stream().mapToDouble(lon).toArray();
             this.cell = cellMeters;
             double meanLat = items.stream().mapToDouble(lat).average().orElse(53);
             this.mPerDegLon = Geo.M_PER_DEG * Math.cos(Math.toRadians(meanLat));
+            Map<Long, List<Integer>> byCell = new HashMap<>();
             for (int i = 0; i < items.size(); i++) {
-                cells.computeIfAbsent(key(cx(lon.applyAsDouble(items.get(i))), cy(lat.applyAsDouble(items.get(i)))),
-                        k -> new ArrayList<>()).add(i);
+                byCell.computeIfAbsent(key(cx(lons[i]), cy(lats[i])), k -> new ArrayList<>()).add(i);
             }
+            byCell.forEach((k, list) -> cells.put(k, list.stream().mapToInt(Integer::intValue).toArray()));
         }
 
         private long cx(double lonDeg) {
@@ -216,21 +232,56 @@ final class StandstillHotspots {
 
         /** Indexes of the items within {@code meters} (at most the cell size) of a place. */
         List<Integer> nearIndexes(double latDeg, double lonDeg, double meters) {
-            long x = cx(lonDeg);
-            long y = cy(latDeg);
-            List<Integer> found = new ArrayList<>();
+            int candidates = 0;
             for (long dx = -1; dx <= 1; dx++) {
                 for (long dy = -1; dy <= 1; dy++) {
-                    for (int i : cells.getOrDefault(key(x + dx, y + dy), List.of())) {
-                        T item = items.get(i);
-                        if (StopPlaces.meters(latDeg, lonDeg, lat.applyAsDouble(item), lon.applyAsDouble(item))
-                                <= meters) {
-                            found.add(i);
+                    int[] cellItems = cells.get(key(cx(lonDeg) + dx, cy(latDeg) + dy));
+                    candidates += cellItems == null ? 0 : cellItems.length;
+                }
+            }
+            if (candidates == 0) {
+                return List.of();
+            }
+            int[] found = new int[candidates];
+            int count = near(latDeg, lonDeg, meters, found);
+            return Arrays.stream(found, 0, count).boxed().toList();
+        }
+
+        /**
+         * As {@link #nearIndexes}, into {@code found} (with room for the items of the cells around).
+         *
+         * @return how many there are
+         */
+        int near(double latDeg, double lonDeg, double meters, int[] found) {
+            long x = cx(lonDeg);
+            long y = cy(latDeg);
+            int count = 0;
+            for (long dx = -1; dx <= 1; dx++) {
+                for (long dy = -1; dy <= 1; dy++) {
+                    int[] cellItems = cells.get(key(x + dx, y + dy));
+                    if (cellItems == null) {
+                        continue;
+                    }
+                    for (int i : cellItems) {
+                        if (within(latDeg, lonDeg, i, meters)) {
+                            found[count++] = i;
                         }
                     }
                 }
             }
-            return found;
+            return count;
+        }
+
+        /** Whether an item is within {@code meters}; the exact distance (slow) only where it's close to that. */
+        private boolean within(double latDeg, double lonDeg, int i, double meters) {
+            double east = (lons[i] - lonDeg) * Geo.M_PER_DEG * Geo.COS_LAT;
+            double north = (lats[i] - latDeg) * Geo.M_PER_DEG;
+            double square = east * east + north * north;
+            double limit = meters * meters;
+            if (Math.abs(square - limit) > limit * 1e-9) {
+                return square < limit;
+            }
+            return StopPlaces.meters(latDeg, lonDeg, lats[i], lons[i]) <= meters;
         }
 
         List<T> near(double latDeg, double lonDeg, double meters) {

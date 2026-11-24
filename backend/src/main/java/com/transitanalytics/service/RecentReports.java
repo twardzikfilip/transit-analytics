@@ -30,6 +30,9 @@ final class RecentReports {
     /** A window ending this little after now is still covered (now moves on while a request runs). */
     static final Duration COVERS_AHEAD = Duration.ofMinutes(1);
 
+    /** Reports read this recently aren't refreshed: one request asks for several things. */
+    static final Duration REFRESH_AFTER = Duration.ofSeconds(2);
+
     private final Clock clock;
     /** Reads the reports in {@code [from, to)}. */
     private final BiFunction<Instant, Instant, List<Report>> read;
@@ -160,6 +163,10 @@ final class RecentReports {
     private void refresh() {
         Instant now = clock.instant();
         Instant from = keptFrom(now);
+        if (start != null && start.equals(from) && now.isBefore(readUntil.plus(REFRESH_AFTER))
+                && !now.isBefore(readUntil)) {
+            return;
+        }
         if (start != null && from.isAfter(start) && from.isBefore(readUntil)) {
             // The day before isn't needed any more: drop its reports, keep today's.
             start = from;
@@ -169,8 +176,9 @@ final class RecentReports {
             minutes.removeIf(m -> m < first);
             positionsBefore = positions.apply(start, readUntil.minus(ServiceDayCache.REPORTS_ARRIVE));
         }
+        Instant counted = start == null ? null : readUntil.minus(ServiceDayCache.REPORTS_ARRIVE);
         boolean again = start == null || !start.equals(from)
-                || positions.apply(start, readUntil.minus(ServiceDayCache.REPORTS_ARRIVE)) != positionsBefore;
+                || positions.apply(start, counted) != positionsBefore;
         Instant readFrom;
         if (again) {
             reading++;
@@ -187,7 +195,9 @@ final class RecentReports {
         }
         minutes.addAll(readMinutes.apply(readFrom, now));
         readUntil = now;
-        positionsBefore = positions.apply(start, readUntil.minus(ServiceDayCache.REPORTS_ARRIVE));
+        Instant until = readUntil.minus(ServiceDayCache.REPORTS_ARRIVE);
+        // Only what is new is counted.
+        positionsBefore = again ? positions.apply(start, until) : positionsBefore + positions.apply(counted, until);
     }
 
     /** Adds a report in its vehicle's time order, unless it is kept already. */

@@ -58,6 +58,7 @@ public class TripAnomalyService {
     private final AtomicLong generation = new AtomicLong();
     private final RecentCache<ReportWindow, TripAnomalyDto.Report> reports;
     private volatile Shapes shapes;
+    private volatile RunningDayTrips runningDayTrips;
     /** The running day's reports, kept in memory and read in pieces. */
     private final RecentReports recent;
     /** Raised whenever the judging changes: stored days are out of date then. */
@@ -100,6 +101,10 @@ public class TripAnomalyService {
     }
 
     private record DayOutcomes(Instant computed, List<Outcome> outcomes) {
+    }
+
+    /** A day's trips, for the timetable and brigades ({@link #generation}) they were read with. */
+    private record RunningDayTrips(LocalDate day, long generation, String version, List<ScheduledTrip> trips) {
     }
 
     /** Route shapes, for the timetable they were read from. */
@@ -200,7 +205,8 @@ public class TripAnomalyService {
 
     private List<Outcome> judge(LocalDate day, Instant now) {
         long judgedIn = generation.get();
-        List<ScheduledTrip> trips = trips(day);
+        List<ScheduledTrip> trips = day.equals(ServiceDay.serviceDay(clock.instant()))
+                ? runningDayTrips(day, judgedIn) : trips(day);
         if (trips.isEmpty()) {
             return List.of();
         }
@@ -348,6 +354,18 @@ public class TripAnomalyService {
                 .orElse(ServiceDay.start(day.plusDays(1)));
         Instant settled = lastArrival.plus(TripAnomalies.SETTLE).plus(TripAnomalies.LOST_AFTER);
         return cached.computed().isAfter(settled);
+    }
+
+    /** The running day's trips, as {@link #trips(LocalDate)}: kept until the timetable or the brigades change. */
+    private List<ScheduledTrip> runningDayTrips(LocalDate day, long generationNow) {
+        String version = shapes().version();
+        RunningDayTrips kept = runningDayTrips;
+        if (kept == null || !kept.day().equals(day) || kept.generation() != generationNow
+                || !kept.version().equals(version)) {
+            kept = new RunningDayTrips(day, generationNow, version, trips(day));
+            runningDayTrips = kept;
+        }
+        return kept.trips();
     }
 
     /** The trips of the timetable services running that day, with their stops. */

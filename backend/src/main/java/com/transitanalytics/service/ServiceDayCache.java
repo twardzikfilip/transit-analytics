@@ -168,10 +168,13 @@ public final class ServiceDayCache<T> {
 
         /** The day's rows as of {@code now}. */
         synchronized List<T> rows(Instant now) {
-            if (cut.isAfter(start) && positions.apply(start, readFrom()) != positionsBefore) {
+            Instant counted = readFrom();
+            if (cut.isAfter(start) && positions.apply(start, counted) != positionsBefore) {
                 // Positions stored late in the part kept: read the day whole again.
                 kept.clear();
                 cut = start;
+                counted = start;
+                positionsBefore = 0;
             }
             List<T> fresh = new ArrayList<>();
             for (T row : query.apply(readFrom(), end)) {
@@ -199,7 +202,10 @@ public final class ServiceDayCache<T> {
                 }
             }
             cut = next;
-            positionsBefore = cut.isAfter(start) ? positions.apply(start, readFrom()) : 0;
+            // Only what is new is counted.
+            if (readFrom().isAfter(counted)) {
+                positionsBefore += positions.apply(counted, readFrom());
+            }
             return result;
         }
 

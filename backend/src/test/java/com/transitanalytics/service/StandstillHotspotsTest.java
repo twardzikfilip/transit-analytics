@@ -54,6 +54,65 @@ class StandstillHotspotsTest {
         assertThat(clusters).hasSize(2).allSatisfy(c -> assertThat(c).hasSize(6));
     }
 
+    /** Every pair compared: cores joined to the cores near them, border points to the first cluster reaching them. */
+    private static List<List<Standstill>> comparingAll(List<Standstill> points) {
+        int[] label = new int[points.size()];
+        int clusters = 0;
+        for (int i = 0; i < points.size(); i++) {
+            if (label[i] != 0 || near(points, i).size() < StandstillHotspots.MIN_POINTS) {
+                continue;
+            }
+            clusters++;
+            List<Integer> queue = new ArrayList<>(List.of(i));
+            while (!queue.isEmpty()) {
+                int j = queue.remove(queue.size() - 1);
+                if (label[j] != 0) {
+                    continue;
+                }
+                label[j] = clusters;
+                List<Integer> more = near(points, j);
+                if (more.size() >= StandstillHotspots.MIN_POINTS) {
+                    queue.addAll(more);
+                }
+            }
+        }
+        List<List<Standstill>> result = new ArrayList<>();
+        for (int c = 1; c <= clusters; c++) {
+            List<Standstill> cluster = new ArrayList<>();
+            for (int i = 0; i < points.size(); i++) {
+                if (label[i] == c) {
+                    cluster.add(points.get(i));
+                }
+            }
+            result.add(cluster);
+        }
+        return result;
+    }
+
+    private static List<Integer> near(List<Standstill> points, int i) {
+        List<Integer> near = new ArrayList<>();
+        for (int j = 0; j < points.size(); j++) {
+            if (StopPlaces.meters(points.get(i).lat(), points.get(i).lon(), points.get(j).lat(), points.get(j).lon())
+                    <= StandstillHotspots.EPS_METERS) {
+                near.add(j);
+            }
+        }
+        return near;
+    }
+
+    @Test
+    void clustersAsComparingAllPairsDoes() {
+        java.util.Random random = new java.util.Random(11);
+        for (int round = 0; round < 20; round++) {
+            List<Standstill> points = new ArrayList<>();
+            for (int i = 0; i < 300; i++) {
+                points.add(new Standstill(i, "9", MORNING, 30, LAT + random.nextInt(60) * 5 * M,
+                        LON + random.nextInt(60) * 5 * M, null));
+            }
+            assertThat(StandstillHotspots.clusters(points)).isEqualTo(comparingAll(points));
+        }
+    }
+
     @Test
     void ranksHotspotsByTimeLostAndDescribesThem() {
         List<Standstill> points = new ArrayList<>();
