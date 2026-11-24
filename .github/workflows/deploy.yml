@@ -1,0 +1,47 @@
+# Puts a released version on the server; also the way back to an older one (Actions → Deploy → Run workflow). Runs
+# tools/deploy.sh there, the only thing its key may do. Secrets of the environment "production": DEPLOY_KEY (private
+# key), DEPLOY_HOST (user@address), DEPLOY_KNOWN_HOSTS (the server's host key line).
+name: Deploy
+
+on:
+  workflow_call:
+    inputs:
+      what: { type: string, required: true }
+      version: { type: string, required: true }
+  workflow_dispatch:
+    inputs:
+      what:
+        type: choice
+        options: [app, recorder]
+        default: app
+      version:
+        description: "A released version, e.g. 1.0.0"
+        type: string
+        required: true
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: production
+    steps:
+      - name: Deploy
+        env:
+          KEY: ${{ secrets.DEPLOY_KEY }}
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          WHAT: ${{ inputs.what }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          [[ $WHAT =~ ^(app|recorder)$ && $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Not a version: $WHAT $VERSION"; exit 1; }
+          echo "::add-mask::${HOST#*@}"   # the logs are public, and ssh's errors name the address
+          install -m 700 -d ~/.ssh
+          (umask 077; printf '%s\n' "$KEY" > ~/.ssh/deploy; printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts)
+          ssh -i ~/.ssh/deploy -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o ServerAliveInterval=20 "$HOST" "$WHAT $VERSION"

@@ -29,7 +29,7 @@ case "${1:-show}" in
     else
       echo "$2 $today" > backend/recorder/VERSION
     fi
-    echo "$1 is now $2; once merged, tag it: git tag $1-v$2" ;;
+    echo "$1 is now $2" ;;
   check)
     valid "$(app)" || fail "VERSION isn't a version: $(app)"
     valid "$(recorder)" || fail "backend/recorder/VERSION isn't a version: $(recorder)"
