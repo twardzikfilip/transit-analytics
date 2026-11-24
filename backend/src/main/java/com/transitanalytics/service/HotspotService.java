@@ -56,7 +56,7 @@ public class HotspotService {
         this.clock = clock;
         this.standstills = new ServiceDayCache<>(clock, this::query, ROWS, ServiceDayCache.positionCount(jdbc),
                 summaries.store("hotspots", () -> LOGIC, Standstill.class));
-        summaries.onOutdated(standstills::forget);
+        summaries.onOutdated("hotspots", standstills::forget);
         this.cache = new RecentCache<>(clock, CACHE_FOR, 16);
     }
 

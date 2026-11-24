@@ -74,17 +74,8 @@ public class TripAnomalyService {
         this.recent = new RecentReports(clock, this::readReports, this::readMinutes,
                 ServiceDayCache.positionCount(jdbc));
         this.summaries = summaries;
-        this.stored = summaries.store("trip-outcomes", this::fingerprint, Outcome.class);
-        summaries.onOutdated(days::remove);
-    }
-
-    /**
-     * Of the learnt brigades on lines. Not of the timetable: a day that is over stays as judged, as imports drop its
-     * trips.
-     */
-    private String fingerprint() {
-        return LOGIC + ":" + jdbc.queryForObject("SELECT md5(coalesce(string_agg(x::text, ',' ORDER BY x::text), ''))"
-                + " FROM recorded_brigade_line x", String.class);
+        this.stored = summaries.keeping("trip-outcomes", () -> LOGIC, Outcome.class, TripAnomalies::key);
+        summaries.onOutdated("trip-outcomes", days::remove);
     }
 
     /**
@@ -172,8 +163,10 @@ public class TripAnomalyService {
             return judgeAndKeep(day, now);
         }
         // The day is over: stored, or judged (one day at a time, as it takes seconds), as of now whatever the window.
-        return load(day).orElseGet(() -> summaries.compute(
+        List<Outcome> outcomes = load(day).orElseGet(() -> summaries.compute(
                 () -> load(day).orElseGet(() -> judgeAndKeep(day, clock.instant()))));
+        WarmUp.pauseNow();
+        return outcomes;
     }
 
     /** A day's stored outcomes, kept in memory from now on. */
@@ -187,14 +180,16 @@ public class TripAnomalyService {
 
     private List<Outcome> judgeAndKeep(LocalDate day, Instant now) {
         long judgedIn = generation.get();
-        long positions = summaries.positions(day);
+        // Counted only for a day that can be stored.
+        long positions = now.isAfter(ServiceDay.start(day.plusDays(1))) ? summaries.positions(day) : 0;
         List<Outcome> outcomes = judge(day, now);
         if (generation.get() == judgedIn) {
             DayOutcomes judged = new DayOutcomes(now, outcomes);
-            days.put(day, judged);
             if (settled(judged, day)) {
-                stored.save(day, outcomes, positions);
+                outcomes = stored.save(day, outcomes, positions);
+                judged = new DayOutcomes(now, outcomes);
             }
+            days.put(day, judged);
         }
         LocalDate oldest = ServiceDay.serviceDay(now).minusDays(ServiceDayCache.KEEP_DAYS);
         days.keySet().removeIf(d -> d.isBefore(oldest));
@@ -213,8 +208,9 @@ public class TripAnomalyService {
         Instant from = ServiceDay.start(day);
         Instant to = reportsEnd(day, trips);
         Instant until = to.isAfter(now) ? now : to;
-        if (recent.covers(from, until)) {
-            return judgeOpenBrigades(day, trips, from, until, now, judgedIn);
+        Optional<List<Outcome>> pieces = judgeOpenBrigades(day, trips, from, until, now, judgedIn);
+        if (pieces.isPresent()) {
+            return pieces.get();
         }
         List<Report> reports = reports(from, until);
         return TripAnomalies.judge(trips, reports, TripAnomalies.Recording.of(reports), shapes().byId(), now);
@@ -224,38 +220,54 @@ public class TripAnomalyService {
      * The running day's outcomes: the brigades whose trips are all settled were judged once and are kept; the others
      * are judged again, with the reports of the buses that ran them (as judging the whole day would). A
      * brigade's outcomes depend on its buses, and on whether its lines were reported and matched at all that day: both
-     * can only become true, so a brigade is kept once all its lines are matched. A brigade with a change of bus is judged again until the day is over, as
-     * whether the replaced bus was used again can change later. When the reports are read again whole (some were
-     * stored late), every brigade is judged again.
+     * can only become true, so a brigade is kept once all its lines are matched. A brigade with a change of bus is
+     * judged again until the day is over, as whether the replaced bus was used again can change later. When the reports are read again whole (some were
+     * stored late), every brigade is judged again. Empty when the day's reports aren't kept in memory (any more).
      *
      * @param judgedIn the {@link #generation} before the trips were read: if it has passed, nothing is kept
      */
-    private List<Outcome> judgeOpenBrigades(LocalDate day, List<ScheduledTrip> trips, Instant from, Instant until,
-                                            Instant now, long judgedIn) {
-        long reading = recent.reading();
+    private Optional<List<Outcome>> judgeOpenBrigades(LocalDate day, List<ScheduledTrip> trips, Instant from,
+                                                      Instant until, Instant now, long judgedIn) {
         Map<String, List<ScheduledTrip>> byBrigade = TripMatching.byBrigade(trips);
+        return recent.read(from, until, () -> openBrigades(day, byBrigade, from, until))
+                .map(open -> judge(open, trips, byBrigade, now, judgedIn));
+    }
+
+    /** What the running day's judging starts from: the brigades settled before, and the others' reports. */
+    private record OpenBrigades(Map<String, List<Outcome>> settled, Set<String> open, List<Report> reports,
+                                Set<Long> minutes, Set<String> lines) {
+    }
+
+    private OpenBrigades openBrigades(LocalDate day, Map<String, List<ScheduledTrip>> byBrigade, Instant from,
+                                      Instant until) {
+        long reading = recent.reading();
         Map<String, List<Outcome>> settled = settledBrigades.compute(day, (d, before) ->
                 before != null && before.reading() == reading ? before
                         : new SettledBrigades(reading, new ConcurrentHashMap<>())).outcomes();
+        Set<String> open = new HashSet<>(byBrigade.keySet());
+        open.removeAll(settled.keySet());
+        return new OpenBrigades(settled, open, recent.reports(from, until, open), recent.reportMinutes(from, until),
+                recent.lines(from, until));
+    }
+
+    private List<Outcome> judge(OpenBrigades day, List<ScheduledTrip> trips,
+                                Map<String, List<ScheduledTrip>> byBrigade, Instant now, long judgedIn) {
+        Map<String, List<Outcome>> settled = day.settled();
+        Set<String> open = day.open();
         List<Outcome> outcomes = new ArrayList<>();
-        Set<String> open = new HashSet<>();
         Set<String> linesMatched = new HashSet<>();
         byBrigade.forEach((brigade, its) -> {
-            List<Outcome> kept = settled.get(brigade);
-            if (kept != null) {
-                outcomes.addAll(kept);
+            if (!open.contains(brigade)) {
+                outcomes.addAll(settled.get(brigade));
                 its.forEach(t -> linesMatched.add(t.line()));
-            } else {
-                open.add(brigade);
             }
         });
         if (open.isEmpty()) {
             return outcomes;
         }
         List<ScheduledTrip> openTrips = trips.stream().filter(t -> open.contains(t.brigade())).toList();
-        TripAnomalies.Judged result = TripAnomalies.judge(openTrips, recent.reports(from, until, open),
-                new TripAnomalies.Recording(recent.reportMinutes(from, until)), shapes().byId(), now,
-                recent.lines(from, until), linesMatched);
+        TripAnomalies.Judged result = TripAnomalies.judge(openTrips, day.reports(),
+                new TripAnomalies.Recording(day.minutes()), shapes().byId(), now, day.lines(), linesMatched);
         List<Outcome> judged = result.outcomes();
         outcomes.addAll(judged);
 
@@ -316,7 +328,7 @@ public class TripAnomalyService {
     /** The minutes with any report in {@code [from, to)}: when recording went on. */
     private TripAnomalies.Recording recording(Instant from, Instant to) {
         return new TripAnomalies.Recording(
-                recent.covers(from, to) ? recent.minutes(from, to) : readMinutes(from, to));
+                recent.read(from, to, () -> recent.minutes(from, to)).orElseGet(() -> readMinutes(from, to)));
     }
 
     /** The minutes (epoch / 60) with any report in {@code [from, to)}, read from the database. */
@@ -421,7 +433,7 @@ public class TripAnomalyService {
      * ({@link RecordedBrigades#BRIGADE_SQL}).
      */
     private List<Report> reports(Instant from, Instant to) {
-        return recent.covers(from, to) ? recent.reports(from, to) : readReports(from, to);
+        return recent.read(from, to, () -> recent.reports(from, to)).orElseGet(() -> readReports(from, to));
     }
 
     /** As {@link #reports(Instant, Instant)}, read from the database. */
@@ -439,15 +451,12 @@ public class TripAnomalyService {
 
     /** As {@link #reports(Instant, Instant, String)}, of the buses that ran any of some brigades then. */
     List<Report> reports(Instant from, Instant to, Collection<String> brigades) {
-        if (recent.covers(from, to)) {
-            return recent.reports(from, to, brigades);
-        }
-        return reports(RecordedBrigades.BRIGADE_SQL, """
+        return recent.read(from, to, () -> recent.reports(from, to, brigades)).orElseGet(() -> reports(RecordedBrigades.BRIGADE_SQL, """
                 p.vehicle_id IN (SELECT p.vehicle_id FROM %s
                                  WHERE p.observed_at >= ? AND p.observed_at < ? AND %s = ANY (?))""".formatted(
                         RecordedBrigades.REPORTS_FROM, RecordedBrigades.BRIGADE_SQL),
                 Timestamp.from(from), Timestamp.from(to), Timestamp.from(from), Timestamp.from(to),
-                brigades.toArray(String[]::new));
+                brigades.toArray(String[]::new)));
     }
 
     /** One operator's reports in {@code [from, to)} with the brigades as the live feed names them, by vehicle and time. */

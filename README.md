@@ -93,12 +93,14 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   trips, Trips and brigades keep the running day's reports in memory the same way.
   Days that are over are also stored in the database (table `day_summary`, about 2 MB a day: standstills, delay runs,
   bus-lane half hours, Fleet hours and trip outcomes), so a restart reads them instead of the positions. They are
-  worked out one at a time. A stored day is worked out again when the report's logic, the bus lanes or the lines'
-  learnt brigades change, or when positions of it turn up later (checked every night at 06:30). A timetable import
-  doesn't change it: imports drop past trips. Nothing is stored with less than 5 GB of disk free, or with
-  `DAY_SUMMARIES_ENABLED=false`. The table is only a cache: emptying it loses nothing.
+  worked out one at a time. A stored day is worked out again when the report's logic or the bus
+  lanes change, or when positions of it turn up later (checked every night at 06:30). Trip outcomes also need the
+  timetable, whose imports drop past trips: a stored day's outcomes stay when some of its trips are gone, and neither
+  an import nor newly learnt brigades change them. The other reports can always be worked out again from the
+  positions; **don't empty the table by hand**, old days' trip outcomes would be lost. Nothing is stored with less than
+  5 GB free on the backend's disk, with a table over 1 GB, or with `DAY_SUMMARIES_ENABLED=false`.
 - `DELETE /api/admin/day-summaries?from=&to=&report=` (admin): drops stored days (service days, both included) of one
-  report (`hotspots`, `delay-generation`, `bus-lanes`, `fleet`, `trip-outcomes`) or of all, to work them out again.
+  report (`hotspots`, `delay-generation`, `bus-lanes`, `fleet`, `trip-outcomes`) or of all, to work them out again (trip outcomes are kept until they have been).
 - Routes (`{line}` is the route's GTFS id, e.g. `103`):
   - `GET /api/lines` — all lines in numeric order, with their subtype, `geometry` and `capacityClass` (see
     *Vehicle and line classes*): the timetable's, and the lines only seen on the live feed (other operators' regional
@@ -490,7 +492,8 @@ Every test run writes a JaCoCo coverage report to `build/reports/jacoco/test/` (
 `check` fails below 50% of lines, or below 90% when `INTEGRATION_TESTS=true` (as in CI).
 Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixture` inserts a small timetable.
 They run against their own database, `transit_test` on the same server (`TEST_DB_URL` to change it; CI points it at
-its own `transit`), never the one the recorder writes to. Create it once:
+its own `transit`), never the one the recorder writes to. Roles belong to the whole server, so the tests keep their
+passwords while migrating (`SharedRoles`). Create it once:
 
 ```bash
 PGPASSWORD=transit psql -h localhost -U transit postgres -c "CREATE DATABASE transit_test"

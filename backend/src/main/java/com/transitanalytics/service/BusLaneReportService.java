@@ -111,7 +111,7 @@ public class BusLaneReportService {
         this.lanes = lanes;
         this.clock = clock;
         this.summaries = summaries;
-        summaries.onOutdated(day -> {
+        summaries.onOutdated("bus-lanes", day -> {
             ServiceDayCache<Bucket> current = days;
             if (current != null) {
                 current.forget(day);

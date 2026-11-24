@@ -51,7 +51,7 @@ public class DelayGenerationService {
         this.clock = clock;
         this.runs = new ServiceDayCache<>(clock, this::query, ROWS, ServiceDayCache.positionCount(jdbc),
                 summaries.store("delay-generation", () -> LOGIC, Run.class));
-        summaries.onOutdated(runs::forget);
+        summaries.onOutdated("delay-generation", runs::forget);
         this.windowRuns = new RecentCache<>(clock, CACHE_FOR, 8);
         this.networks = new RecentCache<>(clock, CACHE_FOR, 8);
         this.lines = new RecentCache<>(clock, CACHE_FOR, 16);

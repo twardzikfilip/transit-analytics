@@ -24,13 +24,19 @@ import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -47,6 +53,10 @@ public class DaySummaries {
     private static final Logger log = LoggerFactory.getLogger(DaySummaries.class);
     /** Below this much free disk space nothing is stored. */
     static final long MIN_FREE_BYTES = 5L << 30;
+    /** Nor above this table size: the database's disk may be another one, whose free space isn't known here. */
+    static final long MAX_TABLE_BYTES = 1L << 30;
+    /** The fingerprint of rows to be worked out again. */
+    private static final String OUTDATED = "outdated";
     /** In the background, the longest pause after a day (as long as the day took, up to this). */
     private static final Duration MAX_PAUSE = Duration.ofSeconds(3);
 
@@ -56,9 +66,11 @@ public class DaySummaries {
     private final boolean enabled;
     private final LongSupplier freeBytes;
     private final JsonMapper json = JsonMapper.builder().build();
+    /** The reports whose stored rows are only marked as out of date, not deleted. */
+    private final Set<String> keeping = ConcurrentHashMap.newKeySet();
     private final ReentrantLock computing = new ReentrantLock(true);
-    /** Told of each day that is out of date, to drop what they keep of it. */
-    private final List<Consumer<LocalDate>> listeners = new CopyOnWriteArrayList<>();
+    /** By report: told of each day that is out of date, to drop what they keep of it. */
+    private final Map<String, List<Consumer<LocalDate>>> listeners = new ConcurrentHashMap<>();
 
     @Autowired
     public DaySummaries(JdbcTemplate jdbc, PlatformTransactionManager transactions, Clock clock,
@@ -88,10 +100,13 @@ public class DaySummaries {
         private final String report;
         private final Supplier<String> fingerprint;
         private final JavaType type;
+        /** See {@link #keeping}; null: rows can always be worked out again. */
+        private final Function<T, String> key;
 
-        private Store(String report, Supplier<String> fingerprint, Class<T> row) {
+        private Store(String report, Supplier<String> fingerprint, Class<T> row, Function<T, String> key) {
             this.report = report;
             this.fingerprint = fingerprint;
+            this.key = key;
             this.type = json.getTypeFactory().constructCollectionType(List.class, row);
         }
 
@@ -100,8 +115,7 @@ public class DaySummaries {
             return load(day).orElseGet(() -> compute(() -> load(day).orElseGet(() -> {
                 long positions = enabled ? positions(day) : 0;
                 List<T> rows = compute.get();
-                save(day, rows, positions);
-                return rows;
+                return save(day, rows, positions);
             })));
         }
 
@@ -123,16 +137,53 @@ public class DaySummaries {
 
         /**
          * Stores a day's rows (none: nothing, they are quickly worked out again). A failure is logged only.
+         * With a key, rows stored before stay when the new ones lack any of them: they couldn't be worked out again.
          *
          * @param positions {@link DaySummaries#positions} before the rows were worked out
+         * @return the day's rows: these, or the ones kept
          */
-        void save(LocalDate day, List<T> rows, long positions) {
-            if (!enabled || rows.isEmpty()) {
-                return;
+        List<T> save(LocalDate day, List<T> rows, long positions) {
+            if (!enabled) {
+                return rows;
             }
+            List<T> before = key == null ? List.of() : stored(day);
+            if (!before.isEmpty() && !keys(rows).containsAll(keys(before))) {
+                log.info("{} of {} stays as stored: some of it can't be worked out any more", report, day);
+                transaction.executeWithoutResult(status -> jdbc.update(
+                        "UPDATE day_summary SET fingerprint = ?, positions = ? WHERE report = ? AND day = ?",
+                        fingerprint.get(), positions, report, Date.valueOf(day)));
+                return before;
+            }
+            if (!rows.isEmpty()) {
+                write(day, rows, positions);
+            }
+            return rows;
+        }
+
+        private Set<String> keys(List<T> rows) {
+            return rows.stream().map(key).collect(Collectors.toSet());
+        }
+
+        /** The day's rows as stored, up to date or not; none when they can't be read. */
+        private List<T> stored(LocalDate day) {
+            try {
+                return jdbc.queryForList("SELECT content FROM day_summary WHERE report = ? AND day = ?",
+                        byte[].class, report, Date.valueOf(day)).stream().findFirst().map(this::read).orElse(List.of());
+            } catch (RuntimeException ex) {
+                log.warn("Stored {} of {} unreadable: {}", report, day, ex.toString());
+                return List.of();
+            }
+        }
+
+        private void write(LocalDate day, List<T> rows, long positions) {
             long free = freeBytes.getAsLong();
             if (free < MIN_FREE_BYTES) {
                 log.warn("{} of {} not stored: only {} MB of disk free", report, day, free >> 20);
+                return;
+            }
+            Long size = jdbc.queryForObject("SELECT pg_total_relation_size('day_summary')", Long.class);
+            if (size != null && size > MAX_TABLE_BYTES) {
+                log.warn("{} of {} not stored: day_summary has {} MB", report, day, size >> 20);
                 return;
             }
             try {
@@ -174,15 +225,24 @@ public class DaySummaries {
      * @param fingerprint of the report's logic (a version raised whenever it changes) and inputs
      */
     <T> Store<T> store(String report, Supplier<String> fingerprint, Class<T> row) {
-        return new Store<>(report, fingerprint, row);
+        return new Store<>(report, fingerprint, row, null);
     }
 
-    /** {@code listener} is told of each day whose rows are out of date. */
-    void onOutdated(Consumer<LocalDate> listener) {
-        listeners.add(listener);
+    /**
+     * As above, for rows worked out from more than the positions: ones stored are never replaced by a day's rows that
+     * lack some of them (by {@code key}), nor deleted.
+     */
+    <T> Store<T> keeping(String report, Supplier<String> fingerprint, Class<T> row, Function<T, String> key) {
+        keeping.add(report);
+        return new Store<>(report, fingerprint, row, key);
     }
 
-    /** Works something out alone: one day at a time; in the background with a pause after each. */
+    /** {@code listener} is told of each day whose rows of a report are out of date. */
+    void onOutdated(String report, Consumer<LocalDate> listener) {
+        listeners.computeIfAbsent(report, r -> new CopyOnWriteArrayList<>()).add(listener);
+    }
+
+    /** Works something out alone: one day at a time; in the background {@link WarmUp#pauseNow} pauses. */
     <R> R compute(Supplier<R> work) {
         if (!enabled) {
             return work.get();
@@ -197,7 +257,7 @@ public class DaySummaries {
             computing.unlock();
         }
         if (WarmUp.running()) {
-            WarmUp.pause(Duration.ofNanos(Math.min(System.nanoTime() - start, MAX_PAUSE.toNanos())));
+            WarmUp.pauseLater(Duration.ofNanos(Math.min(System.nanoTime() - start, MAX_PAUSE.toNanos())));
         }
         return result;
     }
@@ -214,36 +274,46 @@ public class DaySummaries {
         if (!enabled) {
             return;
         }
-        record Stored(LocalDate day, long least, long most) {
+        record Stored(String report, LocalDate day, long positions) {
         }
-        for (Stored stored : jdbc.query(
-                "SELECT day, min(positions) AS least, max(positions) AS most FROM day_summary GROUP BY day",
-                (rs, i) -> new Stored(rs.getObject("day", LocalDate.class), rs.getLong("least"),
-                        rs.getLong("most")))) {
-            long now = positions(stored.day());
-            if (stored.least() != now || stored.most() != now) {
-                log.info("Positions of {} changed ({} now): its reports are worked out again", stored.day(), now);
-                delete(null, stored.day(), stored.day());
+        Map<LocalDate, Long> now = new HashMap<>();
+        for (Stored stored : jdbc.query("SELECT report, day, positions FROM day_summary ORDER BY day",
+                (rs, i) -> new Stored(rs.getString("report"), rs.getObject("day", LocalDate.class),
+                        rs.getLong("positions")))) {
+            if (stored.positions() != now.computeIfAbsent(stored.day(), this::positions)) {
+                log.info("Positions of {} changed: its {} are worked out again", stored.day(), stored.report());
+                delete(stored.report(), stored.day(), stored.day());
             }
         }
     }
 
     /**
-     * Drops stored days, so they are worked out again.
+     * Drops stored days, so they are worked out again; of reports with rows that may not be ({@link #keeping}), they
+     * are marked as out of date instead.
      *
      * @param report null: all reports
-     * @return how many were dropped
+     * @return how many days of reports
      */
     public int delete(String report, LocalDate from, LocalDate to) {
         if (!enabled) {
             return 0;
         }
-        Integer dropped = transaction.execute(status -> jdbc.update(
-                "DELETE FROM day_summary WHERE (?::text IS NULL OR report = ?) AND day BETWEEN ? AND ?",
-                report, report, Date.valueOf(from), Date.valueOf(to)));
+        String[] kept = keeping.toArray(String[]::new);
+        Integer dropped = transaction.execute(status -> jdbc.update("""
+                        UPDATE day_summary SET fingerprint = ?
+                        WHERE report = ANY (?) AND (?::text IS NULL OR report = ?) AND day BETWEEN ? AND ?""",
+                OUTDATED, kept, report, report, Date.valueOf(from), Date.valueOf(to))
+                + jdbc.update("""
+                        DELETE FROM day_summary
+                        WHERE report <> ALL (?) AND (?::text IS NULL OR report = ?) AND day BETWEEN ? AND ?""",
+                kept, report, report, Date.valueOf(from), Date.valueOf(to)));
         for (LocalDate day = from; !day.isAfter(to); day = day.plusDays(1)) {
             LocalDate outdated = day;
-            listeners.forEach(l -> l.accept(outdated));
+            listeners.forEach((of, its) -> {
+                if (report == null || report.equals(of)) {
+                    its.forEach(l -> l.accept(outdated));
+                }
+            });
         }
         return dropped == null ? 0 : dropped;
     }

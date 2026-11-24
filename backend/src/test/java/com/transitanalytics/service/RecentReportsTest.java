@@ -121,6 +121,24 @@ class RecentReportsTest {
     }
 
     @Test
+    void givesNothingWhenTheDayBeforeIsDroppedWhileReading() {
+        TestClock clock = new TestClock();
+        Recorded db = new Recorded();
+        Instant tomorrow = ServiceDay.start(DAY.plusDays(1));
+        db.add(1, tomorrow.minusSeconds(60), "N1-01");
+        clock.now = tomorrow.plus(RecentReports.KEEP_DAY_BEFORE).minusSeconds(1);
+        RecentReports recent = new RecentReports(clock, db::read, db::minutes, db::count);
+        Instant to = clock.now;
+
+        assertThat(recent.read(START, to, () -> recent.reports(START, to))).hasValueSatisfying(r ->
+                assertThat(r).hasSize(1));
+        assertThat(recent.read(START, to, () -> {
+            clock.now = clock.now.plusSeconds(5);
+            return recent.reports(START, to);
+        })).as("its time passed after the check").isEmpty();
+    }
+
+    @Test
     void keepsTheDayBeforeOnlyWhileItsNightTripsRun() {
         TestClock clock = new TestClock();
         Recorded db = new Recorded();

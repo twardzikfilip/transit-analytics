@@ -114,7 +114,8 @@ class DaySummariesIntegrationTest {
     void dropsDaysWhosePositionsChanged() {
         DaySummaries summaries = summaries(Long.MAX_VALUE);
         List<LocalDate> outdated = new ArrayList<>();
-        summaries.onOutdated(outdated::add);
+        summaries.onOutdated("test", outdated::add);
+        summaries.onOutdated("other", day -> outdated.add(LocalDate.MIN));
         DaySummaries.Store<Standstill> store = summaries.store("test", () -> "1", Standstill.class);
         store.day(DAY, this::compute);
 
@@ -125,6 +126,31 @@ class DaySummariesIntegrationTest {
         summaries.check();
         assertThat(store.load(DAY)).isEmpty();
         assertThat(outdated).containsExactly(DAY);
+    }
+
+    @Test
+    void rowsThatCantBeWorkedOutAgainStay() {
+        DaySummaries summaries = summaries(Long.MAX_VALUE);
+        DaySummaries.Store<Outcome> store = summaries.keeping("test", () -> "1", Outcome.class, TripAnomalies::key);
+        List<Outcome> full = List.of(outcome("a", Kind.COMPLETED), outcome("b", Kind.COMPLETED));
+        store.save(DAY, full, 5);
+
+        assertThat(summaries.delete(null, DAY, DAY)).as("marked").isEqualTo(1);
+        assertThat(store.load(DAY)).as("to be worked out again").isEmpty();
+        assertThat(store.save(DAY, List.of(outcome("a", Kind.LOST)), 6)).as("trip b is gone").isEqualTo(full);
+        assertThat(store.load(DAY)).as("up to date as it is").contains(full);
+
+        summaries.check();
+        assertThat(store.save(DAY, List.of(), 0)).as("all trips are gone").isEqualTo(full);
+        assertThat(store.load(DAY)).contains(full);
+
+        List<Outcome> again = List.of(outcome("a", Kind.LOST), outcome("b", Kind.COMPLETED));
+        assertThat(store.save(DAY, again, 0)).as("nothing is gone").isEqualTo(again);
+        assertThat(store.load(DAY)).contains(again);
+    }
+
+    private static Outcome outcome(String trip, Kind kind) {
+        return new Outcome(trip, "103", AT, AT.plusSeconds(60), kind, null, List.of());
     }
 
     @Test

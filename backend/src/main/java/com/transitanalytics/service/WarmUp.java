@@ -15,6 +15,8 @@ public final class WarmUp {
 
     private static final ThreadLocal<Boolean> RUNNING = ThreadLocal.withInitial(() -> false);
 
+    private static final ThreadLocal<Duration> OWED = ThreadLocal.withInitial(() -> Duration.ZERO);
+
     private WarmUp() {
     }
 
@@ -37,10 +39,20 @@ public final class WarmUp {
         return RUNNING.get();
     }
 
-    /** Pauses background work, so it doesn't keep the processor busy on end. */
-    static void pause(Duration duration) {
+    /** Background work owes a pause, so it doesn't keep the processor busy on end. */
+    static void pauseLater(Duration duration) {
+        OWED.set(OWED.get().plus(duration));
+    }
+
+    /** Takes the pauses owed; called where no lock is held that others may wait for. */
+    static void pauseNow() {
+        Duration owed = OWED.get();
+        if (owed.isZero()) {
+            return;
+        }
+        OWED.remove();
         try {
-            Thread.sleep(duration.toMillis());
+            Thread.sleep(owed.toMillis());
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
         }

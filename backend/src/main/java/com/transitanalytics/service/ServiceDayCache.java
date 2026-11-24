@@ -113,6 +113,7 @@ public final class ServiceDayCache<T> {
                 running.remove(day);
                 dayRows = days.computeIfAbsent(day, d -> store == null ? query.apply(start, end)
                         : store.day(d, () -> query.apply(start, end)));
+                WarmUp.pauseNow();
             } else {
                 dayRows = running.computeIfAbsent(day, Running::new).rows(now);
             }

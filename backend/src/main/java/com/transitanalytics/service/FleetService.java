@@ -52,6 +52,8 @@ public class FleetService {
     static final Duration BREAK = Duration.ofMinutes(30);
     /** Each report counts as in service until the bus's next one, up to this long (gaps in the feed don't count). */
     static final Duration REPORT_COUNTS_FOR = Duration.ofMinutes(1);
+    /** A report is polled at most this long after it was made (seconds; on 23 Nov 2026 at most 4.6 minutes). */
+    static final Duration POLLED_AFTER = Duration.ofMinutes(15);
     static final String UNKNOWN_MODEL = "unknown";
 
     /** Raised whenever what is worked out for a day changes: stored days are out of date then. */
@@ -69,7 +71,7 @@ public class FleetService {
         this.trips = trips;
         this.segments = new ServiceDayCache<>(clock, this::query, ROWS, ServiceDayCache.positionCount(jdbc),
                 summaries.store("fleet", () -> LOGIC, Segment.class));
-        summaries.onOutdated(segments::forget);
+        summaries.onOutdated("fleet", segments::forget);
         this.figures = new RecentCache<>(clock, CACHE_FOR, 8);
     }
 
@@ -99,10 +101,11 @@ public class FleetService {
 
     /**
      * A segment is an hour: it fills with the reports in it (each counting until the next, at most
-     * {@link #REPORT_COUNTS_FOR}). A window takes the hours starting in it.
+     * {@link #REPORT_COUNTS_FOR}). A window takes the hours starting in it. Hours go by when reports were polled, the
+     * query by when they were made: up to {@link #POLLED_AFTER} earlier.
      */
     static final ServiceDayCache.Rows<Segment> ROWS = new ServiceDayCache.Rows<>(Segment::hour,
-            s -> s.hour().plus(Duration.ofHours(1)), REPORT_COUNTS_FOR, Duration.ZERO, Duration.ofHours(1));
+            s -> s.hour().plus(Duration.ofHours(1)), REPORT_COUNTS_FOR, POLLED_AFTER, Duration.ofHours(1));
 
     /** A window's figures for all operators. */
     record Figures(Instant from, Instant to, List<Vehicle> fleet, List<Usage> usage, List<Breakdown> breakdowns) {

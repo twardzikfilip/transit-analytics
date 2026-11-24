@@ -12,9 +12,11 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.BiFunction;
+import java.util.function.Supplier;
 
 /**
  * The reports of the service day running now (and of the day before while its night trips may still be judged),
@@ -74,6 +76,18 @@ final class RecentReports {
     boolean covers(Instant from, Instant to) {
         Instant now = clock.instant();
         return !from.isBefore(keptFrom(now)) && !to.isAfter(now.plus(COVERS_AHEAD));
+    }
+
+    /**
+     * Reads what is kept of {@code [from, to)} in one go, with no refresh by others in between; empty when it isn't
+     * kept, or not any more after reading: a refresh drops the day before once its time is over.
+     */
+    synchronized <R> Optional<R> read(Instant from, Instant to, Supplier<R> reading) {
+        if (!covers(from, to)) {
+            return Optional.empty();
+        }
+        R result = reading.get();
+        return start != null && !start.isAfter(from) ? Optional.of(result) : Optional.empty();
     }
 
     /** The reports in {@code [from, to)}, by vehicle and time; the window must be {@link #covers covered}. */
