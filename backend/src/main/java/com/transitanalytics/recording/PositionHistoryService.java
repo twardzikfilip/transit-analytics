@@ -1,6 +1,7 @@
 package com.transitanalytics.recording;
 
 import com.transitanalytics.dto.PositionHistoryDto;
+import com.transitanalytics.service.RecentCache;
 import com.transitanalytics.service.ServiceDayCache;
 import com.transitanalytics.service.TimetableMath;
 import com.transitanalytics.service.WarmUp;
@@ -66,13 +67,20 @@ public class PositionHistoryService {
     }
 
     private static final Duration SLACK = Duration.ofMinutes(15);
+    /** How long the line and delay counts of a window are kept (windows end on the minute, so a reload hits). */
+    static final Duration COUNTS_KEPT_FOR = Duration.ofMinutes(1);
 
     private final JdbcTemplate jdbc;
     private final TransactionTemplate transaction;
     private final Clock clock;
     private final Map<String, ServiceDayCache<FleetPolls.Part>> fleetDays = new HashMap<>();
+    /** The line and delay filters' answers, kept briefly: they count every report in the window. */
+    private final RecentCache<String, List<PositionHistoryDto.RouteActivity>> routes;
+    private final RecentCache<String, List<PositionHistoryDto.DelayBand>> delays;
 
     public PositionHistoryService(JdbcTemplate jdbc, TransactionTemplate transaction, Clock clock) {
+        this.routes = new RecentCache<>(clock, COUNTS_KEPT_FOR, 16);
+        this.delays = new RecentCache<>(clock, COUNTS_KEPT_FOR, 32);
         this.jdbc = jdbc;
         this.transaction = transaction;
         this.clock = clock;
@@ -186,6 +194,16 @@ public class PositionHistoryService {
      */
     public List<PositionHistoryDto.DelayBand> delays(Instant from, Instant to, String route, String agency) {
         validate(from, to);
+        return delays.get(from + "|" + to + "|" + route + "|" + agency, () -> countDelays(from, to, route, agency));
+    }
+
+    /** Forgets the kept line and delay counts (for tests, which record new reports in the same window). */
+    void forgetCounts() {
+        routes.clear();
+        delays.clear();
+    }
+
+    private List<PositionHistoryDto.DelayBand> countDelays(Instant from, Instant to, String route, String agency) {
         String routeFilter = route == null ? "" : " AND route_name = ?";
         List<Integer> starts = DELAY_BAND_MINUTES;
         StringBuilder band = new StringBuilder("CASE");
@@ -224,6 +242,10 @@ public class PositionHistoryService {
     /** Lines of an operator (or all, null) recorded in the window, in natural line order (2, 10, 100, N1). */
     public List<PositionHistoryDto.RouteActivity> routes(Instant from, Instant to, String agency) {
         validate(from, to);
+        return routes.get(from + "|" + to + "|" + agency, () -> countRoutes(from, to, agency));
+    }
+
+    private List<PositionHistoryDto.RouteActivity> countRoutes(Instant from, Instant to, String agency) {
         List<PositionHistoryDto.RouteActivity> routes = jdbc.query("""
                 SELECT route_name, count(*) AS samples
                 FROM position_sample

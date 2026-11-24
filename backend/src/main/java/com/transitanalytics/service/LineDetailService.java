@@ -49,6 +49,8 @@ public class LineDetailService {
 
     /** Lines seen on the live feed are read again after this long. */
     static final Duration FEED_LINES_MAX_AGE = Duration.ofMinutes(5);
+    /** How long a line's performance (all its weekday runs) is kept before it is measured again. */
+    static final Duration PERFORMANCE_KEPT_FOR = Duration.ofMinutes(10);
 
     private final JdbcTemplate jdbc;
     private final RouteRepository routes;
@@ -60,6 +62,8 @@ public class LineDetailService {
     private final BusLanes busLanes;
     private final GtfsProperties feeds;
     private final RecentCache<String, List<String>> feedLines;
+    /** Each line's performance, kept a while: it reads all the line's weekday reports, and changes little. */
+    private final RecentCache<String, LineDetailDto.Performance> performances;
 
     public LineDetailService(JdbcTemplate jdbc, RouteRepository routes, LineTimetable timetables,
                              LineSubtypes subtypes, Clock clock, MapProperties map, OperatorProperties operators,
@@ -74,6 +78,7 @@ public class LineDetailService {
         this.busLanes = busLanes;
         this.feeds = feeds;
         this.feedLines = new RecentCache<>(clock, FEED_LINES_MAX_AGE, 1);
+        this.performances = new RecentCache<>(clock, PERFORMANCE_KEPT_FOR, 32);
     }
 
     /**
@@ -300,6 +305,10 @@ public class LineDetailService {
 
     @Transactional(readOnly = true)
     public LineDetailDto.Performance performance(String line) {
+        return performances.get(line, () -> measurePerformance(line));
+    }
+
+    private LineDetailDto.Performance measurePerformance(String line) {
         Route route = findRoute(line);
         if (route == null) {
             requireOnFeed(line);
