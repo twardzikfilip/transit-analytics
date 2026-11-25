@@ -83,6 +83,11 @@ class AssumedTimetableIntegrationTest {
         assertThat(service("2099-12-18")).isNull();
         assertThat(assumed()).hasSize(19);
 
+        // Christmas Eve 2099 is a Thursday: it gets the last known Sunday's services.
+        on("2099-12-20").nightly();
+        assertThat(service("2099-12-23")).isEqualTo("2099-11-25");
+        assertThat(service("2099-12-24")).isEqualTo("2099-11-22");
+
         // At most eight weeks.
         on("2100-06-01").nightly();
         assertThat(assumed()).hasSize(AssumedTimetable.MAX_DAYS);
@@ -105,6 +110,13 @@ class AssumedTimetableIntegrationTest {
         on("2099-12-02").imported("it");
         assertThat(service("2099-12-02")).isEqualTo("2099-11-28");
         assertThat(assumed()).containsExactly(LocalDate.of(2099, 11, 29), LocalDate.of(2099, 11, 30));
+    }
+
+    @Test
+    void doesNotCopyAHolidayToAnOrdinaryDay() {
+        LocalDate last = LocalDate.of(2026, 11, 14);
+        assertThat(AssumedTimetable.source(LocalDate.of(2026, 11, 18), last)).isEqualTo("2026-11-04");
+        assertThat(AssumedTimetable.source(LocalDate.of(2026, 11, 19), last)).isEqualTo("2026-11-12");
     }
 
     @Test

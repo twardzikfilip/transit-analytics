@@ -903,7 +903,7 @@
     },
     "assumed": {
       "tag": "Rozkład zakładany",
-      "note": "{{operator}}, {{from}} – {{to}}: brak opublikowanego rozkładu na te dni. Przyjęto te same dni tygodnia z ostatniego znanego tygodnia, więc kursy i opóźnienia mogą być błędne, zwłaszcza w święta."
+      "note": "{{operator}}, {{from}} – {{to}}: brak opublikowanego rozkładu na te dni. Przyjęto te same dni tygodnia z ostatniego znanego tygodnia (w święta: niedzielę), więc kursy i opóźnienia mogą być błędne."
     }
   },
   "sources": {
@@ -1558,7 +1558,7 @@
   "home": {
     "timetables": {
       "title": "Kończące się rozkłady jazdy",
-      "rule": "Nie opublikowano nowszego rozkładu. Po ostatnim dniu przyjmuje się te same dni tygodnia z ostatniego znanego tygodnia, najwyżej przez osiem tygodni; kursy i opóźnienia mogą być wtedy błędne.",
+      "rule": "Nie opublikowano nowszego rozkładu. Po ostatnim dniu przyjmuje się te same dni tygodnia z ostatniego znanego tygodnia (w święta: niedzielę), najwyżej przez osiem tygodni; kursy i opóźnienia mogą być wtedy błędne.",
       "left": {
         "one": "pozostał {{count}} dzień",
         "few": "pozostały {{count}} dni",
