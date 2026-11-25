@@ -21,7 +21,8 @@ class VehicleServiceTest {
     private final VehicleRepository repository = mock(VehicleRepository.class);
     private final VehicleService service = new VehicleService(repository,
             new com.transitanalytics.classification.VehicleClassifier(
-                    com.transitanalytics.classification.ClassificationConfigs.vehicles()));
+                    com.transitanalytics.classification.ClassificationConfigs.vehicles()),
+            com.transitanalytics.classification.ClassificationConfigs.operators());
 
     @Test
     void classesAVehicleFromItsModelAndKeepsACapacityGiven() {
@@ -36,6 +37,16 @@ class VehicleServiceTest {
         var unknown = service.create(new VehicleDto.Request("3", "BUS", null, "BKM", "Isuzu Citiport"));
         assertThat(unknown.vehicleClass()).isNull();
         assertThat(unknown.capacity()).isNull();
+    }
+
+    @Test
+    void setsTheCompanyRunningABus() {
+        given(repository.save(any(Vehicle.class))).willAnswer(inv -> inv.getArgument(0));
+
+        assertThat(service.create(new VehicleDto.Request("230", "BUS", null, "BKM", null)).operatingAgency())
+                .isEqualTo("KZK");
+        assertThat(service.create(new VehicleDto.Request("230", "BUS", null, "TUROSN", null)).operatingAgency())
+                .isEqualTo("TUROSN");
     }
 
     private static Vehicle vehicle(Long id, String number) {

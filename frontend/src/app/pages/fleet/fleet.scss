@@ -173,6 +173,14 @@ button.link {
   text-align: center;
 }
 
+/* The logos are drawn for a white background. */
+.operator-logo {
+  height: 2.25rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: var(--radius);
+  background: #fff;
+}
+
 .nowrap {
   white-space: nowrap;
 }

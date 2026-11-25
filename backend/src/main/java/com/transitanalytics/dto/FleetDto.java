@@ -11,7 +11,9 @@ public final class FleetDto {
     private FleetDto() {
     }
 
-    public record Vehicle(long id, String number, String model, String agency, VehicleClass vehicleClass) {
+    /** @param operatingAgency who runs it: KPKM, KPK or KZK for BKM, else its agency; null when not known */
+    public record Vehicle(long id, String number, String model, String agency, VehicleClass vehicleClass,
+                          String operatingAgency) {
     }
 
     /**

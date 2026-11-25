@@ -164,6 +164,13 @@ export function usageBars(usage: VehicleUsage[]): Bar[] {
 /** "1.5 h" axis labels. */
 export const hoursAxis = (v: number) => t('fleet.hours', { n: num(v) });
 
+/** The logo (in public/operators) of a company running BKM's buses; null for other operators. */
+export function operatorLogo(operatingAgency: string | null): string | null {
+  return operatingAgency && ['KPKM', 'KPK', 'KZK'].includes(operatingAgency)
+    ? `/operators/${operatingAgency.toLowerCase()}.png`
+    : null;
+}
+
 /** A size class in words, with its lengths (as configured in the backend's classification/vehicles.yml). */
 export function vehicleClassLabel(vehicleClass: string): string {
   const known = ['mini', 'midi', 'maxi', 'mega', 'double_decker'];

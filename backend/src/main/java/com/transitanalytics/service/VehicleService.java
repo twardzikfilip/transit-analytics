@@ -1,5 +1,6 @@
 package com.transitanalytics.service;
 
+import com.transitanalytics.classification.OperatorProperties;
 import com.transitanalytics.classification.VehicleClassifier;
 import com.transitanalytics.domain.Vehicle;
 import com.transitanalytics.dto.VehicleDto;
@@ -11,11 +12,14 @@ public class VehicleService extends CrudService<Vehicle, VehicleDto.Request, Veh
 
     private final VehicleRepository vehicles;
     private final VehicleClassifier classifier;
+    private final OperatorProperties operators;
 
-    public VehicleService(VehicleRepository repository, VehicleClassifier classifier) {
+    public VehicleService(VehicleRepository repository, VehicleClassifier classifier,
+                          OperatorProperties operators) {
         super(repository, "Vehicle");
         this.vehicles = repository;
         this.classifier = classifier;
+        this.operators = operators;
     }
 
     @Override
@@ -29,6 +33,7 @@ public class VehicleService extends CrudService<Vehicle, VehicleDto.Request, Veh
         e.setType(r.type());
         e.setAgency(r.agency());
         e.setModel(r.model());
+        e.setOperatingAgency(operators.operatingAgency(r.agency(), r.vehicleNumber()));
         // The class follows the model; a capacity given is kept, else the model's (when known).
         VehicleClassifier.Spec spec = classifier.classify(r.model());
         e.setVehicleClass(spec.vehicleClass());
@@ -38,6 +43,7 @@ public class VehicleService extends CrudService<Vehicle, VehicleDto.Request, Veh
     @Override
     protected VehicleDto.Response toResponse(Vehicle e) {
         return new VehicleDto.Response(e.getId(), e.getVehicleNumber(), e.getType(), e.getCapacity(),
-                e.getAgency(), e.getModel(), e.getVehicleClass());
+                e.getAgency(), e.getModel(), e.getVehicleClass(),
+                e.getOperatingAgency());
     }
 }

@@ -13,7 +13,14 @@ import { windowQuery } from '../../shared/time-window/time-window';
 import { FleetActions } from '../../store/fleet/fleet.actions';
 import { fleetFeature } from '../../store/fleet/fleet.reducer';
 import { DEFAULT_PRESET, fleetQuery, loadReport, openVehicle } from './fleet';
-import { dailyBars, dayLabel, hoursAxis, isShortWindow, timelineRows } from './fleet-format';
+import {
+  dailyBars,
+  dayLabel,
+  hoursAxis,
+  isShortWindow,
+  operatorLogo,
+  timelineRows,
+} from './fleet-format';
 import { RunTimeline } from './run-timeline';
 import { VehicleSearch } from './vehicle-search';
 import { Skeleton } from '../../shared/skeleton/skeleton';
@@ -68,6 +75,11 @@ export class VehiclePage {
     const d = this.detail();
     return d && d.vehicle.id === this.selectedId() ? d : null;
   });
+
+  /** The logo of the company running it; null when it has none here. */
+  protected readonly logo = computed(() =>
+    operatorLogo(this.shown()?.vehicle.operatingAgency ?? null),
+  );
 
   protected readonly perRun = computed(() => {
     const d = this.shown();

@@ -28,6 +28,10 @@ public class Vehicle {
     @Column(name = "vehicle_class", length = 16)
     private VehicleClass vehicleClass;
 
+    /** Who runs the bus: KPKM, KPK or KZK for BKM, else its agency (classification/operators.yml); null if not known. */
+    @Column(name = "operating_agency", length = 64)
+    private String operatingAgency;
+
     public Long getId() {
         return id;
     }
@@ -82,5 +86,13 @@ public class Vehicle {
 
     public void setVehicleClass(VehicleClass vehicleClass) {
         this.vehicleClass = vehicleClass;
+    }
+
+    public String getOperatingAgency() {
+        return operatingAgency;
+    }
+
+    public void setOperatingAgency(String operatingAgency) {
+        this.operatingAgency = operatingAgency;
     }
 }

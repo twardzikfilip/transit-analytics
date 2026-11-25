@@ -9,6 +9,8 @@ export interface FleetVehicle {
   agency: string | null;
   /** Size class from the model; null when not known. */
   vehicleClass: VehicleClass | null;
+  /** Who runs it: KPKM, KPK or KZK for BKM, else its agency; null when not known. */
+  operatingAgency: string | null;
 }
 
 /** An operator and how many buses of the fleet are its. */

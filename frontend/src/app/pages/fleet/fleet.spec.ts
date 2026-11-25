@@ -47,6 +47,7 @@ const bus = (
   model,
   agency: 'BKM',
   vehicleClass: model ? 'maxi' : null,
+  operatingAgency: 'KZK',
 });
 const usage = (v: FleetVehicle, hours: number, lines: string[] = ['103']): VehicleUsage => ({
   vehicle: v,
@@ -463,6 +464,33 @@ describe('Fleet page', () => {
     expect(store.dispatch).toHaveBeenCalledWith(
       FleetActions.loadVehicle({ id: 1, window: WINDOW }),
     );
+  });
+
+  it('shows the logo of the company running the bus, when it has one', () => {
+    const logo = (operatingAgency: string | null) => {
+      const d = detail();
+      const { el } = renderPage(
+        VehiclePage,
+        stateAfter(
+          fleetFeature,
+          FleetActions.loaded({ report: report() }),
+          FleetActions.vehicleLoaded({
+            vehicle: { ...d, vehicle: { ...d.vehicle, operatingAgency } },
+          }),
+        ),
+        URL,
+        [],
+        { id: '1' },
+      );
+      const img = el.querySelector<HTMLImageElement>('.detail-header img');
+      const found = img && [img.getAttribute('src'), img.alt];
+      TestBed.resetTestingModule();
+      return found;
+    };
+    expect(logo('KZK')).toEqual(['/operators/kzk.png', 'KZK']);
+    expect(logo('KPKM')).toEqual(['/operators/kpkm.png', 'KPKM']);
+    expect(logo('TUROSN')).toBeNull();
+    expect(logo(null)).toBeNull();
   });
 
   it('tells each breakdown of the bus step by step, with both buses on a time line and a map', async () => {

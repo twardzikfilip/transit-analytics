@@ -10,6 +10,14 @@
   <section class="card detail" [class.loading]="loadingVehicle()">
     <div class="detail-header">
       <span class="badge">{{ d.vehicle.number }}</span>
+      @if (logo(); as src) {
+        <img
+          class="operator-logo"
+          [src]="src"
+          [alt]="d.vehicle.operatingAgency"
+          [title]="d.vehicle.operatingAgency"
+        />
+      }
       <div>
         <h3>{{ d.vehicle.model ?? t('fleet.modelUnknown') }}</h3>
         <span class="muted">

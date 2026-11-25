@@ -11,7 +11,12 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Keeps every bus's class (and capacity, where known) in line with {@code classification/vehicles.yml}. */
+import java.util.Objects;
+
+/**
+ * Keeps every bus's class (and capacity, where known) in line with {@code classification/vehicles.yml}, and the company
+ * running it with {@code classification/operators.yml}.
+ */
 @Service
 public class VehicleClasses {
 
@@ -19,10 +24,13 @@ public class VehicleClasses {
 
     private final VehicleRepository vehicles;
     private final VehicleClassifier classifier;
+    private final OperatorProperties operators;
 
-    public VehicleClasses(VehicleRepository vehicles, VehicleClassifier classifier) {
+    public VehicleClasses(VehicleRepository vehicles, VehicleClassifier classifier,
+                          OperatorProperties operators) {
         this.vehicles = vehicles;
         this.classifier = classifier;
+        this.operators = operators;
     }
 
     /** Classes every bus at startup, before the lines are classified (their capacity counts the big buses). */
@@ -32,16 +40,16 @@ public class VehicleClasses {
     public void applyAll() {
         int changed = 0;
         for (Vehicle v : vehicles.findAll()) {
-            if (apply(v, classifier.classify(v.getModel()))) {
+            if (apply(v)) {
                 changed++;
             }
         }
-        log.info("Vehicle classes applied; {} vehicles changed", changed);
+        log.info("Vehicle classes and operators applied; {} vehicles changed", changed);
     }
 
     /**
-     * Classes the buses transit-recorder registered since (it stores a new bus's number, type and model only), every
-     * few minutes.
+     * Classes the buses transit-recorder registered since (it stores a new bus's number, type, agency and model only),
+     * every few minutes.
      *
      * @return how many were classed
      */
@@ -50,13 +58,23 @@ public class VehicleClasses {
     @Transactional
     public int applyToNew() {
         int changed = 0;
-        for (Vehicle v : vehicles.findByVehicleClassIsNullAndModelIsNotNull()) {
-            if (apply(v, classifier.classify(v.getModel()))) {
+        for (Vehicle v : vehicles.findUnclassified()) {
+            if (apply(v)) {
                 changed++;
             }
         }
         if (changed > 0) {
-            log.info("Vehicle classes applied to {} new vehicles", changed);
+            log.info("Vehicle classes and operators applied to {} new vehicles", changed);
+        }
+        return changed;
+    }
+
+    private boolean apply(Vehicle v) {
+        boolean changed = apply(v, classifier.classify(v.getModel()));
+        String operator = operators.operatingAgency(v.getAgency(), v.getVehicleNumber());
+        if (!Objects.equals(operator, v.getOperatingAgency())) {
+            v.setOperatingAgency(operator);
+            changed = true;
         }
         return changed;
     }

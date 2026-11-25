@@ -25,10 +25,10 @@ class FleetServiceTest {
 
     private static final LocalDate DAY = LocalDate.of(2026, 11, 16);
     private static final Instant HOUR = Instant.parse("2026-11-16T09:00:00Z");
-    private static final Vehicle A = new Vehicle(1, "230", "Solaris Urbino 12", "BKM", VehicleClass.MAXI);
-    private static final Vehicle B = new Vehicle(2, "9", "Solaris Urbino 12", "BKM", VehicleClass.MAXI);
-    private static final Vehicle C = new Vehicle(3, "1050", null, "TUROSN", null);
-    private static final Vehicle IDLE = new Vehicle(4, "17", "Yutong U12", "BKM", VehicleClass.MAXI);
+    private static final Vehicle A = new Vehicle(1, "230", "Solaris Urbino 12", "BKM", VehicleClass.MAXI, null);
+    private static final Vehicle B = new Vehicle(2, "9", "Solaris Urbino 12", "BKM", VehicleClass.MAXI, null);
+    private static final Vehicle C = new Vehicle(3, "1050", null, "TUROSN", null, null);
+    private static final Vehicle IDLE = new Vehicle(4, "17", "Yutong U12", "BKM", VehicleClass.MAXI, null);
 
     private static Instant at(String hhmm) {
         return ServiceDay.gtfsTimeZero(DAY).plusSeconds(
@@ -41,9 +41,9 @@ class FleetServiceTest {
 
     @Test
     void ordersSizeClassesSmallestFirstAndTakesTheMakeFromTheModelName() {
-        Vehicle big = new Vehicle(10, "500", "Solaris Urbino 18", "BKM", VehicleClass.MEGA);
-        Vehicle mini = new Vehicle(11, "501", "Karsan Jest", "BKM", VehicleClass.MINI);
-        Vehicle dd = new Vehicle(12, "502", "MAN ND313 Lion`s City DD", "X", VehicleClass.DOUBLE_DECKER);
+        Vehicle big = new Vehicle(10, "500", "Solaris Urbino 18", "BKM", VehicleClass.MEGA, null);
+        Vehicle mini = new Vehicle(11, "501", "Karsan Jest", "BKM", VehicleClass.MINI, null);
+        Vehicle dd = new Vehicle(12, "502", "MAN ND313 Lion`s City DD", "X", VehicleClass.DOUBLE_DECKER, null);
         assertThat(FleetService.classes(List.of(dd, big, A, mini), List.of())).extracting(FleetDto.ModelCount::model)
                 .containsExactly("mini", "maxi", "mega", "double_decker");
         assertThat(FleetService.make("  Mercedes-Benz Conecto G")).isEqualTo("Mercedes-Benz");
