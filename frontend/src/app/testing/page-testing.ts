@@ -5,7 +5,7 @@ import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/route
 import { Action, ActionReducer } from '@ngrx/store';
 import { MockStore, provideMockStore } from '@ngrx/store/testing';
 import { BehaviorSubject, of } from 'rxjs';
-import { BoundaryApi, BusLaneApi } from '../core/api/api.services';
+import { BoundaryApi, BusLaneApi, GtfsApi } from '../core/api/api.services';
 import { BusLanes, CityBoundaries, Session } from '../core/models/models';
 import { provideTestI18n } from './i18n-testing';
 
@@ -136,6 +136,7 @@ export function renderPage<T>(
       provideMockStore({ initialState: state }),
       { provide: BoundaryApi, useValue: { boundaries: () => of(TEST_BOUNDARIES) } },
       { provide: BusLaneApi, useValue: { lanes: () => of(TEST_BUS_LANES), report: () => of() } },
+      { provide: GtfsApi, useValue: { coverage: () => of() } },
       {
         provide: ActivatedRoute,
         useValue: {

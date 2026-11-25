@@ -876,6 +876,10 @@
       "pksnova-500": "PKS Nova",
       "wschodexpress": "Wschód Express",
       "turosn-koscielna": "Turośń Kościelna"
+    },
+    "assumed": {
+      "tag": "Angenommener Fahrplan",
+      "note": "{{operator}}, {{from}} – {{to}}: Für diese Tage ist kein Fahrplan veröffentlicht. Angenommen werden dieselben Wochentage der letzten bekannten Woche; Fahrten und Verspätungen können daher falsch sein, vor allem an Feiertagen."
     }
   },
   "sources": {
@@ -1518,7 +1522,7 @@
   "home": {
     "timetables": {
       "title": "Bald endende Fahrpläne",
-      "rule": "Es wurde kein neuerer Fahrplan veröffentlicht. Nach dem letzten Tag lassen sich Verspätungen gegenüber dem Fahrplan, Fahrten und Umläufe dieses Betreibers nicht mehr bestimmen; Positionen werden weiter aufgezeichnet.",
+      "rule": "Es wurde kein neuerer Fahrplan veröffentlicht. Nach dem letzten Tag werden dieselben Wochentage der letzten bekannten Woche angenommen, höchstens acht Wochen lang; Fahrten und Verspätungen können dann falsch sein.",
       "left": {
         "one": "noch {{count}} Tag",
         "other": "noch {{count}} Tage"
@@ -1526,7 +1530,8 @@
       "today": "heute ist der letzte Tag",
       "ended": "abgelaufen",
       "notLoaded": "nicht geladen",
-      "lastDay": "letzter Tag: {{day}}"
+      "lastDay": "letzter Tag: {{day}}",
+      "assumedUntil": "angenommen bis {{day}}"
     },
     "trackers": {
       "title": "Busse mit möglicherweise defektem Sender",

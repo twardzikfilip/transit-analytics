@@ -5,6 +5,7 @@ import { Store } from '@ngrx/store';
 import { interval } from 'rxjs';
 import { BrigadeDay } from '../../core/models/models';
 import { injectBackLink } from '../../core/title/page-back';
+import { AssumedTimetable } from '../../shared/assumed-timetable';
 import { injectSetQuery } from '../../shared/url-query';
 import { BrigadesActions } from '../../store/brigades/brigades.actions';
 import { brigadesFeature } from '../../store/brigades/brigades.reducer';
@@ -27,7 +28,7 @@ const SETTLES_MS = 60 * 60_000;
  */
 @Component({
   selector: 'app-brigade',
-  imports: [Skeleton, BrigadeDayChart, TripList],
+  imports: [AssumedTimetable, Skeleton, BrigadeDayChart, TripList],
   templateUrl: './brigade.html',
   styleUrl: './brigades.scss',
 })
@@ -45,6 +46,8 @@ export class BrigadePage {
   protected readonly loadingDay = this.store.selectSignal(brigadesFeature.selectLoadingDay);
 
   protected readonly brigade = computed(() => this.path().get('brigade') ?? '');
+  /** The operator the brigade was opened from (?agency=): another operator's is its feed. */
+  protected readonly agency = computed(() => this.params().get('agency'));
   /** The day in the URL, else today's service day (as the backend says, with the brigade's day). */
   protected readonly date = computed(
     () => this.params().get('date') ?? this.shown()?.serviceDay ?? '',

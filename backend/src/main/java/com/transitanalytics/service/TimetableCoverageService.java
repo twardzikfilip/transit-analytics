@@ -48,22 +48,28 @@ public class TimetableCoverageService {
         jdbc.query("""
                 SELECT c.feed, max(c.date) AS last FROM calendar_date c
                 WHERE c.exception_type = 1
+                  AND NOT EXISTS (SELECT 1 FROM assumed_timetable_day a WHERE a.feed = c.feed AND a.date = c.date)
                   AND EXISTS (SELECT 1 FROM trip t WHERE t.feed = c.feed AND t.service_id = c.service_id)
                 GROUP BY c.feed""", rs -> {
             last.put(rs.getString("feed"), rs.getObject("last", LocalDate.class));
         });
+        Map<String, List<LocalDate>> assumed = new HashMap<>();
+        jdbc.query("SELECT feed, date FROM assumed_timetable_day ORDER BY date", rs -> {
+            assumed.computeIfAbsent(rs.getString("feed"), k -> new ArrayList<>())
+                    .add(rs.getObject("date", LocalDate.class));
+        });
         List<String> keys = new ArrayList<>(List.of(TimetableFeed.MAIN));
         keys.addAll(new TreeSet<>(properties.extra().keySet()));
         return new TimetableCoverageDto(today, WARN_DAYS,
-                keys.stream().map(key -> feed(key, last.get(key), today)).toList());
+                keys.stream().map(key -> feed(key, last.get(key), assumed.getOrDefault(key, List.of()), today)).toList());
     }
 
-    static TimetableCoverageDto.Feed feed(String key, LocalDate lastDay, LocalDate today) {
+    static TimetableCoverageDto.Feed feed(String key, LocalDate lastDay, List<LocalDate> assumed, LocalDate today) {
         if (lastDay == null) {
-            return new TimetableCoverageDto.Feed(key, null, null, true);
+            return new TimetableCoverageDto.Feed(key, null, null, true, assumed);
         }
         int left = (int) ChronoUnit.DAYS.between(today, lastDay);
-        return new TimetableCoverageDto.Feed(key, lastDay, left, left <= WARN_DAYS);
+        return new TimetableCoverageDto.Feed(key, lastDay, left, left <= WARN_DAYS, assumed);
     }
 
     /** After the nightly imports: says in the log which timetables are ending. */

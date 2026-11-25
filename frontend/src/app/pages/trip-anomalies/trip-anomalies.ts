@@ -4,6 +4,7 @@ import { ActivatedRoute } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { concat, distinctUntilChanged, interval, map, of, switchMap } from 'rxjs';
 import { AbnormalTrip, TripAnomalyKind } from '../../core/models/models';
+import { AssumedTimetable } from '../../shared/assumed-timetable';
 import { PathLine, PathMap } from '../../shared/map/path-map';
 import { cssColor } from '../../shared/palette';
 import { TimeWindowPicker } from '../../shared/time-window/time-window-picker';
@@ -58,7 +59,7 @@ export function refreshes(w: TimeWindow): boolean {
  */
 @Component({
   selector: 'app-trip-anomalies',
-  imports: [LineBadge, Skeleton, LocalDatePipe, TimeWindowPicker, PathMap],
+  imports: [AssumedTimetable, LineBadge, Skeleton, LocalDatePipe, TimeWindowPicker, PathMap],
   templateUrl: './trip-anomalies.html',
   styleUrl: './trip-anomalies.scss',
 })

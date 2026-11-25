@@ -900,6 +900,10 @@
       "pksnova-500": "PKS Nova",
       "wschodexpress": "Wschód Express",
       "turosn-koscielna": "Turośń Kościelna"
+    },
+    "assumed": {
+      "tag": "Rozkład zakładany",
+      "note": "{{operator}}, {{from}} – {{to}}: brak opublikowanego rozkładu na te dni. Przyjęto te same dni tygodnia z ostatniego znanego tygodnia, więc kursy i opóźnienia mogą być błędne, zwłaszcza w święta."
     }
   },
   "sources": {
@@ -1554,7 +1558,7 @@
   "home": {
     "timetables": {
       "title": "Kończące się rozkłady jazdy",
-      "rule": "Nie opublikowano nowszego rozkładu. Po ostatnim dniu nie da się wyznaczyć opóźnień względem rozkładu, kursów ani brygad tego przewoźnika; pozycje są nadal zapisywane.",
+      "rule": "Nie opublikowano nowszego rozkładu. Po ostatnim dniu przyjmuje się te same dni tygodnia z ostatniego znanego tygodnia, najwyżej przez osiem tygodni; kursy i opóźnienia mogą być wtedy błędne.",
       "left": {
         "one": "pozostał {{count}} dzień",
         "few": "pozostały {{count}} dni",
@@ -1564,7 +1568,8 @@
       "today": "dziś jest ostatni dzień",
       "ended": "zakończony",
       "notLoaded": "niewczytany",
-      "lastDay": "ostatni dzień: {{day}}"
+      "lastDay": "ostatni dzień: {{day}}",
+      "assumedUntil": "zakładany do: {{day}}"
     },
     "trackers": {
       "title": "Autobusy z możliwie wadliwym nadajnikiem",

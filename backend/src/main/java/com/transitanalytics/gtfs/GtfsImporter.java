@@ -177,11 +177,14 @@ public class GtfsImporter {
     private final DataSource dataSource;
     private final JdbcTemplate jdbc;
     private final TransactionTemplate transaction;
+    private final AssumedTimetable assumed;
 
-    public GtfsImporter(DataSource dataSource, JdbcTemplate jdbc, TransactionTemplate transaction) {
+    public GtfsImporter(DataSource dataSource, JdbcTemplate jdbc, TransactionTemplate transaction,
+                        AssumedTimetable assumed) {
         this.dataSource = dataSource;
         this.jdbc = jdbc;
         this.transaction = transaction;
+        this.assumed = assumed;
     }
 
     /** Result of loading a feed, before the caller adds where it came from. */
@@ -305,6 +308,7 @@ public class GtfsImporter {
         jdbc.update("DELETE FROM calendar_date WHERE feed = " + f);
         note(skipped, GtfsFile.CALENDAR_DATES,
                 staged.get(GtfsFile.CALENDAR_DATES) - jdbc.update(INSERT_CALENDAR_DATES.formatted(f)));
+        assumed.imported(feed);
 
         jdbc.update("DELETE FROM shape_point WHERE feed = " + f);
         note(skipped, GtfsFile.SHAPES, staged.get(GtfsFile.SHAPES) - jdbc.update(INSERT_SHAPE_POINTS.formatted(f)));

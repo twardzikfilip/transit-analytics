@@ -133,7 +133,7 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   Also every stretch between two consecutive stops (both directions together) with its peak and all-day buses and
   its route shape, for the maps. Computed in the background at startup and cached per timetable.
 - `GET /api/gtfs/coverage` — until when each timetable runs: its last day with trips, days left, and whether it is
-  ending (5 days or fewer left, ended, or not loaded). Also logged as a warning every night at 05:00.
+  ending (5 days or fewer left, ended, or not loaded), and its assumed days (see the feeds below). Also logged as a warning every night at 05:00.
 - `POST /api/gtfs/{feed}/import` (admin) — downloads a GTFS timetable and loads it: `bialystok` (the city's) or
   another operator's feed from `app.gtfs.extra` (`pksnova-500`, `wschodexpress`, `turosn-koscielna`); see below.
 - `GET /api/zbiorkom/bialystok/positions` — live Białystok vehicle positions from [zbiorkom.live](https://zbiorkom.live),
@@ -330,7 +330,10 @@ timetable. Every timetable row has a `feed` column (`bialystok` for the city's, 
 as the feed gives them; feeds reuse each other's ids (stop `536`, service `319`, agency `1`), so ids are unique per
 feed and the import looks them up within the feed. An import replaces only that feed's rows (the city's import leaves
 the others alone too). Imported with `POST /api/gtfs/<key>/import` and again every night at 04:50
-(`extra-refresh-cron`), as these feeds cover about two weeks at a time.
+(`extra-refresh-cron`), as these feeds cover about two weeks at a time. When no newer one is published, a feed is
+continued after its last day, up to a week ahead and for at most eight weeks: each day gets the services of the same
+weekday in its last known week. These days are marked as assumed (`assumed_timetable_day`) and an import that has them
+replaces them. Public holidays aren't known, so they get their weekday's services.
 
 - **Shared stops:** these feeds give a city stop their own id and BKM's id as its code (Wschód Express's stop `536`,
   code `305`, is BKM's al. Piłsudskiego/Rzeka Biała, `305`). A stop whose code is a BKM stop id within 60 m of it is
@@ -551,7 +554,7 @@ PGPASSWORD=transit psql -h localhost -U transit transit_test -c "CREATE EXTENSIO
 - Startup bundle: telemetry (the OpenTelemetry SDK) loads as its own chunk right after startup, and the NgRx
   devtools are only in development builds (`store-devtools.prod.ts` replaces them in production).
 - `pages` — login, settings (theme; versions; GTFS import for admins), sources (where the data comes from; "Data sources" in the header menu), and:
-- Home: a warning on top while a timetable is ending (`/api/gtfs/coverage`; nothing otherwise); then buses with a possibly faulty tracker first (a tile with a red border while any bus is listed: each bus links
+- Home: a warning on top while a timetable is ending (`/api/gtfs/coverage`; nothing otherwise; with the day until which it is assumed. Trips, Abnormal trips and a brigade's page opened from its operator's list say when a day shown is assumed); then buses with a possibly faulty tracker first (a tile with a red border while any bus is listed: each bus links
   to its page, with its no-signal trips of all it ran, the days, its lines and the latest), then the live map
   (Leaflet/OSM; a `livePositions` load every 5 s, markers drawn from the store). Each bus is a pill-shaped badge with
   its line number in its kind's colour, an arrow pointing its way when the feed gives a bearing, and a ring in the

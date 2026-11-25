@@ -110,4 +110,6 @@ export interface FeedCoverage {
   /** 0 when today is the last day, negative once it has ended. */
   daysLeft: number | null;
   ending: boolean;
+  /** Days continued with its last known week's services, in order ("2026-11-29"). */
+  assumed: string[];
 }
