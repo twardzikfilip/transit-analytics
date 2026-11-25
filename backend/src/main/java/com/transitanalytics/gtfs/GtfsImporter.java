@@ -204,6 +204,11 @@ public class GtfsImporter {
      * digits or '-'.
      */
     public Loaded load(ZipFile zip, String feed) {
+        return load(zip, feed, null);
+    }
+
+    /** As {@link #load(ZipFile, String)}, only part of the feed (null: all of it). */
+    public Loaded load(ZipFile zip, String feed, GtfsProperties.Selection only) {
         if (!feed.matches("[a-z0-9-]{1,32}")) {
             throw new IllegalArgumentException("Not a feed key: " + feed);
         }
@@ -220,6 +225,9 @@ public class GtfsImporter {
         try {
             return transaction.execute(status -> {
                 Map<GtfsFile, Long> staged = stage(zip);
+                if (only != null) {
+                    select(staged, only);
+                }
                 Map<String, Long> skipped = merge(staged, feed);
                 // ON COMMIT DROP would remove them too, but not if this runs inside a longer transaction.
                 for (GtfsFile file : GtfsFile.values()) {
@@ -262,6 +270,35 @@ public class GtfsImporter {
             throw new GtfsFeedException("Could not read the feed: " + ex.getMessage(), ex);
         } finally {
             DataSourceUtils.releaseConnection(connection, dataSource);
+        }
+    }
+
+    /** Keeps only a part of what was staged: the chosen trips and what they use; {@code staged} is set to what is left. */
+    private void select(Map<GtfsFile, Long> staged, GtfsProperties.Selection only) {
+        String[] agencies = only.agencies().toArray(String[]::new);
+        String[] stations = only.stations().toArray(String[]::new);
+        jdbc.update("DELETE FROM gtfs_routes WHERE agency_id IS NULL OR agency_id <> ALL (?)", (Object) agencies);
+        jdbc.update("DELETE FROM gtfs_trips WHERE route_id NOT IN (SELECT route_id FROM gtfs_routes)");
+        jdbc.update("""
+                DELETE FROM gtfs_trips WHERE trip_id NOT IN (
+                    SELECT st.trip_id FROM gtfs_stop_times st JOIN gtfs_stops s ON s.stop_id = st.stop_id
+                    WHERE s.stop_id = ANY (?) OR s.parent_station = ANY (?))""", stations, stations);
+        jdbc.update("DELETE FROM gtfs_routes WHERE route_id NOT IN (SELECT route_id FROM gtfs_trips)");
+        jdbc.update("DELETE FROM gtfs_agency WHERE agency_id NOT IN (SELECT agency_id FROM gtfs_routes)");
+        jdbc.update("DELETE FROM gtfs_stop_times WHERE trip_id NOT IN (SELECT trip_id FROM gtfs_trips)");
+        jdbc.update("""
+                DELETE FROM gtfs_stops WHERE stop_id NOT IN (
+                    SELECT stop_id FROM gtfs_stop_times
+                    UNION
+                    SELECT s.parent_station FROM gtfs_stops s JOIN gtfs_stop_times st ON st.stop_id = s.stop_id
+                    WHERE s.parent_station IS NOT NULL)""");
+        jdbc.update("DELETE FROM gtfs_calendar_dates WHERE service_id NOT IN (SELECT service_id FROM gtfs_trips)");
+        jdbc.update("""
+                DELETE FROM gtfs_shapes
+                WHERE shape_id NOT IN (SELECT shape_id FROM gtfs_trips WHERE shape_id IS NOT NULL)""");
+        for (GtfsFile file : GtfsFile.values()) {
+            jdbc.execute("ANALYZE " + file.stagingTable());
+            staged.put(file, jdbc.queryForObject("SELECT count(*) FROM " + file.stagingTable(), Long.class));
         }
     }
 

@@ -1,0 +1,44 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.map-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.legend .item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* As RAILWAY_STYLES in the palette. */
+.swatch.railway,
+.swatch.spur {
+  height: 3px;
+  background: #495057;
+}
+
+.swatch.spur {
+  height: 1px;
+}
+
+.routes {
+  h2 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+
+  .intro {
+    margin: 0.25rem 0 0.75rem;
+  }
+}
+
+.note {
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
+}

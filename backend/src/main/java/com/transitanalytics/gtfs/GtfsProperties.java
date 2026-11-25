@@ -3,9 +3,11 @@ package com.transitanalytics.gtfs;
 import com.transitanalytics.domain.TimetableFeed;
 import com.transitanalytics.zbiorkom.BialystokFeed;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.ConstructorBinding;
 import org.springframework.util.unit.DataSize;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -33,8 +35,26 @@ public record GtfsProperties(Duration connectTimeout, Duration readTimeout, Data
      * @param name   what the feed is, for people
      * @param agency the operator its buses have on the live feed (e.g. "WSCHODEXPRESS"), so a line's recorded runs
      *               can be told from another operator's line of the same number; null when its buses aren't on it
+     * @param only   the part of the feed to load; null: all of it
      */
-    public record Feed(String url, String name, String agency) {
+    public record Feed(String url, String name, String agency, Selection only) {
+
+        @ConstructorBinding
+        public Feed {
+        }
+
+        public Feed(String url, String name, String agency) {
+            this(url, name, agency, null);
+        }
+    }
+
+    /**
+     * Part of a feed: every trip of some agencies that calls at one of some stations, with its whole run.
+     *
+     * @param agencies their ids in the feed
+     * @param stations their ids in the feed: a stop's, or its parent station's
+     */
+    public record Selection(List<String> agencies, List<String> stations) {
     }
 
     /** The feed with this key ({@code bialystok} or a key under {@code extra}); null if there is none. */

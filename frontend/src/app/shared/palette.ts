@@ -100,6 +100,12 @@ export const BUS_LANE_STYLE = {
   label: 'palette.busLane',
 } as const;
 
+/** Railways on the City rail map, under the routes: lines, and thinner the spurs to depots and factories. */
+export const RAILWAY_STYLES = {
+  line: { color: '#495057', weight: 2, opacity: 0.8 },
+  spur: { color: '#495057', weight: 1, opacity: 0.7 },
+} as const;
+
 /** Dark ink for outlines and dots on maps (chosen or highlighted marks, stops). */
 export const INK = '#1f2933';
 /** White, for outlines that separate neighbouring areas on maps. */

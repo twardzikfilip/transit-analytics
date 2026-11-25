@@ -28,7 +28,8 @@
     "loading": "Wczytywanie",
     "version": "Wersja {{version}}",
     "backToBrigades": "Wróć do wszystkich brygad",
-    "backToFleet": "Wróć do przeglądu taboru"
+    "backToFleet": "Wróć do przeglądu taboru",
+    "cityRail": "Kolej Miejska"
   },
   "titles": {
     "home": "Start",
@@ -49,7 +50,8 @@
     "trips": "Kursy",
     "stopTimes": "Godziny odjazdów",
     "sources": "Źródła danych",
-    "settings": "Ustawienia"
+    "settings": "Ustawienia",
+    "cityRail": "Kolej Miejska"
   },
   "login": {
     "username": "Nazwa użytkownika",
@@ -899,7 +901,8 @@
       "bialystok": "BKM",
       "pksnova-500": "PKS Nova",
       "wschodexpress": "Wschód Express",
-      "turosn-koscielna": "Turośń Kościelna"
+      "turosn-koscielna": "Turośń Kościelna",
+      "rail": "Polregio, PKP Intercity"
     },
     "assumed": {
       "tag": "Rozkład zakładany",
@@ -943,6 +946,12 @@
       "name": "Turośń Kościelna, linia 700 (GTFS)",
       "gives": "Rozkład linii Białystok – Turośń Kościelna; jej przystanki w mieście to przystanki BKM (nieoficjalne źródło, CC0).",
       "usedOn": "Linie, Brygady, Przystanki, Narastanie opóźnień, Miejsca przestojów, Buspasy",
+      "refreshed": "Co noc"
+    },
+    "rail": {
+      "name": "Pociągi Polregio i PKP Intercity (GTFS)",
+      "gives": "Rozkłady pociągów Polregio i PKP Intercity na liniach kolejowych wokół Białegostoku: dane PKP Polskie Linie Kolejowe S.A., w formacie GTFS opracowane przez Mikołaja Kuranowskiego.",
+      "usedOn": "Kolej Miejska",
       "refreshed": "Co noc"
     },
     "osm": {
@@ -1648,5 +1657,30 @@
       "noStop": "Nie zatrzymał się"
     },
     "halts": "Najdłuższe postoje na przystankach:"
+  },
+  "cityRail": {
+    "loading": "Wczytywanie linii kolejowych",
+    "mapLabel": "Mapa linii kolejowych i tras pociągów",
+    "railways": "Linia kolejowa",
+    "spurs": "Bocznica (zajezdnie, zakłady)",
+    "reach": "Trasy pokazane są do stacji Łapy, Knyszyn, Czarna Białostocka i Lewickie, pozostałe linie kolejowe do 10 km od granic miasta.",
+    "railwayLine": "Linia kolejowa nr {{ref}}",
+    "routes": "Trasy Polregio",
+    "intro": "Pociągi korzystające wokół Białegostoku z tej samej linii kolejowej to jedna trasa, niezależnie od tego, dokąd jadą dalej. Wybierz trasę, aby wyróżnić ją na mapie.",
+    "route": "Trasa i jej stacje",
+    "destinations": "Pociągi do i z",
+    "day": {
+      "weekday": "Dzień roboczy",
+      "saturday": "Sobota",
+      "sunday": "Niedziela"
+    },
+    "fromCity": "Z Białegostoku",
+    "toCity": "Do Białegostoku",
+    "note": "Liczba pociągów na dobę, w najbliższym takim dniu rozkładu. Pociąg przejeżdżający przez Białystok liczy się na obu swoich trasach.",
+    "notLoaded": "Rozkłady pociągów nie są jeszcze wczytane. Są importowane co noc.",
+    "routeOnly": "Trasa",
+    "total": "Wszystkie trasy",
+    "allTrains": "Wszystkie pociągi: Polregio i PKP Intercity",
+    "allIntro": "Te same trasy, z pociągami obu przewoźników łącznie."
   }
 }

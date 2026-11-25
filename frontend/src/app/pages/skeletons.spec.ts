@@ -4,6 +4,8 @@ import { BrigadesActions } from '../store/brigades/brigades.actions';
 import { brigadesFeature } from '../store/brigades/brigades.reducer';
 import { BusLanesActions } from '../store/bus-lanes/bus-lanes.actions';
 import { busLanesFeature } from '../store/bus-lanes/bus-lanes.reducer';
+import { CityRailActions } from '../store/city-rail/city-rail.actions';
+import { cityRailFeature } from '../store/city-rail/city-rail.reducer';
 import { CorridorsActions } from '../store/corridors/corridors.actions';
 import { corridorsFeature } from '../store/corridors/corridors.reducer';
 import { DelayGenerationActions } from '../store/delay-generation/delay-generation.actions';
@@ -24,6 +26,7 @@ import { renderPage, stateAfter, useSvgMaps } from '../testing/page-testing';
 import { BrigadePage } from './brigades/brigade';
 import { BrigadesPage } from './brigades/brigades';
 import { BusLanesPage } from './bus-lanes/bus-lanes';
+import { CityRail } from './city-rail/city-rail';
 import { Corridors } from './corridors/corridors';
 import { DelayGeneration } from './delay-generation/delay-generation';
 import { Fleet } from './fleet/fleet';
@@ -86,6 +89,7 @@ const LOADING: [string, Type<unknown>, Record<string, unknown>, Record<string, s
     stateAfter(delayGenerationFeature, DelayGenerationActions.load({ window: WINDOW })),
     {},
   ],
+  ['City rail', CityRail, stateAfter(cityRailFeature, CityRailActions.load()), {}],
   ['Corridors', Corridors, stateAfter(corridorsFeature, CorridorsActions.load()), {}],
   [
     'Routes',

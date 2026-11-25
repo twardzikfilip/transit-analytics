@@ -96,7 +96,8 @@ public class GtfsFeedService {
         Path file = downloader.download(url);
         try (ZipFile zip = new ZipFile(file.toFile())) {
             long bytes = Files.size(file);
-            GtfsImporter.Loaded loaded = importer.load(zip, key);
+            GtfsImporter.Loaded loaded = feed.only() == null ? importer.load(zip, key)
+                    : importer.load(zip, key, feed.only());
             long ms = Duration.between(start, Instant.now()).toMillis();
             log.info("Imported GTFS feed {} ({} bytes) in {} ms: {}; skipped {}; ignored files {}",
                     key, bytes, ms, loaded.rows(), loaded.skipped(), loaded.ignoredFiles());

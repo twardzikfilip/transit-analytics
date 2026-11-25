@@ -75,6 +75,7 @@ export class Sources {
     { id: 'pks', url: 'https://files.girlc.at/gtfs/pks_nova_suprasl.zip' },
     { id: 'wschodexpress', url: 'https://files.girlc.at/gtfs/wschod_express.zip' },
     { id: 'turosn', url: 'https://files.girlc.at/gtfs/turosn_koscielna.zip' },
+    { id: 'rail', url: 'https://mkuran.pl/gtfs/' },
     { id: 'osm', url: 'https://www.openstreetmap.org' },
     { id: 'osrm', url: 'https://router.project-osrm.org' },
     { id: 'city', url: null },

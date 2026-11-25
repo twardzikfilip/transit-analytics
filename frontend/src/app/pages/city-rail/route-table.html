@@ -1,0 +1,62 @@
+<div class="data-table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th rowspan="2">{{ t(stations() ? 'cityRail.route' : 'cityRail.routeOnly') }}</th>
+        <th rowspan="2">{{ t('cityRail.destinations') }}</th>
+        @for (d of days(); track d.kind) {
+          <th colspan="2" class="day">
+            {{ t('cityRail.day.' + d.kind) }}
+            <span class="date">{{ d.date | date: 'd MMM' }}</span>
+          </th>
+        }
+      </tr>
+      <tr>
+        @for (d of days(); track d.kind) {
+          <th class="num first">{{ t('cityRail.fromCity') }}</th>
+          <th class="num">{{ t('cityRail.toCity') }}</th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @for (route of rows(); track route.id) {
+        <tr
+          [class.chosen]="chosen() === route.id"
+          (mouseenter)="hover.emit(route.id)"
+          (mouseleave)="hover.emit(null)"
+          (click)="choose.emit(route.id)"
+        >
+          <td>
+            <button
+              type="button"
+              class="name"
+              [attr.aria-pressed]="chosen() === route.id"
+              (focus)="hover.emit(route.id)"
+              (blur)="hover.emit(null)"
+              (click)="choose.emit(route.id); $event.stopPropagation()"
+            >
+              <span class="line" [style.background]="route.color"></span>{{ route.name }}
+            </button>
+            @if (stations()) {
+              <p class="muted stations">{{ route.stationNames }}</p>
+            }
+          </td>
+          <td>{{ route.trains.destinations.join(', ') }}</td>
+          @for (n of route.trains.departures; track $index) {
+            <td class="num first">{{ n.fromCity }}</td>
+            <td class="num">{{ n.toCity }}</td>
+          }
+        </tr>
+      }
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="2">{{ t('cityRail.total') }}</td>
+        @for (n of totals(); track $index) {
+          <td class="num first">{{ n.fromCity }}</td>
+          <td class="num">{{ n.toCity }}</td>
+        }
+      </tr>
+    </tfoot>
+  </table>
+</div>

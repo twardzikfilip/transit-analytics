@@ -73,6 +73,8 @@ erDiagram
   vehicle ||--o{ position_sample : reports
   route |o..o{ position_sample : "is reported as (route_name)"
   user_role ||--o{ app_user : has
+  rail_train ||--o{ rail_train_call : "calls at"
+  rail_train ||--o{ rail_train_day : "runs on"
 
   agency {
     bigint id PK
@@ -187,6 +189,27 @@ erDiagram
     bigint positions
     bytea content
   }
+  rail_train {
+    bigint id PK
+    varchar key UK
+    varchar agency
+    varchar gtfs_id
+    text number
+    text headsign
+  }
+  rail_train_call {
+    bigint train_id PK, FK
+    integer stop_sequence PK
+    varchar station_id
+    text station
+    varchar stop_id
+    varchar arrival_time
+    varchar departure_time
+  }
+  rail_train_day {
+    date date PK
+    bigint train_id PK, FK
+  }
   app_user {
     bigint id PK
     varchar username UK
@@ -201,6 +224,7 @@ erDiagram
 ```
 
 - **Timetable** (from GTFS): `agency`, `route`, `trip`, `stop_time`, `stop`, `shape_point`, `calendar_date`. Less used columns are left out. `feed` says which feed a row came from. `assumed_timetable_day` lists the days continued after a timetable ran out.
+- **Past train timetables:** `rail_train`, `rail_train_call`, `rail_train_day`, kept day by day, as imports replace the timetable.
 - **Recordings:** `vehicle` and `position_sample`, a TimescaleDB table split by time. The views `fleet_5min` and `route_delay_hourly` are computed from it.
 - **Worked out by the backend:** `trip_brigade` and `recorded_brigade_line` (brigades learnt from recordings), and `day_summary` (stored results of finished days).
 
@@ -211,7 +235,8 @@ erDiagram
 | Live positions and delays | [zbiorkom.live](https://zbiorkom.live) |
 | City buses timetable (GTFS) | [BKM Białystok](https://komunikacja.bialystok.pl) |
 | PKS Nova 500, Wschód Express, Turośń Kościelna 700 timetables (GTFS) | unofficial feeds made from Time4Bus, [files.girlc.at](https://files.girlc.at/gtfs/) (CC0) |
-| Map, borders, woods, bus lanes | [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors (ODbL) |
+| Polregio and PKP Intercity trains (GTFS) | PKP Polskie Linie Kolejowe, put into GTFS by [Mikołaj Kuranowski](https://mkuran.pl/gtfs/) |
+| Map, borders, woods, bus lanes, railways | [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors (ODbL) |
 | Residents | city and gmina registers, 2021 census, a few from Wikipedia ([details](backend/src/main/resources/places/README.md)) |
 
 The licence of this repository doesn't cover this data: each source keeps its own terms.

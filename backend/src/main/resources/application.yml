@@ -103,7 +103,26 @@ app:
         name: "Turośń Kościelna line 700"
         url: ${GTFS_TUROSN_KOSCIELNA_URL:https://files.girlc.at/gtfs/turosn_koscielna.zip}
         agency: TUROSN
+      # Polregio's and PKP Intercity's trains, for the City Rail page. The file has every train in Poland (timetables of
+      # PKP Polskie Linie Kolejowe, put into GTFS by Mikołaj Kuranowski, https://mkuran.pl/gtfs/): every trip of the two
+      # agencies calling at a station of the network (app.city-rail) is loaded, with its whole run.
+      rail:
+        name: "Polregio and PKP Intercity trains around Białystok"
+        url: ${GTFS_RAIL_URL:https://mkuran.pl/gtfs/polish_trains.zip}
+        only:
+          agencies: [PR, IC]
+          # Białystok; to Łapy: Zielone Wzgórza, Klepacze, Niewodnica, Trypucie, Baciuty, Bojary, Uhowo, Łapy;
+          # to Knyszyn: Starosielce, Bacieczki, Fasty, Dobrzyniewo Duże, Borsukówka, Knyszyn;
+          # to Czarna Białostocka: Wasilków, Czarny Blok, Wólka Ratowiecka, Czarna Białostocka;
+          # to Lewickie: Nowe Miasto, Stadion, Hryniewicze, Lewickie.
+          stations: ["24000", "279919", "24612", "24596", "24570", "24562", "24554", "24547", "24539", "24042", "24059",
+                     "24067", "24075", "24083", "24091", "24190", "24216", "24224", "24232", "264544", "24372", "264545",
+                     "24364"]
     extra-refresh-cron: "0 50 4 * * *"
+  # City Rail: the station in the city, and where the network ends (station ids of the feed "rail").
+  city-rail:
+    hub: "24000"                                  # Białystok
+    ends: ["24539", "24091", "24232", "24364"]    # Łapy, Knyszyn, Czarna Białostocka, Lewickie
   # Brigades of the other operators' lines, learnt from the recorded positions (their timetables don't name them):
   # learnt again every night once the service day is over, after each import of their feeds and at startup.
   recorded-brigades:

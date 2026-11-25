@@ -1,5 +1,6 @@
 package com.transitanalytics.service;
 
+import com.transitanalytics.domain.TimetableFeed;
 import com.transitanalytics.dto.DelayGenerationDto;
 import com.transitanalytics.recording.DelayOutliers;
 import com.transitanalytics.service.DelayGeneration.Passage;
@@ -127,7 +128,7 @@ public class DelayGenerationService {
     }
 
     private List<StopPlaces.StopRef> stops() {
-        return jdbc.query("SELECT name, latitude, longitude FROM stop",
+        return jdbc.query("SELECT name, latitude, longitude FROM stop WHERE feed <> '" + TimetableFeed.RAIL + "'",
                 (rs, i) -> new StopPlaces.StopRef(rs.getString("name"), (Double) rs.getObject("latitude"),
                         (Double) rs.getObject("longitude")));
     }

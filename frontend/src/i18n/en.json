@@ -28,7 +28,8 @@
     "loading": "Loading",
     "version": "Version {{version}}",
     "backToBrigades": "Back to all brigades",
-    "backToFleet": "Back to the fleet overview"
+    "backToFleet": "Back to the fleet overview",
+    "cityRail": "City Rail"
   },
   "titles": {
     "home": "Home",
@@ -49,7 +50,8 @@
     "trips": "Trips",
     "stopTimes": "Stop times",
     "sources": "Data sources",
-    "settings": "Settings"
+    "settings": "Settings",
+    "cityRail": "City Rail"
   },
   "login": {
     "username": "Username",
@@ -875,7 +877,8 @@
       "bialystok": "BKM",
       "pksnova-500": "PKS Nova",
       "wschodexpress": "Wschód Express",
-      "turosn-koscielna": "Turośń Kościelna"
+      "turosn-koscielna": "Turośń Kościelna",
+      "rail": "Polregio, PKP Intercity"
     },
     "assumed": {
       "tag": "Assumed timetable",
@@ -919,6 +922,12 @@
       "name": "Turośń Kościelna line 700 (GTFS)",
       "gives": "Timetable of the Białystok – Turośń Kościelna line; its stops in the city are BKM's (unofficial feed, CC0).",
       "usedOn": "Routes, Brigades, Stops, Delay generation, Stop hotspots, Bus lanes",
+      "refreshed": "Nightly"
+    },
+    "rail": {
+      "name": "Polregio and PKP Intercity trains (GTFS)",
+      "gives": "Timetables of the Polregio and PKP Intercity trains on the railways around Białystok: data of PKP Polskie Linie Kolejowe S.A., put into GTFS by Mikołaj Kuranowski.",
+      "usedOn": "City Rail",
       "refreshed": "Nightly"
     },
     "osm": {
@@ -1608,5 +1617,30 @@
       "noStop": "Didn't stop"
     },
     "halts": "Longest halts at stops:"
+  },
+  "cityRail": {
+    "loading": "Loading the railways",
+    "mapLabel": "Map of the railways and the train routes",
+    "railways": "Railway",
+    "spurs": "Spur (depots, factories)",
+    "reach": "Routes are shown up to Łapy, Knyszyn, Czarna Białostocka and Lewickie, other railways up to 10 km from the city limits.",
+    "railwayLine": "Railway line {{ref}}",
+    "routes": "Polregio routes",
+    "intro": "Trains that use the same railway around Białystok are one route, wherever they run beyond it. Choose a route to highlight it on the map.",
+    "route": "Route and its stations",
+    "destinations": "Trains to and from",
+    "day": {
+      "weekday": "Weekday",
+      "saturday": "Saturday",
+      "sunday": "Sunday"
+    },
+    "fromCity": "From Białystok",
+    "toCity": "To Białystok",
+    "note": "Trains per day, on the next such day in the timetable. A train running through Białystok counts on both its routes.",
+    "notLoaded": "The train timetables are not loaded yet. They are imported every night.",
+    "routeOnly": "Route",
+    "total": "All routes",
+    "allTrains": "All trains: Polregio and PKP Intercity",
+    "allIntro": "The same routes, with the trains of both operators together."
   }
 }

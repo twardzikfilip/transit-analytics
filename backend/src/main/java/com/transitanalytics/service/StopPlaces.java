@@ -1,5 +1,6 @@
 package com.transitanalytics.service;
 
+import com.transitanalytics.domain.TimetableFeed;
 import com.transitanalytics.geo.Geo;
 
 import java.util.ArrayList;
@@ -46,7 +47,7 @@ final class StopPlaces {
     }
 
     /**
-     * Every located stop of the timetable, with whether runs start or end there ({@code terminal}). Columns: name,
+     * Every located bus stop of the timetable, with whether runs start or end there ({@code terminal}). Columns: name,
      * latitude, longitude, terminal.
      */
     static final String STOPS_WITH_TERMINALS = """
@@ -59,7 +60,7 @@ final class StopPlaces {
                 WHERE st.stop_sequence IN (e.first, e.last))
             SELECT s.name, s.latitude, s.longitude, t.stop_id IS NOT NULL AS terminal
             FROM stop s LEFT JOIN terminals t ON t.stop_id = s.id
-            WHERE s.latitude IS NOT NULL AND s.longitude IS NOT NULL""";
+            WHERE s.latitude IS NOT NULL AND s.longitude IS NOT NULL AND s.feed <> '%s'""".formatted(TimetableFeed.RAIL);
 
     /** Distance in metres (see {@link Geo#meters}). */
     static double meters(double lat1, double lon1, double lat2, double lon2) {

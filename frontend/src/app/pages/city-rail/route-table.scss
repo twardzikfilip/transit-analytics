@@ -1,0 +1,74 @@
+/* Room for every day beside the route. */
+table.data-table th,
+table.data-table td {
+  padding-left: 0.6rem;
+  padding-right: 0.6rem;
+}
+
+table.data-table th.num {
+  white-space: normal;
+}
+
+tbody td:first-child {
+  min-width: 17rem;
+}
+
+tbody td:nth-child(2) {
+  min-width: 11rem;
+}
+
+tbody tr {
+  cursor: pointer;
+
+  &:hover,
+  &.chosen {
+    background: var(--hover);
+  }
+}
+
+td.num,
+th.num {
+  text-align: right;
+}
+
+/* A line between the days. */
+.first,
+.day {
+  border-left: 1px solid var(--border);
+}
+
+.date {
+  font-weight: 400;
+}
+
+.name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.line {
+  flex: none;
+  width: 1.5rem;
+  height: 5px;
+  border-radius: 3px;
+}
+
+.stations {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+}
+
+tfoot td {
+  border-top: 1px solid var(--border);
+  font-weight: 600;
+}

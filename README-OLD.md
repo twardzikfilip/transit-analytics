@@ -135,7 +135,7 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
 - `GET /api/gtfs/coverage` — until when each timetable runs: its last day with trips, days left, and whether it is
   ending (5 days or fewer left, ended, or not loaded), and its assumed days (see the feeds below). Also logged as a warning every night at 05:00.
 - `POST /api/gtfs/{feed}/import` (admin) — downloads a GTFS timetable and loads it: `bialystok` (the city's) or
-  another operator's feed from `app.gtfs.extra` (`pksnova-500`, `wschodexpress`, `turosn-koscielna`); see below.
+  another operator's feed from `app.gtfs.extra` (`pksnova-500`, `wschodexpress`, `turosn-koscielna`, `rail`); see below.
 - `GET /api/zbiorkom/bialystok/positions` — live Białystok vehicle positions from [zbiorkom.live](https://zbiorkom.live),
   used by the live map: transit-recorder's latest snapshot (at most 10 s old), or straight from zbiorkom.live when the
   recorder doesn't answer. Vehicles seen for the first time are added to the vehicle table (number, type, agency,
@@ -159,6 +159,12 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   its standstills, buses, typical and long wait, the directions buses were heading, the busiest hour and the lines.
   Per-day figures are over the days with recordings. Service days that are over are read once and kept; the last
   month is read at startup in the background. Cached for 2 minutes.
+- `GET /api/city-rail` — City Rail: the railways (OpenStreetMap, `places/osm/railways.json`) and a route from Białystok to
+  each end of the network (`app.city-rail`: Łapy, Knyszyn, Czarna Białostocka, Lewickie). A route has every train whose
+  track leads past its end, wherever it runs beyond and whether it calls there (`CityRailService`): its stations, and
+  for Polregio (`polregio`) and together with PKP Intercity (`all`) the destinations and the trains from and to
+  Białystok on the next weekday, Saturday and Sunday of the timetable that are no public holiday. A through train is
+  on both its routes.
 - `GET /api/bus-lanes` — the city's bus lanes from OpenStreetMap (`places/osm/bus-lanes.json`, or the refreshed copy in
   `./config/map/bus-lanes.json`): each street section with how many lanes run each way and whether buses have a lane
   the other way too (on the section or the other carriageway), the sections grouped by street and direction, the
@@ -354,7 +360,7 @@ replaces them. Public holidays (Christmas Eve included) get the last known Sunda
   BKM's. Its buses are on the live feed as `WSCHODEXPRESS`.
 - `turosn-koscielna`: **Turośń Kościelna line 700**, `https://files.girlc.at/gtfs/turosn_koscielna.zip`; 7 of its 60
   stops are BKM's. Its buses are on the live feed as `TUROSN`.
-- All three are unofficial feeds generated from Time4Bus (CC0). `agency` in each feed's settings names the operator
+- The three above are unofficial feeds generated from Time4Bus (CC0). `agency` in each feed's settings names the operator
   its buses have on the live feed, so a line's recorded runs (travel times, delays on the Routes page) are its own.
 - On the Routes page such a line shows like the city's (map, variants, termini, bus lanes, zone 2, travel times),
   run by its own operator, at `/routes/route/<number>` (a city line wins if a feed ever had the same route id). What
@@ -365,6 +371,15 @@ replaces them. Public holidays (Christmas Eve included) get the last known Sunda
   e.g. `wschodexpress`, shown by its short name; Wschód Express's five agencies are the municipalities ordering its
   lines, and one bus runs lines of two of them; a former `wschodexpress-1` link opens it), and a feed whose buses aren't on the live feed (no `agency`: PKS
   Nova) is left out of Abnormal trips, as nothing can be recorded for it. The Stops page shows each stop's timetable.
+- `rail`: **Polregio and PKP Intercity trains around Białystok**, from `https://mkuran.pl/gtfs/polish_trains.zip` (36 MB,
+  every train in Poland for about a month; data of PKP Polskie Linie Kolejowe S.A., put into GTFS by Mikołaj
+  Kuranowski). `only` in its settings keeps every trip of some agencies (`PR`, `IC`) calling at one of some stations
+  (those of the City Rail network), with its whole run: about 440 trips, the train number as `trip.short_name`,
+  platform and track in the stop's id. A station a train passes without a call has no time. For the City Rail page
+  only: Routes, Stops, Stop times, Brigades, Delay generation, Stop hotspots and Abnormal trips leave its rows
+  (`TimetableFeed.RAIL`) out. An import replaces the timetable, so every day's trains are also kept for good
+  (`gtfs/RailArchive`): `rail_train` (a train and its exact run, once), `rail_train_call` and `rail_train_day`. Days from
+  today on are as the newest file has them, past days as last published.
 - **Brigades learnt from the recordings** (`service/RecordedBrigades`, `BrigadeLearning`): these feeds name no
   brigades (no block ids), but their buses report brigade numbers on the live feed. The numbers repeat from line to
   line ("1" on line 400 and "1" on line 414 are different buses), and a bus runs some lines together under one number
@@ -646,6 +661,9 @@ PGPASSWORD=transit psql -h localhost -U transit transit_test -c "CREATE EXTENSIO
   come. Hover a trip for details. Below, every trip of the day in the Trips page's list (`app-trip-list`, shared;
   `GET /api/trip-runs/day`): open one for its delay, speed, halts and map (`?trip=`, `?map=1`); it is marked on the
   timeline, and choosing a trip there opens it in the list. Loaded again every minute while the brigade is out.
+- City Rail (`/city-rail`, last in the sidebar, below a line): a map of the railways in and around the city with the
+  routes in their colours and their stations, and two tables of the routes with trains per day both ways: Polregio's,
+  and all (with PKP Intercity's). The route pointed at, or chosen (`?route=`), is highlighted on the map.
 - Network coverage: for each walking distance (400, 500, 600 m), tiles with the share of the city within it of the
   nearest bus stop, with and without the woods and the Biała valley, and a map (rolls up to its title) of the area
   near a stop with the woods hatched green and the valley hatched light blue; the woods and the valley's stretches
