@@ -12,9 +12,9 @@ on:
         options: [patch, minor, major]
         default: patch
       what:
-        description: "auto: what changed since its last release"
+        description: "auto: what changed since its last release; both: app and recorder"
         type: choice
-        options: [auto, app, recorder, both]
+        options: [auto, app, recorder, grafana, both, all]
         default: auto
       deploy:
         description: "Put it on the server"
@@ -42,6 +42,7 @@ jobs:
     outputs:
       app: ${{ steps.raise.outputs.app }}
       recorder: ${{ steps.raise.outputs.recorder }}
+      grafana: ${{ steps.raise.outputs.grafana }}
       commit: ${{ steps.raise.outputs.commit }}
     steps:
       - uses: actions/checkout@v4
@@ -59,11 +60,13 @@ jobs:
           tools/release.sh "$WHAT" "$BUMP"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add VERSION backend/recorder/VERSION frontend/package.json frontend/package-lock.json
+          git add VERSION backend/recorder/VERSION grafana/VERSION frontend/package.json frontend/package-lock.json
           tags=()
           if grep -q '^app=' release.out; then tags+=("app-v$(sed -n 's/^app=//p' release.out)"); fi
           if grep -q '^recorder=' release.out; then tags+=("recorder-v$(sed -n 's/^recorder=//p' release.out)"); fi
-          git commit -q -m "Release ${tags[*]}"
+          if grep -q '^grafana=' release.out; then tags+=("grafana-v$(sed -n 's/^grafana=//p' release.out)"); fi
+          # Nothing to commit when a first release keeps the version and the day in the file.
+          git diff --cached --quiet || git commit -q -m "Release ${tags[*]}"
           for tag in "${tags[@]}"; do tools/version.sh check "$tag"; git tag "$tag"; done
           git push --atomic origin HEAD:main "${tags[@]}"
           cat release.out >> "$GITHUB_OUTPUT"
@@ -79,6 +82,7 @@ jobs:
     env:
       APP: ${{ needs.version.outputs.app }}
       RECORDER: ${{ needs.version.outputs.recorder }}
+      GRAFANA: ${{ needs.version.outputs.grafana }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -102,6 +106,12 @@ jobs:
         run: |
           (cd backend && ./gradlew :recorder:bootJar --no-daemon)
           docker buildx build --platform linux/arm64,linux/amd64 --push -t "$REGISTRY/transit-recorder:$RECORDER" backend/recorder
+
+      - name: Grafana image
+        if: env.GRAFANA != ''
+        run: |
+          docker build -q -t transit-grafana grafana && grafana/check.sh transit-grafana
+          docker buildx build --platform linux/arm64,linux/amd64 --push -t "$REGISTRY/transit-grafana:$GRAFANA" grafana
 
       - uses: actions/setup-node@v4
         if: env.APP != ''
@@ -129,6 +139,8 @@ jobs:
     steps:
       - if: needs.version.outputs.recorder != ''
         run: gh release create "recorder-v${{ needs.version.outputs.recorder }}" --verify-tag --latest=false --generate-notes --title "Recorder ${{ needs.version.outputs.recorder }}"
+      - if: needs.version.outputs.grafana != ''
+        run: gh release create "grafana-v${{ needs.version.outputs.grafana }}" --verify-tag --latest=false --generate-notes --title "Grafana ${{ needs.version.outputs.grafana }}"
       - if: needs.version.outputs.app != ''
         run: gh release create "app-v${{ needs.version.outputs.app }}" --verify-tag --generate-notes --title "App ${{ needs.version.outputs.app }}"
 
@@ -151,4 +163,16 @@ jobs:
     with:
       what: recorder
       version: ${{ needs.version.outputs.recorder }}
+    secrets: inherit
+
+  # Last: the app's deployment brings the way to it (Caddy) and the server's scripts.
+  deploy-grafana:
+    needs: [version, images, deploy-app, deploy-recorder]
+    if: >-
+      !cancelled() && inputs.deploy && needs.images.result == 'success' && needs.version.outputs.grafana != ''
+      && (needs.deploy-app.result == 'success' || needs.deploy-app.result == 'skipped')
+    uses: ./.github/workflows/deploy.yml
+    with:
+      what: grafana
+      version: ${{ needs.version.outputs.grafana }}
     secrets: inherit

@@ -682,17 +682,18 @@ npm run build
 
 ## Versions
 
-Two, each raised on its own (semantic versions: patch for a fix, minor for a feature, major for a change that needs
+Three, each raised on its own (semantic versions: patch for a fix, minor for a feature, major for a change that needs
 something done by hand):
 
 | Version | Of | File |
 |---|---|---|
 | app | backend and frontend, released together | `VERSION` (and `frontend/package.json`) |
 | recorder | transit-recorder | `backend/recorder/VERSION` |
+| grafana | Grafana's dashboards and setup on the server | `grafana/VERSION` |
 
-Each file has the version and its release date (the day it was set). `tools/version.sh` shows both; `tools/version.sh app 1.1.0` or `recorder 1.0.1` sets one; CI runs `check`, which fails
+Each file has the version and its release date (the day it was set). `tools/version.sh` shows all; `tools/version.sh app 1.1.0` or `recorder 1.0.1` sets one; CI runs `check`, which fails
 when the files disagree. A change in `backend/zbiorkom-feed` is in both apps, so it raises both. A release is a tag on
-`main`: `app-v1.1.0` or `recorder-v1.0.1` (made by the Release workflow). The sidebar shows the app's version; Settings both with their release dates, and tells when the server has a newer
+`main`: `app-v1.1.0`, `recorder-v1.0.1` or `grafana-v1.0.1` (made by the Release workflow). The sidebar shows the app's version; Settings both with their release dates, and tells when the server has a newer
 one than the open page; each app also has its own in `/actuator/info` (the backend's needs a sign-in).
 
 ## Hosting
@@ -723,7 +724,7 @@ From a change to the server:
 2. **Actions → Release → Run workflow**, or `gh workflow run release.yml -f bump=minor` (patch, minor or major).
 
 The release tests `main` again, raises the version of what changed since its last release (`tools/release.sh`: the app,
-the recorder, or both; documents and tests don't count), commits and tags it, builds the images, puts them on the server
+the recorder, Grafana, or several; documents and tests don't count), commits and tags it, builds the images, puts them on the server
 and writes release notes. With `-f deploy=false` it stops before the server.
 
 **Back to an older version:** Actions → Deploy, or `gh workflow run deploy.yml -f what=app -f version=1.0.0`.
@@ -733,6 +734,24 @@ goes back by itself when it isn't healthy. The database isn't taken back: a migr
 needs the backup. GitHub's key may run only that script; it, the address and the host key are secrets of the environment
 `production`.
 
+## Grafana
+
+On the server Grafana runs at `https://<domain>/grafana/`, from the image `transit-grafana` (`grafana/Dockerfile`): the
+dashboards of `grafana/dashboards`, the read-only database source, and Tempo with the backend's traces of the last
+week. It has its own login, `admin` with `GRAFANA_ADMIN_PASSWORD` of the server's `.env` (read at Grafana's first start
+only), and no sign-up. The Transit Logins dashboard stays empty there: browsers send no telemetry to the server.
+
+Dashboards there can't be saved from the pages, so the repository is always what runs. To change or add one:
+
+1. Edit it at home (http://localhost:3000), in the folder **Transit Analytics**, and save.
+2. `grafana/export.sh` writes it to `grafana/dashboards`; look at `git diff`. Editing the JSON by hand works too.
+3. Branch, pull request, merge, **Release**: it notices the change and releases Grafana alone, without touching the app.
+
+`grafana/check.sh` (in CI and before a release's image is published) starts the image and checks that every dashboard
+is loaded, the data sources they use exist, and nobody gets in without a login. Back to an older version:
+`gh workflow run deploy.yml -f what=grafana -f version=1.0.0`. Its data (users, preferences) is in the volume
+`grafanadata`, not in backups.
+
 ## Continuous integration
 
 GitHub Actions (`.github/workflows/ci.yml`) runs on every pull request and on pushes to `main`:
@@ -740,6 +759,7 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every pull request and on pu
 - **Backend:** `./gradlew check` with the database tests, against a TimescaleDB service container (the same image as
   `docker-compose.yml`; Flyway builds the schema on the empty database). Fails on a failing test or line coverage
   below 90%.
+- **Grafana:** builds the image and checks it (`grafana/check.sh`).
 - **Frontend:** `npm ci`, `npm run test:coverage` (fails below the thresholds in `angular.json`) and the production
   build (fails over the bundle budget).
 

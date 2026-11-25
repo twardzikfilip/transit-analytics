@@ -12,7 +12,7 @@ on:
     inputs:
       what:
         type: choice
-        options: [app, recorder]
+        options: [app, recorder, grafana]
         default: app
       version:
         description: "A released version, e.g. 1.0.0"
@@ -39,7 +39,7 @@ jobs:
           WHAT: ${{ inputs.what }}
           VERSION: ${{ inputs.version }}
         run: |
-          [[ $WHAT =~ ^(app|recorder)$ && $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Not a version: $WHAT $VERSION"; exit 1; }
+          [[ $WHAT =~ ^(app|recorder|grafana)$ && $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Not a version: $WHAT $VERSION"; exit 1; }
           echo "::add-mask::${HOST#*@}"   # the logs are public, and ssh's errors name the address
           install -m 700 -d ~/.ssh
           (umask 077; printf '%s\n' "$KEY" > ~/.ssh/deploy; printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts)
