@@ -876,6 +876,10 @@
       "pksnova-500": "PKS Nova",
       "wschodexpress": "Wschód Express",
       "turosn-koscielna": "Turośń Kościelna"
+    },
+    "assumed": {
+      "tag": "Assumed timetable",
+      "note": "{{operator}}, {{from}} – {{to}}: no timetable is published for these days. The same weekdays of its last known week are assumed, so trips and delays may be wrong, above all on holidays."
     }
   },
   "sources": {
@@ -1518,7 +1522,7 @@
   "home": {
     "timetables": {
       "title": "Timetables about to end",
-      "rule": "No newer timetable has been published. After its last day, that operator's delays against the timetable, trips and brigades can't be worked out; positions are still recorded.",
+      "rule": "No newer timetable has been published. After its last day, the same weekdays of its last known week are assumed, for up to eight weeks; trips and delays may then be wrong.",
       "left": {
         "one": "{{count}} day left",
         "other": "{{count}} days left"
@@ -1526,7 +1530,8 @@
       "today": "today is its last day",
       "ended": "has ended",
       "notLoaded": "not loaded",
-      "lastDay": "last day {{day}}"
+      "lastDay": "last day {{day}}",
+      "assumedUntil": "assumed until {{day}}"
     },
     "trackers": {
       "title": "Buses with a possibly faulty tracker",

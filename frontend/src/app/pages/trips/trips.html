@@ -29,6 +29,9 @@
   }
 </app-time-window>
 
+@if (result(); as r) {
+  <app-assumed-timetable [from]="r.shownFrom" [to]="r.to" />
+}
 @if (cut()) {
   <p class="muted note">{{ t('trips.lastDay') }}</p>
 }

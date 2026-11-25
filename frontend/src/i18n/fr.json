@@ -888,6 +888,10 @@
       "pksnova-500": "PKS Nova",
       "wschodexpress": "Wschód Express",
       "turosn-koscielna": "Turośń Kościelna"
+    },
+    "assumed": {
+      "tag": "Horaire supposé",
+      "note": "{{operator}}, {{from}} – {{to}} : aucun horaire n'est publié pour ces jours. Les mêmes jours de la dernière semaine connue sont supposés ; les courses et les retards peuvent donc être faux, surtout les jours fériés."
     }
   },
   "sources": {
@@ -1536,7 +1540,7 @@
   "home": {
     "timetables": {
       "title": "Horaires bientôt expirés",
-      "rule": "Aucun horaire plus récent n'a été publié. Après le dernier jour, les retards par rapport à l'horaire, les courses et les services de cet exploitant ne peuvent plus être calculés ; les positions restent enregistrées.",
+      "rule": "Aucun horaire plus récent n'a été publié. Après le dernier jour, les mêmes jours de la dernière semaine connue sont supposés, pendant huit semaines au plus ; les courses et les retards peuvent alors être faux.",
       "left": {
         "one": "encore {{count}} jour",
         "many": "encore {{count}} jours",
@@ -1545,7 +1549,8 @@
       "today": "dernier jour aujourd'hui",
       "ended": "expiré",
       "notLoaded": "non chargé",
-      "lastDay": "dernier jour : {{day}}"
+      "lastDay": "dernier jour : {{day}}",
+      "assumedUntil": "supposé jusqu'au {{day}}"
     },
     "trackers": {
       "title": "Bus au traceur peut-être défaillant",

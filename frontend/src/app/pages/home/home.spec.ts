@@ -79,6 +79,7 @@ describe('Timetable warning', () => {
     lastDay: daysLeft === null ? null : '2026-11-28',
     daysLeft,
     ending,
+    assumed: daysLeft === -1 ? ['2026-11-29', '2026-11-30'] : [],
   });
   const render = (feeds: FeedCoverage[]) =>
     renderPage(TimetableWarning, {}, {}, [
@@ -103,6 +104,7 @@ describe('Timetable warning', () => {
     expect(items[0]).toContain('28 Nov');
     expect(items[1]).toContain('today is its last day');
     expect(items[2]).toContain('has ended');
+    expect(items[2]).toContain('assumed until Mon 30 Nov');
     expect(items[3]).toContain('not loaded');
     expect(el.querySelectorAll('.tag.danger')).toHaveLength(2);
   });

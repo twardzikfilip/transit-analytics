@@ -36,6 +36,11 @@ export function coverageLeft(f: FeedCoverage): string {
                   t('home.timetables.lastDay', { day: f.lastDay | date: 'EEE d MMM' })
                 }}</span>
               }
+              @if (f.assumed.at(-1); as until) {
+                <span class="muted">{{
+                  t('home.timetables.assumedUntil', { day: until | date: 'EEE d MMM' })
+                }}</span>
+              }
             </li>
           }
         </ul>

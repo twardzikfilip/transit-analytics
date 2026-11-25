@@ -13,6 +13,7 @@ import {
   switchMap,
 } from 'rxjs';
 import { PageMeta, TripRunQuery } from '../../core/models/models';
+import { AssumedTimetable } from '../../shared/assumed-timetable';
 import { Pager } from '../../shared/pager/pager';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { LocalDatePipe } from '../../shared/i18n/locale-pipes';
@@ -57,7 +58,7 @@ export function readQuery(params: ParamMap, now = new Date()): TripRunQuery & { 
  */
 @Component({
   selector: 'app-trips',
-  imports: [TimeWindowPicker, Pager, Skeleton, LocalDatePipe, TripList],
+  imports: [AssumedTimetable, TimeWindowPicker, Pager, Skeleton, LocalDatePipe, TripList],
   templateUrl: './trips.html',
   styleUrl: './trips.scss',
 })

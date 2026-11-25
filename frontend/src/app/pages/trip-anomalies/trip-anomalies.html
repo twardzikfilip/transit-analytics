@@ -21,6 +21,7 @@
 </app-time-window>
 
 @if (report(); as r) {
+  <app-assumed-timetable [from]="r.from" [to]="r.to" />
   <div class="cards" [class.loading]="loading()">
     <div class="card stat">
       <span class="label">{{ t('anomalies.scheduled') }}</span>

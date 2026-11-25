@@ -12,6 +12,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -46,11 +47,11 @@ class TimetableCoverageIntegrationTest {
 
         TimetableCoverageDto early = at("2099-12-25T12:00:00Z");
         assertThat(early.feeds()).extracting(TimetableCoverageDto.Feed::feed).containsExactly("bialystok", "it", "none");
-        assertThat(early.feeds().get(1)).isEqualTo(new TimetableCoverageDto.Feed("it", LAST, 6, false));
-        assertThat(early.feeds().get(2)).isEqualTo(new TimetableCoverageDto.Feed("none", null, null, true));
-        assertThat(at("2099-12-26T12:00:00Z").feeds().get(1)).isEqualTo(new TimetableCoverageDto.Feed("it", LAST, 5, true));
+        assertThat(early.feeds().get(1)).isEqualTo(new TimetableCoverageDto.Feed("it", LAST, 6, false, List.of()));
+        assertThat(early.feeds().get(2)).isEqualTo(new TimetableCoverageDto.Feed("none", null, null, true, List.of()));
+        assertThat(at("2099-12-26T12:00:00Z").feeds().get(1)).isEqualTo(new TimetableCoverageDto.Feed("it", LAST, 5, true, List.of()));
         // 00:30 local time still belongs to the day before.
         assertThat(at("2099-12-31T23:30:00Z").feeds().get(1).daysLeft()).isZero();
-        assertThat(at("2100-01-02T12:00:00Z").feeds().get(1)).isEqualTo(new TimetableCoverageDto.Feed("it", LAST, -2, true));
+        assertThat(at("2100-01-02T12:00:00Z").feeds().get(1)).isEqualTo(new TimetableCoverageDto.Feed("it", LAST, -2, true, List.of()));
     }
 }

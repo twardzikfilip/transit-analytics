@@ -13,11 +13,12 @@ public record TimetableCoverageDto(LocalDate today, int warnDays, List<Feed> fee
 
     /**
      * @param feed     the feed's key
-     * @param lastDay  the last day with trips; null when nothing is loaded
+     * @param lastDay  the last published day with trips; null when nothing is loaded
      * @param daysLeft days after today it still covers: 0 when today is the last, negative once it has ended; null when
      *                 nothing is loaded
      * @param ending   whether it has ended, isn't loaded, or ends within the days to warn
+     * @param assumed  days continued with its last known week's services (ahead and past), in order
      */
-    public record Feed(String feed, LocalDate lastDay, Integer daysLeft, boolean ending) {
+    public record Feed(String feed, LocalDate lastDay, Integer daysLeft, boolean ending, List<LocalDate> assumed) {
     }
 }

@@ -11,6 +11,9 @@
 </div>
 
 @if (shown(); as d) {
+  @if (agency(); as feed) {
+    <app-assumed-timetable [from]="d.serviceDay" [to]="d.serviceDay" [feed]="feed" />
+  }
   @if (!d.trips.length) {
     <p class="muted">{{ t('brigades.notRunning', { brigade: d.brigade, day: d.serviceDay }) }}</p>
   } @else {
