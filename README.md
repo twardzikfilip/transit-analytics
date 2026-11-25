@@ -333,7 +333,7 @@ the others alone too). Imported with `POST /api/gtfs/<key>/import` and again eve
 (`extra-refresh-cron`), as these feeds cover about two weeks at a time. When no newer one is published, a feed is
 continued after its last day, up to a week ahead and for at most eight weeks: each day gets the services of the same
 weekday in its last known week. These days are marked as assumed (`assumed_timetable_day`) and an import that has them
-replaces them. Public holidays aren't known, so they get their weekday's services.
+replaces them. Public holidays (Christmas Eve included) get the last known Sunday's services.
 
 - **Shared stops:** these feeds give a city stop their own id and BKM's id as its code (Wschód Express's stop `536`,
   code `305`, is BKM's al. Piłsudskiego/Rzeka Biała, `305`). A stop whose code is a BKM stop id within 60 m of it is

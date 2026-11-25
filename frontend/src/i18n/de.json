@@ -879,7 +879,7 @@
     },
     "assumed": {
       "tag": "Angenommener Fahrplan",
-      "note": "{{operator}}, {{from}} – {{to}}: Für diese Tage ist kein Fahrplan veröffentlicht. Angenommen werden dieselben Wochentage der letzten bekannten Woche; Fahrten und Verspätungen können daher falsch sein, vor allem an Feiertagen."
+      "note": "{{operator}}, {{from}} – {{to}}: Für diese Tage ist kein Fahrplan veröffentlicht. Angenommen werden dieselben Wochentage der letzten bekannten Woche (an Feiertagen der Sonntag); Fahrten und Verspätungen können daher falsch sein."
     }
   },
   "sources": {
@@ -1522,7 +1522,7 @@
   "home": {
     "timetables": {
       "title": "Bald endende Fahrpläne",
-      "rule": "Es wurde kein neuerer Fahrplan veröffentlicht. Nach dem letzten Tag werden dieselben Wochentage der letzten bekannten Woche angenommen, höchstens acht Wochen lang; Fahrten und Verspätungen können dann falsch sein.",
+      "rule": "Es wurde kein neuerer Fahrplan veröffentlicht. Nach dem letzten Tag werden dieselben Wochentage der letzten bekannten Woche (an Feiertagen der Sonntag) angenommen, höchstens acht Wochen lang; Fahrten und Verspätungen können dann falsch sein.",
       "left": {
         "one": "noch {{count}} Tag",
         "other": "noch {{count}} Tage"

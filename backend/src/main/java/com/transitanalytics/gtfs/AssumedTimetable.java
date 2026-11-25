@@ -13,14 +13,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Date;
 import java.time.Clock;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 
 /**
  * Continues another operator's timetable after its last day, when no newer one is published: every day gets the
  * services of the same weekday in the last known week. Such days are marked in {@code assumed_timetable_day}. The
  * city's own feed covers months and is never continued.
  * <p>
- * Public holidays aren't known: they get their weekday's services.
+ * Public holidays get the last known Sunday's services.
  */
 @Component
 public class AssumedTimetable {
@@ -84,15 +86,15 @@ public class AssumedTimetable {
         if (until.isAfter(last.plusDays(MAX_DAYS))) {
             until = last.plusDays(MAX_DAYS);
         }
-        // The day a whole number of weeks earlier that is within the last known week.
-        int added = jdbc.update("""
-                INSERT INTO calendar_date (feed, service_id, date, exception_type)
-                SELECT c.feed, c.service_id, d.date, 1
-                FROM (SELECT ?::date + n AS date, ?::date - 6 + (n - 1) % 7 AS source
-                      FROM generate_series(1, ?::date - ?::date) n) d
-                JOIN calendar_date c ON c.feed = ? AND c.date = d.source AND c.exception_type = 1
-                ON CONFLICT (feed, service_id, date) DO NOTHING""",
-                Date.valueOf(last), Date.valueOf(last), Date.valueOf(until), Date.valueOf(last), feed);
+        int added = 0;
+        for (LocalDate day = last.plusDays(1); !day.isAfter(until); day = day.plusDays(1)) {
+            added += jdbc.update("""
+                    INSERT INTO calendar_date (feed, service_id, date, exception_type)
+                    SELECT feed, service_id, ?, 1 FROM calendar_date
+                    WHERE feed = ? AND date = ? AND exception_type = 1
+                    ON CONFLICT (feed, service_id, date) DO NOTHING""",
+                    Date.valueOf(day), feed, Date.valueOf(source(day, last)));
+        }
         if (added > 0) {
             jdbc.update("""
                     INSERT INTO assumed_timetable_day (feed, date)
@@ -100,5 +102,15 @@ public class AssumedTimetable {
                     ON CONFLICT DO NOTHING""", feed, Date.valueOf(last));
             log.warn("Timetable {} ends on {}: continued to {} with its last known week", feed, last, until);
         }
+    }
+
+    /**
+     * The known day whose services a day after the last gets: the same weekday (Sunday on a public holiday) in the last
+     * known week; the week before when that was a holiday itself.
+     */
+    static LocalDate source(LocalDate day, LocalDate last) {
+        DayOfWeek weekday = PublicHolidays.isHoliday(day) ? DayOfWeek.SUNDAY : day.getDayOfWeek();
+        LocalDate source = last.with(TemporalAdjusters.previousOrSame(weekday));
+        return weekday != DayOfWeek.SUNDAY && PublicHolidays.isHoliday(source) ? source.minusWeeks(1) : source;
     }
 }
