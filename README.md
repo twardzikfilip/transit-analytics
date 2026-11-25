@@ -700,8 +700,8 @@ one than the open page; each app also has its own in `/actuator/info` (the backe
 
 A server runs released images with `docker-compose.prod.yml`: PostgreSQL, transit-recorder, the backend, and Caddy with
 the frontend (`frontend/Caddyfile`). Only Caddy's ports 80 and 443 are public; it serves the pages and passes `/api` on
-to the backend. No telemetry is sent. A release builds
-the images (below), for ARM and x86, as `ghcr.io/twardzikfilip/transit-{backend,frontend,recorder}:<version>`. How the server
+to the backend and `/grafana` to Grafana. The backend's traces stay on the server (Tempo); nothing else is sent. A release builds
+the images (below), for ARM and x86, as `ghcr.io/twardzikfilip/transit-{backend,frontend,recorder,grafana}:<version>`. How the server
 was set up: [docs/server-setup.md](docs/server-setup.md).
 
 With `ENVIRONMENT=production` (set there) the backend doesn't start with a secret or password from the repository, and
@@ -713,7 +713,7 @@ On the server: clone the repository, make `.env` with `tools/server-env.sh <doma
 `backend/data/spool` (owned by `RECORDER_UID`), then `docker compose -f docker-compose.prod.yml up -d postgres` and restore
 the data **before** starting the recorder. Later:
 
-- a new version: the Release workflow (below), or on the server `tools/deploy.sh app 1.1.0` / `recorder 1.0.1`;
+- a new version: the Release workflow (below), or on the server `tools/deploy.sh app 1.1.0` / `recorder 1.0.1` / `grafana 1.0.1`;
 - never a bare `docker compose up`, which could recreate the recorder or the database.
 
 ## Releases
