@@ -9,12 +9,14 @@ app:
     # The suburban belt: villages and towns reaching within this many km of the city limits (the belt itself is
     # chosen when places/osm/belt.json is built; this is what the page says).
     belt-km: 5
-    # Areas are measured on a grid of squares this size: finer in the city, coarser over the belt (35 km across).
+    # The same in the arc from Supraśl round the south to Baciuty.
+    belt-far-km: 9
+    # Areas are measured on a grid of squares this size: finer in the city, coarser over the belt (50 km across).
     cell-meters: 10
     belt-cell-meters: 20
     # Districts and villages with at least this share of woods get their density without the woods too.
     large-forest-share: 0.10
     # Unnamed woods at least this large (km²) are listed on their own; the smaller ones together.
     listed-woods-km2: 0.1
-    # Woods in the belt smaller than this (km²) are counted but not drawn.
+    # Woods and open land in the belt smaller than this (km²) are counted but not drawn.
     drawn-woods-km2: 0.002

@@ -39,6 +39,7 @@ function place(name: string, shape: AreaShape, extra: Partial<PlaceDensity> = {}
     density: 5000,
     forestKm2: 0,
     valleyKm2: 0,
+    openKm2: 0,
     landKm2: 2,
     landDensity: 5000,
     largeForest: false,
@@ -86,6 +87,7 @@ const DATA: NetworkCoverage = {
       density: 232,
       forestKm2: 6.95,
       valleyKm2: 0.5,
+      openKm2: 0,
       landKm2: 6.51,
       landDensity: 498,
       largeForest: true,
@@ -96,6 +98,7 @@ const DATA: NetworkCoverage = {
   sources: { shapes: 'OSM', shapesFetched: '2026-11-20', population: 'city' },
   belt: {
     distanceKm: 5,
+    farKm: 9,
     cellMeters: 20,
     places: [
       place('Kleosin', square(53.09, 23.12), {
@@ -124,6 +127,7 @@ const DATA: NetworkCoverage = {
       }),
     ],
     woods: [square(53.1, 23.05, 0.005)],
+    open: [],
   },
 };
 
@@ -228,7 +232,7 @@ describe('Network coverage page', () => {
       el.querySelector('app-district-map .leaflet-woods-pane path')?.getAttribute('fill'),
     ).toMatch(/^url\(#no-people-hatch/);
     const legend = text(el.querySelector('app-district-map .legend'));
-    expect(legend).toContain('0: woods, Biała valley');
+    expect(legend).toContain('0: woods, open land, Biała valley');
     // The valley on the density map, as nobody lives there: woods (2) and the two stretches.
     expect(el.querySelectorAll('app-district-map .leaflet-woods-pane path')).toHaveLength(4);
     expect(legend).toContain('No figure');
@@ -258,7 +262,9 @@ describe('Network coverage page', () => {
     expect(asOf('2023-12-31')).toBe('31.12.2023');
     expect(asOf('2012')).toBe('2012');
     expect(densityTooltip(DATA.belt.places[1])).toContain('No population figure found');
-    expect(densityTooltip(DATA.districts[1])).toContain('outside the woods and the Biała valley');
+    expect(densityTooltip(DATA.districts[1])).toContain(
+      'outside the woods (6.95 km²) and the Biała valley (50.0 ha)',
+    );
     expect(densityTooltip(DATA.belt.places[0])).toContain('(village, gmina Juchnowiec Kościelny)');
   });
 });

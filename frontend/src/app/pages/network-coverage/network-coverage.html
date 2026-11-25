@@ -270,6 +270,7 @@
         {{
           t('coverage.beltIntro', {
             km: d.belt.distanceKm,
+            far: d.belt.farKm,
             places: beltTotals().places,
             area: area(beltTotals().km2),
             people: int(beltTotals().people),
@@ -287,7 +288,7 @@
               <th class="num">{{ t('coverage.col.residents') }}</th>
               <th>{{ t('coverage.col.asOf') }}</th>
               <th class="num">{{ t('coverage.col.density') }}</th>
-              <th class="num">{{ t('coverage.col.withoutWoods') }}</th>
+              <th class="num" style="white-space: normal">{{ t('coverage.col.withoutBoth') }}</th>
               @for (c of d.coverages; track c.radiusMeters) {
                 <th class="num">{{ t('coverage.col.within', { m: c.radiusMeters }) }}</th>
               }
@@ -310,10 +311,11 @@
                 <td [title]="p.populationSource ?? ''">{{ asOf(p.populationDate) }}</td>
                 <td class="num">{{ p.density === null ? '–' : density(p.density) }}</td>
                 <td class="num">
-                  @if (p.landDensity !== null && p.forestKm2 > 0) {
+                  @if (p.landDensity !== null && p.forestKm2 + p.openKm2 > 0) {
                     {{ density(p.landDensity) }}
+                    <br />
                     <span class="muted small">{{
-                      t('coverage.woodsShare', { share: forestShare(p) })
+                      t('coverage.woodsOpen', { woods: forestShare(p), open: openShare(p) })
                     }}</span>
                   } @else {
                     –
@@ -343,6 +345,7 @@
         }}
       </li>
       <li>{{ t('coverage.how2') }}</li>
+      <li>{{ t('coverage.howOpen') }}</li>
       <li>{{ t('coverage.how3') }}</li>
       <li>
         {{

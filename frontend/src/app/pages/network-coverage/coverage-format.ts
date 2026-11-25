@@ -36,7 +36,7 @@ function kindWord(p: PlaceDensity): string {
 
 /**
  * A place's tooltip on the density map (HTML): residents, area, and densities with and without where nobody lives (its
- * woods and the Biała valley).
+ * woods, the Biała valley and open land).
  */
 export function densityTooltip(p: PlaceDensity): string {
   const what = kindWord(p);
@@ -47,18 +47,20 @@ export function densityTooltip(p: PlaceDensity): string {
     return `${title}<br>${area(p.areaKm2)}<br>${escapeHtml(t('coverage.tip.noFigure'))}`;
   }
   const when = p.kind === 'district' ? '' : ` (${asOf(p.populationDate)})`;
-  const empty =
-    p.forestKm2 > 0 && p.valleyKm2 > 0
-      ? t('coverage.tip.both', { area: area(p.forestKm2 + p.valleyKm2) })
-      : p.valleyKm2 > 0
-        ? t('coverage.tip.valley', { area: area(p.valleyKm2) })
-        : t('coverage.tip.woods', { area: area(p.forestKm2) });
-  const densities =
-    p.forestKm2 > 0 || p.valleyKm2 > 0
-      ? escapeHtml(t('coverage.tip.outside', { density: density(p.landDensity), empty })) +
-        '<br>' +
-        escapeHtml(t('coverage.tip.whole', { density: density(p.density), what }))
-      : density(p.density);
+  const parts: [string, number][] = [
+    ['woods', p.forestKm2],
+    ['valley', p.valleyKm2],
+    ['open', p.openKm2],
+  ];
+  const there = parts.filter(([, km2]) => km2 > 0);
+  const empty = there
+    .map(([key, km2]) => t(`coverage.tip.${key}`, { area: area(km2) }))
+    .join(t('coverage.tip.and'));
+  const densities = there.length
+    ? escapeHtml(t('coverage.tip.outside', { density: density(p.landDensity), empty })) +
+      '<br>' +
+      escapeHtml(t('coverage.tip.whole', { density: density(p.density), what }))
+    : density(p.density);
   const residents = t('coverage.tip.residents', {
     people: int(p.population),
     when,

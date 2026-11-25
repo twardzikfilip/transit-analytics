@@ -55,7 +55,9 @@ export interface PlaceDensity {
   forestKm2: number;
   /** The Biała valley in it, outside the woods. */
   valleyKm2: number;
-  /** It without its woods and the valley. */
+  /** Fields, meadows and other open land in it (pieces of at least 1 ha); villages and towns only. */
+  openKm2: number;
+  /** It without its woods, the valley and the open land. */
   landKm2: number;
   landDensity: number | null;
   /** Woods cover at least `forestShare` of it. */
@@ -70,12 +72,17 @@ export interface Population {
   source: string;
 }
 
-/** Every village and town reaching within `distanceKm` of the city limits, and the woods in them. */
+/**
+ * Every village and town reaching within `distanceKm` of the city limits (`farKm` from Supraśl round the south to
+ * Baciuty), and the woods and open land in them.
+ */
 export interface Belt {
   distanceKm: number;
+  farKm: number;
   cellMeters: number;
   places: PlaceDensity[];
   woods: AreaShape[];
+  open: AreaShape[];
 }
 
 export interface NetworkCoverage {

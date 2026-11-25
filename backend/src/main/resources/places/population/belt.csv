@@ -1,62 +1,93 @@
-# Residents of the villages and towns reaching within 5 km of Białystok's city limits, with the date and source of
-# each figure; empty: no figure found. Edit by hand: rows are matched to osm/belt.json by the osm column (a village's
-# OpenStreetMap relation). First written by tools/geo/init_belt_population.py from the inputs in tools/geo/sources/.
+# Residents of the villages and towns of the belt around Białystok, with the date and source of each figure; empty: no
+# figure found (the census counts some small places with a neighbour). Edit by hand: rows are matched to osm/belt.json
+# by the osm column (a village's OpenStreetMap relation). First written by tools/geo/init_belt_population.py from the
+# inputs in tools/geo/sources/; the belt was widened in Nov 2026 with the 2021 census per place (tools/geo/sources/
+# census-2021.json). Places named together are counted together.
 osm,name,gmina,population,date,source
+relation/7100842,Baciuty,gmina Turośń Kościelna,365,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0042458)"
+relation/7100841,Baciuty-Kolonia,gmina Turośń Kościelna,215,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0042487)"
 relation/7095345,Barszczewo,gmina Choroszcz,554,2021-03-31,"NSP 2021 (GUS), via Wikidata Q4865040"
+relation/7100840,Barszczówka,gmina Turośń Kościelna,152,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0042493)"
 relation/7101813,Białostoczek,gmina Zabłudów,,,
+relation/7106356,Biele,gmina Juchnowiec Kościelny,122,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
+relation/7101679,Bobrowa,gmina Zabłudów,92,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0044434)"
 relation/7102003,Bogdaniec,gmina Zabłudów,,,
 relation/7097186,Bohdan,gmina Dobrzyniewo Duże,181,2021-03-31,"NSP 2021 (GUS), via Wikidata Q4938018"
 relation/7105767,Brończany,gmina Juchnowiec Kościelny,347,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
 relation/3092528,Choroszcz,gmina Choroszcz,5961,2021-03-31,"NSP 2021 (GUS), via Wikidata Q924100"
 relation/7098655,Ciasne,gmina Supraśl,496,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5119205"
 relation/7095322,Czaplino,gmina Choroszcz,180,2021-03-31,"NSP 2021 (GUS), via Wikidata Q2234706"
+relation/7100806,Dobrowoda,gmina Turośń Kościelna,134,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0042665)"
 relation/7097754,Dobrzyniewo Duże,gmina Dobrzyniewo Duże,1817,2021-03-31,"NSP 2021 (GUS), via Wikidata Q3033441"
 relation/7097714,Dobrzyniewo Fabryczne,gmina Dobrzyniewo Duże,358,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5286928"
 relation/7097711,Dobrzyniewo Kościelne,gmina Dobrzyniewo Duże,195,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5286927"
-relation/7095590,Dzikie,gmina Choroszcz,182,2021-03-31,"NSP 2021 (GUS), via Wikidata Q2654437"
-relation/7095591,Dzikie-Kolonia,gmina Choroszcz,,,
+relation/7101858,Dobrzyniówka,gmina Zabłudów,687,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0044463)"
+relation/7095590,"Dzikie, Dzikie-Kolonia",gmina Choroszcz,182,2021-03-31,"NSP 2021 (GUS), via Wikidata Q2654437"
 relation/7097813,Dąbrówki,gmina Wasilków,608,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5320869"
 relation/7097715,Fasty,gmina Dobrzyniewo Duże,1819,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5437133"
 relation/7098653,Grabówka,gmina Grabówka,4403,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5590880"
-relation/7101919,Halickie,gmina Zabłudów,,,
-relation/7098663,Henrykowo,gmina Grabówka,296,2011,Wikipedia (pl): Henrykowo (województwo podlaskie)
+relation/7101919,Halickie,gmina Zabłudów,474,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0044575)"
+relation/7098663,Henrykowo,gmina Grabówka,409,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0041453)"
 relation/7105773,Hermanówka,gmina Juchnowiec Kościelny,161,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
 relation/7105719,Horodniany,gmina Juchnowiec Kościelny,432,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
 relation/7105716,Hryniewicze,gmina Juchnowiec Kościelny,585,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
 relation/7105741,Ignatki,gmina Juchnowiec Kościelny,713,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
 relation/7105721,Ignatki-Osiedle,gmina Juchnowiec Kościelny,1446,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
+relation/7100896,Iwanówka,gmina Turośń Kościelna,196,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0042702)"
 relation/7105673,Izabelin,gmina Juchnowiec Kościelny,204,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
+relation/7098661,Izoby,gmina Grabówka,,,
+relation/7106302,Janowicze,gmina Juchnowiec Kościelny,140,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
+relation/7106301,Janowicze-Kolonia,gmina Juchnowiec Kościelny,53,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
+relation/7098424,Jałówka,gmina Supraśl,35,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0041476)"
 relation/7095412,Jeroniki,gmina Choroszcz,111,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5736537"
-relation/7097848,Jurowce,gmina Wasilków,,,
+relation/7105800,Juchnowiec Dolny,gmina Juchnowiec Kościelny,446,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
+relation/7105799,Juchnowiec Górny,gmina Juchnowiec Kościelny,317,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
+relation/7105775,Juchnowiec Kościelny,gmina Juchnowiec Kościelny,239,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
+relation/7100743,Juraszki,gmina Turośń Kościelna,110,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0042725)"
+relation/7097848,Jurowce,gmina Wasilków,886,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0043541)"
 relation/7102000,Józefowo,gmina Zabłudów,,,
 relation/7101817,Kamionka,gmina Zabłudów,183,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5739246"
 relation/7098656,Karakule,gmina Supraśl,700,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5741574"
-relation/7097906,Katrynka,gmina Wasilków,44,2012,Wikipedia (pl): Katrynka (wieś)
+relation/7097906,Katrynka,gmina Wasilków,76,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0043564)"
 relation/7105720,Kleosin,gmina Juchnowiec Kościelny,4564,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
-relation/7095321,Klepacze,gmina Choroszcz,,,
-relation/7106290,Kojrany,gmina Juchnowiec Kościelny,,,
+relation/7095321,Klepacze,gmina Choroszcz,2395,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0025135)"
+relation/7106357,Klewinowo,gmina Juchnowiec Kościelny,234,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
 relation/7105740,Kolonia Koplany,gmina Juchnowiec Kościelny,176,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
 relation/7105739,Koplany,gmina Juchnowiec Kościelny,243,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
-relation/7095382,Krupniki,gmina Choroszcz,,,
+relation/7104739,Kowalowce,gmina Zabłudów,104,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0044629)"
+relation/7008441,Kołodno,gmina Gródek,77,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0029050)"
+relation/7101859,Krasne,gmina Zabłudów,,,
+relation/7098664,Krasne (gmina Supraśl),gmina Supraśl,,,
+relation/7098659,Krasny Las,gmina Grabówka,,,
+relation/7095382,Krupniki,gmina Choroszcz,878,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0025170)"
 relation/7097759,Krynice,gmina Dobrzyniewo Duże,342,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5736321"
+relation/7105098,Krynickie,gmina Zabłudów,218,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0044641)"
 relation/7105718,Księżyno,gmina Juchnowiec Kościelny,1174,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
 relation/7105717,Księżyno-Kolonia,gmina Juchnowiec Kościelny,193,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
+relation/7102012,Kucharówka,gmina Zabłudów,105,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0044658)"
 relation/7102001,Kudrycze,gmina Zabłudów,148,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5618091"
-relation/7096846,Kulikówka,gmina Dobrzyniewo Duże,148,2011,Wikipedia (pl): Kulikówka
+relation/7096846,Kulikówka,gmina Dobrzyniewo Duże,159,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0027200)"
 relation/7101814,Kuriany,gmina Zabłudów,915,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5618587"
 relation/7097185,Letniki,gmina Dobrzyniewo Duże,359,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5616980"
 relation/7105766,Lewickie,gmina Juchnowiec Kościelny,490,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
 relation/7105765,Lewickie-Kolonia,gmina Juchnowiec Kościelny,216,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
+relation/7105764,"Lewickie-Stacja, Kojrany",gmina Juchnowiec Kościelny,185,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
 relation/7097183,Leńce,gmina Dobrzyniewo Duże,200,2021-03-31,"NSP 2021 (GUS), via Wikidata Q2648521"
+relation/7100744,Lubejki,gmina Turośń Kościelna,107,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0042731)"
+relation/7098662,Majówka,gmina Grabówka,,,
 relation/7100894,Markowszczyzna,gmina Turośń Kościelna,276,2021-03-31,"NSP 2021 (GUS), via Wikidata Q6771378"
+relation/7105763,Mańkowizna,gmina Juchnowiec Kościelny,,,
 relation/7095240,Mińce,gmina Choroszcz,118,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5736699"
+relation/7100895,Niecki,gmina Turośń Kościelna,229,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0042783)"
 relation/7100953,Niewodnica Korycka,gmina Turośń Kościelna,688,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5617825"
 relation/7100952,Niewodnica Kościelna,gmina Turośń Kościelna,1045,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5618209"
 relation/7105715,Niewodnica Nargilewska,gmina Juchnowiec Kościelny,117,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
 relation/7105714,Niewodnica Nargilewska-Kolonia,gmina Juchnowiec Kościelny,144,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
 relation/7097713,Nowe Aleksandrowo,gmina Dobrzyniewo Duże,779,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5617866"
-relation/7097814,Nowodworce,gmina Wasilków,717,2012,Wikipedia (pl): Nowodworce
-relation/7098658,Ogrodniczki,gmina Supraśl,,,
+relation/7097814,Nowodworce,gmina Wasilków,2039,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0043593)"
+relation/7105099,Nowosady,gmina Zabłudów,101,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0044724)"
+relation/7098658,Ogrodniczki,gmina Supraśl,902,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0041588)"
+relation/7105798,Ogrodniczki,gmina Juchnowiec Kościelny,78,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
 relation/7095344,Ogrodniki,gmina Choroszcz,115,2021-03-31,"NSP 2021 (GUS), via Wikidata Q7080253"
 relation/7097712,Ogrodniki,gmina Dobrzyniewo Duże,257,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5619069"
 relation/7095343,Oliszki,gmina Choroszcz,344,2021-03-31,"NSP 2021 (GUS), via Wikidata Q7086962"
@@ -66,32 +97,46 @@ relation/7104740,Pasynki,gmina Zabłudów,105,2021-03-31,"NSP 2021 (GUS), via ht
 relation/7097184,Podleńce,gmina Dobrzyniewo Duże,203,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5619948"
 relation/7100745,Pomigacze,gmina Turośń Kościelna,299,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5618953"
 relation/7097162,Ponikła,gmina Dobrzyniewo Duże,290,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5621326"
-relation/7095384,Porosły,gmina Choroszcz,,,
-relation/7095383,Porosły-Kolonia,gmina Choroszcz,,,
+relation/7095384,"Porosły, Porosły-Kolonia",gmina Choroszcz,1561,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0025247)"
 relation/7101812,Protasy,gmina Zabłudów,253,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5741664"
+relation/7098657,Pólko,gmina Supraśl,,,
 relation/7101811,Płoskie,gmina Zabłudów,88,2021-03-31,"NSP 2021 (GUS), via Wikidata Q7265149"
 relation/7101906,Rafałówka,gmina Zabłudów,490,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5736916"
 relation/7105774,Rumejki,gmina Juchnowiec Kościelny,175,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
-relation/7097904,Rybniki,gmina Wasilków,262,2012,Wikipedia (pl): Rybniki (województwo podlaskie)
+relation/7097904,Rybniki,gmina Wasilków,269,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0043624)"
 relation/7097847,Sielachowskie,gmina Wasilków,305,2021-03-31,"NSP 2021 (GUS), via Wikidata Q7510805"
 relation/7095385,Sienkiewicze,gmina Choroszcz,240,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5736460"
-relation/7102002,Skrybicze,gmina Zabłudów,268,2021,Wikipedia (pl): Skrybicze
+relation/7102002,Skrybicze,gmina Zabłudów,268,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0044865)"
 relation/7098651,Sobolewo,gmina Grabówka,1952,2021-03-31,"NSP 2021 (GUS), via https://www.polskawliczbach.pl/wies_Sobolewo_suprasl_podlaskie"
 relation/7097907,Sochonie,gmina Wasilków,866,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5735383"
 relation/7105692,Solniczki,gmina Juchnowiec Kościelny,465,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
+relation/7105097,Solniki,gmina Zabłudów,52,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0044888)"
 relation/7098654,Sowlany,gmina Grabówka,648,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5741305"
 relation/7105693,Stanisławowo,gmina Juchnowiec Kościelny,306,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
+relation/7097811,Studzianki,gmina Wasilków,1245,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0043676)"
+relation/3091199,Supraśl,gmina Supraśl,4427,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0923472)"
+relation/7105801,Szerenosy,gmina Juchnowiec Kościelny,173,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
+relation/7101678,Tatarowce,gmina Zabłudów,57,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0044894)"
+relation/7100828,Topilec,gmina Turośń Kościelna,88,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0042932)"
 relation/7100954,Tołcze,gmina Turośń Kościelna,219,2021-03-31,"NSP 2021 (GUS), via Wikidata Q3917314"
 relation/7100955,Trypucie,gmina Turośń Kościelna,278,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5735476"
 relation/7095320,Turczyn,gmina Choroszcz,,,
+relation/7100805,Turośń Dolna,gmina Turośń Kościelna,372,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0042961)"
+relation/7100742,Turośń Kościelna,gmina Turośń Kościelna,847,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0043009)"
 relation/3091200,Wasilków,gmina Wasilków,12147,2021-03-31,"NSP 2021 (GUS), via Wikidata Q1906290"
 relation/7097905,Woroszyły,gmina Wasilków,115,2021-03-31,"NSP 2021 (GUS), via Wikidata Q8036927"
+relation/7106300,Wólka,gmina Juchnowiec Kościelny,150,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
+relation/1745177,Zabłudów,gmina Zabłudów,2475,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0923578)"
+relation/7101815,Zacisze,gmina Zabłudów,42,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0044948)"
 relation/7102011,Zagruszany,gmina Zabłudów,191,2021-03-31,"NSP 2021 (GUS), via Wikidata Q980698"
+relation/7101816,Zajezierce,gmina Zabłudów,78,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0044960)"
 relation/7100893,Zalesiany,gmina Turośń Kościelna,226,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5736389"
+relation/7100827,Zawady,gmina Turośń Kościelna,106,2021-03-31,"NSP 2021 (GUS), via citypopulation.de (SIMC 0043073)"
 relation/7098652,Zaścianki,gmina Grabówka,2844,2021-03-31,"NSP 2021 (GUS), via Wikidata Q964757"
 relation/7098660,Zielona,gmina Grabówka,,,
 relation/7101905,Zwierki,gmina Zabłudów,329,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5737554"
 relation/7101904,Łubniki,gmina Zabłudów,224,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5618872"
+relation/7101675,Łukiany,gmina Zabłudów,,,
 relation/7095411,Łyski,gmina Choroszcz,543,2021-03-31,"NSP 2021 (GUS), via Wikidata Q3492260"
 relation/7105674,Śródlesie,gmina Juchnowiec Kościelny,301,2023-12-31,"Gmina Juchnowiec Kościelny, Gminny Program Rewitalizacji do 2035 r. (uchwała IX/84/2025), tab. 1"
 relation/7104738,Żuki,gmina Zabłudów,74,2021-03-31,"NSP 2021 (GUS), via Wikidata Q5741641"

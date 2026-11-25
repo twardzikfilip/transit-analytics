@@ -71,14 +71,16 @@ public record NetworkCoverageDto(List<double[]> stops, double cellMeters, Place 
      * @param density          residents per km²; null without a figure
      * @param forestKm2        woods in it
      * @param valleyKm2        the Biała valley in it (outside the woods)
-     * @param landKm2          it without its woods and the valley
+     * @param openKm2          fields, meadows and other open land in it, pieces of at least 1 ha; a village or town only
+     * @param landKm2          it without its woods, the valley and the open land
      * @param landDensity      residents per km² of {@code landKm2}; null without a figure
      * @param largeForest      woods cover at least {@link NetworkCoverageDto#forestShare} of it
      * @param coveredShares    the share of it within each walking distance of a stop, as {@code coverages}
      */
     public record PlaceDensity(String name, String kind, String gmina, Shape shape, double areaKm2, Integer population,
                                String populationDate, String populationSource, Double density, double forestKm2,
-                               double valleyKm2, double landKm2, Double landDensity, boolean largeForest, List<Double> coveredShares) {
+                               double valleyKm2, double openKm2, double landKm2, Double landDensity, boolean largeForest,
+                               List<Double> coveredShares) {
     }
 
     /** A population figure, when it is from and where it comes from. */
@@ -90,10 +92,13 @@ public record NetworkCoverageDto(List<double[]> stops, double cellMeters, Place 
     }
 
     /**
-     * The suburban belt: every village (sołectwo) and town reaching within {@code distanceKm} of the city limits.
+     * The suburban belt: every village (sołectwo) and town reaching within {@code distanceKm} of the city
+     * limits, or within {@code farKm} in the arc from Supraśl round the south to Baciuty.
      *
-     * @param woods outlines of the woods in them (the larger pieces; all count in the areas)
+     * @param woods outlines of the woods in them (pieces of at least 1 ha)
+     * @param open  the same of the fields, meadows and other open land
      */
-    public record Belt(double distanceKm, double cellMeters, List<PlaceDensity> places, List<Shape> woods) {
+    public record Belt(double distanceKm, double farKm, double cellMeters, List<PlaceDensity> places, List<Shape> woods,
+                       List<Shape> open) {
     }
 }
