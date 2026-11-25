@@ -498,7 +498,7 @@ INTEGRATION_TESTS=true ./gradlew test           # also boots the full context ag
 Every test run writes a JaCoCo coverage report to `build/reports/jacoco/test/` (`html/index.html`, and
 `jacocoTestReport.xml` for CI). Unit tests alone cover about 54% of lines; with the database tests about 95%.
 `check` fails below 50% of lines, or below 90% when `INTEGRATION_TESTS=true` (as in CI).
-Database tests use `@DbIntegrationTest` and roll their data back; `TimetableFixture` inserts a small timetable.
+Database tests use `@DbIntegrationTest` (the recorder's: `@RecorderDbTest`) and roll their data back; `TimetableFixture` inserts a small timetable.
 They run against their own database, `transit_test` on the same server (`TEST_DB_URL` to change it; CI points it at
 its own `transit`), never the one the recorder writes to. Roles belong to the whole server, so the tests keep their
 passwords while migrating (`SharedRoles`). Create it once:

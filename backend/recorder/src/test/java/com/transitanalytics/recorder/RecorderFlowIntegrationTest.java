@@ -36,7 +36,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 /**
- * The recorder's whole path against the real database, logged in as its own role ({@code transit_recorder}, V16):
+ * The recorder's whole path against the test database, logged in as its own role ({@code transit_recorder}, V16):
  * poll, archive, store; a database that is down; the spool storing what was missed. Vehicles "IT-RF…", reports in
  * 2099; removed afterwards.
  */
