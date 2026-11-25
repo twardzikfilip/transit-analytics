@@ -1,10 +1,13 @@
 package com.transitanalytics.web;
 
+import com.transitanalytics.dto.TimetableCoverageDto;
 import com.transitanalytics.gtfs.GtfsFeedService;
 import com.transitanalytics.gtfs.GtfsImportResult;
+import com.transitanalytics.service.TimetableCoverageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,9 +19,19 @@ import org.springframework.web.bind.annotation.RestController;
 public class GtfsController {
 
     private final GtfsFeedService feeds;
+    private final TimetableCoverageService coverage;
 
-    public GtfsController(GtfsFeedService feeds) {
+    public GtfsController(GtfsFeedService feeds, TimetableCoverageService coverage) {
         this.feeds = feeds;
+        this.coverage = coverage;
+    }
+
+    @Operation(summary = "Until when the timetables run",
+            description = "Each feed's last day with trips and the days left, and whether it is ending (5 days or fewer "
+                    + "left, ended, or not loaded).")
+    @GetMapping("/coverage")
+    public TimetableCoverageDto coverage() {
+        return coverage.coverage();
     }
 
     @Operation(summary = "Import a timetable feed",

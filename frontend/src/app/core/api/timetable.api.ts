@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { GtfsImportResult, Route, Stop, StopTime } from '../models/models';
+import { GtfsImportResult, Route, Stop, StopTime, TimetableCoverage } from '../models/models';
 import { CrudApiService } from './crud-api.service';
 
 @Injectable({ providedIn: 'root' })
@@ -29,6 +29,11 @@ export class StopTimeApi extends CrudApiService<StopTime, unknown> {
 @Injectable({ providedIn: 'root' })
 export class GtfsApi {
   private readonly http = inject(HttpClient);
+
+  /** Until when each timetable runs. */
+  coverage(): Observable<TimetableCoverage> {
+    return this.http.get<TimetableCoverage>('/api/gtfs/coverage');
+  }
 
   importBialystok(): Observable<GtfsImportResult> {
     return this.http.post<GtfsImportResult>('/api/gtfs/bialystok/import', null);

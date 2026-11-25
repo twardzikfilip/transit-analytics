@@ -94,3 +94,20 @@ export interface GtfsImportResult {
   skipped: Record<string, number>;
   ignoredFiles: string[];
 }
+
+/** Until when the imported timetables run. */
+export interface TimetableCoverage {
+  today: string;
+  /** A feed with no more than this many days left is ending. */
+  warnDays: number;
+  feeds: FeedCoverage[];
+}
+
+export interface FeedCoverage {
+  feed: string;
+  /** The last day with trips ("2026-11-28"); null when nothing is loaded. */
+  lastDay: string | null;
+  /** 0 when today is the last day, negative once it has ended. */
+  daysLeft: number | null;
+  ending: boolean;
+}

@@ -1534,6 +1534,19 @@
     "stepNextTrip": "Le bus {{bus}} assure la course suivante du service, vers {{to}} (prévue à {{time}})."
   },
   "home": {
+    "timetables": {
+      "title": "Horaires bientôt expirés",
+      "rule": "Aucun horaire plus récent n'a été publié. Après le dernier jour, les retards par rapport à l'horaire, les courses et les services de cet exploitant ne peuvent plus être calculés ; les positions restent enregistrées.",
+      "left": {
+        "one": "encore {{count}} jour",
+        "many": "encore {{count}} jours",
+        "other": "encore {{count}} jours"
+      },
+      "today": "dernier jour aujourd'hui",
+      "ended": "expiré",
+      "notLoaded": "non chargé",
+      "lastDay": "dernier jour : {{day}}"
+    },
     "trackers": {
       "title": "Bus au traceur peut-être défaillant",
       "rule": "Bus qui ont cessé d'émettre en cours de course {{days}} jours ou plus la semaine dernière ({{trips}}+ courses, {{share}} %+ de leurs courses) : vérifiez leur traceur. Leurs trous relèvent du suivi, pas du service.",

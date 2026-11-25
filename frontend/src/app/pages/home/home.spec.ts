@@ -1,11 +1,12 @@
 import { of } from 'rxjs';
-import { TripAnomalyApi } from '../../core/api/api.services';
-import { FaultyTracker, FaultyTrackers } from '../../core/models/models';
+import { GtfsApi, TripAnomalyApi } from '../../core/api/api.services';
+import { FaultyTracker, FaultyTrackers, FeedCoverage } from '../../core/models/models';
 import { renderPage, stateAfter, text, useSvgMaps } from '../../testing/page-testing';
 import { livePositionsFeature } from '../../store/live-positions/live-positions.reducer';
 import { positionHistoryFeature } from '../../store/position-history/position-history.reducer';
 import { FaultyTrackers as FaultyTrackersTile } from './faulty-trackers';
 import { Home } from './home';
+import { TimetableWarning } from './timetable-warning';
 
 describe('Home page', () => {
   it('shows the faulty trackers, the live map, then the recorded positions with their own time window', () => {
@@ -17,7 +18,10 @@ describe('Home page', () => {
         ...stateAfter(positionHistoryFeature),
       },
       {},
-      [{ provide: TripAnomalyApi, useValue: { faultyTrackers: () => of() } }],
+      [
+        { provide: TripAnomalyApi, useValue: { faultyTrackers: () => of() } },
+        { provide: GtfsApi, useValue: { coverage: () => of() } },
+      ],
     ).el;
     expect(el.querySelector('app-faulty-trackers')).not.toBeNull();
     expect(el.querySelector('app-live-map')).not.toBeNull();
@@ -66,5 +70,44 @@ describe('Faulty trackers tile', () => {
     ]);
     expect(el.querySelector('.tile.alert')).toBeNull();
     expect(text(el.querySelector('.tile p:last-child'))).toContain('No bus lost its signal');
+  });
+});
+
+describe('Timetable warning', () => {
+  const feed = (key: string, daysLeft: number | null, ending = true): FeedCoverage => ({
+    feed: key,
+    lastDay: daysLeft === null ? null : '2026-11-28',
+    daysLeft,
+    ending,
+  });
+  const render = (feeds: FeedCoverage[]) =>
+    renderPage(TimetableWarning, {}, {}, [
+      {
+        provide: GtfsApi,
+        useValue: { coverage: () => of({ today: '2026-11-25', warnDays: 5, feeds }) },
+      },
+    ]).el;
+
+  it('lists the timetables that end soon, have ended or are not loaded', () => {
+    const el = render([
+      feed('bialystok', 70, false),
+      feed('wschodexpress', 3),
+      feed('turosn-koscielna', 0),
+      feed('pksnova-500', -1),
+      feed('bialystok', null),
+    ]);
+    const items = [...el.querySelectorAll('li')].map(text);
+    expect(items).toHaveLength(4);
+    expect(items[0]).toContain('Wschód Express');
+    expect(items[0]).toContain('3 days left');
+    expect(items[0]).toContain('28 Nov');
+    expect(items[1]).toContain('today is its last day');
+    expect(items[2]).toContain('has ended');
+    expect(items[3]).toContain('not loaded');
+    expect(el.querySelectorAll('.tag.danger')).toHaveLength(2);
+  });
+
+  it('shows nothing while every timetable runs on', () => {
+    expect(render([feed('bialystok', 70, false)]).querySelector('section')).toBeNull();
   });
 });
