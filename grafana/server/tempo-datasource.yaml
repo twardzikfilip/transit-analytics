@@ -1,0 +1,10 @@
+apiVersion: 1
+
+# The backend's traces, for the Transit Backend dashboard (at home otel-lgtm has its own).
+datasources:
+  - name: Tempo
+    uid: tempo
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    editable: false

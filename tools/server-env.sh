@@ -28,7 +28,8 @@ umask 077
   echo "SITE_ADDRESS=$1"
   echo "APP_VERSION=$(cut -d' ' -f1 VERSION)"
   echo "RECORDER_VERSION=$(cut -d' ' -f1 backend/recorder/VERSION)"
-  for name in DB_PASSWORD RECORDER_DB_PASSWORD GRAFANA_DB_PASSWORD JWT_SECRET; do
+  echo "GRAFANA_VERSION=$(cut -d' ' -f1 grafana/VERSION)"
+  for name in DB_PASSWORD RECORDER_DB_PASSWORD GRAFANA_DB_PASSWORD GRAFANA_ADMIN_PASSWORD JWT_SECRET; do
     echo "$name=$(openssl rand -hex 32)"
   done
   echo "ADMIN_PASSWORD=$admin"

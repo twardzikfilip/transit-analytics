@@ -59,6 +59,9 @@ services:
         condition: service_healthy
     environment:
       <<: *no-telemetry
+      # Its traces, for Grafana; it runs without Tempo too.
+      MANAGEMENT_TRACING_EXPORT_ENABLED: "true"
+      OTLP_ENDPOINT: http://tempo:4318
       DB_USER: transit
       DB_PASSWORD: ${DB_PASSWORD:?set it in .env}
       RECORDER_DB_PASSWORD: ${RECORDER_DB_PASSWORD:?set it in .env}
@@ -92,8 +95,41 @@ services:
       - caddyconfig:/config
     mem_limit: 256m
 
+  # Grafana at /grafana (through Caddy), with the dashboards of grafana/.
+  grafana:
+    image: ghcr.io/twardzikfilip/transit-grafana:${GRAFANA_VERSION:?set it in .env}
+    container_name: transit-grafana
+    restart: unless-stopped
+    environment:
+      GF_SERVER_ROOT_URL: https://${SITE_ADDRESS:?set it in .env}/grafana/
+      # Read at its first start only.
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set it in .env}
+      GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD:?set it in .env}
+    volumes:
+      - grafanadata:/var/lib/grafana
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/grafana/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    mem_limit: 768m
+
+  # The backend's traces, for a week.
+  tempo:
+    image: grafana/tempo:3.1.1
+    container_name: transit-tempo
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./grafana/server/tempo.yaml:/etc/tempo.yaml:ro
+      - tempodata:/var/tempo
+    mem_limit: 768m
+
 volumes:
   tsdata:
+  grafanadata:
+  tempodata:
   backendconfig:
   caddydata:
   caddyconfig:

@@ -1,0 +1,11 @@
+apiVersion: 1
+
+# The dashboards in the image. They can't be saved from the pages: a change is a new version (README, "Grafana").
+providers:
+  - name: transit-analytics
+    folder: Transit Analytics
+    type: file
+    allowUiUpdates: false
+    options:
+      path: /etc/grafana/dashboards
+      foldersFromFilesStructure: false

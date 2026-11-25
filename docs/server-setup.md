@@ -167,6 +167,17 @@ shred -u deploy-key
 
 Port 22 has to stay open to GitHub's machines (their addresses change).
 
+## 14. Grafana
+
+A new server's `.env` has what it needs (`tools/server-env.sh`). To an older one, add once:
+
+```sh
+cd ~/transit-analytics && echo GRAFANA_VERSION=1.0.0 >> .env && echo "GRAFANA_ADMIN_PASSWORD=$(openssl rand -hex 16)" >> .env
+```
+
+Then run the Release workflow (README, "Grafana"). Read the password with
+`grep GRAFANA_ADMIN_PASSWORD ~/transit-analytics/.env`. It is for user `admin` at `https://<domain>/grafana/`.
+
 ## Not done yet
 
 Backups away from the server, and a check from outside that the recorder records.

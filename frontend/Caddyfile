@@ -1,4 +1,4 @@
-# The only part reachable from outside: the pages, and /api passed on to the backend. Everything else of the backend
+# The only part reachable from outside: the pages, /api passed on to the backend, and /grafana to Grafana. Everything else of the backend
 # (API docs, actuator) isn't passed on. With a domain as SITE_ADDRESS, Caddy gets and renews its HTTPS certificate.
 {$SITE_ADDRESS::80} {
 	encode zstd gzip
@@ -18,6 +18,11 @@
 			max_size 1MB
 		}
 		reverse_proxy {$BACKEND:backend:8080}
+	}
+
+	redir /grafana /grafana/
+	handle /grafana/* {
+		reverse_proxy {$GRAFANA:grafana:3000}
 	}
 
 	handle {

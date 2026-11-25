@@ -71,6 +71,15 @@ jobs:
             backend/*/build/reports/jacoco/test/
           retention-days: 14
 
+  grafana:
+    name: Grafana (image, dashboards, data sources)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -q -t transit-grafana grafana
+      - run: grafana/check.sh transit-grafana
+
   frontend:
     name: Frontend (tests, coverage, production build)
     runs-on: ubuntu-latest
