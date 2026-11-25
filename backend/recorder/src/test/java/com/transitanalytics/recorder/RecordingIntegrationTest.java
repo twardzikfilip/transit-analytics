@@ -23,7 +23,7 @@ import java.util.zip.GZIPOutputStream;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Position recording against the real TimescaleDB database. Uses vehicle numbers starting with "IT-" and removes
+ * Position recording against a TimescaleDB database ({@link RecorderDbTest}). Uses vehicle numbers starting with "IT-" and removes
  * them (and their positions) afterwards. Run with INTEGRATION_TESTS=true and the DB up.
  */
 @RecorderDbTest
@@ -64,8 +64,8 @@ class RecordingIntegrationTest {
 
     @AfterEach
     void cleanUp() {
-        // Only the tests' own times (2020 and 2099): a delete reaching the real data's compressed chunks would have
-        // to decompress them, past TimescaleDB's limit.
+        // Only the tests' own times (2020 and 2099): a delete reaching older, compressed chunks would have to
+        // decompress them, past TimescaleDB's limit.
         jdbc.update("DELETE FROM position_sample WHERE vehicle_id IN "
                 + "(SELECT id FROM vehicle WHERE vehicle_number LIKE 'IT-%') "
                 + "AND (observed_at < '2021-01-01' OR observed_at >= '2099-01-01')");
