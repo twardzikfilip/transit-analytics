@@ -1,0 +1,10 @@
+[Unit]
+Description=Every hour: fetch the Transit Analytics backup if one is due
+
+[Timer]
+OnCalendar=*-*-* *:35:00
+OnStartupSec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
