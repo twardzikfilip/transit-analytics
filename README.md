@@ -55,7 +55,156 @@ flowchart LR
 
 One server runs it all with Docker Compose; GitHub Actions tests and releases it ([set-up](docs/server-setup.md)).
 
-## 4. Data sources
+## 4. Data models
+
+Solid lines are foreign keys. Dotted lines are links by value, without a foreign key.
+
+```mermaid
+erDiagram
+  agency |o--o{ route : runs
+  route ||--o{ trip : has
+  trip ||--o{ stop_time : "calls at"
+  stop ||--o{ stop_time : "is called at"
+  stop |o..o{ stop : "groups (parent_station)"
+  trip ||--o| trip_brigade : "is worked by"
+  trip }o..o{ calendar_date : "runs on (service_id)"
+  trip }o..o{ shape_point : "follows (shape_id)"
+  assumed_timetable_day |o..o{ calendar_date : "marks as assumed (date)"
+  vehicle ||--o{ position_sample : reports
+  route |o..o{ position_sample : "is reported as (route_name)"
+  user_role ||--o{ app_user : has
+
+  agency {
+    bigint id PK
+    varchar feed UK "with gtfs_id"
+    varchar gtfs_id UK "with feed"
+    varchar name
+    varchar url
+    varchar timezone
+  }
+  route {
+    bigint id PK
+    varchar feed UK "with gtfs_id"
+    varchar gtfs_id UK "with feed"
+    bigint agency_id FK
+    varchar short_name
+    varchar long_name
+    varchar color
+    smallint route_type
+    varchar subtype "urban, suburban, night_urban, regional"
+    varchar geometry
+    varchar capacity_class
+    varchar operating_agency
+  }
+  trip {
+    bigint id PK
+    varchar feed UK "with gtfs_id"
+    varchar gtfs_id UK "with feed"
+    bigint route_id FK
+    varchar service_id
+    varchar shape_id
+    varchar headsign
+    smallint direction
+    varchar block_id
+  }
+  stop_time {
+    bigint id PK
+    bigint trip_id FK, UK "with stop_sequence"
+    integer stop_sequence UK "with trip_id"
+    bigint stop_id FK
+    varchar arrival_time
+    varchar departure_time
+  }
+  stop {
+    bigint id PK
+    varchar feed UK "with gtfs_id"
+    varchar gtfs_id UK "with feed"
+    varchar code
+    varchar name
+    double latitude
+    double longitude
+    varchar parent_station
+  }
+  shape_point {
+    bigint id PK
+    varchar feed UK "with shape_id, sequence"
+    varchar shape_id UK "with feed, sequence"
+    integer sequence UK "with feed, shape_id"
+    double latitude
+    double longitude
+  }
+  calendar_date {
+    bigint id PK
+    varchar feed UK "with service_id, date"
+    varchar service_id UK "with feed, date"
+    date date UK "with feed, service_id"
+    smallint exception_type
+  }
+  assumed_timetable_day {
+    varchar feed PK
+    date date PK
+  }
+  trip_brigade {
+    bigint trip_id PK, FK
+    varchar brigade
+    integer days
+  }
+  vehicle {
+    bigint id PK
+    varchar vehicle_number UK
+    varchar type
+    varchar model
+    integer capacity
+    varchar agency
+    varchar vehicle_class
+    varchar operating_agency
+  }
+  position_sample {
+    bigint vehicle_id FK, UK "with observed_at"
+    timestamptz observed_at UK "with vehicle_id"
+    timestamptz fetched_at
+    text route_name
+    text brigade
+    text headsign
+    double latitude
+    double longitude
+    smallint bearing
+    integer delay_seconds
+    text next_stop_name
+    smallint next_stop_sequence
+  }
+  recorded_brigade_line {
+    varchar agency PK
+    varchar line PK
+    varchar live_brigade PK
+    varchar brigade
+  }
+  day_summary {
+    varchar report PK
+    date day PK
+    varchar fingerprint
+    timestamptz computed_at
+    bigint positions
+    bytea content
+  }
+  app_user {
+    bigint id PK
+    varchar username UK
+    varchar password_hash
+    bigint role_id FK
+    timestamptz created_at
+  }
+  user_role {
+    bigint id PK
+    varchar name UK
+  }
+```
+
+- **Timetable** (from GTFS): `agency`, `route`, `trip`, `stop_time`, `stop`, `shape_point`, `calendar_date`. Less used columns are left out. `feed` says which feed a row came from. `assumed_timetable_day` lists the days continued after a timetable ran out.
+- **Recordings:** `vehicle` and `position_sample`, a TimescaleDB table split by time. The views `fleet_5min` and `route_delay_hourly` are computed from it.
+- **Worked out by the backend:** `trip_brigade` and `recorded_brigade_line` (brigades learnt from recordings), and `day_summary` (stored results of finished days).
+
+## 5. Data sources
 
 | Data | Source |
 |---|---|
@@ -67,5 +216,5 @@ One server runs it all with Docker Compose; GitHub Actions tests and releases it
 
 The licence of this repository doesn't cover this data: each source keeps its own terms.
 
-## 5. TODO
+## 6. TODO
 tbd

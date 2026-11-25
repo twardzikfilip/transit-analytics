@@ -139,7 +139,7 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
 - `GET /api/zbiorkom/bialystok/positions` — live Białystok vehicle positions from [zbiorkom.live](https://zbiorkom.live),
   used by the live map: transit-recorder's latest snapshot (at most 10 s old), or straight from zbiorkom.live when the
   recorder doesn't answer. Vehicles seen for the first time are added to the vehicle table (number, type, agency,
-  model; the backend adds the class and capacity of its model within 5 minutes). The agency `default` is stored as `BKM`, and GTFS type codes become names
+  model; the backend adds its class, capacity and operating company within 5 minutes). The agency `default` is stored as `BKM`, and GTFS type codes become names
   (`3` → `BUS`). Each position carries its line's `subtype` (the stored one, else from the name, for other operators'
   lines). If zbiorkom.live fails or times out, the endpoint returns 502.
 - `GET /api/fleet?from=&to=[&agency=BKM&agency=…]` — Fleet, from recorded positions: buses in use and in the fleet
@@ -275,7 +275,8 @@ source. A file of the same path in `./config/places/` where the backend runs ove
 
 ### Vehicle and line classes
 
-Configured in two YAML files, not in code: `backend/src/main/resources/classification/vehicles.yml` and `routes.yml`
+Configured in three YAML files, not in code: `backend/src/main/resources/classification/vehicles.yml`, `routes.yml`
+and `operators.yml`
 (each explains its rules at the top). A copy in `./config/classification/` where the backend runs overrides the
 built-in one without rebuilding; restart to apply.
 
@@ -296,6 +297,10 @@ built-in one without rebuilding; restart to apply.
   measures get wrong (line 26: a diameter).
 - **Operating company** (`route.operating_agency`): KPKM, KPK or KZK, from `classification/operators.yml` (BKM is
   the organiser, `route.agency`); stored when lines are classified.
+- **A bus's operating company** (`vehicle.operating_agency`): for BKM's buses KPKM, KPK or KZK, by the bus's number
+  (`vehicles` in `classification/operators.yml`; null for a number in no range); for others their agency. Stored with
+  the vehicle class, at startup and for every newly registered bus. `operatingAgency` in `/api/vehicles` and
+  `/api/fleet`; a bus's page shows the company's logo next to its number (`frontend/public/operators`).
 - **Line capacity** (`route.capacity_class`; not for night lines, which get a geometry only — `skip-subtypes`): from
   the weekday departures (lines without weekday service: the service they run most) and the share of the line's recorded reports made by MEGA buses over the last 28 days, per day type. Ordered rules:
   `main` (MEGA every day, peak headway under 15 min), `primary` (MEGA on some weekday runs, under 20 min), `secondary`
@@ -397,7 +402,7 @@ deploying the backend loses nothing.
   most every 10 s, not stored).
 - **Database access:** it logs in as `transit_recorder` (migration V16: add vehicles and positions, read them back),
   password `RECORDER_DB_PASSWORD` (the same for the backend, which sets it, and the recorder). The backend owns the
-  schema; the recorder checks the tables exist at startup. New buses get their size class from the backend within
+  schema; the recorder checks the tables exist at startup. New buses get their size class and operating company from the backend within
   5 minutes (`VehicleClasses.applyToNew`).
 - **Running it:** `backend/recorder/upgrade.sh` (also the first time; needs Docker access). It builds the image, creates
   `backend/data/raw` and `backend/data/spool` (the container runs as you; folders Docker creates itself belong to root

@@ -264,7 +264,7 @@ class SecurityWebTest {
 
     @Test
     void adminCanCreateVehicle() throws Exception {
-        given(vehicleService.create(any())).willReturn(new VehicleDto.Response(1L, "BUS-1", "BUS", 50, null, null, null));
+        given(vehicleService.create(any())).willReturn(new VehicleDto.Response(1L, "BUS-1", "BUS", 50, null, null, null, null));
 
         mvc.perform(post("/api/vehicles").header("Authorization", bearer("admin", "ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON).content(VEHICLE_JSON))
@@ -388,7 +388,7 @@ class SecurityWebTest {
     @Test
     void guestCanReadTheFleetForAWindowAndOperators() throws Exception {
         var vehicle = new FleetDto.Vehicle(7L, "230", "Solaris Urbino 12", "BKM",
-                com.transitanalytics.domain.VehicleClass.MAXI);
+                com.transitanalytics.domain.VehicleClass.MAXI, "KZK");
         var usage = new FleetDto.Usage(vehicle, 12.5, 1, List.of("103"));
         var from = Instant.parse("2026-11-15T20:00:00Z");
         var to = Instant.parse("2026-11-16T20:00:00Z");
@@ -422,7 +422,7 @@ class SecurityWebTest {
     @Test
     void guestCanReadOneBusOfTheFleet() throws Exception {
         var from = Instant.parse("2026-11-16T03:00:00Z");
-        var detail = new FleetDto.VehicleDetail(new FleetDto.Vehicle(7L, "230", null, "BKM", null), from, NOW, 1.5,
+        var detail = new FleetDto.VehicleDetail(new FleetDto.Vehicle(7L, "230", null, "BKM", null, null), from, NOW, 1.5,
                 List.of("103"), NOW, List.of(new FleetDto.Day(LocalDate.of(2026, 11, 16), from, 1.5,
                 List.of(new FleetDto.Run(18000, 21000, "103", "103-05", "Choroszcz")), List.of())),
                 List.of(new FleetDto.Incident("missed", LocalDate.of(2026, 11, 16), "103", "103-05", "Choroszcz",

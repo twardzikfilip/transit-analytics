@@ -10,6 +10,8 @@ export interface Vehicle {
   model: string | null;
   /** Size class from the model; null when the model isn't known. */
   vehicleClass: VehicleClass | null;
+  /** Who runs it: KPKM, KPK or KZK for BKM, else its agency; null when not known. */
+  operatingAgency: string | null;
 }
 
 /** Bus size: mini (under 8 m), midi (8–11 m), maxi (11–15 m), mega (15 m+, articulated) or a double-decker. */

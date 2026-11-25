@@ -208,9 +208,10 @@ public class FleetService {
     }
 
     private List<Vehicle> vehicles() {
-        return jdbc.query("SELECT id, vehicle_number, model, agency, vehicle_class FROM vehicle",
+        return jdbc.query("SELECT id, vehicle_number, model, agency, vehicle_class, operating_agency FROM vehicle",
                 (rs, i) -> new Vehicle(rs.getLong("id"), rs.getString("vehicle_number"), rs.getString("model"),
-                        rs.getString("agency"), vehicleClass(rs.getString("vehicle_class"))));
+                        rs.getString("agency"), vehicleClass(rs.getString("vehicle_class")),
+                        rs.getString("operating_agency")));
     }
 
     static List<Usage> usage(List<Segment> segments, Map<Long, Vehicle> vehicles) {
@@ -302,9 +303,11 @@ public class FleetService {
 
     /** One bus in a window: its runs and breaks per service day, and the abnormal trips it was involved in. */
     public FleetDto.VehicleDetail vehicle(long id, ReportWindow window) {
-        Vehicle vehicle = jdbc.query("SELECT id, vehicle_number, model, agency, vehicle_class FROM vehicle WHERE id = ?",
+        Vehicle vehicle = jdbc.query("""
+                SELECT id, vehicle_number, model, agency, vehicle_class, operating_agency FROM vehicle WHERE id = ?""",
                 (rs, i) -> new Vehicle(rs.getLong("id"), rs.getString("vehicle_number"), rs.getString("model"),
-                        rs.getString("agency"), vehicleClass(rs.getString("vehicle_class"))), id).stream().findFirst()
+                        rs.getString("agency"), vehicleClass(rs.getString("vehicle_class")),
+                        rs.getString("operating_agency")), id).stream().findFirst()
                 .orElseThrow(() -> new NotFoundException("Vehicle", id));
         List<Report> reports = jdbc.query("""
                 SELECT coalesce(fetched_at, observed_at) AS poll, route_name, nullif(brigade, '') AS brigade,

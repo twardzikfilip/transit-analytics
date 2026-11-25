@@ -18,8 +18,12 @@ public final class VehicleDto {
             @Size(max = 128) String model) {
     }
 
-    /** @param vehicleClass size class from the model (see classification/vehicles.yml); null when not known */
+    /**
+     * @param vehicleClass    size class from the model (see classification/vehicles.yml); null when not known
+     * @param operatingAgency who runs it: KPKM, KPK or KZK for BKM, else its agency (see
+     *                        classification/operators.yml); null when not known
+     */
     public record Response(Long id, String vehicleNumber, String type, Integer capacity, String agency, String model,
-                           VehicleClass vehicleClass) {
+                           VehicleClass vehicleClass, String operatingAgency) {
     }
 }
