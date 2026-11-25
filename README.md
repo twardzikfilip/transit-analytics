@@ -132,6 +132,8 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   stretch between stops and averaged along the corridor by length. Busiest first.
   Also every stretch between two consecutive stops (both directions together) with its peak and all-day buses and
   its route shape, for the maps. Computed in the background at startup and cached per timetable.
+- `GET /api/gtfs/coverage` — until when each timetable runs: its last day with trips, days left, and whether it is
+  ending (5 days or fewer left, ended, or not loaded). Also logged as a warning every night at 05:00.
 - `POST /api/gtfs/{feed}/import` (admin) — downloads a GTFS timetable and loads it: `bialystok` (the city's) or
   another operator's feed from `app.gtfs.extra` (`pksnova-500`, `wschodexpress`, `turosn-koscielna`); see below.
 - `GET /api/zbiorkom/bialystok/positions` — live Białystok vehicle positions from [zbiorkom.live](https://zbiorkom.live),
@@ -549,7 +551,7 @@ PGPASSWORD=transit psql -h localhost -U transit transit_test -c "CREATE EXTENSIO
 - Startup bundle: telemetry (the OpenTelemetry SDK) loads as its own chunk right after startup, and the NgRx
   devtools are only in development builds (`store-devtools.prod.ts` replaces them in production).
 - `pages` — login, settings (theme; versions; GTFS import for admins), sources (where the data comes from; "Data sources" in the header menu), and:
-- Home: buses with a possibly faulty tracker first (a tile with a red border while any bus is listed: each bus links
+- Home: a warning on top while a timetable is ending (`/api/gtfs/coverage`; nothing otherwise); then buses with a possibly faulty tracker first (a tile with a red border while any bus is listed: each bus links
   to its page, with its no-signal trips of all it ran, the days, its lines and the latest), then the live map
   (Leaflet/OSM; a `livePositions` load every 5 s, markers drawn from the store). Each bus is a pill-shaped badge with
   its line number in its kind's colour, an arrow pointing its way when the feed gives a bearing, and a ring in the

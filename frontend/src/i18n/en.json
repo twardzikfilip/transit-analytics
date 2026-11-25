@@ -1516,6 +1516,18 @@
     "stepNextTrip": "Bus {{bus}} runs the brigade's next trip, towards {{to}} (scheduled {{time}})."
   },
   "home": {
+    "timetables": {
+      "title": "Timetables about to end",
+      "rule": "No newer timetable has been published. After its last day, that operator's delays against the timetable, trips and brigades can't be worked out; positions are still recorded.",
+      "left": {
+        "one": "{{count}} day left",
+        "other": "{{count}} days left"
+      },
+      "today": "today is its last day",
+      "ended": "has ended",
+      "notLoaded": "not loaded",
+      "lastDay": "last day {{day}}"
+    },
     "trackers": {
       "title": "Buses with a possibly faulty tracker",
       "rule": "Buses that stopped reporting partway through their trips on {{days}} or more days of the last week ({{trips}}+ trips, {{share}}%+ of the trips they ran): check their trackers. Their gaps are tracking, not service.",

@@ -1516,6 +1516,18 @@
     "stepNextTrip": "Bus {{bus}} fährt die nächste Fahrt des Umlaufs, Richtung {{to}} (planmäßig {{time}})."
   },
   "home": {
+    "timetables": {
+      "title": "Bald endende Fahrpläne",
+      "rule": "Es wurde kein neuerer Fahrplan veröffentlicht. Nach dem letzten Tag lassen sich Verspätungen gegenüber dem Fahrplan, Fahrten und Umläufe dieses Betreibers nicht mehr bestimmen; Positionen werden weiter aufgezeichnet.",
+      "left": {
+        "one": "noch {{count}} Tag",
+        "other": "noch {{count}} Tage"
+      },
+      "today": "heute ist der letzte Tag",
+      "ended": "abgelaufen",
+      "notLoaded": "nicht geladen",
+      "lastDay": "letzter Tag: {{day}}"
+    },
     "trackers": {
       "title": "Busse mit möglicherweise defektem Sender",
       "rule": "Busse, die an {{days}} oder mehr Tagen der letzten Woche mitten auf Fahrten aufhörten zu melden ({{trips}}+ Fahrten, {{share}} %+ ihrer Fahrten): Sender prüfen. Ihre Lücken betreffen die Ortung, nicht den Betrieb.",

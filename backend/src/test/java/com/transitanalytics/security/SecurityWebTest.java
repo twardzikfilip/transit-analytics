@@ -31,6 +31,7 @@ import com.transitanalytics.service.ReportWindows;
 import com.transitanalytics.service.FaultyTrackers;
 import com.transitanalytics.service.TripAnomalyService;
 import com.transitanalytics.service.TripRunService;
+import com.transitanalytics.service.TimetableCoverageService;
 import com.transitanalytics.service.VehicleService;
 
 import com.transitanalytics.web.BrigadeController;
@@ -157,6 +158,9 @@ class SecurityWebTest {
 
     @MockitoBean
     GtfsFeedService gtfsFeedService;
+
+    @MockitoBean
+    TimetableCoverageService timetableCoverage;
 
     @MockitoBean
     PositionHistoryService positionHistoryService;

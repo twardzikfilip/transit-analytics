@@ -1552,6 +1552,20 @@
     "stepNextTrip": "Autobus {{bus}} jedzie następnym kursem brygady, w kierunku {{to}} (planowo {{time}})."
   },
   "home": {
+    "timetables": {
+      "title": "Kończące się rozkłady jazdy",
+      "rule": "Nie opublikowano nowszego rozkładu. Po ostatnim dniu nie da się wyznaczyć opóźnień względem rozkładu, kursów ani brygad tego przewoźnika; pozycje są nadal zapisywane.",
+      "left": {
+        "one": "pozostał {{count}} dzień",
+        "few": "pozostały {{count}} dni",
+        "many": "pozostało {{count}} dni",
+        "other": "pozostało {{count}} dnia"
+      },
+      "today": "dziś jest ostatni dzień",
+      "ended": "zakończony",
+      "notLoaded": "niewczytany",
+      "lastDay": "ostatni dzień: {{day}}"
+    },
     "trackers": {
       "title": "Autobusy z możliwie wadliwym nadajnikiem",
       "rule": "Autobusy, które przestawały nadawać w trakcie kursów w {{days}} lub więcej dni ostatniego tygodnia ({{trips}}+ kursów, {{share}}%+ ich kursów): sprawdź ich nadajniki. Ich luki to problem śledzenia, nie kursowania.",
