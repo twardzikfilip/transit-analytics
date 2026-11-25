@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 Transit analytics for Białystok's buses (BKM and other operators): live positions, recorded history, timetable
-(GTFS) analysis and network coverage. `README.md` is the full reference (API, pages, data, deployment); this file is
+(GTFS) analysis and network coverage. `README-OLD.md` is the full reference (API, pages, data, deployment); this file is
 the short version for working on the code.
 
 ## Layout
@@ -43,7 +43,7 @@ aren't archived (the health says so from recorder 1.0.0 on).
 
 Before calling a change done:
 - Backend: `cd backend && INTEGRATION_TESTS=true ./gradlew check` (needs the database up, and the `transit_test`
-  database the tests use: README, "Tests"; coverage floor 90%).
+  database the tests use: README-OLD, "Tests"; coverage floor 90%).
   To run some tests: `./gradlew :test --tests '*Name*'` (`:test`, the root project; plain `test` also runs the
   subprojects, where the filter fails).
 - Frontend: `cd frontend && npx ng test --watch=false`, `npx ng build`, `npx prettier --check src`.
@@ -78,8 +78,8 @@ Before calling a change done:
   `tr`). Long explanations with markup go through `[innerHTML]`. Use the `date`/`number` pipes from
   `shared/i18n/locale-pipes.ts`, not Angular's.
 - **Versions:** the app's (`VERSION`) and the recorder's (`backend/recorder/VERSION`) are set with `tools/version.sh`
-  (README, "Versions"); a change in `zbiorkom-feed` raises both.
-- **Docs:** keep `README.md` in step with behaviour (API section, frontend pages section).
+  (README-OLD, "Versions"); a change in `zbiorkom-feed` raises both.
+- **Docs:** keep `README-OLD.md` in step with behaviour (API section, frontend pages section).
 - Code comments and UI text: plain English, short sentences; say what something is and why, not a history of changes.
 
 ## Working with the user
