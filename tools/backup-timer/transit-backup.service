@@ -1,0 +1,10 @@
+[Unit]
+Description=Fetch the Transit Analytics server's nightly backup
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/transit-fetch-backup
+Nice=19
+IOSchedulingClass=idle
+CPUQuota=50%
+TimeoutStartSec=1h

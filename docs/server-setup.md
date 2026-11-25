@@ -178,6 +178,38 @@ cd ~/transit-analytics && echo GRAFANA_VERSION=1.0.0 >> .env && echo "GRAFANA_AD
 Then run the Release workflow (README, "Grafana"). Read the password with
 `grep GRAFANA_ADMIN_PASSWORD ~/transit-analytics/.env`. It is for user `admin` at `https://<domain>/grafana/`.
 
+## 15. Nightly backups
+
+`tools/deploy.sh` keeps copies on the server; these are kept away from it, on the home computer, which fetches them.
+
+1. At home: `ssh-keygen -t ed25519 -N '' -f ~/.ssh/transit-backup`. Save the server's host key (checked to be the right one)
+   as `~/.ssh/transit-backup.known_hosts`, and `SERVER=user@address` as `~/.config/transit-backup.env` (mode 600).
+2. On the server, the key's line in `~/.ssh/authorized_keys` starts with
+   `restrict,command="nice -n 19 docker exec transit-postgres nice -n 19 pg_dump -U transit -Fc -Z 1 transit"`: it gives
+   the dump, whatever it asks.
+3. At home:
+
+```sh
+install -m 755 tools/fetch-backup.sh ~/.local/bin/transit-fetch-backup
+install -m 644 tools/backup-timer/* ~/.config/systemd/user/
+systemctl --user daemon-reload && systemctl --user enable --now transit-backup.timer
+~/.local/bin/transit-fetch-backup --now          # the first one, into ~/backups/server
+```
+
+The timer asks every hour whether a backup is due (one a day, from 03:30), so a failure is retried and a computer that
+was off makes up for it. The dump is read through once before it counts. The last 7 days and 4 weeks are kept; nothing is
+fetched with under 8 GB free. A failure shows as a desktop notification, once a day. Installed is a copy: install it
+again after changing the script.
+
+To restore into an empty database (never over a running one; try it in a throwaway container first), use TimescaleDB's
+own two steps around it:
+
+```sh
+psql -U transit -d transit -c "CREATE EXTENSION IF NOT EXISTS timescaledb VERSION '2.31.0'" -c "SELECT timescaledb_pre_restore()"
+pg_restore -U transit -d transit --no-owner < transit-….dump
+psql -U transit -d transit -c "SELECT timescaledb_post_restore()"
+```
+
 ## Not done yet
 
-Backups away from the server, and a check from outside that the recorder records.
+A check from outside that the recorder records.
