@@ -40,4 +40,11 @@ describe('Sources page', () => {
     expect(text(detail?.querySelector('code'))).toBe('22.45,52.88,23.48,53.44');
     expect(text(detail)).toContain('Kołodzieje (line 470)');
   });
+
+  it('credits the photo behind the login form', () => {
+    const el = renderPage(Sources, {}).el;
+    const link = el.querySelector<HTMLAnchorElement>('a[href*="radio.bialystok.pl"]');
+    expect(text(link)).toBe('Polskie Radio Białystok: photo');
+    expect(text(link!.closest('tr')!)).toContain('Joanna Szubzda');
+  });
 });

@@ -487,8 +487,8 @@ describe('Fleet page', () => {
       TestBed.resetTestingModule();
       return found;
     };
-    expect(logo('KZK')).toEqual(['/operators/kzk.png', 'KZK']);
-    expect(logo('KPKM')).toEqual(['/operators/kpkm.png', 'KPKM']);
+    expect(logo('KZK')).toEqual(['/images/operators/kzk.png', 'KZK']);
+    expect(logo('KPKM')).toEqual(['/images/operators/kpkm.png', 'KPKM']);
     expect(logo('TUROSN')).toBeNull();
     expect(logo(null)).toBeNull();
   });

@@ -977,6 +977,12 @@
       "usedOn": "Fleet, Bus lanes",
       "refreshed": "By hand"
     },
+    "loginPhoto": {
+      "name": "Polskie Radio Białystok: photo",
+      "gives": "The photo of BKM buses behind the login form (Joanna Szubzda © Polskie Radio Białystok).",
+      "usedOn": "Login",
+      "refreshed": "Once"
+    },
     "models": {
       "name": "Vehicle models (own list)",
       "gives": "Length, class and capacity of each bus model.",

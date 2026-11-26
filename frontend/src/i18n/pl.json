@@ -1001,6 +1001,12 @@
       "usedOn": "Tabor, Buspasy",
       "refreshed": "Ręcznie"
     },
+    "loginPhoto": {
+      "name": "Polskie Radio Białystok: zdjęcie",
+      "gives": "Zdjęcie autobusów BKM w tle formularza logowania (Joanna Szubzda © Polskie Radio Białystok).",
+      "usedOn": "Logowanie",
+      "refreshed": "Jednorazowo"
+    },
     "models": {
       "name": "Modele pojazdów (własna lista)",
       "gives": "Długość, klasa i pojemność każdego modelu autobusu.",

@@ -309,7 +309,7 @@ built-in one without rebuilding; restart to apply.
 - **A bus's operating company** (`vehicle.operating_agency`): for BKM's buses KPKM, KPK or KZK, by the bus's number
   (`vehicles` in `classification/operators.yml`; null for a number in no range); for others their agency. Stored with
   the vehicle class, at startup and for every newly registered bus. `operatingAgency` in `/api/vehicles` and
-  `/api/fleet`; a bus's page shows the company's logo next to its number (`frontend/public/operators`).
+  `/api/fleet`; a bus's page shows the company's logo next to its number (`frontend/public/images/operators`).
 - **Line capacity** (`route.capacity_class`; not for night lines, which get a geometry only — `skip-subtypes`): from
   the weekday departures (lines without weekday service: the service they run most) and the share of the line's recorded reports made by MEGA buses over the last 28 days, per day type. Ordered rules:
   `main` (MEGA every day, peak headway under 15 min), `primary` (MEGA on some weekday runs, under 20 min), `secondary`
@@ -582,7 +582,7 @@ PGPASSWORD=transit psql -h localhost -U transit transit_test -c "CREATE EXTENSIO
   (`?range=1w`, or `?from=…&to=…` in local time, and `?agency=`).
 - Startup bundle: telemetry (the OpenTelemetry SDK) loads as its own chunk right after startup, and the NgRx
   devtools are only in development builds (`store-devtools.prod.ts` replaces them in production).
-- `pages` — login, settings (theme; versions; GTFS import for admins), sources (where the data comes from; "Data sources" in the header menu), and:
+- `pages` — login (a photo of BKM buses behind the form, in `public/images`), settings (theme; versions; GTFS import for admins), sources (where the data comes from; "Data sources" in the header menu), and:
 - Home: a warning on top while a timetable is ending (`/api/gtfs/coverage`; nothing otherwise; with the day until which it is assumed. Trips, Abnormal trips and a brigade's page opened from its operator's list say when a day shown is assumed); then buses with a possibly faulty tracker first (a tile with a red border while any bus is listed: each bus links
   to its page, with its no-signal trips of all it ran, the days, its lines and the latest), then the live map
   (Leaflet/OSM; a `livePositions` load every 5 s, markers drawn from the store). Each bus is a pill-shaped badge with
