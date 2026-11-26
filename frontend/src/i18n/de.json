@@ -977,6 +977,12 @@
       "usedOn": "Fahrzeugflotte, Busspuren",
       "refreshed": "Von Hand"
     },
+    "loginPhoto": {
+      "name": "Polskie Radio Białystok: Foto",
+      "gives": "Das Foto von BKM-Bussen hinter dem Anmeldeformular (Joanna Szubzda © Polskie Radio Białystok).",
+      "usedOn": "Anmeldung",
+      "refreshed": "Einmalig"
+    },
     "models": {
       "name": "Fahrzeugmodelle (eigene Liste)",
       "gives": "Länge, Klasse und Kapazität jedes Busmodells.",

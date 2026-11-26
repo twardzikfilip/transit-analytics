@@ -989,6 +989,12 @@
       "usedOn": "Flotte, Couloirs de bus",
       "refreshed": "À la main"
     },
+    "loginPhoto": {
+      "name": "Polskie Radio Białystok : photo",
+      "gives": "La photo de bus BKM derrière le formulaire de connexion (Joanna Szubzda © Polskie Radio Białystok).",
+      "usedOn": "Connexion",
+      "refreshed": "Une fois"
+    },
     "models": {
       "name": "Modèles de véhicules (liste propre)",
       "gives": "Longueur, classe et capacité de chaque modèle de bus.",

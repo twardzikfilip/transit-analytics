@@ -82,6 +82,10 @@ export class Sources {
     { id: 'city', url: null },
     { id: 'census', url: null },
     { id: 'operators', url: 'https://komunikacja.bialystok.pl/pl/informacje/kontakt/' },
+    {
+      id: 'loginPhoto',
+      url: 'https://www.radio.bialystok.pl/src/554/29835ad8dd6adff2b387270f27862b0e',
+    },
     { id: 'models', url: null },
     { id: 'routeTypes', url: 'https://alternativetransport.wordpress.com/2017/12/07/route-types/' },
   ];
