@@ -797,7 +797,7 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every pull request and on pu
   `docker-compose.yml`; Flyway builds the schema on the empty database). Fails on a failing test or line coverage
   below 90%.
 - **Grafana:** builds the image and checks it (`grafana/check.sh`).
-- **Frontend:** `npm ci`, `npm run test:coverage` (fails below the thresholds in `angular.json`) and the production
+- **Frontend:** `npm ci`, `npx prettier --check src` (fails on unformatted code), `npm run test:coverage` (fails below the thresholds in `angular.json`) and the production
   build (fails over the bundle budget).
 
 Test and coverage reports are kept as artifacts of each run for 14 days.
