@@ -960,6 +960,12 @@
       "usedOn": "Wszystkie mapy, Pokrycie siecią, Buspasy, klasy linii",
       "refreshed": "Buspasy co miesiąc; reszta ręcznie"
     },
+    "worldcover": {
+      "name": "ESA WorldCover 2021",
+      "gives": "Pokrycie terenu z satelitów (CC BY 4.0): pola i lasy wokół miasta tam, gdzie nie ma ich OpenStreetMap.",
+      "usedOn": "Pokrycie siecią",
+      "refreshed": "Ręcznie"
+    },
     "osrm": {
       "name": "Serwer demonstracyjny OSRM",
       "gives": "Prawdopodobne trasy przejazdu między zajezdniami a pierwszym lub ostatnim przystankiem.",
@@ -1084,7 +1090,7 @@
       "place": "Miejscowość",
       "gmina": "Gmina",
       "asOf": "Stan na",
-      "withoutWoods": "Bez lasów"
+      "withoutBoth": "Bez lasów i terenów otwartych"
     },
     "areas": "({{n}} obszarów)",
     "allWoods": "Wszystkie lasy",
@@ -1093,17 +1099,16 @@
     "allValley": "Cała dolina",
     "densityTitle": "Gęstość zaludnienia",
     "districtsBelt": "Osiedla i strefa podmiejska",
-    "districtsIntro": "{{n}} osiedli oraz wsie i miasta wokół Białegostoku, w kolorach według liczby mieszkańców na km² poza ich lasami i doliną Białej; te są na skali jako miejsca, gdzie nikt nie mieszka. Najedź na miejsce, by zobaczyć dane.",
+    "districtsIntro": "{{n}} osiedli oraz wsie i miasta wokół Białegostoku, w kolorach według liczby mieszkańców na km² poza ich lasami i doliną Białej, a poza miastem także poza polami i innymi terenami otwartymi; te są na skali jako miejsca, gdzie nikt nie mieszka. Najedź na miejsce, by zobaczyć dane.",
     "areaResidents": "Powierzchnia, mieszkańcy i gęstość",
     "city": "Miasto",
     "official": "Miasto, według GUS",
     "withoutTitle": "Gęstość bez lasów i doliny Białej",
     "withoutIntro": "Osiedla, w których lasy lub dolina Białej zajmują co najmniej {{share}} powierzchni, po ich odjęciu: jak gęsto zamieszkana jest reszta.",
     "beltTitle": "Wsie i miasta wokół Białegostoku",
-    "beltIntro": "Każda wieś (sołectwo) i miasto sięgające do {{km}} km od granic miasta: {{places}} miejsc, {{area}}, {{people}} mieszkańców w {{known}} z danymi. Na mapie powyżej razem z osiedlami, w tej samej skali; gęstość poza lasami, jak dla osiedli.",
+    "beltIntro": "Każda wieś (sołectwo) i miasto sięgające do {{km}} km od granic miasta, a od Supraśla przez południe do Baciut do {{far}} km: {{places}} miejsc, {{area}}, {{people}} mieszkańców w {{known}} z danymi. Na mapie powyżej razem z osiedlami, w tej samej skali; gęstość poza lasami i terenami otwartymi.",
     "town": "miasto",
     "noFigure": "brak danych",
-    "woodsShare": "{{share}} lasów",
     "how": "Jak to jest liczone",
     "how1": "Granice miasta, osiedla, wsie i lasy pochodzą z OpenStreetMap ({{fetched}}). Powierzchnie mierzone są na siatce kwadratów {{cell}} m w mieście i {{beltCell}} m wokół niego, więc nakładające się lasy liczą się raz.",
     "how2": "Dolina Białej to otwarte tereny wzdłuż rzeki (woda, mokradła, łąki, murawy, zarośla, trawniki i parki w OpenStreetMap) tam, gdzie dolina jest szeroka: od Piastowskiej wzdłuż Branickiego do Stawów Dojlidzkich oraz od Białostoczka na zachód i północ do granic miasta; do 600 m od rzeki, poza lasami.",
@@ -1118,12 +1123,13 @@
     },
     "tip": {
       "noFigure": "Brak danych o liczbie mieszkańców",
-      "both": "lasów i doliny Białej ({{area}})",
       "valley": "doliny Białej ({{area}})",
       "woods": "lasów ({{area}})",
       "outside": "{{density}} poza obszarem {{empty}}",
       "whole": "{{density}} na całym obszarze ({{what}})",
-      "residents": "{{people}} mieszkańców{{when}}, {{area}}"
+      "residents": "{{people}} mieszkańców{{when}}, {{area}}",
+      "open": "terenów otwartych ({{area}})",
+      "and": " i "
     },
     "stepMore": "{{min}} i więcej",
     "mapLabel": "Mapa obszaru do {{m}} m od najbliższego przystanku, lasów i doliny Białej",
@@ -1134,10 +1140,13 @@
     "districtMap": "Mapa osiedli i wsi wokół miasta według gęstości zaludnienia",
     "perKm2": "Mieszkańcy na km²",
     "perKm2Colon": "Mieszkańcy na km²:",
-    "zeroEmpty": "0: lasy, dolina Białej",
+    "zeroEmpty": "0: lasy, tereny otwarte, dolina Białej",
     "noFigureLegend": "Brak danych",
     "woodsEmpty": "Lasy: brak mieszkańców",
-    "valleyEmpty": "Dolina Białej: brak mieszkańców"
+    "valleyEmpty": "Dolina Białej: brak mieszkańców",
+    "openEmpty": "Pola i inne tereny otwarte: brak mieszkańców",
+    "howOpen": "Wokół miasta od powierzchni odjęto lasy i tereny otwarte (pola, łąki, sady, zarośla, mokradła i wody) w płatach od 1 ha. Pochodzą z OpenStreetMap, a tam, gdzie nie ma ono danych o terenie, z ESA WorldCover 2021 (© ESA WorldCover project, zawiera zmodyfikowane dane Copernicus Sentinel, CC BY 4.0), poza pasem 40 m od budynków. Osiedla liczone są tylko bez lasów i doliny, więc porównuj ostrożnie. Miejsca nazwane razem liczone są razem; spis liczy niektóre małe miejsca z sąsiadem i te pozostają bez danych.",
+    "woodsOpen": "{{woods}} lasów, {{open}} otwartych"
   },
   "routes": {
     "subtype": {

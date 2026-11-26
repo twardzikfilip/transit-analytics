@@ -936,6 +936,12 @@
       "usedOn": "Alle Karten, Netzabdeckung, Busspuren, Linienklassen",
       "refreshed": "Busspuren monatlich; der Rest von Hand"
     },
+    "worldcover": {
+      "name": "ESA WorldCover 2021",
+      "gives": "Landbedeckung aus Satellitendaten (CC BY 4.0): Felder und Wälder rund um die Stadt, wo OpenStreetMap keine hat.",
+      "usedOn": "Netzabdeckung",
+      "refreshed": "Von Hand"
+    },
     "osrm": {
       "name": "OSRM-Demoserver",
       "gives": "Wahrscheinliche Fahrwege zwischen Depots und der ersten oder letzten Haltestelle.",
@@ -1060,7 +1066,7 @@
       "place": "Ort",
       "gmina": "Gemeinde",
       "asOf": "Stand",
-      "withoutWoods": "Ohne Wälder"
+      "withoutBoth": "Ohne Wälder und offene Flächen"
     },
     "areas": "({{n}} Flächen)",
     "allWoods": "Alle Wälder",
@@ -1069,17 +1075,16 @@
     "allValley": "Das ganze Tal",
     "densityTitle": "Bevölkerungsdichte",
     "districtsBelt": "Stadtteile und Umland",
-    "districtsIntro": "Die {{n}} Stadtteile (osiedla) und die Dörfer und Städte rund um die Stadt, gefärbt nach Einwohnern pro km² außerhalb ihrer Wälder und des Biała-Tals; diese stehen auf der Skala als Orte, wo niemand wohnt. Fahre über einen Ort für seine Zahlen.",
+    "districtsIntro": "Die {{n}} Stadtteile (osiedla) und die Dörfer und Städte rund um die Stadt, gefärbt nach Einwohnern pro km² außerhalb ihrer Wälder und des Biała-Tals, außerhalb der Stadt auch ihrer Felder und anderen offenen Flächen; diese stehen auf der Skala als Orte, wo niemand wohnt. Fahre über einen Ort für seine Zahlen.",
     "areaResidents": "Fläche, Einwohner und Dichte",
     "city": "Stadt",
     "official": "Stadt, laut Statistischem Hauptamt",
     "withoutTitle": "Dichten ohne Wälder und Biała-Tal",
     "withoutIntro": "Stadtteile, bei denen Wälder oder das Biała-Tal mindestens {{share}} der Fläche ausmachen, ohne diese: wie dicht der Rest bewohnt ist.",
     "beltTitle": "Dörfer und Städte rund um die Stadt",
-    "beltIntro": "Jedes Dorf (sołectwo) und jede Stadt bis {{km}} km an die Stadtgrenze heran: {{places}} Orte, {{area}}, {{people}} Einwohner in den {{known}} mit einer Zahl. Auf der Karte oben mit den Stadtteilen, in derselben Skala; Dichten außerhalb der Wälder, wie bei den Stadtteilen.",
+    "beltIntro": "Jedes Dorf (sołectwo) und jede Stadt bis {{km}} km an die Stadtgrenze heran, von Supraśl über den Süden bis Baciuty bis {{far}} km: {{places}} Orte, {{area}}, {{people}} Einwohner in den {{known}} mit einer Zahl. Auf der Karte oben mit den Stadtteilen, in derselben Skala; Dichten außerhalb der Wälder und offenen Flächen.",
     "town": "Stadt",
     "noFigure": "keine Zahl",
-    "woodsShare": "{{share}} Wald",
     "how": "Wie das berechnet wird",
     "how1": "Stadtgrenze, Stadtteile, Dörfer und Wälder stammen aus OpenStreetMap ({{fetched}}). Flächen werden auf einem Raster aus {{cell}}-m-Quadraten in der Stadt und {{beltCell}}-m-Quadraten drumherum gemessen, sodass überlappende Wälder einmal zählen.",
     "how2": "Das Biała-Tal ist das offene Land entlang des Flusses (Wasser, Feuchtgebiet, Wiese, Grasland, Gebüsch, Rasen und Parks in OpenStreetMap), wo das Tal breit ist: von der Piastowska entlang der Branickiego bis zu den Stawy Dojlidzkie und von Białostoczek nach Westen und Norden bis zur Stadtgrenze; bis 600 m vom Fluss, außerhalb der Wälder.",
@@ -1094,12 +1099,13 @@
     },
     "tip": {
       "noFigure": "Keine Einwohnerzahl gefunden",
-      "both": "der Wälder und des Biała-Tals ({{area}})",
       "valley": "des Biała-Tals ({{area}})",
       "woods": "der Wälder ({{area}})",
       "outside": "{{density}} außerhalb {{empty}}",
       "whole": "{{density}} im ganzen Gebiet ({{what}})",
-      "residents": "{{people}} Einwohner{{when}}, {{area}}"
+      "residents": "{{people}} Einwohner{{when}}, {{area}}",
+      "open": "der offenen Flächen ({{area}})",
+      "and": " und "
     },
     "stepMore": "{{min}} und mehr",
     "mapLabel": "Karte der Fläche bis {{m}} m zur nächsten Haltestelle, der Wälder und des Biała-Tals",
@@ -1110,10 +1116,13 @@
     "districtMap": "Karte der Stadtteile und der umliegenden Dörfer nach Bevölkerungsdichte",
     "perKm2": "Einwohner pro km²",
     "perKm2Colon": "Einwohner pro km²:",
-    "zeroEmpty": "0: Wälder, Biała-Tal",
+    "zeroEmpty": "0: Wälder, offene Flächen, Biała-Tal",
     "noFigureLegend": "Keine Zahl",
     "woodsEmpty": "Wälder: keine Einwohner",
-    "valleyEmpty": "Biała-Tal: keine Einwohner"
+    "valleyEmpty": "Biała-Tal: keine Einwohner",
+    "openEmpty": "Felder und andere offene Flächen: keine Einwohner",
+    "howOpen": "Rund um die Stadt sind Wälder und offene Flächen (Felder, Wiesen, Obstgärten, Gebüsch, Feuchtgebiete und Wasser) ab 1 ha aus der Fläche herausgenommen. Sie stammen aus OpenStreetMap und, wo es nichts über das Land sagt, aus ESA WorldCover 2021 (© ESA WorldCover project, enthält veränderte Copernicus-Sentinel-Daten, CC BY 4.0), außer im Umkreis von 40 m um Gebäude. Die Stadtteile sind nur ohne Wälder und Tal gerechnet, also vorsichtig vergleichen. Zusammen genannte Orte zählen zusammen; die Volkszählung zählt manche kleinen Orte mit einem Nachbarn, diese bleiben ohne Zahl.",
+    "woodsOpen": "{{woods}} Wald, {{open}} offen"
   },
   "routes": {
     "subtype": {

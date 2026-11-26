@@ -668,8 +668,8 @@ PGPASSWORD=transit psql -h localhost -U transit transit_test -c "CREATE EXTENSIO
   nearest bus stop, with and without the woods and the Biała valley, and a map (rolls up to its title) of the area
   near a stop with the woods hatched green and the valley hatched light blue; the woods and the valley's stretches
   listed. Then the population density: one map of the districts and the villages and towns around the city on one
-  scale (density outside the woods and the valley; those as nobody living there; places without a figure left
-  white), and tables of the districts, the districts with large woods or valley, and the belt.
+  scale (density outside the woods and the valley, and around the city also outside open land: fields, meadows and the
+  like; those as nobody living there; places without a figure left white), and tables of the districts, the districts with large woods or valley, and the belt.
 - Abnormal trips: the trips of any time window (preset windows up to 12 hours refresh every minute). Cards count the trips by outcome (click a kind to list only those), a table shows the
   lines with abnormal trips, and the trips table lists each abnormal trip with its kind, scheduled times, line and
   brigade, buses, the stops it was seen on, its delays and what happened (filter by line, or by bus). Bus changes show

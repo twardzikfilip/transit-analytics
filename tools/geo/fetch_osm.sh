@@ -36,14 +36,14 @@ WOODS='way["landuse"="forest"](area.s);way["natural"="wood"](area.s);rel["landus
 # The city, its districts (osiedla) and the woods within it.
 fetch admin.json "[out:json][timeout:120];rel($CITY);out geom;area[\"name\"=\"Białystok\"][\"boundary\"=\"administrative\"][\"admin_level\"=\"8\"]->.c;rel(area.c)[\"boundary\"=\"administrative\"][\"admin_level\"=\"9\"];out geom;"
 fetch forest.json "[out:json][timeout:150];rel($CITY);map_to_area->.s;($WOODS);out geom;"
-# The belt: every village (sołectwo; tagged admin_level 8 around Białystok) or town reaching within 5 km of the
-# city limits, the gminas they are in, and the woods within them.
-fetch belt.json "[out:json][timeout:180];rel($CITY);way(r);rel(around:5000)[\"boundary\"=\"administrative\"][\"admin_level\"=\"8\"];out geom;"
+# The belt: villages (sołectwa; tagged admin_level 8 around Białystok) and towns around the city, the gminas they are
+# in, what the land is used for, and the buildings (build_belt_geo.py chooses the villages, build_belt_land.py measures
+# the land).
+fetch belt.json "[out:json][timeout:180];rel($CITY);way(r);rel(around:9500)[\"boundary\"=\"administrative\"][\"admin_level\"=\"8\"];out geom;"
 fetch gminas.json "[out:json][timeout:180];rel(id:$GMINAS);out geom;"
-if [[ "$ONLY" == "  " || "$ONLY" == *" belt-forest.json "* ]]; then
-IDS=$(python3 -c "import json; print(','.join(str(e['id']) for e in json.load(open('raw/belt.json'))['elements'] if e['id'] != $CITY))")
-fetch belt-forest.json "[out:json][timeout:240];rel(id:$IDS);map_to_area->.s;($WOODS);out geom;"
-fi
+BELT=52.92,22.83,53.32,23.68
+fetch belt-land.json "[out:json][timeout:240][bbox:$BELT];(way[\"landuse\"];rel[\"landuse\"][\"type\"=\"multipolygon\"];way[\"natural\"~\"^(wood|grassland|scrub|heath|wetland|water)$\"];rel[\"natural\"~\"^(wood|grassland|scrub|heath|wetland|water)$\"];);out geom;"
+fetch belt-buildings.json "[out:json][timeout:240][bbox:$BELT];(way[\"building\"];rel[\"building\"];);out center qt;"
 
 # The valley of the river Biała: the river in the city, and the open land along it (water, wetland, meadow, grass,
 # scrub, parks), from which build_bialystok_geo.py keeps the uninhabited floodplain (see VALLEY_STRETCHES there).

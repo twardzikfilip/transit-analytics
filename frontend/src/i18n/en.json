@@ -936,6 +936,12 @@
       "usedOn": "All maps, Network coverage, Bus lanes, line classes",
       "refreshed": "Bus lanes monthly; the rest by hand"
     },
+    "worldcover": {
+      "name": "ESA WorldCover 2021",
+      "gives": "Land cover from satellites (CC BY 4.0): fields and woods around the city where OpenStreetMap has none.",
+      "usedOn": "Network coverage",
+      "refreshed": "By hand"
+    },
     "osrm": {
       "name": "OSRM demo server",
       "gives": "Likely driving routes between depots and the first or last stop.",
@@ -1060,7 +1066,7 @@
       "place": "Place",
       "gmina": "Gmina",
       "asOf": "As of",
-      "withoutWoods": "Without woods"
+      "withoutBoth": "Without woods and open land"
     },
     "areas": "({{n}} areas)",
     "allWoods": "All woods",
@@ -1069,17 +1075,16 @@
     "allValley": "All of the valley",
     "densityTitle": "Population density",
     "districtsBelt": "Districts and the suburban belt",
-    "districtsIntro": "The {{n}} districts (osiedla) and the villages and towns around the city, coloured by how many people live per km² outside their woods and the Biała valley; those are on the scale as places nobody lives. Hover a place for its figures.",
+    "districtsIntro": "The {{n}} districts (osiedla) and the villages and towns around the city, coloured by how many people live per km² outside their woods and the Biała valley, and outside the city also their fields and other open land; those are on the scale as places nobody lives. Hover a place for its figures.",
     "areaResidents": "Area, residents and density",
     "city": "City",
     "official": "City, by Statistics Poland",
     "withoutTitle": "Densities without the woods and the Biała valley",
     "withoutIntro": "Districts with woods or the Biała valley on at least {{share}} of their area, with those taken out: how densely the rest is lived in.",
     "beltTitle": "Villages and towns around the city",
-    "beltIntro": "Every village (sołectwo) and town reaching within {{km}} km of the city limits: {{places}} places, {{area}}, {{people}} residents in the {{known}} with a figure. On the map above with the districts, on the same scale; densities outside the woods, as for the districts.",
+    "beltIntro": "Every village (sołectwo) and town reaching within {{km}} km of the city limits, or {{far}} km from Supraśl round the south to Baciuty: {{places}} places, {{area}}, {{people}} residents in the {{known}} with a figure. On the map above with the districts, on the same scale; densities outside the woods and open land.",
     "town": "town",
     "noFigure": "no figure",
-    "woodsShare": "{{share}} woods",
     "how": "How this is worked out",
     "how1": "The city limits, districts, villages and woods come from OpenStreetMap ({{fetched}}). Areas are measured on a grid of {{cell}} m squares in the city and {{beltCell}} m squares around it, so overlapping woods count once.",
     "how2": "The Biała valley is the open land along the river (water, wetland, meadow, grassland, scrub, grass and parks in OpenStreetMap) where its valley is wide: from Piastowska along Branickiego to Stawy Dojlidzkie, and from Białostoczek west and north to the city limits; within 600 m of the river, outside the woods.",
@@ -1094,12 +1099,13 @@
     },
     "tip": {
       "noFigure": "No population figure found",
-      "both": "the woods and the Biała valley ({{area}})",
       "valley": "the Biała valley ({{area}})",
       "woods": "the woods ({{area}})",
       "outside": "{{density}} outside {{empty}}",
       "whole": "{{density}} over the whole {{what}}",
-      "residents": "{{people}} residents{{when}}, {{area}}"
+      "residents": "{{people}} residents{{when}}, {{area}}",
+      "open": "open land ({{area}})",
+      "and": " and "
     },
     "stepMore": "{{min}} and more",
     "mapLabel": "Map of the area within {{m}} m of the nearest stop, the woods and the Biała valley",
@@ -1110,10 +1116,13 @@
     "districtMap": "Map of the districts and the villages around the city by population density",
     "perKm2": "Residents per km²",
     "perKm2Colon": "Residents per km²:",
-    "zeroEmpty": "0: woods, Biała valley",
+    "zeroEmpty": "0: woods, open land, Biała valley",
     "noFigureLegend": "No figure",
     "woodsEmpty": "Woods: no residents",
-    "valleyEmpty": "Biała valley: no residents"
+    "valleyEmpty": "Biała valley: no residents",
+    "openEmpty": "Fields and other open land: no residents",
+    "howOpen": "Around the city, woods and open land (fields, meadows, orchards, scrub, wetland and water) in pieces of at least 1 ha are taken out of the area. They come from OpenStreetMap; where it says nothing about the land, from ESA WorldCover 2021 (© ESA WorldCover project, contains modified Copernicus Sentinel data, CC BY 4.0), except within 40 m of a building. The districts are without woods and the valley only, so compare the two with care. Places named together are counted together; the census counts some small places with a neighbour, and those are left without a figure.",
+    "woodsOpen": "{{woods}} woods, {{open}} open"
   },
   "routes": {
     "subtype": {

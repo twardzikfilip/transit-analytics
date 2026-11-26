@@ -13,7 +13,8 @@ import java.util.Map;
 
 /**
  * The reference data the Network coverage page works from, as read from {@code places/} (see its README): the city's
- * border, districts, woods and the valley of the river Biała; the villages and towns around it and their woods; and the residents of each.
+ * border, districts, woods and the valley of the river Biała; the villages and towns around it and
+ * their woods and open land; and the residents of each.
  */
 record PlaceReferenceData(Areas city, BeltAreas belt, Map<String, Residents> districtPopulation,
                           String districtPopulationSource, Map<String, Residents> beltPopulation, Population official) {
@@ -58,7 +59,8 @@ record PlaceReferenceData(Areas city, BeltAreas belt, Map<String, Residents> dis
         }
     }
 
-    record BeltAreas(String source, List<BeltFeature> villages, List<Feature> woods) {
+    /** @param open fields, meadows and other open land where nobody lives */
+    record BeltAreas(String source, List<BeltFeature> villages, List<Feature> woods, List<Feature> open) {
     }
 
     /** A village's residents: null when no figure was found. */

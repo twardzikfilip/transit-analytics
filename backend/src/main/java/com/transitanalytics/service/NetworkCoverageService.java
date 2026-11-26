@@ -27,7 +27,7 @@ import java.util.function.IntFunction;
  * Network coverage: the share of the city within each walking distance of the nearest stop of the city's lines, of
  * all of it and of the part where people can live (outside its woods and the valley of the river Biała); the woods and
  * the valley; and the population density of the city's districts and of the villages and towns around it, also
- * without those. The places come from {@code places/} (see
+ * without those (around the city, also without fields and other open land). The places come from {@code places/} (see
  * {@link PlaceReferenceData}), the settings from {@code map/network-coverage.yml}. Areas are measured on a grid.
  */
 @Service
@@ -137,7 +137,7 @@ public class NetworkCoverageService {
         }
 
         List<Feature> districtShapes = areas.districts();
-        List<PlaceDensity> districtRows = measure(districts, forest, valley, near, i -> {
+        List<PlaceDensity> districtRows = measure(districts, forest, valley, new BitSet(), near, i -> {
             Feature f = districtShapes.get(i);
             return new Place(f, "district", null,
                     places.districtPopulation().getOrDefault(f.name(), Residents.UNKNOWN));
@@ -154,7 +154,7 @@ public class NetworkCoverageService {
 
     /**
      * The villages and towns around the city, measured like the districts, outside the city limits, on a coarser
-     * grid (the belt is some 35 km across).
+     * grid (the belt is some 50 km across).
      */
     private NetworkCoverageDto.Belt belt(List<double[]> stopsXy, List<double[][]> cityRings) {
         List<PlaceReferenceData.BeltFeature> villages = places.belt().villages();
@@ -166,25 +166,34 @@ public class NetworkCoverageService {
         PlaceGrid belt = new PlaceGrid(grid, outsideCity, placeRings);
 
         BitSet woods = new BitSet(grid.size());
-        List<Shape> drawn = new ArrayList<>();
-        for (Feature f : places.belt().woods()) {
-            int[] count = new int[1];
-            grid.fill(f.rings(), cell -> {
-                if (belt.placeOf(cell) != 0) {
-                    woods.set(cell);
-                    count[0]++;
-                }
-            });
-            if (grid.km2(count[0]) >= settings.drawnWoodsKm2()) {
-                drawn.add(f.shape());
-            }
-        }
-        List<PlaceDensity> rows = measure(belt, woods, new BitSet(), near(grid, stopsXy), i -> {
+        List<Shape> drawnWoods = fill(belt, places.belt().woods(), woods, new BitSet());
+        BitSet open = new BitSet(grid.size());
+        List<Shape> drawnOpen = fill(belt, places.belt().open(), open, woods);
+        List<PlaceDensity> rows = measure(belt, woods, new BitSet(), open, near(grid, stopsXy), i -> {
             PlaceReferenceData.BeltFeature v = villages.get(i);
             return new Place(v.feature(), v.kind(), v.gmina(),
                     places.beltPopulation().getOrDefault(v.osm(), Residents.UNKNOWN));
         });
-        return new NetworkCoverageDto.Belt(settings.beltKm(), settings.beltCellMeters(), rows, drawn);
+        return new NetworkCoverageDto.Belt(settings.beltKm(), settings.beltFarKm(), settings.beltCellMeters(), rows,
+                drawnWoods, drawnOpen);
+    }
+
+    /** Adds the features' cells in the belt that aren't {@code taken}; returns the shapes large enough to draw. */
+    private List<Shape> fill(PlaceGrid belt, List<Feature> features, BitSet cells, BitSet taken) {
+        List<Shape> drawn = new ArrayList<>();
+        for (Feature f : features) {
+            int[] count = new int[1];
+            belt.grid.fill(f.rings(), cell -> {
+                if (belt.placeOf(cell) != 0 && !taken.get(cell)) {
+                    cells.set(cell);
+                    count[0]++;
+                }
+            });
+            if (belt.grid.km2(count[0]) >= settings.drawnWoodsKm2()) {
+                drawn.add(f.shape());
+            }
+        }
+        return drawn;
     }
 
     /** A place to measure: its shape, what it is and its residents. */
@@ -196,12 +205,13 @@ public class NetworkCoverageService {
         return settings.radii().stream().map(radius -> grid.near(stopsXy, radius)).toList();
     }
 
-    /** Each place's area, woods, valley, densities and share near a stop (at each distance). */
-    private List<PlaceDensity> measure(PlaceGrid grid, BitSet woods, BitSet valley, List<BitSet> near,
+    /** Each place's area, woods, valley, open land, densities and share near a stop (at each distance). */
+    private List<PlaceDensity> measure(PlaceGrid grid, BitSet woods, BitSet valley, BitSet open, List<BitSet> near,
                                        IntFunction<Place> place) {
         long[] cells = grid.count(null);
         long[] wood = grid.count(woods);
         long[] river = grid.count(valley);
+        long[] fields = grid.count(open);
         List<long[]> covered = near.stream().map(grid::count).toList();
         List<PlaceDensity> rows = new ArrayList<>();
         for (int i = 0; i < grid.places; i++) {
@@ -210,13 +220,14 @@ public class NetworkCoverageService {
             double area = grid.grid.km2(n);
             double forest = grid.grid.km2(wood[i + 1]);
             double valleyKm2 = grid.grid.km2(river[i + 1]);
-            double land = area - forest - valleyKm2;
+            double openKm2 = grid.grid.km2(fields[i + 1]);
+            double land = area - forest - valleyKm2 - openKm2;
             Integer people = p.residents().population();
             int id = i + 1;
             List<Double> shares = covered.stream().map(c -> n == 0 ? 0 : (double) c[id] / n).toList();
             rows.add(new PlaceDensity(p.feature().name(), p.kind(), p.gmina(), p.feature().shape(), round(area),
                     people, p.residents().date(), p.residents().source(),
-                    people == null ? null : ratio(people, area), round(forest), round(valleyKm2), round(land),
+                    people == null ? null : ratio(people, area), round(forest), round(valleyKm2), round(openKm2), round(land),
                     people == null ? null : ratio(people, land), area > 0 && forest / area >= settings.largeForestShare(),
                     shares));
         }

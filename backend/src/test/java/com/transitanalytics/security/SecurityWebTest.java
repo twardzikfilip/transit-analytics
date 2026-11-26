@@ -587,7 +587,7 @@ class SecurityWebTest {
                         new NetworkCoverageDto.Coverage(81, 66, 0.82))),
                 List.of(), 21, List.of(), 5, List.of(), 0.1, new NetworkCoverageDto.Population(289_217, "2025-12-31", "GUS"),
                 new NetworkCoverageDto.Sources("OSM", "2026-11-20", "city"),
-                new NetworkCoverageDto.Belt(5, 20, List.of(), List.of())));
+                new NetworkCoverageDto.Belt(5, 9, 20, List.of(), List.of(), List.of())));
         mvc.perform(get("/api/network-coverage").header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.coverages[0].city.share").value(0.74));

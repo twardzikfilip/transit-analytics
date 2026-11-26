@@ -948,6 +948,12 @@
       "usedOn": "Toutes les cartes, Couverture du réseau, Couloirs de bus, classes de lignes",
       "refreshed": "Couloirs de bus chaque mois ; le reste à la main"
     },
+    "worldcover": {
+      "name": "ESA WorldCover 2021",
+      "gives": "Couverture du sol par satellite (CC BY 4.0) : champs et bois autour de la ville là où OpenStreetMap n'en a pas.",
+      "usedOn": "Couverture du réseau",
+      "refreshed": "À la main"
+    },
     "osrm": {
       "name": "Serveur de démonstration OSRM",
       "gives": "Itinéraires routiers probables entre les dépôts et le premier ou dernier arrêt.",
@@ -1072,7 +1078,7 @@
       "place": "Lieu",
       "gmina": "Gmina",
       "asOf": "Date",
-      "withoutWoods": "Sans les bois"
+      "withoutBoth": "Sans bois ni terrains ouverts"
     },
     "areas": "({{n}} zones)",
     "allWoods": "Tous les bois",
@@ -1081,17 +1087,16 @@
     "allValley": "Toute la vallée",
     "densityTitle": "Densité de population",
     "districtsBelt": "Quartiers et couronne périurbaine",
-    "districtsIntro": "Les {{n}} quartiers (osiedla) et les villages et villes autour de la ville, colorés selon le nombre d'habitants par km² hors de leurs bois et de la vallée de la Biała ; ceux-ci figurent sur l'échelle comme lieux inhabités. Survolez un lieu pour voir ses chiffres.",
+    "districtsIntro": "Les {{n}} quartiers (osiedla) et les villages et villes autour de la ville, colorés selon le nombre d'habitants par km² hors de leurs bois et de la vallée de la Biała, et hors de la ville aussi de leurs champs et autres terrains ouverts ; ceux-ci figurent sur l'échelle comme lieux inhabités. Survolez un lieu pour voir ses chiffres.",
     "areaResidents": "Superficie, habitants et densité",
     "city": "Ville",
     "official": "Ville, selon l'Office statistique polonais",
     "withoutTitle": "Densités sans les bois ni la vallée de la Biała",
     "withoutIntro": "Les quartiers dont les bois ou la vallée de la Biała couvrent au moins {{share}} de la superficie, ceux-ci retirés : la densité d'habitation du reste.",
     "beltTitle": "Villages et villes autour de la ville",
-    "beltIntro": "Chaque village (sołectwo) et ville à moins de {{km}} km des limites de la ville : {{places}} lieux, {{area}}, {{people}} habitants dans les {{known}} dont le chiffre est connu. Sur la carte ci-dessus avec les quartiers, à la même échelle ; densités hors des bois, comme pour les quartiers.",
+    "beltIntro": "Chaque village (sołectwo) et ville à moins de {{km}} km des limites de la ville, ou {{far}} km de Supraśl à Baciuty par le sud : {{places}} lieux, {{area}}, {{people}} habitants dans les {{known}} dont le chiffre est connu. Sur la carte ci-dessus avec les quartiers, à la même échelle ; densités hors des bois et des terrains ouverts.",
     "town": "ville",
     "noFigure": "pas de chiffre",
-    "woodsShare": "{{share}} de bois",
     "how": "Comment c'est calculé",
     "how1": "Les limites de la ville, les quartiers, les villages et les bois viennent d'OpenStreetMap ({{fetched}}). Les superficies sont mesurées sur une grille de carrés de {{cell}} m dans la ville et de {{beltCell}} m autour, donc les bois qui se chevauchent ne comptent qu'une fois.",
     "how2": "La vallée de la Biała est l'espace ouvert le long de la rivière (eau, zones humides, prairies, herbages, broussailles, pelouses et parcs dans OpenStreetMap) là où sa vallée est large : de Piastowska le long de Branickiego jusqu'à Stawy Dojlidzkie, et de Białostoczek vers l'ouest et le nord jusqu'aux limites de la ville ; à moins de 600 m de la rivière, hors des bois.",
@@ -1106,12 +1111,13 @@
     },
     "tip": {
       "noFigure": "Aucun chiffre de population trouvé",
-      "both": "les bois et la vallée de la Biała ({{area}})",
       "valley": "la vallée de la Biała ({{area}})",
       "woods": "les bois ({{area}})",
       "outside": "{{density}} hors de {{empty}}",
       "whole": "{{density}} sur tout le {{what}}",
-      "residents": "{{people}} habitants{{when}}, {{area}}"
+      "residents": "{{people}} habitants{{when}}, {{area}}",
+      "open": "les terrains ouverts ({{area}})",
+      "and": " et "
     },
     "stepMore": "{{min}} et plus",
     "mapLabel": "Carte de la zone à moins de {{m}} m de l'arrêt le plus proche, des bois et de la vallée de la Biała",
@@ -1122,10 +1128,13 @@
     "districtMap": "Carte des quartiers et des villages autour de la ville selon la densité de population",
     "perKm2": "Habitants par km²",
     "perKm2Colon": "Habitants par km² :",
-    "zeroEmpty": "0 : bois, vallée de la Biała",
+    "zeroEmpty": "0 : bois, terrains ouverts, vallée de la Biała",
     "noFigureLegend": "Pas de chiffre",
     "woodsEmpty": "Bois : pas d'habitants",
-    "valleyEmpty": "Vallée de la Biała : pas d'habitants"
+    "valleyEmpty": "Vallée de la Biała : pas d'habitants",
+    "openEmpty": "Champs et autres terrains ouverts : pas d'habitants",
+    "howOpen": "Autour de la ville, les bois et les terrains ouverts (champs, prés, vergers, broussailles, zones humides et eau) d'au moins 1 ha sont retirés de la superficie. Ils viennent d'OpenStreetMap et, là où il ne dit rien du terrain, d'ESA WorldCover 2021 (© ESA WorldCover project, contient des données Copernicus Sentinel modifiées, CC BY 4.0), sauf à moins de 40 m d'un bâtiment. Les quartiers sont calculés sans les bois et la vallée seulement : comparez avec prudence. Les lieux nommés ensemble sont comptés ensemble ; le recensement compte certains petits lieux avec un voisin, ceux-là restent sans chiffre.",
+    "woodsOpen": "{{woods}} bois, {{open}} ouvert"
   },
   "routes": {
     "subtype": {

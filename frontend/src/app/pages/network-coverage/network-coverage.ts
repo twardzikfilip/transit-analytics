@@ -111,6 +111,10 @@ export class NetworkCoveragePage {
     return percent(p.areaKm2 ? p.forestKm2 / p.areaKm2 : 0);
   }
 
+  protected openShare(p: PlaceDensity): string {
+    return percent(p.areaKm2 ? p.openKm2 / p.areaKm2 : 0);
+  }
+
   /** "+38%": how much higher the density is without the woods and the valley. */
   protected rise(p: PlaceDensity): string {
     return p.density && p.landDensity

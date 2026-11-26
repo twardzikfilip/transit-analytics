@@ -77,6 +77,7 @@ export class Sources {
     { id: 'turosn', url: 'https://files.girlc.at/gtfs/turosn_koscielna.zip' },
     { id: 'rail', url: 'https://mkuran.pl/gtfs/' },
     { id: 'osm', url: 'https://www.openstreetmap.org' },
+    { id: 'worldcover', url: 'https://esa-worldcover.org' },
     { id: 'osrm', url: 'https://router.project-osrm.org' },
     { id: 'city', url: null },
     { id: 'census', url: null },

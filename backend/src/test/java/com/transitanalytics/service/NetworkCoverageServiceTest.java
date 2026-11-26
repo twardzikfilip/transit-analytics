@@ -81,6 +81,19 @@ class NetworkCoverageServiceTest {
             assertThat(p.landDensity()).isNull();
         });
         assertThat(belt.woods()).isNotEmpty();
+        assertThat(belt.open()).isNotEmpty();
+        assertThat(NONE.districts()).allSatisfy(d -> assertThat(d.openKm2()).isZero());
+        // The arc from Supraśl to Baciuty reaches further.
+        for (String name : List.of("Supraśl", "Zabłudów", "Juchnowiec Kościelny", "Juchnowiec Dolny", "Sobolewo",
+                "Turośń Kościelna", "Turośń Dolna", "Baciuty")) {
+            PlaceDensity p = place(belt.places(), name);
+            assertThat(p.openKm2()).as(name).isPositive();
+            assertThat(p.landKm2()).as(name).isPositive()
+                    .isCloseTo(p.areaKm2() - p.forestKm2() - p.openKm2(), within(0.003));
+            assertThat(p.landDensity()).as(name).isGreaterThan(p.density());
+        }
+        // The census' Solniki, not Solniczki.
+        assertThat(place(belt.places(), "Solniki").population()).isEqualTo(52);
     }
 
     @Test

@@ -21,7 +21,7 @@ const PANES = { fills: 410, woods: 420, lines: 430 };
 
 /**
  * The city's districts and the villages and towns around it, coloured by population density, light (few residents per
- * km²) to dark (many). The density is that outside a place's woods; the woods are on the scale too, as nobody lives
+ * km²) to dark (many). The density is that outside a place's woods and open land; those are on the scale too, as nobody lives
  * there: pale grey, lined, below the first step. Places without a figure are white with a dashed outline. Each place
  * is named as the zoom allows; hover one for its figures.
  */
@@ -108,12 +108,13 @@ export class DistrictMap {
     this.labels.forEach((l) => l.label.remove());
     this.labels = [];
     for (const p of [...data.districts, ...data.belt.places]) this.drawPlace(p);
-    // Where nobody lives: the woods, and the Biała valley.
+    // Where nobody lives: the woods, the open land around the city, and the Biała valley.
     const empty = [
       ...[...data.forests.flatMap((f) => f.shapes), ...data.belt.woods].map((shape) => ({
         shape,
         tip: t('coverage.woodsEmpty'),
       })),
+      ...data.belt.open.map((shape) => ({ shape, tip: t('coverage.openEmpty') })),
       ...data.valley.map((v) => ({ shape: v.shape, tip: t('coverage.valleyEmpty') })),
     ];
     for (const { shape, tip } of empty) {
