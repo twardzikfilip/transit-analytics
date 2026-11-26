@@ -12,22 +12,29 @@ describe('GTFS import reducer', () => {
     rows: { route: 55, stop: 1083 },
     skipped: {},
     ignoredFiles: [],
+    unchanged: false,
   };
 
-  it('tracks a running import and keeps the last result', () => {
-    let state = reduce(undefined, GtfsImportActions.importBialystok());
-    expect(state.running).toBe(true);
+  it('tracks which feed is importing and keeps the last result', () => {
+    let state = reduce(undefined, GtfsImportActions.importFeed({ feed: 'bialystok' }));
+    expect(state.running).toBe('bialystok');
 
     state = reduce(state, GtfsImportActions.importSuccess({ result }));
-    expect(state).toEqual({ running: false, result, error: null });
+    expect(state).toEqual({ feeds: null, running: null, result, error: null });
 
-    state = reduce(state, GtfsImportActions.importBialystok());
+    state = reduce(state, GtfsImportActions.importFeed({ feed: 'rail' }));
     state = reduce(
       state,
       GtfsImportActions.importFailure({ error: 'Live data source unavailable' }),
     );
-    expect(state.running).toBe(false);
+    expect(state.running).toBeNull();
     expect(state.error).toBe('Live data source unavailable');
     expect(state.result).toBe(result);
+  });
+
+  it('keeps the feeds, and none after a failure', () => {
+    const feeds = [{ key: 'rail', name: 'Trains', source: 'https://x', last: null }];
+    expect(reduce(undefined, GtfsImportActions.feedsLoaded({ feeds })).feeds).toBe(feeds);
+    expect(reduce(undefined, GtfsImportActions.feedsFailure({ error: 'x' })).feeds).toEqual([]);
   });
 });

@@ -21,7 +21,10 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 
-/** The Białystok import: download, load, report; one at a time; a broken download is a feed error. */
+/**
+ * The Białystok import: download, load, report; one at a time; a broken download is a feed error; the same download
+ * again is not imported.
+ */
 class GtfsFeedServiceTest {
 
     private static final String URL = "https://feeds.example/gtfs.zip";
@@ -31,17 +34,25 @@ class GtfsFeedServiceTest {
     private final GtfsImporter importer = mock(GtfsImporter.class);
     private final org.springframework.context.ApplicationEventPublisher events =
             mock(org.springframework.context.ApplicationEventPublisher.class);
+    private final ImportedFeeds imported = mock(ImportedFeeds.class);
     private final GtfsFeedService service = new GtfsFeedService(downloader, importer,
             new GtfsProperties(Duration.ofSeconds(5), Duration.ofSeconds(30), DataSize.ofMegabytes(50),
                     new GtfsProperties.Feed(URL, null, null),
                     Map.of("other", new GtfsProperties.Feed(OTHER_URL, "Other line", "OTHER")), "-"),
-            ObservationRegistry.NOOP, events);
+            ObservationRegistry.NOOP, events, imported);
 
     private static Path zipWith(String entry) throws Exception {
+        return zipWith(entry, "x", "feed_info.txt", "built today");
+    }
+
+    /** A zip with these entries (name, content, name, content...). */
+    private static Path zipWith(String... entries) throws Exception {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         try (ZipOutputStream zip = new ZipOutputStream(bytes)) {
-            zip.putNextEntry(new ZipEntry(entry));
-            zip.write("x".getBytes());
+            for (int i = 0; i < entries.length; i += 2) {
+                zip.putNextEntry(new ZipEntry(entries[i]));
+                zip.write(entries[i + 1].getBytes());
+            }
         }
         Path file = Files.createTempFile("gtfs-test-", ".zip");
         Files.write(file, bytes.toByteArray());
@@ -109,5 +120,59 @@ class GtfsFeedServiceTest {
         given(downloader.download(OTHER_URL)).willThrow(new GtfsFeedException("gone"));
         service.refreshExtra();
         org.mockito.Mockito.verify(downloader, org.mockito.Mockito.times(2)).download(OTHER_URL);
+    }
+
+    @Test
+    void theSameDownloadAgainIsNotImported() throws Exception {
+        Path file = zipWith("stops.txt", "a", "feed_info.txt", "built yesterday");
+        String fingerprint;
+        try (java.util.zip.ZipFile zip = new java.util.zip.ZipFile(zipWith("feed_info.txt", "built today",
+                "stops.txt", "a").toFile())) {
+            // Another build of the same timetable: other files and the order inside the zip don't count.
+            fingerprint = ImportedFeeds.fingerprint(zip, null);
+        }
+        java.time.Instant before = java.time.Instant.parse("2026-11-25T03:50:00Z");
+        given(imported.last("bialystok")).willReturn(new ImportedFeeds.Last(fingerprint, before, 100));
+        given(downloader.download(URL)).willReturn(file);
+
+        GtfsImportResult result = service.importFeed();
+
+        assertThat(result.unchanged()).isTrue();
+        assertThat(result.importedAt()).isEqualTo(before);
+        assertThat(result.rows()).isEmpty();
+        assertThat(file).doesNotExist();
+        org.mockito.Mockito.verifyNoInteractions(importer, events);
+        org.mockito.Mockito.verify(imported, org.mockito.Mockito.never()).remember(anyString(), any());
+    }
+
+    @Test
+    void aChangedDownloadIsImportedAndRemembered() throws Exception {
+        given(imported.last("bialystok")).willReturn(new ImportedFeeds.Last("old", java.time.Instant.EPOCH, 100));
+        given(downloader.download(URL)).willReturn(zipWith("stops.txt", "b"));
+        given(importer.load(any(), anyString())).willReturn(new GtfsImporter.Loaded(Map.of(), Map.of(), List.of()));
+
+        GtfsImportResult result = service.importFeed();
+
+        assertThat(result.unchanged()).isFalse();
+        org.mockito.Mockito.verify(imported).remember(eq("bialystok"),
+                org.mockito.ArgumentMatchers.argThat(last -> !last.fingerprint().equals("old")));
+    }
+
+    @Test
+    void theSelectionIsPartOfTheFingerprint() throws Exception {
+        try (java.util.zip.ZipFile zip = new java.util.zip.ZipFile(zipWith("stops.txt", "a").toFile())) {
+            assertThat(ImportedFeeds.fingerprint(zip, null)).isNotEqualTo(ImportedFeeds.fingerprint(zip,
+                    new GtfsProperties.Selection(List.of("PR"), List.of("1"))));
+        }
+    }
+
+    @Test
+    void listsEveryFeedWithItsLastImport() {
+        ImportedFeeds.Last last = new ImportedFeeds.Last("f", java.time.Instant.EPOCH, 5);
+        given(imported.all()).willReturn(Map.of("other", last));
+
+        assertThat(service.feeds()).containsExactly(
+                new GtfsFeedService.Feed("bialystok", null, URL, null),
+                new GtfsFeedService.Feed("other", "Other line", OTHER_URL, last));
     }
 }

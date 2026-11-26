@@ -146,6 +146,12 @@ erDiagram
     varchar feed PK
     date date PK
   }
+  gtfs_feed_import {
+    varchar feed PK
+    varchar fingerprint
+    timestamptz imported_at
+    bigint downloaded_bytes
+  }
   trip_brigade {
     bigint trip_id PK, FK
     varchar brigade
@@ -223,7 +229,7 @@ erDiagram
   }
 ```
 
-- **Timetable** (from GTFS): `agency`, `route`, `trip`, `stop_time`, `stop`, `shape_point`, `calendar_date`. Less used columns are left out. `feed` says which feed a row came from. `assumed_timetable_day` lists the days continued after a timetable ran out.
+- **Timetable** (from GTFS): `agency`, `route`, `trip`, `stop_time`, `stop`, `shape_point`, `calendar_date`. Less used columns are left out. `feed` says which feed a row came from. `assumed_timetable_day` lists the days continued after a timetable ran out. `gtfs_feed_import` keeps each feed's last import, so the same feed isn't imported twice.
 - **Past train timetables:** `rail_train`, `rail_train_call`, `rail_train_day`, kept day by day, as imports replace the timetable.
 - **Recordings:** `vehicle` and `position_sample`, a TimescaleDB table split by time. The views `fleet_5min` and `route_delay_hourly` are computed from it.
 - **Worked out by the backend:** `trip_brigade` and `recorded_brigade_line` (brigades learnt from recordings), and `day_summary` (stored results of finished days).
