@@ -45,10 +45,10 @@ jobs:
       grafana: ${{ steps.raise.outputs.grafana }}
       commit: ${{ steps.raise.outputs.commit }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
       - name: Raise the versions and tag
@@ -84,18 +84,19 @@ jobs:
       RECORDER: ${{ needs.version.outputs.recorder }}
       GRAFANA: ${{ needs.version.outputs.grafana }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.version.outputs.commit }}
       - run: echo "REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "17"
-      - uses: gradle/actions/setup-gradle@v4
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      # v5, not v6: v6 moves caching into a closed component under Gradle's own terms of use.
+      - uses: gradle/actions/setup-gradle@v5
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -113,7 +114,7 @@ jobs:
           docker build -q -t transit-grafana grafana && grafana/check.sh transit-grafana
           docker buildx build --platform linux/arm64,linux/amd64 --push -t "$REGISTRY/transit-grafana:$GRAFANA" grafana
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: env.APP != ''
         with:
           node-version: "22"

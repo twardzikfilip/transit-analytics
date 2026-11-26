@@ -50,18 +50,19 @@ jobs:
       # that way.
       RECORDING_ENABLED: "false"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "17"
-      - uses: gradle/actions/setup-gradle@v4
+      # v5, not v6: v6 moves caching into a closed component under Gradle's own terms of use.
+      - uses: gradle/actions/setup-gradle@v5
       # check = compile, all tests (integration ones too, with INTEGRATION_TESTS), JaCoCo report and coverage rule, for
       # the backend and its subprojects: zbiorkom-feed (shared feed code) and recorder (transit-recorder).
       - run: ./gradlew check --no-daemon
       - name: Upload test and coverage reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: backend-reports
           path: |
@@ -76,7 +77,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: docker build -q -t transit-grafana grafana
       - run: grafana/check.sh transit-grafana
 
@@ -88,10 +89,10 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # VERSION, package.json and the recorder's version.
       - run: ../tools/version.sh check
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: npm
@@ -102,7 +103,7 @@ jobs:
       - run: npm run build
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-coverage
           path: frontend/coverage/
