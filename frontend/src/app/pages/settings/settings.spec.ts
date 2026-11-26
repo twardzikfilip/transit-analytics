@@ -22,17 +22,39 @@ describe('Settings page', () => {
     rows: { route: 55, stop: 1083 },
     skipped: { stop_time: 4 },
     ignoredFiles: ['feed_info.txt'],
+    unchanged: false,
   };
+  const feeds = [
+    {
+      key: 'bialystok',
+      name: null,
+      source: 'https://example/gtfs.zip',
+      last: { fingerprint: 'f', importedAt: '2026-11-16T10:00:00Z', downloadedBytes: 1 },
+    },
+    { key: 'rail', name: 'Trains', source: 'https://example/rail.zip', last: null },
+    { key: 'new-one', name: 'A new feed', source: 'https://example/new.zip', last: null },
+  ];
 
-  it('lets admins import the timetable and shows what was loaded', () => {
+  it('lets admins import each feed and shows what was loaded', () => {
     const { el, store } = renderPage(Settings, {
       ...signedIn('ADMIN'),
       ...stateAfter(versionsFeature),
-      ...stateAfter(gtfsImportFeature, GtfsImportActions.importSuccess({ result })),
+      ...stateAfter(
+        gtfsImportFeature,
+        GtfsImportActions.feedsLoaded({ feeds }),
+        GtfsImportActions.importSuccess({ result }),
+      ),
     });
 
-    (el.querySelector('button.primary') as HTMLButtonElement).click();
-    expect(store.dispatch).toHaveBeenCalledWith(GtfsImportActions.importBialystok());
+    expect(store.dispatch).toHaveBeenCalledWith(GtfsImportActions.loadFeeds());
+    expect([...el.querySelectorAll('.feeds tbody tr')].map(cells)).toEqual([
+      ['Białystok city buses (BKM)', 'Nov 16, 2026, 11:00:00 AM', 'Import'],
+      ['Polregio and PKP Intercity trains', 'never', 'Import'],
+      ['A new feed', 'never', 'Import'],
+    ]);
+    (el.querySelectorAll('.feeds button')[1] as HTMLButtonElement).click();
+    expect(store.dispatch).toHaveBeenCalledWith(GtfsImportActions.importFeed({ feed: 'rail' }));
+    expect(text(el.querySelector('.result .feed-name'))).toBe('Białystok city buses (BKM)');
     expect([...el.querySelectorAll('.result tr')].map(cells)).toEqual([
       ['Routes', '55'],
       ['Stops', '1,083'],
@@ -42,14 +64,53 @@ describe('Settings page', () => {
     expect(text(el.querySelector('.result'))).toContain('Not loaded: feed_info.txt');
   });
 
-  it('shows a running import and a failure', () => {
+  it('says when a feed was the same as its last import', () => {
+    const el = renderPage(Settings, {
+      ...signedIn('ADMIN'),
+      ...stateAfter(versionsFeature),
+      ...stateAfter(
+        gtfsImportFeature,
+        GtfsImportActions.feedsLoaded({ feeds }),
+        GtfsImportActions.importSuccess({
+          result: {
+            ...result,
+            feed: 'rail',
+            rows: {},
+            skipped: {},
+            ignoredFiles: [],
+            unchanged: true,
+          },
+        }),
+      ),
+    }).el;
+    expect(text(el.querySelector('.result'))).toBe(
+      'Polregio and PKP Intercity trains: the feed is the same as imported Nov 16, 2026, 11:00:00 AM, so nothing was imported.',
+    );
+    expect(el.querySelector('.result table')).toBeNull();
+  });
+
+  it('shows a running import, with the other feeds waiting', () => {
     const running = renderPage(Settings, {
       ...signedIn('ADMIN'),
       ...stateAfter(versionsFeature),
-      ...stateAfter(gtfsImportFeature, GtfsImportActions.importBialystok()),
+      ...stateAfter(
+        gtfsImportFeature,
+        GtfsImportActions.feedsLoaded({ feeds }),
+        GtfsImportActions.importFeed({ feed: 'rail' }),
+      ),
     }).el;
-    expect((running.querySelector('button.primary') as HTMLButtonElement).disabled).toBe(true);
-    expect(text(running.querySelector('button.primary'))).toBe('Importing…');
+    const buttons = [...running.querySelectorAll('.feeds button')] as HTMLButtonElement[];
+    expect(buttons.map((b) => b.disabled)).toEqual([true, true, true]);
+    expect(buttons.map(text)).toEqual(['Import', 'Importing…', 'Import']);
+  });
+
+  it('shows a skeleton until the feeds are loaded', () => {
+    const loading = renderPage(Settings, {
+      ...signedIn('ADMIN'),
+      ...stateAfter(versionsFeature),
+      ...stateAfter(gtfsImportFeature),
+    }).el;
+    expect(loading.querySelector('.gtfs app-skeleton')).not.toBeNull();
   });
 
   it('leaves a failed import to the toast: nothing of it on the page', () => {

@@ -134,8 +134,11 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   its route shape, for the maps. Computed in the background at startup and cached per timetable.
 - `GET /api/gtfs/coverage` — until when each timetable runs: its last day with trips, days left, and whether it is
   ending (5 days or fewer left, ended, or not loaded), and its assumed days (see the feeds below). Also logged as a warning every night at 05:00.
+- `GET /api/gtfs/feeds` — every feed that can be imported (`bialystok` first) with its last import: when, the
+  download's size and its fingerprint.
 - `POST /api/gtfs/{feed}/import` (admin) — downloads a GTFS timetable and loads it: `bialystok` (the city's) or
   another operator's feed from `app.gtfs.extra` (`pksnova-500`, `wschodexpress`, `turosn-koscielna`, `rail`); see below.
+  A download the same as the feed's last import is not imported again: the answer says `unchanged: true`.
 - `GET /api/zbiorkom/bialystok/positions` — live Białystok vehicle positions from [zbiorkom.live](https://zbiorkom.live),
   used by the live map: transit-recorder's latest snapshot (at most 10 s old), or straight from zbiorkom.live when the
   recorder doesn't answer. Vehicles seen for the first time are added to the vehicle table (number, type, agency,
@@ -317,9 +320,15 @@ built-in one without rebuilding; restart to apply.
 
 ### Timetable (GTFS) import
 
-`POST /api/gtfs/bialystok/import`, or **Settings → Import Białystok timetable** in the app (admins only), downloads
-the feed and loads agency, routes, stops, trips, stop times, calendar dates and shapes. It takes about 30 s, mostly
-inserting the ~384k stop times.
+`POST /api/gtfs/bialystok/import`, or **Settings → Timetable data** in the app (admins only; one Import button per
+feed, with its last import), downloads the feed and loads agency, routes, stops, trips, stop times, calendar dates and
+shapes. It takes about 30 s, mostly inserting the ~384k stop times.
+
+Each import keeps a fingerprint of what it loaded (`gtfs_feed_import`, migration V24; `gtfs/ImportedFeeds`): SHA-256
+of the files the import reads, by name and content, and of the part of the feed it takes (`only`). When a download has
+the same fingerprint as the feed's last import, and the feed's trips are still loaded, nothing is imported and nothing
+is worked out again. Other files (such as `feed_info.txt`) and the zip's own dates don't count, so a feed packed again
+with the same timetable is the same.
 
 - The tables follow GTFS (migration V7). Each row keeps its feed id in `gtfs_id`; times stay as GTFS `HH:MM:SS` and can
   go past 24:00 for trips after midnight. Route colours are stored as `#RRGGBB`.

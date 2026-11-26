@@ -310,11 +310,22 @@ class SecurityWebTest {
     void adminCanImportGtfs() throws Exception {
         given(gtfsFeedService.importFeed("bialystok")).willReturn(new GtfsImportResult("bialystok", "https://x", 10,
                 Instant.parse("2026-11-16T10:00:00Z"), 1234, java.util.Map.of("stop", 1083L), java.util.Map.of(),
-                List.of()));
+                List.of(), false));
 
         mvc.perform(post("/api/gtfs/bialystok/import").header("Authorization", bearer("admin", "ADMIN")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.rows.stop").value(1083));
+                .andExpect(jsonPath("$.rows.stop").value(1083))
+                .andExpect(jsonPath("$.unchanged").value(false));
+    }
+
+    @Test
+    void anyoneLoggedInSeesTheFeeds() throws Exception {
+        given(gtfsFeedService.feeds()).willReturn(List.of(new com.transitanalytics.gtfs.GtfsFeedService.Feed(
+                "bialystok", "Białystok", "https://x", null)));
+
+        mvc.perform(get("/api/gtfs/feeds").header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].key").value("bialystok"));
     }
 
     @Test

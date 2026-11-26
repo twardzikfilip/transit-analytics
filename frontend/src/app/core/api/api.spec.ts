@@ -104,18 +104,20 @@ describe('API clients', () => {
     TestBed.inject(LineDetailApi).detail('N 1/x').subscribe();
     TestBed.inject(LineDetailApi).performance('103').subscribe();
     TestBed.inject(CorridorApi).report().subscribe();
-    TestBed.inject(GtfsApi).importBialystok().subscribe();
+    TestBed.inject(GtfsApi).importFeed('rail').subscribe();
+    TestBed.inject(GtfsApi).feeds().subscribe();
 
     for (const url of [
       '/api/lines/stats',
       '/api/lines',
       '/api/lines/103/performance',
       '/api/corridors',
+      '/api/gtfs/feeds',
     ]) {
       http.expectOne(url);
     }
     http.expectOne('/api/lines/N%201%2Fx/detail');
-    expect(http.expectOne('/api/gtfs/bialystok/import').request.method).toBe('POST');
+    expect(http.expectOne('/api/gtfs/rail/import').request.method).toBe('POST');
   });
 
   it("reads live positions, a brigade's schedule and the fleet for a window", () => {

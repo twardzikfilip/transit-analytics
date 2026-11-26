@@ -9,7 +9,7 @@ import { Page, Session, Stop } from '../core/models/models';
 import { AuthActions } from './auth/auth.actions';
 import { login, loginSuccess, logout } from './auth/auth.effects';
 import { GtfsImportActions } from './gtfs-import/gtfs-import.actions';
-import { importBialystok, reloadRoutesAfterImport } from './gtfs-import/gtfs-import.effects';
+import { importFeed, loadFeeds, reloadAfterImport } from './gtfs-import/gtfs-import.effects';
 import { RoutesActions } from './routes/routes.actions';
 import { StopsActions } from './stops/stops.actions';
 import { loadStops } from './stops/stops.effects';
@@ -85,14 +85,26 @@ describe('store effects', () => {
     expect((out[0] as { type: string }).type).toBe(StopsActions.failure.type);
   });
 
-  it('imports the timetable and then reloads the routes', () => {
-    const result = { feed: 'bialystok' } as never;
-    const api = { importBialystok: () => of(result) } as unknown as GtfsApi;
-    expect(run((a) => importBialystok(a, api), GtfsImportActions.importBialystok())).toEqual([
+  it('imports a feed, then reloads the feeds, and the routes if anything was imported', () => {
+    const result = { feed: 'rail', unchanged: false } as never;
+    const feeds = [{ key: 'rail' }] as never;
+    const api = {
+      importFeed: (feed: string) => of({ ...(result as object), feed }),
+      feeds: () => of(feeds),
+    } as unknown as GtfsApi;
+    expect(run((a) => importFeed(a, api), GtfsImportActions.importFeed({ feed: 'rail' }))).toEqual([
       GtfsImportActions.importSuccess({ result }),
     ]);
-    expect(run(reloadRoutesAfterImport, GtfsImportActions.importSuccess({ result }))).toEqual([
+    expect(run((a) => loadFeeds(a, api), GtfsImportActions.loadFeeds())).toEqual([
+      GtfsImportActions.feedsLoaded({ feeds }),
+    ]);
+    expect(run(reloadAfterImport, GtfsImportActions.importSuccess({ result }))).toEqual([
+      GtfsImportActions.loadFeeds(),
       RoutesActions.load(),
+    ]);
+    const same = { feed: 'rail', unchanged: true } as never;
+    expect(run(reloadAfterImport, GtfsImportActions.importSuccess({ result: same }))).toEqual([
+      GtfsImportActions.loadFeeds(),
     ]);
   });
 });

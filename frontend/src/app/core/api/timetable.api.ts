@@ -1,7 +1,14 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { GtfsImportResult, Route, Stop, StopTime, TimetableCoverage } from '../models/models';
+import {
+  GtfsFeed,
+  GtfsImportResult,
+  Route,
+  Stop,
+  StopTime,
+  TimetableCoverage,
+} from '../models/models';
 import { CrudApiService } from './crud-api.service';
 
 @Injectable({ providedIn: 'root' })
@@ -35,7 +42,13 @@ export class GtfsApi {
     return this.http.get<TimetableCoverage>('/api/gtfs/coverage');
   }
 
-  importBialystok(): Observable<GtfsImportResult> {
-    return this.http.post<GtfsImportResult>('/api/gtfs/bialystok/import', null);
+  /** Every feed that can be imported, with its last import. */
+  feeds(): Observable<GtfsFeed[]> {
+    return this.http.get<GtfsFeed[]>('/api/gtfs/feeds');
+  }
+
+  /** Imports a feed; a download the same as its last import is not imported again (unchanged). */
+  importFeed(feed: string): Observable<GtfsImportResult> {
+    return this.http.post<GtfsImportResult>(`/api/gtfs/${encodeURIComponent(feed)}/import`, null);
   }
 }

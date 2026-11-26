@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @Tag(name = "GTFS import", description = "Load public transport timetables (GTFS) into the database")
 @RestController
 @RequestMapping("/api/gtfs")
@@ -34,14 +36,23 @@ public class GtfsController {
         return coverage.coverage();
     }
 
+    @Operation(summary = "Timetable feeds",
+            description = "Every feed that can be imported (\"bialystok\" first), with its last import: when, the "
+                    + "download's size and a fingerprint of what it loaded.")
+    @GetMapping("/feeds")
+    public List<GtfsFeedService.Feed> feeds() {
+        return feeds.feeds();
+    }
+
     @Operation(summary = "Import a timetable feed",
             description = "Downloads a GTFS feed and replaces what it loaded before (agencies, routes, stops, trips, "
                     + "stop times, calendar dates and shapes) with it: \"bialystok\" is the city's (komunikacja.bialystok.pl); "
                     + "other operators' feeds are configured under app.gtfs.extra (\"pksnova-500\", \"wschodexpress\", "
                     + "\"turosn-koscielna\"). Each row records its feed, so imports of one feed never touch another's; "
                     + "another feed's stops that are the city's (their code is its stop id) are the city's. Admin only; "
-                    + "takes a few seconds.")
-    @ApiResponse(responseCode = "200", description = "Imported; row counts per table")
+                    + "takes a few seconds. A download that is the same as the feed's last import (the files it loads "
+                    + "and the part of the feed it takes) is not imported again: the answer then says unchanged.")
+    @ApiResponse(responseCode = "200", description = "Imported, with row counts per table; or unchanged")
     @ApiResponse(responseCode = "404", description = "No such feed")
     @ApiResponse(responseCode = "409", description = "An import is already running")
     @ApiResponse(responseCode = "422", description = "The feed is incomplete or invalid; nothing was changed")

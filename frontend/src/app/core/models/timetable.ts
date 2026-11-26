@@ -93,6 +93,18 @@ export interface GtfsImportResult {
   /** Feed rows per file that were skipped because they point at a missing route, trip or stop. */
   skipped: Record<string, number>;
   ignoredFiles: string[];
+  /** The download was the same as the last import's: nothing was imported, and importedAt is that import's time. */
+  unchanged: boolean;
+}
+
+/** A timetable feed that can be imported, with its last import. */
+export interface GtfsFeed {
+  /** "bialystok", or another operator's feed ("rail", "wschodexpress"...). */
+  key: string;
+  /** What the feed is, as the server's settings name it; null for some. */
+  name: string | null;
+  source: string;
+  last: { fingerprint: string; importedAt: string; downloadedBytes: number } | null;
 }
 
 /** Until when the imported timetables run. */
