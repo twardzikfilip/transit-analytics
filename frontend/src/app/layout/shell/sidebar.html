@@ -24,6 +24,9 @@
   </div>
   <nav [attr.aria-label]="t('nav.pages')">
     @for (group of navGroups; track $index) {
+      @if (group.divider) {
+        <hr class="divider" />
+      }
       @if (group.label) {
         <h2 class="group">
           <span class="label">{{ t(group.label) }}</span>

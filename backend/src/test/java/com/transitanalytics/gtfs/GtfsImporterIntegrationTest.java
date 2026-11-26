@@ -261,4 +261,60 @@ class GtfsImporterIntegrationTest {
         }
         return new ZipFile(file.toFile());
     }
+
+    @Test
+    void loadsOnlyTheChosenAgenciesTripsCallingAtTheChosenStations() throws IOException {
+        Map<String, String> country = Map.of(
+                "agency.txt", """
+                        agency_id,agency_name,agency_url,agency_timezone
+                        PR,Regional,https://example.org,Europe/Warsaw
+                        IC,Fast,https://example.org,Europe/Warsaw
+                        """,
+                "routes.txt", """
+                        route_id,agency_id,route_short_name,route_type
+                        PR_REG,PR,REG,2
+                        PR_FAR,PR,FAR,2
+                        IC_IC,IC,IC,2
+                        """,
+                "stops.txt", """
+                        stop_id,stop_name,stop_lat,stop_lon,parent_station
+                        HUB,Hub,53.13,23.13,
+                        HUB-1,Hub,53.13,23.13,HUB
+                        A,A,53.2,23.2,
+                        FAR,Far,50.0,20.0,
+                        """,
+                "trips.txt", """
+                        trip_id,route_id,service_id,shape_id
+                        KEPT,PR_REG,S1,SH1
+                        ELSEWHERE,PR_FAR,S2,SH2
+                        FAST,IC_IC,S2,SH2
+                        """,
+                "stop_times.txt", """
+                        trip_id,stop_sequence,stop_id,arrival_time,departure_time
+                        KEPT,0,HUB-1,08:00:00,08:00:00
+                        KEPT,1,A,08:10:00,08:10:00
+                        ELSEWHERE,0,FAR,08:00:00,08:00:00
+                        FAST,0,HUB-1,08:00:00,08:00:00
+                        """,
+                "calendar_dates.txt", "service_id,date,exception_type\nS1,20261126,1\nS2,20261126,1\n",
+                "shapes.txt", "shape_id,shape_pt_sequence,shape_pt_lat,shape_pt_lon\nSH1,0,53.13,23.13\nSH2,0,50,20\n");
+        try (ZipFile zip = zip(country)) {
+            var loaded = importer.load(zip, "it-rail", new GtfsProperties.Selection(java.util.List.of("PR"), java.util.List.of("HUB", "NONE")));
+            assertThat(loaded.skipped()).isEmpty();
+        }
+        assertThat(ids("agency")).containsExactly("PR");
+        assertThat(ids("route")).containsExactly("PR_REG");
+        assertThat(ids("trip")).containsExactly("KEPT");
+        assertThat(ids("stop")).containsExactly("A", "HUB", "HUB-1");
+        assertThat(stopsOf("it-rail", "KEPT")).containsExactly("it-rail HUB-1", "it-rail A");
+        assertThat(jdbc.queryForList("SELECT service_id FROM calendar_date WHERE feed = 'it-rail'", String.class))
+                .containsOnly("S1");
+        assertThat(jdbc.queryForList("SELECT shape_id FROM shape_point WHERE feed = 'it-rail'", String.class))
+                .containsExactly("SH1");
+    }
+
+    private java.util.List<String> ids(String table) {
+        return jdbc.queryForList("SELECT gtfs_id FROM " + table + " WHERE feed = 'it-rail' ORDER BY gtfs_id",
+                String.class);
+    }
 }

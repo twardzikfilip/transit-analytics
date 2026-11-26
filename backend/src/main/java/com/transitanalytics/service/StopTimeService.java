@@ -1,5 +1,6 @@
 package com.transitanalytics.service;
 
+import com.transitanalytics.domain.TimetableFeed;
 import com.transitanalytics.domain.StopTime;
 import com.transitanalytics.dto.StopTimeDto;
 import com.transitanalytics.repository.StopRepository;
@@ -23,7 +24,8 @@ public class StopTimeService
 
     @Override
     protected Specification<StopTime> toSpecification(StopTimeDto.Filter f) {
-        return Specs.all(Specs.idOf("trip", f.tripId()), Specs.idOf("stop", f.stopId()));
+        return Specs.all(Specs.notEqual("trip.feed", TimetableFeed.RAIL),
+                Specs.idOf("trip", f.tripId()), Specs.idOf("stop", f.stopId()));
     }
 
     @Override

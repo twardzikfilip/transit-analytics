@@ -1,5 +1,6 @@
 package com.transitanalytics.service;
 
+import com.transitanalytics.domain.TimetableFeed;
 import com.transitanalytics.domain.Route;
 import com.transitanalytics.domain.RouteSubtype;
 import com.transitanalytics.dto.RouteDto;
@@ -20,7 +21,8 @@ public class RouteService extends CrudService<Route, RouteDto.Request, RouteDto.
 
     @Override
     protected Specification<Route> toSpecification(RouteDto.Filter f) {
-        return Specs.all(Specs.contains(f.q(), "shortName", "longName"), Specs.equal("routeType", f.routeType()),
+        return Specs.all(Specs.notEqual("feed", TimetableFeed.RAIL),
+                Specs.contains(f.q(), "shortName", "longName"), Specs.equal("routeType", f.routeType()),
                 Specs.equal("subtype", f.subtype()));
     }
 

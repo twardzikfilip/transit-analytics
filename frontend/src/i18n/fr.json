@@ -28,7 +28,8 @@
     "loading": "Chargement",
     "version": "Version {{version}}",
     "backToBrigades": "Retour à tous les services",
-    "backToFleet": "Retour à la vue d'ensemble de la flotte"
+    "backToFleet": "Retour à la vue d'ensemble de la flotte",
+    "cityRail": "Train urbain"
   },
   "titles": {
     "home": "Accueil",
@@ -49,7 +50,8 @@
     "trips": "Courses",
     "stopTimes": "Horaires aux arrêts",
     "sources": "Sources de données",
-    "settings": "Paramètres"
+    "settings": "Paramètres",
+    "cityRail": "Train urbain"
   },
   "login": {
     "username": "Nom d'utilisateur",
@@ -887,7 +889,8 @@
       "bialystok": "BKM",
       "pksnova-500": "PKS Nova",
       "wschodexpress": "Wschód Express",
-      "turosn-koscielna": "Turośń Kościelna"
+      "turosn-koscielna": "Turośń Kościelna",
+      "rail": "Polregio, PKP Intercity"
     },
     "assumed": {
       "tag": "Horaire supposé",
@@ -931,6 +934,12 @@
       "name": "Turośń Kościelna, ligne 700 (GTFS)",
       "gives": "Horaires de la ligne Białystok – Turośń Kościelna ; ses arrêts en ville sont ceux de BKM (flux non officiel, CC0).",
       "usedOn": "Lignes, Services, Arrêts, Formation des retards, Points d'immobilisation, Couloirs de bus",
+      "refreshed": "Chaque nuit"
+    },
+    "rail": {
+      "name": "Trains Polregio et PKP Intercity (GTFS)",
+      "gives": "Horaires des trains Polregio et PKP Intercity sur les voies ferrées autour de Białystok : données de PKP Polskie Linie Kolejowe S.A., mises en GTFS par Mikołaj Kuranowski.",
+      "usedOn": "Train urbain",
       "refreshed": "Chaque nuit"
     },
     "osm": {
@@ -1628,5 +1637,30 @@
       "noStop": "Ne s'est pas arrêté"
     },
     "halts": "Plus longs arrêts aux arrêts :"
+  },
+  "cityRail": {
+    "loading": "Chargement des voies ferrées",
+    "mapLabel": "Carte des voies ferrées et des lignes de train",
+    "railways": "Voie ferrée",
+    "spurs": "Embranchement (dépôts, usines)",
+    "reach": "Les lignes sont affichées jusqu’à Łapy, Knyszyn, Czarna Białostocka et Lewickie, les autres voies ferrées jusqu’à 10 km des limites de la ville.",
+    "railwayLine": "Voie ferrée {{ref}}",
+    "routes": "Lignes Polregio",
+    "intro": "Les trains qui empruntent la même voie ferrée autour de Białystok forment une seule ligne, où qu’ils aillent ensuite. Choisissez une ligne pour la mettre en évidence sur la carte.",
+    "route": "Ligne et ses gares",
+    "destinations": "Trains vers et depuis",
+    "day": {
+      "weekday": "Jour ouvrable",
+      "saturday": "Samedi",
+      "sunday": "Dimanche"
+    },
+    "fromCity": "De Białystok",
+    "toCity": "Vers Białystok",
+    "note": "Trains par jour, le prochain jour de ce type dans les horaires. Un train traversant Białystok compte sur ses deux lignes.",
+    "notLoaded": "Les horaires des trains ne sont pas encore chargés. Ils sont importés chaque nuit.",
+    "routeOnly": "Ligne",
+    "total": "Toutes les lignes",
+    "allTrains": "Tous les trains : Polregio et PKP Intercity",
+    "allIntro": "Les mêmes lignes, avec les trains des deux opérateurs réunis."
   }
 }

@@ -71,8 +71,9 @@ public class BrigadeDayService {
         List<BrigadeDto.Agency> agencies = jdbc.query("""
                 SELECT %s AS key, string_agg(DISTINCT a.name, ', ') AS name, count(*) AS trips, a.feed <> ? AS other
                 FROM trip t JOIN route r ON r.id = t.route_id JOIN agency a ON a.id = r.agency_id
+                WHERE a.feed <> '%s'
                 GROUP BY 1, a.feed
-                ORDER BY other, trips DESC, name""".formatted(OPERATOR_KEY),
+                ORDER BY other, trips DESC, name""".formatted(OPERATOR_KEY, TimetableFeed.RAIL),
                 (rs, i) -> new BrigadeDto.Agency(rs.getString("key"), rs.getString("name")), TimetableFeed.MAIN);
         List<String> ids = agencies.stream().map(BrigadeDto.Agency::id).toList();
         // A former key of one of a feed's agencies (wschodexpress-2) is its feed's.

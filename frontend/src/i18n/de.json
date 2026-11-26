@@ -28,7 +28,8 @@
     "loading": "Wird geladen",
     "version": "Version {{version}}",
     "backToBrigades": "Zurück zu allen Umläufen",
-    "backToFleet": "Zurück zur Flottenübersicht"
+    "backToFleet": "Zurück zur Flottenübersicht",
+    "cityRail": "Stadtbahn"
   },
   "titles": {
     "home": "Start",
@@ -49,7 +50,8 @@
     "trips": "Fahrten",
     "stopTimes": "Haltezeiten",
     "sources": "Datenquellen",
-    "settings": "Einstellungen"
+    "settings": "Einstellungen",
+    "cityRail": "Stadtbahn"
   },
   "login": {
     "username": "Benutzername",
@@ -875,7 +877,8 @@
       "bialystok": "BKM",
       "pksnova-500": "PKS Nova",
       "wschodexpress": "Wschód Express",
-      "turosn-koscielna": "Turośń Kościelna"
+      "turosn-koscielna": "Turośń Kościelna",
+      "rail": "Polregio, PKP Intercity"
     },
     "assumed": {
       "tag": "Angenommener Fahrplan",
@@ -919,6 +922,12 @@
       "name": "Turośń Kościelna, Linie 700 (GTFS)",
       "gives": "Fahrplan der Linie Białystok – Turośń Kościelna; ihre Haltestellen in der Stadt sind die der BKM (inoffizieller Feed, CC0).",
       "usedOn": "Linien, Umläufe, Haltestellen, Verspätungsaufbau, Standzeit-Hotspots, Busspuren",
+      "refreshed": "Jede Nacht"
+    },
+    "rail": {
+      "name": "Züge von Polregio und PKP Intercity (GTFS)",
+      "gives": "Fahrpläne der Züge von Polregio und PKP Intercity auf den Bahnstrecken um Białystok: Daten der PKP Polskie Linie Kolejowe S.A., von Mikołaj Kuranowski als GTFS aufbereitet.",
+      "usedOn": "Stadtbahn",
       "refreshed": "Jede Nacht"
     },
     "osm": {
@@ -1608,5 +1617,30 @@
       "noStop": "Hielt nicht"
     },
     "halts": "Längste Halte an Haltestellen:"
+  },
+  "cityRail": {
+    "loading": "Bahnstrecken werden geladen",
+    "mapLabel": "Karte der Bahnstrecken und Zugstrecken",
+    "railways": "Bahnstrecke",
+    "spurs": "Anschlussgleis (Depots, Betriebe)",
+    "reach": "Die Strecken sind bis Łapy, Knyszyn, Czarna Białostocka und Lewickie gezeigt, andere Bahnstrecken bis 10 km von der Stadtgrenze.",
+    "railwayLine": "Bahnstrecke {{ref}}",
+    "routes": "Polregio-Strecken",
+    "intro": "Züge, die um Białystok dieselbe Bahnstrecke nutzen, sind eine Strecke, wohin sie danach auch fahren. Wählen Sie eine Strecke, um sie auf der Karte hervorzuheben.",
+    "route": "Strecke und ihre Bahnhöfe",
+    "destinations": "Züge nach und von",
+    "day": {
+      "weekday": "Werktag",
+      "saturday": "Samstag",
+      "sunday": "Sonntag"
+    },
+    "fromCity": "Ab Białystok",
+    "toCity": "Nach Białystok",
+    "note": "Züge pro Tag, am nächsten solchen Tag im Fahrplan. Ein durch Białystok fahrender Zug zählt auf seinen beiden Strecken.",
+    "notLoaded": "Die Zugfahrpläne sind noch nicht geladen. Sie werden jede Nacht importiert.",
+    "routeOnly": "Strecke",
+    "total": "Alle Strecken",
+    "allTrains": "Alle Züge: Polregio und PKP Intercity",
+    "allIntro": "Dieselben Strecken, mit den Zügen beider Betreiber zusammen."
   }
 }

@@ -16,6 +16,8 @@ interface NavGroup {
   /** Its heading's translation key; null: no heading (Home, on its own at the top). */
   label: string | null;
   items: NavItem[];
+  /** A line above it. */
+  divider?: boolean;
 }
 
 /**
@@ -39,7 +41,7 @@ export class Sidebar {
   protected readonly t = t;
   protected readonly version = APP_VERSION;
 
-  /** The sidebar: Home on its own, then day-to-day operation, then the network and its timetable. */
+  /** The sidebar: Home on its own, then day-to-day operation, then the network and its timetable, then the trains. */
   protected readonly navGroups: NavGroup[] = [
     { label: null, items: [{ path: '/home', label: 'nav.home', icon: 'home' }] },
     {
@@ -63,6 +65,11 @@ export class Sidebar {
         { path: '/stops', label: 'nav.stops', icon: 'stops' },
         { path: '/stop-times', label: 'nav.stopTimes', icon: 'stopTimes' },
       ],
+    },
+    {
+      label: null,
+      divider: true,
+      items: [{ path: '/city-rail', label: 'nav.cityRail', icon: 'cityRail' }],
     },
   ];
 

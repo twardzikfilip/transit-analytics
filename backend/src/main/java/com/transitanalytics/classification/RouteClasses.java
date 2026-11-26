@@ -76,6 +76,9 @@ public class RouteClasses {
     /** After a timetable import: shapes and departures may have changed. */
     @EventListener
     public void afterImport(GtfsImported imported) {
+        if (TimetableFeed.RAIL.equals(imported.feed())) {
+            return;
+        }
         WarmUp.inBackground("route-classes", RouteClasses.class, this::classifyAll);
     }
 

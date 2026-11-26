@@ -1,0 +1,52 @@
+@if (report(); as r) {
+  <section class="card map-card">
+    <app-rail-map
+      [railways]="r.railways"
+      [routes]="routes()"
+      [highlighted]="highlighted()"
+      (choose)="choose($event)"
+    />
+    <p class="legend inset muted">
+      <span class="item"><span class="swatch railway"></span>{{ t('cityRail.railways') }}</span>
+      <span class="item"><span class="swatch spur"></span>{{ t('cityRail.spurs') }}</span>
+      <span>{{ t('cityRail.reach') }}</span>
+    </p>
+  </section>
+
+  <section class="card routes">
+    <h2>{{ t('cityRail.routes') }}</h2>
+    <p class="muted intro">{{ t('cityRail.intro') }}</p>
+    @if (routes().length) {
+      <app-route-table
+        [routes]="routes()"
+        [days]="r.days"
+        trains="polregio"
+        [stations]="true"
+        [chosen]="chosen()"
+        (choose)="choose($event)"
+        (hover)="hovered.set($event)"
+      />
+    } @else {
+      <p class="muted">{{ t('cityRail.notLoaded') }}</p>
+    }
+  </section>
+
+  @if (routes().length) {
+    <section class="card routes">
+      <h2>{{ t('cityRail.allTrains') }}</h2>
+      <p class="muted intro">{{ t('cityRail.allIntro') }}</p>
+      <app-route-table
+        [routes]="routes()"
+        [days]="r.days"
+        trains="all"
+        [chosen]="chosen()"
+        (choose)="choose($event)"
+        (hover)="hovered.set($event)"
+      />
+      <p class="muted note">{{ t('cityRail.note') }}</p>
+    </section>
+  }
+} @else if (loading()) {
+  <app-skeleton kind="map" height="560px" [label]="t('cityRail.loading')" />
+  <app-skeleton kind="card" [count]="1" height="260px" />
+}

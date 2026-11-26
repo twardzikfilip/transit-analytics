@@ -27,6 +27,17 @@ public final class Specs {
         return (root, query, cb) -> cb.equal(root.get(attribute), value);
     }
 
+    /** Whether an attribute, possibly of a to-one association ("trip.feed"), is another value. */
+    public static <E> Specification<E> notEqual(String attribute, Object value) {
+        return (root, query, cb) -> {
+            jakarta.persistence.criteria.Path<?> path = root;
+            for (String step : attribute.split("\\.")) {
+                path = path.get(step);
+            }
+            return cb.notEqual(path, value);
+        };
+    }
+
     /** Equality on the id of a to-one association, e.g. {@code idOf("route", 5)}. */
     public static <E> Specification<E> idOf(String association, Long id) {
         if (id == null) {

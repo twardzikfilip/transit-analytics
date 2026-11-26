@@ -349,6 +349,9 @@ public class TripAnomalyService {
     /** After a feed's import: reports are read on the timetable's lines, which may have changed. */
     @EventListener
     public void afterImport(GtfsImported imported) {
+        if (TimetableFeed.RAIL.equals(imported.feed())) {
+            return;
+        }
         generation.incrementAndGet();
         settledBrigades.clear();
         recent.forget();
@@ -495,9 +498,10 @@ public class TripAnomalyService {
         return alias + ".feed || '/' || " + alias + ".shape_id";
     }
 
-    /** All route shapes, read again when the timetable changes (another import). */
+    /** All bus lines' shapes, read again when the timetable changes (another import). */
     private Shapes shapes() {
-        Map<String, Object> v = jdbc.queryForMap("SELECT count(*) AS trips, max(id) AS last FROM trip");
+        Map<String, Object> v = jdbc.queryForMap("SELECT count(*) AS trips, max(id) AS last FROM trip WHERE feed <> ?",
+                TimetableFeed.RAIL);
         String version = v.get("trips") + ":" + v.get("last");
         Shapes current = shapes;
         if (current != null && current.version().equals(version)) {
@@ -505,7 +509,7 @@ public class TripAnomalyService {
         }
         Map<String, List<double[]>> points = new HashMap<>();
         jdbc.query("SELECT " + shapeKey("sp") + " AS shape_id, latitude, longitude FROM shape_point sp"
-                        + " ORDER BY feed, shape_id, sequence",
+                        + " WHERE feed <> '" + TimetableFeed.RAIL + "' ORDER BY feed, shape_id, sequence",
                 rs -> {
                     points.computeIfAbsent(rs.getString("shape_id"), k -> new ArrayList<>())
                             .add(new double[] {rs.getDouble("latitude"), rs.getDouble("longitude")});

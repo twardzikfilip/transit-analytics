@@ -1,5 +1,6 @@
 package com.transitanalytics.service;
 
+import com.transitanalytics.domain.TimetableFeed;
 import com.transitanalytics.domain.Stop;
 import com.transitanalytics.dto.StopDto;
 import com.transitanalytics.repository.StopRepository;
@@ -15,7 +16,8 @@ public class StopService extends CrudService<Stop, StopDto.Request, StopDto.Resp
 
     @Override
     protected Specification<Stop> toSpecification(StopDto.Filter f) {
-        return Specs.all(Specs.contains(f.q(), "name", "code"), Specs.equal("zoneId", f.zoneId()));
+        return Specs.all(Specs.notEqual("feed", TimetableFeed.RAIL),
+                Specs.contains(f.q(), "name", "code"), Specs.equal("zoneId", f.zoneId()));
     }
 
     @Override

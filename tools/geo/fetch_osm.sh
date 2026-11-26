@@ -52,3 +52,9 @@ GREEN='["landuse"~"^(meadow|grass|reservoir|basin|recreation_ground|village_gree
 # (Overpass's "around" a set of ways returns nothing here, so the land is fetched in the city and kept near the river
 # by the build script.)
 fetch valley.json "[out:json][timeout:240];rel($CITY);map_to_area->.s;(way[\"waterway\"~\"^(river|canal)$\"][\"name\"=\"Biała\"](area.s);way(area.s)$OPEN;rel(area.s)$OPEN;way(area.s)$GREEN;rel(area.s)$GREEN;way(area.s)[\"leisure\"=\"park\"];rel(area.s)[\"leisure\"=\"park\"];);out geom;"
+
+# The railways in use within about 10 km of the city limits (build_railways.py cuts them).
+fetch railways.json "[out:json][timeout:120];way[\"railway\"=\"rail\"](53.0,22.9,53.31,23.42);out tags geom;"
+
+# The railways in use in and around the city (build_railways.py cuts them 10 km from the city limits).
+fetch railways.json "[out:json][timeout:120];way[\"railway\"=\"rail\"](52.95,22.85,53.35,23.5);out tags geom;"

@@ -87,6 +87,12 @@ export const routes: Routes = [
         loadChildren: () => import('./pages/routes/routes.routes').then((m) => m.ROUTES_ROUTES),
       },
       {
+        path: 'city-rail',
+        title: 'titles.cityRail',
+        loadChildren: () =>
+          import('./pages/city-rail/city-rail.routes').then((m) => m.CITY_RAIL_ROUTES),
+      },
+      {
         path: 'sources',
         title: 'titles.sources',
         loadComponent: () => import('./pages/sources/sources').then((m) => m.Sources),
