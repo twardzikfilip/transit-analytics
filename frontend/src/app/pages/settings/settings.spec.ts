@@ -48,7 +48,12 @@ describe('Settings page', () => {
 
     expect(store.dispatch).toHaveBeenCalledWith(GtfsImportActions.loadFeeds());
     expect([...el.querySelectorAll('.feeds tbody tr')].map(cells)).toEqual([
-      ['Białystok city buses (BKM)', 'Nov 16, 2026, 11:00:00 AM', 'Import'],
+      // The time is shown in the browser's zone.
+      [
+        'Białystok city buses (BKM)',
+        expect.stringMatching(/^Nov 16, 2026, \d+:00:00 AM$/),
+        'Import',
+      ],
       ['Polregio and PKP Intercity trains', 'never', 'Import'],
       ['A new feed', 'never', 'Import'],
     ]);
@@ -83,8 +88,8 @@ describe('Settings page', () => {
         }),
       ),
     }).el;
-    expect(text(el.querySelector('.result'))).toBe(
-      'Polregio and PKP Intercity trains: the feed is the same as imported Nov 16, 2026, 11:00:00 AM, so nothing was imported.',
+    expect(text(el.querySelector('.result'))).toMatch(
+      /^Polregio and PKP Intercity trains: the feed is the same as imported Nov 16, 2026, \d+:00:00 AM, so nothing was imported\.$/,
     );
     expect(el.querySelector('.result table')).toBeNull();
   });
