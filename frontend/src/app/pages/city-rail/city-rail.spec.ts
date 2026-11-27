@@ -1,4 +1,4 @@
-import { CityRailReport } from '../../core/models/models';
+import { CityRailReport, RailBusComparison } from '../../core/models/models';
 import { CityRailActions } from '../../store/city-rail/city-rail.actions';
 import { cityRailFeature } from '../../store/city-rail/city-rail.reducer';
 import { renderPage, stateAfter, text, useSvgMaps } from '../../testing/page-testing';
@@ -74,12 +74,78 @@ const REPORT: CityRailReport = {
   ],
 };
 
-const state = (report: CityRailReport) =>
-  stateAfter(cityRailFeature, CityRailActions.loaded({ report }));
+const leg = (line: string, from: string, to: string, departure: string, arrival: string) => ({
+  line,
+  from,
+  to,
+  departure,
+  arrival,
+});
 
-async function render(report: CityRailReport, query: Record<string, string> = {}) {
+const COMPARISON: RailBusComparison = {
+  day: '2026-11-26',
+  offPeak: ['08:30-15:00', '17:00-20:00'],
+  maxChanges: 2,
+  stations: [
+    {
+      name: 'Białystok',
+      stops: [
+        { name: 'Centrum Przydworcowe', meters: 54 },
+        { name: 'Kolejowa', meters: 163 },
+      ],
+    },
+    { name: 'Białystok Starosielce', stops: [{ name: 'Starosielce PKP', meters: 62 }] },
+    { name: 'Białystok Bacieczki', stops: [] },
+  ],
+  pairs: [
+    {
+      from: 'Białystok',
+      to: 'Białystok Starosielce',
+      train: {
+        minutes: 6,
+        departure: '05:40',
+        arrival: '05:46',
+        legs: [leg('15801', 'Białystok', 'Białystok Starosielce', '05:40', '05:46')],
+      },
+      bus: {
+        minutes: 15,
+        departure: '09:04',
+        arrival: '09:19',
+        legs: [
+          leg('20', 'Centrum Przydworcowe', 'Popiełuszki', '09:04', '09:10'),
+          leg('8', 'Popiełuszki', 'Starosielce PKP', '09:12', '09:19'),
+        ],
+      },
+    },
+    { from: 'Białystok', to: 'Białystok Bacieczki', train: null, bus: null },
+    {
+      from: 'Białystok Starosielce',
+      to: 'Białystok',
+      train: null,
+      bus: {
+        minutes: 15,
+        departure: '17:57',
+        arrival: '18:12',
+        legs: [leg('8', 'Starosielce PKP', 'Kolejowa', '17:57', '18:12')],
+      },
+    },
+  ],
+};
+
+const state = (report: CityRailReport, comparison: RailBusComparison | null = COMPARISON) =>
+  stateAfter(
+    cityRailFeature,
+    CityRailActions.loaded({ report }),
+    ...(comparison ? [CityRailActions.comparisonLoaded({ comparison })] : []),
+  );
+
+async function render(
+  report: CityRailReport,
+  query: Record<string, string> = {},
+  comparison: RailBusComparison | null = COMPARISON,
+) {
   useSvgMaps();
-  const page = renderPage(CityRail, state(report), query);
+  const page = renderPage(CityRail, state(report, comparison), query);
   await page.fixture.whenStable();
   page.fixture.detectChanges();
   return page;
@@ -142,8 +208,63 @@ describe('City rail page', () => {
   });
 
   it('says so while the trains are not loaded', async () => {
-    const { el } = await render({ ...REPORT, days: [], routes: [] });
+    const { el } = await render({ ...REPORT, days: [], routes: [] }, {}, null);
     expect(el.querySelector('table')).toBeNull();
+    expect(text(el)).toContain('not loaded yet');
+  });
+
+  it('compares the train with the bus between the stations in the city', async () => {
+    const { el, store } = await render(REPORT);
+    expect(store.dispatch).toHaveBeenCalledWith(CityRailActions.loadComparison());
+    const table = el.querySelector('app-rail-bus-table table')!;
+    const rows = [...table.querySelectorAll('tbody tr')];
+    expect(rows.map((r) => text(r.querySelector('th.from')))).toEqual([
+      'Białystok',
+      '',
+      'Białystok Starosielce',
+    ]);
+    expect(table.querySelector('th.from')!.getAttribute('rowspan')).toBe('2');
+
+    const [train, bus] = [...rows[0].querySelectorAll('td.journey')];
+    expect(text(train.querySelector('.minutes'))).toBe('6 min');
+    expect(train.classList).toContain('faster');
+    expect(bus.classList).not.toContain('faster');
+    expect(text(bus.querySelector('.legs'))).toBe('20 → 8 · 09:04–09:19');
+    expect(bus.querySelector('.legs')!.getAttribute('title')).toBe(
+      '09:04 Centrum Przydworcowe → 09:10 Popiełuszki (20)\n' +
+        '09:12 Popiełuszki → 09:19 Starosielce PKP (8)',
+    );
+    expect(text(rows[0].querySelector('.difference'))).toBe('+9 min');
+
+    expect(text(rows[1])).toContain('No connection');
+    expect(text(rows[1].querySelector('.difference'))).toBe('');
+    // Only by bus: the bus is the faster way.
+    expect(rows[2].querySelectorAll('td.journey')[1].classList).toContain('faster');
+
+    const stops = text(el.querySelector('app-rail-bus-table details'));
+    expect(stops).toContain('Białystok: Centrum Przydworcowe (54 m), Kolejowa (163 m)');
+    expect(stops).toContain('Białystok Bacieczki: none within 1 km');
+  });
+
+  it('shows a skeleton while the comparison loads', async () => {
+    useSvgMaps();
+    const { el, fixture } = renderPage(
+      CityRail,
+      stateAfter(
+        cityRailFeature,
+        CityRailActions.loaded({ report: REPORT }),
+        CityRailActions.loadComparison(),
+      ),
+    );
+    await fixture.whenStable();
+    expect(el.querySelector('app-rail-bus-table')).toBeNull();
+    expect(text(el)).toContain('Train or bus in the city');
+    expect(el.querySelectorAll('app-skeleton').length).toBe(1);
+  });
+
+  it('says so when there are no trains to compare', async () => {
+    const { el } = await render(REPORT, {}, { ...COMPARISON, day: null, stations: [], pairs: [] });
+    expect(el.querySelector('app-rail-bus-table')).toBeNull();
     expect(text(el)).toContain('not loaded yet');
   });
 });

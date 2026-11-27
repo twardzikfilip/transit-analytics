@@ -1,0 +1,76 @@
+.intro {
+  margin: 0.25rem 0 0.75rem;
+}
+
+table.data-table th,
+table.data-table td {
+  padding-left: 0.6rem;
+  padding-right: 0.6rem;
+  vertical-align: top;
+}
+
+/* A line above each station's rows. */
+tr.group > * {
+  border-top: 2px solid var(--border);
+}
+
+th.from {
+  text-align: left;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+td.to {
+  white-space: nowrap;
+}
+
+td.journey {
+  min-width: 11rem;
+
+  .minutes {
+    display: block;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .legs {
+    display: block;
+    font-size: 0.8rem;
+    cursor: help;
+  }
+
+  /* The faster way between the two stations. */
+  &.faster .minutes {
+    font-weight: 700;
+    color: var(--green-bkm);
+  }
+}
+
+td.num,
+th.num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.note {
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
+}
+
+.stops {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+
+  summary {
+    cursor: pointer;
+  }
+
+  ul {
+    margin: 0.5rem 0 0;
+    padding-left: 1.2rem;
+  }
+
+  li + li {
+    margin-top: 0.25rem;
+  }
+}

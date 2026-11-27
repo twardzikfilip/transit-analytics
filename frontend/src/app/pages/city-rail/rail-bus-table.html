@@ -1,0 +1,66 @@
+<p class="muted intro">
+  {{
+    t('cityRail.vsBus.intro', {
+      day: (comparison().day | date: 'EEEE d MMMM'),
+      offPeak: comparison().offPeak.join(', '),
+      changes: comparison().maxChanges,
+    })
+  }}
+</p>
+<div class="data-table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>{{ t('cityRail.vsBus.from') }}</th>
+        <th>{{ t('cityRail.vsBus.to') }}</th>
+        <th>{{ t('cityRail.vsBus.train') }}</th>
+        <th>{{ t('cityRail.vsBus.bus') }}</th>
+        <th class="num">{{ t('cityRail.vsBus.difference') }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (r of rows(); track r.from + r.to) {
+        <tr [class.group]="r.span > 0">
+          @if (r.span > 0) {
+            <th scope="rowgroup" class="from" [attr.rowspan]="r.span">{{ r.from }}</th>
+          }
+          <td class="to">{{ r.to }}</td>
+          @for (way of ['train', 'bus']; track way) {
+            @let journey = way === 'train' ? r.train : r.bus;
+            <td class="journey" [class.faster]="r.faster === way">
+              @if (journey) {
+                <span class="minutes">{{ t('cityRail.vsBus.min', { n: journey.minutes }) }}</span>
+                <span class="muted legs" [title]="legs(journey)">{{ summary(journey) }}</span>
+              } @else {
+                <span class="muted">{{ t('cityRail.vsBus.none') }}</span>
+              }
+            </td>
+          }
+          <td class="num difference">
+            @if (r.difference !== null) {
+              {{ signed(r.difference) }}
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+<p class="muted note">{{ t('cityRail.vsBus.note') }}</p>
+<details class="stops">
+  <summary>{{ t('cityRail.vsBus.stops') }}</summary>
+  <ul>
+    @for (s of comparison().stations; track s.name) {
+      <li>
+        <strong>{{ s.name }}</strong>:
+        @for (stop of s.stops; track $index; let last = $last) {
+          {{ stop.name }} ({{ t('cityRail.vsBus.meters', { n: stop.meters }) }}){{
+            last ? '' : ','
+          }}
+        } @empty {
+          {{ t('cityRail.vsBus.noStops') }}
+        }
+      </li>
+    }
+  </ul>
+</details>

@@ -168,6 +168,14 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   for Polregio (`polregio`) and together with PKP Intercity (`all`) the destinations and the trains from and to
   Białystok on the next weekday, Saturday and Sunday of the timetable that are no public holiday. A through train is
   on both its routes.
+- `GET /api/city-rail/comparison` — train against bus between the railway stations in the city limits (Białystok,
+  Bacieczki, Starosielce, Zielone Wzgórza, Nowe Miasto, Stadion): for every pair, the fastest Polregio journey leaving
+  at any time and the fastest bus journey (every bus timetable) leaving off-peak (08:30–15:00, 17:00–20:00), both on
+  the weekday the trains are counted on, with up to two changes (`service/RailBusComparison`, `JourneyPlanner`: a
+  round-based search, as RAPTOR). A station's bus stops are the nearest one and those at most 200 m further. Changing
+  trains takes 3 minutes; changing buses 1 minute, plus the walk to another stop up to 300 m away (4.5 km/h, a fifth
+  longer than straight). Worked out in the background at startup and after each import (some seconds), then kept for
+  the day.
 - `GET /api/bus-lanes` — the city's bus lanes from OpenStreetMap (`places/osm/bus-lanes.json`, or the refreshed copy in
   `./config/map/bus-lanes.json`): each street section with how many lanes run each way and whether buses have a lane
   the other way too (on the section or the other carriageway), the sections grouped by street and direction, the
@@ -672,7 +680,10 @@ PGPASSWORD=transit psql -h localhost -U transit transit_test -c "CREATE EXTENSIO
   timeline, and choosing a trip there opens it in the list. Loaded again every minute while the brigade is out.
 - City Rail (`/city-rail`, last in the sidebar, below a line): a map of the railways in and around the city with the
   routes in their colours and their stations, and two tables of the routes with trains per day both ways: Polregio's,
-  and all (with PKP Intercity's). The route pointed at, or chosen (`?route=`), is highlighted on the map.
+  and all (with PKP Intercity's). The route pointed at, or chosen (`?route=`), is highlighted on the map. Last, train
+  or bus in the city: a table of every pair of stations in the city with the fastest train and off-peak bus journey,
+  the lines taken (point at them for every ride), the faster way in green and how much longer the bus takes; each
+  station's bus stops below it.
 - Network coverage: for each walking distance (400, 500, 600 m), tiles with the share of the city within it of the
   nearest bus stop, with and without the woods and the Biała valley, and a map (rolls up to its title) of the area
   near a stop with the woods hatched green and the valley hatched light blue; the woods and the valley's stretches

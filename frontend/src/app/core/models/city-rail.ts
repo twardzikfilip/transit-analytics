@@ -47,3 +47,53 @@ export interface RailStation {
   lat: number;
   lon: number;
 }
+
+/**
+ * Train against bus between the railway stations in the city: the fastest Polregio journey (leaving at any time) and
+ * the fastest bus journey leaving off-peak, between the bus stops nearest the stations, each with up to
+ * `maxChanges` changes.
+ */
+export interface RailBusComparison {
+  /** The weekday compared, yyyy-MM-dd; null while the trains' timetable isn't loaded. */
+  day: string | null;
+  /** When the buses leave, "HH:MM-HH:MM". */
+  offPeak: string[];
+  maxChanges: number;
+  /** The stations in the city, with the bus stops nearest each. */
+  stations: ComparedStation[];
+  /** Every station to every other. */
+  pairs: RailBusPair[];
+}
+
+export interface ComparedStation {
+  name: string;
+  /** Straight from the station. */
+  stops: { name: string; meters: number }[];
+}
+
+export interface RailBusPair {
+  from: string;
+  to: string;
+  /** Null when there is none. */
+  train: RailBusJourney | null;
+  bus: RailBusJourney | null;
+}
+
+export interface RailBusJourney {
+  /** From the first departure to the last arrival, changes included. */
+  minutes: number;
+  /** "HH:MM". */
+  departure: string;
+  arrival: string;
+  /** One per ride; a change between two. */
+  legs: RailBusLeg[];
+}
+
+export interface RailBusLeg {
+  /** The bus line, or the train's number. */
+  line: string;
+  from: string;
+  to: string;
+  departure: string;
+  arrival: string;
+}

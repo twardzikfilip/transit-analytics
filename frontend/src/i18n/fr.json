@@ -1687,6 +1687,23 @@
     "routeOnly": "Ligne",
     "total": "Toutes les lignes",
     "allTrains": "Tous les trains : Polregio et PKP Intercity",
-    "allIntro": "Les mêmes lignes, avec les trains des deux opérateurs réunis."
+    "allIntro": "Les mêmes lignes, avec les trains des deux opérateurs réunis.",
+    "vsBus": {
+      "title": "Train ou bus en ville",
+      "loading": "Calcul des trajets",
+      "intro": "Le trajet le plus rapide entre deux gares de la ville le {{day}} : en train Polregio partant à toute heure, et en bus partant en heures creuses ({{offPeak}}) des arrêts les plus proches d'une gare vers ceux les plus proches de l'autre. Jusqu'à {{changes}} correspondances dans les deux cas.",
+      "from": "De",
+      "to": "À",
+      "train": "Train Polregio",
+      "bus": "Bus (heures creuses)",
+      "difference": "Bus par rapport au train",
+      "min": "{{n}} min",
+      "none": "Aucune liaison",
+      "leg": "{{departure}} {{from}} → {{arrival}} {{to}} ({{line}})",
+      "note": "Du premier départ à la dernière arrivée, attente des correspondances comprise, mais sans l'attente du premier train ou bus ni la marche entre la gare et ses arrêts. Changer de train prend 3 minutes ; changer de bus 1 minute, plus la marche jusqu'à un autre arrêt à 300 m au plus. Le mode le plus rapide est en vert ; survolez les lignes pour voir chaque trajet.",
+      "stops": "Les arrêts de bus de chaque gare (le plus proche et ceux à 200 m de plus au maximum)",
+      "meters": "{{n}} m",
+      "noStops": "aucun à moins de 1 km"
+    }
   }
 }

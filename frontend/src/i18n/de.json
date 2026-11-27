@@ -1667,6 +1667,23 @@
     "routeOnly": "Strecke",
     "total": "Alle Strecken",
     "allTrains": "Alle Züge: Polregio und PKP Intercity",
-    "allIntro": "Dieselben Strecken, mit den Zügen beider Betreiber zusammen."
+    "allIntro": "Dieselben Strecken, mit den Zügen beider Betreiber zusammen.",
+    "vsBus": {
+      "title": "Zug oder Bus in der Stadt",
+      "loading": "Verbindungen werden berechnet",
+      "intro": "Die schnellste Verbindung zwischen je zwei Bahnhöfen in der Stadt am {{day}}: mit dem Polregio-Zug zu jeder Tageszeit und mit dem Bus außerhalb der Hauptverkehrszeit ({{offPeak}}) von den Haltestellen nahe dem einen Bahnhof zu denen nahe dem anderen. Jeweils bis zu {{changes}} Umstiege.",
+      "from": "Von",
+      "to": "Nach",
+      "train": "Polregio-Zug",
+      "bus": "Bus (außerhalb der Hauptverkehrszeit)",
+      "difference": "Bus gegenüber Zug",
+      "min": "{{n}} Min.",
+      "none": "Keine Verbindung",
+      "leg": "{{departure}} {{from}} → {{arrival}} {{to}} ({{line}})",
+      "note": "Von der ersten Abfahrt bis zur letzten Ankunft, mit Wartezeit beim Umsteigen, aber ohne die Wartezeit auf den ersten Zug oder Bus und ohne den Weg zwischen Bahnhof und Haltestellen. Umsteigen zwischen Zügen dauert 3 Minuten, zwischen Bussen 1 Minute, dazu der Fußweg zu einer anderen Haltestelle bis 300 m. Der schnellere Weg ist grün; zeigen Sie auf die Linien, um jede Fahrt zu sehen.",
+      "stops": "Die Bushaltestellen jedes Bahnhofs (die nächste und alle höchstens 200 m weiter entfernten)",
+      "meters": "{{n}} m",
+      "noStops": "keine im Umkreis von 1 km"
+    }
   }
 }

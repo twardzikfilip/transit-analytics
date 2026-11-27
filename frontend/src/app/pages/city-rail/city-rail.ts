@@ -9,16 +9,18 @@ import { Skeleton } from '../../shared/skeleton/skeleton';
 import { injectSetQuery } from '../../shared/url-query';
 import { CityRailActions } from '../../store/city-rail/city-rail.actions';
 import { cityRailFeature } from '../../store/city-rail/city-rail.reducer';
+import { RailBusTable } from './rail-bus-table';
 import { RailMap } from './rail-map';
 import { RouteTable } from './route-table';
 
 /**
  * City rail: the railways in and around the city on a map, and the routes on them, each in its colour with its
  * trains per day both ways: Polregio's, and together with PKP Intercity's. The route chosen (?route=Wasilków) is highlighted on the map.
+ * Last, train against bus between the stations in the city (loaded on its own, as it takes longer).
  */
 @Component({
   selector: 'app-city-rail',
-  imports: [RailMap, RouteTable, Skeleton],
+  imports: [RailBusTable, RailMap, RouteTable, Skeleton],
   templateUrl: './city-rail.html',
   styleUrl: './city-rail.scss',
 })
@@ -29,6 +31,10 @@ export class CityRail {
 
   protected readonly report = this.store.selectSignal(cityRailFeature.selectReport);
   protected readonly loading = this.store.selectSignal(cityRailFeature.selectLoading);
+  protected readonly comparison = this.store.selectSignal(cityRailFeature.selectComparison);
+  protected readonly comparisonLoading = this.store.selectSignal(
+    cityRailFeature.selectComparisonLoading,
+  );
 
   protected readonly routes = computed(() =>
     (this.report()?.routes ?? []).map((route, i) => ({
@@ -49,6 +55,7 @@ export class CityRail {
 
   constructor() {
     this.store.dispatch(CityRailActions.load());
+    this.store.dispatch(CityRailActions.loadComparison());
   }
 
   /** Chooses a route, or no longer, if it was chosen. */
