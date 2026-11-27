@@ -42,6 +42,14 @@ h2 {
   &.unserved {
     border-style: dashed;
   }
+
+  /* Passed without stopping: small and grey. */
+  &.passed {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-color: #8a8f98;
+    background: #8a8f98;
+  }
 }
 
 .block {
@@ -84,6 +92,11 @@ th.num {
 
 .tag.unserved {
   background: var(--accent-soft);
+  color: var(--fg);
+}
+
+.tag.passed {
+  background: var(--hover);
   color: var(--fg);
 }
 

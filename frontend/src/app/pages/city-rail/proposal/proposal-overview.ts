@@ -9,8 +9,8 @@ import { cityRailFeature } from '../../../store/city-rail/city-rail.reducer';
 import { MapLine, MapStation, NEW_STATION_COLOR, ProposalMap } from './proposal-map';
 
 /**
- * Proposal no. 1, its overview: the five railways on the map (the one to Kuriany, unused today, dashed) with their
- * stations, the new ones named; then each railway's stations, what every timetable keeps to, and the two solutions.
+ * Proposal no. 1, its overview: the five railways on the map (the one to Henrykowo, unused today, dashed) with their
+ * stations; then each railway's stations, what every timetable keeps to, and the two solutions.
  */
 @Component({
   selector: 'app-proposal-overview',
@@ -37,7 +37,10 @@ export class ProposalOverview {
         name: `${stations[0].name} – ${stations[stations.length - 1].name}`,
         km: stations[stations.length - 1].km,
         fresh: stations.filter((s) => s.kind === 'new').length,
-        spacing: stations[stations.length - 1].km / (stations.length - 1),
+        // Between the stations the city trains call at.
+        spacing:
+          stations[stations.length - 1].km /
+          Math.max(1, stations.filter((s) => s.kind !== 'passed').length - 1),
       };
     }),
   );

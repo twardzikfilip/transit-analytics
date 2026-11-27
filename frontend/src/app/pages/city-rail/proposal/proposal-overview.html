@@ -10,6 +10,7 @@
       <li><span class="line-swatch dashed"></span>{{ t('cityRail.proposal.legend.unused') }}</li>
       <li><span class="dot served"></span>{{ t('cityRail.proposal.legend.served') }}</li>
       <li><span class="dot unserved"></span>{{ t('cityRail.proposal.legend.unserved') }}</li>
+      <li><span class="dot passed"></span>{{ t('cityRail.proposal.legend.passed') }}</li>
       <li>
         <span class="dot" [style.background]="newColor"></span
         >{{ t('cityRail.proposal.legend.new') }}
@@ -60,6 +61,7 @@
                       class="tag"
                       [class.new]="s.kind === 'new'"
                       [class.unserved]="s.kind === 'unserved'"
+                      [class.passed]="s.kind === 'passed'"
                       >{{ t('cityRail.proposal.kinds.' + s.kind) }}</span
                     >
                   }
@@ -79,7 +81,6 @@
         <li>
           {{
             t('cityRail.proposal.rules.interval', {
-              minutes: r.intervalMinutes,
               first: r.firstDeparture,
               last: r.lastDeparture,
             })
