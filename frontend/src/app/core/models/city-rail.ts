@@ -97,3 +97,89 @@ export interface RailBusLeg {
   departure: string;
   arrival: string;
 }
+
+/**
+ * City Rail proposal no. 1: city trains on the five railways from Białystok, shortened to Klepacze, Fasty, Lewickie,
+ * Wasilków and Kuriany, with new stations, and two ways of running them, each timetabled around today's trains.
+ */
+export interface CityRailProposal {
+  /** The weekday whose trains the timetables keep clear of, yyyy-MM-dd; null while the timetable isn't loaded. */
+  day: string | null;
+  rules: ProposalRules;
+  /** The railways, from Białystok outwards. */
+  corridors: ProposalCorridor[];
+  /** Empty while the timetable isn't loaded. */
+  solutions: ProposalSolution[];
+}
+
+export interface ProposalRules {
+  /** At least this long from any other train going the same way on the same railway. */
+  headwayMinutes: number;
+  /** At least this long at an end before going back. */
+  turnaroundMinutes: number;
+  /** At most this long between two trains of a line. */
+  intervalMinutes: number;
+  /** "HH:MM". */
+  firstDeparture: string;
+  lastDeparture: string;
+  /** Seconds standing at a new station. */
+  newStationDwell: number;
+  /** Seconds standing at Białystok when running through. */
+  hubDwell: number;
+  /** Today's trains on the railways. */
+  trainsConsidered: number;
+}
+
+export type ProposalStationKind = 'served' | 'unserved' | 'new';
+
+export interface ProposalCorridor {
+  /** Its end, in lower case ("klepacze"). */
+  id: string;
+  /** The railway line's number. */
+  ref: string;
+  /** Whether any train runs on it today. */
+  served: boolean;
+  stations: ProposalStation[];
+  points: LatLon[];
+}
+
+export interface ProposalStation {
+  name: string;
+  kind: ProposalStationKind;
+  lat: number;
+  lon: number;
+  /** Along the railway from Białystok. */
+  km: number;
+}
+
+export interface ProposalSolution {
+  id: 'radial' | 'through';
+  lines: ProposalLine[];
+}
+
+export interface ProposalLine {
+  /** "S1". */
+  id: string;
+  stations: { name: string; kind: ProposalStationKind; km: number }[];
+  points: LatLon[];
+  km: number;
+  spacingKm: number;
+  runMinutes: number;
+  runMinutesBack: number;
+  trainsPerDay: number;
+  maxIntervalMinutes: number;
+  vehicles: number;
+  minTurnaround: number;
+  /** The nearest any of its trains comes to another on the same railway and way; null when none. */
+  closestMinutes: number | null;
+  /** Its trains coming closer than the headway. */
+  conflicts: number;
+  out: ProposalTrip[];
+  back: ProposalTrip[];
+}
+
+export interface ProposalTrip {
+  /** "HH:MM" per station: the departure, at the last the arrival. */
+  times: string[];
+  conflict: boolean;
+}

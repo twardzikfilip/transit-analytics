@@ -1,0 +1,103 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.intro {
+  margin: 0.25rem 0 0.75rem;
+}
+
+.map-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+/* As RAILWAY_STYLES in the palette. */
+.swatch.railway {
+  height: 3px;
+  background: #495057;
+}
+
+.line-swatch.dashed {
+  border-top-style: dashed;
+  border-top-color: var(--muted);
+}
+
+/* Stations, as on the map. */
+.dot {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  border: 1.5px solid #1f2933;
+  background: #fff;
+
+  &.unserved {
+    border-style: dashed;
+  }
+}
+
+.block {
+  display: block;
+  font-weight: 400;
+}
+
+table.data-table th,
+table.data-table td {
+  padding-left: 0.6rem;
+  padding-right: 0.6rem;
+}
+
+/* A line above each railway's or line's rows. */
+tr.group > * {
+  border-top: 2px solid var(--border);
+}
+
+th.corridor {
+  color: var(--fg);
+  white-space: normal;
+  min-width: 12rem;
+
+  .tag {
+    margin-top: 0.3rem;
+  }
+}
+
+td.num,
+th.num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.tag.new {
+  background: #e8590c;
+  color: #fff;
+}
+
+.tag.unserved {
+  background: var(--accent-soft);
+  color: var(--fg);
+}
+
+.rules,
+.solutions {
+  margin: 0.5rem 0 0;
+  padding-left: 1.2rem;
+
+  li + li {
+    margin-top: 0.35rem;
+  }
+}
+
+.solutions a {
+  font-weight: 600;
+  margin-right: 0.5rem;
+}

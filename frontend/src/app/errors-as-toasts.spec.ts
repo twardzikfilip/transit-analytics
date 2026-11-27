@@ -41,7 +41,10 @@ const PAGES = [
   '/stops',
   '/trips',
   '/stop-times',
-  '/city-rail',
+  '/city-rail/current',
+  '/city-rail/proposal-1',
+  '/city-rail/proposal-1/radial',
+  '/city-rail/proposal-1/through',
   '/sources',
   '/settings',
 ];

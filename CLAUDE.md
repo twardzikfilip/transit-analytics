@@ -19,7 +19,7 @@ the short version for working on the code.
   - `src/app/pages/<page>/`, `src/app/store/<slice>/`, `src/app/core/` (API, auth, theme, title, models),
     `src/app/shared/` (maps, charts, formatting, palette, icons, time window), `src/app/layout/shell/` (sidebar).
 - `tools/geo/`: OpenStreetMap fetch (`fetch_osm.sh [file.json]`, Overpass, tries mirrors with backoff) and the
-  Python builds of `places/osm/*.json` (`build_bialystok_geo.py`, `biala_valley.py`, `build_belt_geo.py` with `build_belt_land.py` and `worldcover.py`, `build_railways.py`). Raw
+  Python builds of `places/osm/*.json` (`build_bialystok_geo.py`, `biala_valley.py`, `build_belt_geo.py` with `build_belt_land.py` and `worldcover.py`, `build_railways.py`, `build_city_rail_proposal.py`). Raw
   answers go to `tools/geo/raw/` (not committed). No shapely; numpy is available.
 - `docker-compose.yml`: `postgres` (TimescaleDB), `recorder`, `otel-lgtm` (Grafana on :3000).
 

@@ -27,6 +27,7 @@ import { BrigadePage } from './brigades/brigade';
 import { BrigadesPage } from './brigades/brigades';
 import { BusLanesPage } from './bus-lanes/bus-lanes';
 import { CityRail } from './city-rail/city-rail';
+import { ProposalOverview } from './city-rail/proposal/proposal-overview';
 import { Corridors } from './corridors/corridors';
 import { DelayGeneration } from './delay-generation/delay-generation';
 import { Fleet } from './fleet/fleet';
@@ -90,6 +91,12 @@ const LOADING: [string, Type<unknown>, Record<string, unknown>, Record<string, s
     {},
   ],
   ['City rail', CityRail, stateAfter(cityRailFeature, CityRailActions.load()), {}],
+  [
+    'City rail proposal',
+    ProposalOverview,
+    stateAfter(cityRailFeature, CityRailActions.loadProposal()),
+    {},
+  ],
   ['Corridors', Corridors, stateAfter(corridorsFeature, CorridorsActions.load()), {}],
   [
     'Routes',

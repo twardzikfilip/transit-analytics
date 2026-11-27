@@ -1,0 +1,12 @@
+<nav class="tabs" [attr.aria-label]="t('cityRail.proposal.tabs.label')">
+  @for (tab of tabs; track tab.path) {
+    <a
+      [routerLink]="tab.path"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: tab.exact }"
+      ariaCurrentWhenActive="page"
+      >{{ t(tab.label) }}</a
+    >
+  }
+</nav>
+<router-outlet />

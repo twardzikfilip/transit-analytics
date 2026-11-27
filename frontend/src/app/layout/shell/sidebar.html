@@ -35,16 +35,48 @@
       <ul>
         @for (item of group.items; track item.path) {
           <li>
-            <a
-              [routerLink]="item.path"
-              routerLinkActive="active"
-              ariaCurrentWhenActive="page"
-              [attr.title]="collapsed() ? t(item.label) : null"
-              (click)="close.emit()"
-            >
-              <app-icon class="icon" [name]="item.icon" />
-              <span class="label">{{ t(item.label) }}</span>
-            </a>
+            <!-- An item with pages of its own: it opens and closes their submenu (narrowed, it opens its first page). -->
+            @if (item.children && !collapsed()) {
+              <button
+                type="button"
+                class="parent"
+                [class.within]="within(item)"
+                [attr.aria-expanded]="expanded(item)"
+                [attr.aria-controls]="'sub' + item.path.replaceAll('/', '-')"
+                (click)="toggle(item)"
+              >
+                <app-icon class="icon" [name]="item.icon" />
+                <span class="label">{{ t(item.label) }}</span>
+                <app-icon class="chevron" name="chevronRight" />
+              </button>
+              @if (expanded(item)) {
+                <ul class="sub" [id]="'sub' + item.path.replaceAll('/', '-')">
+                  @for (child of item.children; track child.path) {
+                    <li>
+                      <a
+                        [routerLink]="child.path"
+                        routerLinkActive="active"
+                        ariaCurrentWhenActive="page"
+                        (click)="close.emit()"
+                      >
+                        <span class="label">{{ t(child.label) }}</span>
+                      </a>
+                    </li>
+                  }
+                </ul>
+              }
+            } @else {
+              <a
+                [routerLink]="item.path"
+                routerLinkActive="active"
+                ariaCurrentWhenActive="page"
+                [attr.title]="collapsed() ? t(item.label) : null"
+                (click)="close.emit()"
+              >
+                <app-icon class="icon" [name]="item.icon" />
+                <span class="label">{{ t(item.label) }}</span>
+              </a>
+            }
           </li>
         }
       </ul>

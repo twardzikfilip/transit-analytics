@@ -1,0 +1,31 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* The proposal's pages: tabs along the top, the one shown underlined in the primary colour. */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+
+  a {
+    padding: 0.5rem 0.1rem;
+    margin-bottom: -1px;
+    border-bottom: 3px solid transparent;
+    color: var(--muted);
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--fg);
+    }
+
+    &.active {
+      border-bottom-color: var(--primary);
+      color: var(--fg);
+    }
+  }
+}

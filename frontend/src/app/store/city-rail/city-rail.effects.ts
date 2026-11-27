@@ -37,3 +37,19 @@ export const loadComparison = createEffect(
     ),
   { functional: true },
 );
+
+export const loadProposal = createEffect(
+  (actions$ = inject(Actions), api = inject(CityRailApi)) =>
+    actions$.pipe(
+      ofType(CityRailActions.loadProposal),
+      exhaustMap(() =>
+        api.proposal().pipe(
+          map((proposal) => CityRailActions.proposalLoaded({ proposal })),
+          catchError((err: HttpErrorResponse) =>
+            of(CityRailActions.proposalFailure({ error: errorMessage(err) })),
+          ),
+        ),
+      ),
+    ),
+  { functional: true },
+);

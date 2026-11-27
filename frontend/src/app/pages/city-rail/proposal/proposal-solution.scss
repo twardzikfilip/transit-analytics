@@ -1,0 +1,56 @@
+.legend .route-badge {
+  min-width: 2.2em;
+  font-size: 0.8rem;
+}
+
+h2 .route-badge {
+  margin-right: 0.35rem;
+}
+
+h3 {
+  margin: 1rem 0 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.lines td {
+  white-space: nowrap;
+}
+
+/* Headings wrap, so all the figures fit beside each other. */
+.lines th {
+  white-space: normal;
+  vertical-align: bottom;
+}
+
+.note {
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
+}
+
+/* A timetable: stations down, trains across; the station names stay put while it scrolls sideways. */
+table.times {
+  width: auto;
+
+  th[scope='row'] {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--surface);
+    color: var(--fg);
+    font-weight: 500;
+    font-size: 0.85rem;
+  }
+
+  td.time {
+    padding: 0.4rem 0.45rem;
+    text-align: center;
+    font-size: 0.85rem;
+  }
+}
+
+/* A train coming closer than the headway to another, and how many do. */
+.conflict {
+  color: var(--danger);
+  font-weight: 600;
+}
