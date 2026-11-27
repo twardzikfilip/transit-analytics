@@ -1,5 +1,7 @@
-import { Component, input, output, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Component, inject, input, output, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { filter, map } from 'rxjs';
 import { Icon } from '../../shared/icons/icon';
 import { IconName } from '../../shared/icons/icons';
 import { t } from '../../core/i18n/t';
@@ -10,6 +12,8 @@ interface NavItem {
   /** Translation key of its name. */
   label: string;
   icon: IconName;
+  /** Its pages, in a submenu that drops down under it (the item itself then only opens and closes it). */
+  children?: { path: string; label: string }[];
 }
 
 interface NavGroup {
@@ -69,9 +73,45 @@ export class Sidebar {
     {
       label: null,
       divider: true,
-      items: [{ path: '/city-rail', label: 'nav.cityRail', icon: 'cityRail' }],
+      items: [
+        {
+          path: '/city-rail',
+          label: 'nav.cityRail',
+          icon: 'cityRail',
+          children: [
+            { path: '/city-rail/current', label: 'nav.cityRailCurrent' },
+            { path: '/city-rail/proposal-1', label: 'nav.cityRailProposal' },
+          ],
+        },
+      ],
     },
   ];
+
+  private readonly router = inject(Router);
+  /** The page shown. */
+  private readonly url = toSignal(
+    this.router.events.pipe(
+      filter((e) => e instanceof NavigationEnd),
+      map(() => this.router.url),
+    ),
+    { initialValue: this.router.url },
+  );
+  /** Submenus opened or closed by hand; the others are open while one of their pages is shown. */
+  private readonly toggled = signal<Record<string, boolean>>({});
+
+  /** Whether one of an item's pages is shown. */
+  protected within(item: NavItem): boolean {
+    return this.url().startsWith(item.path + '/') || this.url() === item.path;
+  }
+
+  protected expanded(item: NavItem): boolean {
+    return this.toggled()[item.path] ?? this.within(item);
+  }
+
+  protected toggle(item: NavItem): void {
+    const open = !this.expanded(item);
+    this.toggled.update((t) => ({ ...t, [item.path]: open }));
+  }
 
   protected toggleCollapsed(): void {
     this.collapsed.update((c) => !c);

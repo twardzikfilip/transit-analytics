@@ -29,7 +29,9 @@
     "version": "Version {{version}}",
     "backToBrigades": "Retour à tous les services",
     "backToFleet": "Retour à la vue d'ensemble de la flotte",
-    "cityRail": "Train urbain"
+    "cityRail": "Train urbain",
+    "cityRailCurrent": "État actuel",
+    "cityRailProposal": "Proposition n° 1"
   },
   "titles": {
     "home": "Accueil",
@@ -51,7 +53,11 @@
     "stopTimes": "Horaires aux arrêts",
     "sources": "Sources de données",
     "settings": "Paramètres",
-    "cityRail": "Train urbain"
+    "cityRail": "Train urbain",
+    "cityRailCurrent": "Train urbain : état actuel",
+    "cityRailProposal": "Train urbain : proposition n° 1",
+    "cityRailRadial": "Proposition n° 1 : cinq lignes depuis Białystok",
+    "cityRailThrough": "Proposition n° 1 : lignes traversant Białystok"
   },
   "login": {
     "username": "Nom d'utilisateur",
@@ -1704,6 +1710,70 @@
       "stops": "Les arrêts de bus de chaque gare (le plus proche et ceux à 200 m de plus au maximum)",
       "meters": "{{n}} m",
       "noStops": "aucun à moins de 1 km"
+    },
+    "proposal": {
+      "loading": "Construction de l’horaire de la proposition",
+      "mapLabel": "Carte des lignes et gares proposées du train urbain",
+      "tabs": {
+        "label": "Proposition n° 1",
+        "overview": "Réseau",
+        "radial": "Solution 1 : cinq lignes depuis Białystok",
+        "through": "Solution 2 : lignes traversant Białystok"
+      },
+      "legend": {
+        "corridor": "Voie du train urbain",
+        "unused": "Sans trains de voyageurs aujourd’hui",
+        "served": "Gare",
+        "unserved": "Gare sans arrêt aujourd’hui",
+        "new": "Nouvelle gare"
+      },
+      "network": "Le réseau",
+      "networkIntro": "Des trains urbains sur les cinq voies partant de Białystok, raccourcies à Klepacze, Fasty, Lewickie, Wasilków et Kuriany ; la voie vers Kuriany, par Białystok Fabryczny, n’a pas de trains de voyageurs aujourd’hui. Six nouvelles gares : vers Kuriany, Białystok Jurowiecka (entre les rues Przytorowa et Poleska, après le pont sur la rue Jurowiecka), Białystok Pieczurki (après le passage à niveau de la rue Piasta) et Białystok Zaścianki (après le passage à niveau de la rue Baranowicka) ; vers Wasilków, Białystok Białostoczek (là où se rejoignent les rues Sitarska et Sokólska) ; vers Fasty, Białystok Leśna Dolina (après le croisement avec la rue Popiełuszki) ; vers Lewickie, Ignatki-Osiedle (après le passage à niveau de la rue Leśna). Distances le long de la voie depuis la gare de Białystok (OpenStreetMap).",
+      "railway": "Voie",
+      "station": "Gare",
+      "km": "km",
+      "kind": "Remarque",
+      "corridorName": "{{name}} (ligne {{ref}})",
+      "corridorFacts": "Ligne {{ref}} · {{km}} km · une gare tous les {{spacing}} km",
+      "noTrainsToday": "Sans trains de voyageurs aujourd’hui",
+      "kinds": {
+        "served": "Gare",
+        "unserved": "Sans arrêt aujourd’hui",
+        "new": "Nouvelle"
+      },
+      "rulesTitle": "Ce que respecte chaque horaire",
+      "rules": {
+        "interval": "Chaque ligne passe au moins toutes les {{minutes}} minutes dans chaque sens, d’environ {{first}} à {{last}}.",
+        "headway": "Chaque train garde au moins {{minutes}} minutes d’écart avec tout autre train allant dans le même sens sur la même voie, à chaque gare, et n’en rattrape aucun entre deux gares.",
+        "turnaround": "Au terminus, un train attend au moins {{minutes}} minutes avant de repartir.",
+        "dwell": "Les trains s’arrêtent {{seconds}} s aux nouvelles gares (et à Białystok Fabryczny et Kuriany), autant que ceux de Polregio à Białystok Starosielce, et {{hub}} minutes à Białystok quand ils le traversent.",
+        "runTimes": "Les temps de parcours sont ceux de Polregio entre les gares où ses trains s’arrêtent ; une nouvelle gare en route ajoute le temps perdu à freiner et repartir. Vers Kuriany, où aucun train ne circule, ils sont calculés d’après la distance à 80 km/h au plus, mis à l’échelle comme les temps de Polregio ailleurs.",
+        "trains": "Horaire construit autour des {{n}} trains de ces voies le {{day}} (Polregio et PKP Intercity, à l’arrêt ou de passage).",
+        "notCounted": "Les trains en sens inverse ne comptent pas : ils se croisent en gare ou sur voie double. Les trains de marchandises ne figurent pas dans l’horaire."
+      },
+      "solutions": "Deux façons de l’exploiter",
+      "radialIntro": "Cinq lignes, chacune de Białystok à un terminus.",
+      "throughIntro": "Deux lignes traversant Białystok d’un terminus à l’autre, et une s’y arrêtant.",
+      "linesTitle": "Les lignes",
+      "linesIntro": "Horaire construit autour des trains du {{day}}.",
+      "line": "Ligne",
+      "length": "Longueur",
+      "stations": "Gares",
+      "spacing": "Entre gares",
+      "runTime": "Temps de parcours",
+      "speed": "Vitesse moyenne",
+      "trains": "Trains par jour",
+      "interval": "Attente la plus longue",
+      "vehicles": "Trains nécessaires",
+      "closest": "Train le plus proche",
+      "kmValue": "{{km}} km",
+      "kmh": "{{v}} km/h",
+      "minutesBoth": "{{out}} / {{back}} min",
+      "tableNote": "Temps de parcours : aller et retour. Entre gares : la distance moyenne. Trains par jour : dans chaque sens. Attente la plus longue : entre deux trains de la ligne. Trains nécessaires : pour assurer l’horaire, chacun attendant au moins le temps de retournement au terminus. Train le plus proche : le plus petit écart d’un de ses trains avec un autre allant dans le même sens sur la même voie.",
+      "timetable": "{{name}} : horaire",
+      "timetableIntro": "Départs ; à la dernière gare, arrivées. Les trains attendent au moins {{turnaround}} minutes au terminus ; {{vehicles}} trains assurent la ligne.",
+      "conflicts": "En rouge, les trains plus proches d’un autre que l’écart minimal, aucune heure dans l’heure n’évitant tous les autres : {{n}}.",
+      "towards": "Vers {{to}}"
     }
   }
 }

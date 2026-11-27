@@ -1,5 +1,5 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import { CityRailReport, RailBusComparison } from '../../core/models/models';
+import { CityRailProposal, CityRailReport, RailBusComparison } from '../../core/models/models';
 
 export const CityRailActions = createActionGroup({
   source: 'City rail',
@@ -10,5 +10,8 @@ export const CityRailActions = createActionGroup({
     'Load comparison': emptyProps(),
     'Comparison loaded': props<{ comparison: RailBusComparison }>(),
     'Comparison failure': props<{ error: string }>(),
+    'Load proposal': emptyProps(),
+    'Proposal loaded': props<{ proposal: CityRailProposal }>(),
+    'Proposal failure': props<{ error: string }>(),
   },
 });

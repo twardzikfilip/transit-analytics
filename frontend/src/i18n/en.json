@@ -29,7 +29,9 @@
     "version": "Version {{version}}",
     "backToBrigades": "Back to all brigades",
     "backToFleet": "Back to the fleet overview",
-    "cityRail": "City Rail"
+    "cityRail": "City Rail",
+    "cityRailCurrent": "Current state",
+    "cityRailProposal": "Proposal no. 1"
   },
   "titles": {
     "home": "Home",
@@ -51,7 +53,11 @@
     "stopTimes": "Stop times",
     "sources": "Data sources",
     "settings": "Settings",
-    "cityRail": "City Rail"
+    "cityRail": "City Rail",
+    "cityRailCurrent": "City Rail: current state",
+    "cityRailProposal": "City Rail: proposal no. 1",
+    "cityRailRadial": "Proposal no. 1: five lines from Białystok",
+    "cityRailThrough": "Proposal no. 1: lines through Białystok"
   },
   "login": {
     "username": "Username",
@@ -1684,6 +1690,70 @@
       "stops": "The bus stops of each station (the nearest, and those at most 200 m further)",
       "meters": "{{n}} m",
       "noStops": "none within 1 km"
+    },
+    "proposal": {
+      "loading": "Timetabling the proposal",
+      "mapLabel": "Map of the proposed city rail lines and stations",
+      "tabs": {
+        "label": "Proposal no. 1",
+        "overview": "Network",
+        "radial": "Solution 1: five lines from Białystok",
+        "through": "Solution 2: lines through Białystok"
+      },
+      "legend": {
+        "corridor": "City rail railway",
+        "unused": "No passenger trains today",
+        "served": "Station",
+        "unserved": "Station no train calls at today",
+        "new": "New station"
+      },
+      "network": "The network",
+      "networkIntro": "City trains on the five railways from Białystok, shortened to Klepacze, Fasty, Lewickie, Wasilków and Kuriany; the railway to Kuriany, through Białystok Fabryczny, has no passenger trains today. Six new stations: towards Kuriany, Białystok Jurowiecka (between Przytorowa and Poleska streets, past the bridge over Jurowiecka street), Białystok Pieczurki (past the crossing with Piasta street) and Białystok Zaścianki (past the crossing with Baranowicka street); towards Wasilków, Białystok Białostoczek (where Sitarska and Sokólska streets meet); towards Fasty, Białystok Leśna Dolina (past the crossing with Popiełuszki street); towards Lewickie, Ignatki-Osiedle (past the crossing with Leśna street). Distances along the track from Białystok station (OpenStreetMap).",
+      "railway": "Railway",
+      "station": "Station",
+      "km": "km",
+      "kind": "Note",
+      "corridorName": "{{name}} (railway line {{ref}})",
+      "corridorFacts": "Line {{ref}} · {{km}} km · a station every {{spacing}} km",
+      "noTrainsToday": "No passenger trains today",
+      "kinds": {
+        "served": "Station",
+        "unserved": "No trains today",
+        "new": "New"
+      },
+      "rulesTitle": "What every timetable keeps to",
+      "rules": {
+        "interval": "Every line runs at least every {{minutes}} minutes each way, from about {{first}} until {{last}}.",
+        "headway": "Each train keeps at least {{minutes}} minutes from every other train going the same way on the same railway, at every station, and doesn’t catch up with one between stations.",
+        "turnaround": "A train stands at least {{minutes}} minutes at the end of its line before going back.",
+        "dwell": "Trains stand {{seconds}} s at the new stations (and at Białystok Fabryczny and Kuriany), as long as Polregio’s at Białystok Starosielce, and {{hub}} minutes at Białystok when running through.",
+        "runTimes": "Run times are Polregio’s between the stations its trains call at; a new station on the way adds the time lost braking and starting again. To Kuriany, where no train runs, they are worked out from the distance at up to 80 km/h, scaled as Polregio’s times compare elsewhere.",
+        "trains": "Timetabled around the {{n}} trains on these railways on {{day}} (Polregio and PKP Intercity, calling or passing).",
+        "notCounted": "Trains going the other way aren’t counted: they pass each other at stations or on double track. Freight trains aren’t in the timetable."
+      },
+      "solutions": "Two ways of running it",
+      "radialIntro": "Five lines, each from Białystok to one end.",
+      "throughIntro": "Two lines running through Białystok from one end to another, and one ending there.",
+      "linesTitle": "The lines",
+      "linesIntro": "Timetabled around the trains of {{day}}.",
+      "line": "Line",
+      "length": "Length",
+      "stations": "Stations",
+      "spacing": "Between stations",
+      "runTime": "Run time",
+      "speed": "Average speed",
+      "trains": "Trains a day",
+      "interval": "Longest wait",
+      "vehicles": "Trains needed",
+      "closest": "Closest train",
+      "kmValue": "{{km}} km",
+      "kmh": "{{v}} km/h",
+      "minutesBoth": "{{out}} / {{back}} min",
+      "tableNote": "Run time: there and back. Between stations: the average distance. Trains a day: each way. Longest wait: between two trains of the line. Trains needed: to run the timetable, each standing at least the turnaround time at an end. Closest train: the nearest any of its trains comes to another going the same way on the same railway.",
+      "timetable": "{{name}}: timetable",
+      "timetableIntro": "Departures; at the last station, arrivals. Trains stand at least {{turnaround}} minutes at an end; {{vehicles}} trains run the line.",
+      "conflicts": "In red, trains coming closer to another than the headway, as no time within the hour keeps clear of all: {{n}}.",
+      "towards": "To {{to}}"
     }
   }
 }

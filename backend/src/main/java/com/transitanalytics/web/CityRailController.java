@@ -1,6 +1,8 @@
 package com.transitanalytics.web;
 
 import com.transitanalytics.dto.CityRailDto;
+import com.transitanalytics.dto.CityRailProposalDto;
+import com.transitanalytics.service.CityRailProposal;
 import com.transitanalytics.service.CityRailService;
 import com.transitanalytics.service.RailBusComparison;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,10 +18,12 @@ public class CityRailController {
 
     private final CityRailService rail;
     private final RailBusComparison comparison;
+    private final CityRailProposal proposal;
 
-    public CityRailController(CityRailService rail, RailBusComparison comparison) {
+    public CityRailController(CityRailService rail, RailBusComparison comparison, CityRailProposal proposal) {
         this.rail = rail;
         this.comparison = comparison;
+        this.proposal = proposal;
     }
 
     @Operation(summary = "Railways and the trains on them",
@@ -42,5 +46,18 @@ public class CityRailController {
     @GetMapping("/comparison")
     public CityRailDto.Comparison comparison() {
         return comparison.comparison();
+    }
+
+    @Operation(summary = "City Rail proposal no. 1",
+            description = "City trains on the five railways from Białystok, shortened to Klepacze, Fasty, Lewickie, "
+                    + "Wasilków and Kuriany (the railway to Kuriany has no passenger trains today), calling at every "
+                    + "station, the new ones included. Two ways of running them, each timetabled around the trains "
+                    + "(Polregio and PKP Intercity) of the weekday the trains are counted on: five lines from "
+                    + "Białystok (radial), or two lines through Białystok and one ending there (through). Each line "
+                    + "runs at least every hour each way from 05:00 to 23:00, keeps at least 10 minutes from any other "
+                    + "train going the same way on the same railway, and stands at least 5 minutes at its ends.")
+    @GetMapping("/proposal")
+    public CityRailProposalDto.Proposal proposal() {
+        return proposal.proposal();
     }
 }

@@ -1,0 +1,133 @@
+@if (proposal(); as p) {
+  <section class="card map-card">
+    <app-proposal-map [railways]="railways()" [lines]="lines()" [stations]="stations()" />
+    <ul class="legend inset muted">
+      <li><span class="swatch railway"></span>{{ t('cityRail.railways') }}</li>
+      <li>
+        <span class="line-swatch" [style.border-top-color]="corridors()[0]?.color"></span
+        >{{ t('cityRail.proposal.legend.corridor') }}
+      </li>
+      <li><span class="line-swatch dashed"></span>{{ t('cityRail.proposal.legend.unused') }}</li>
+      <li><span class="dot served"></span>{{ t('cityRail.proposal.legend.served') }}</li>
+      <li><span class="dot unserved"></span>{{ t('cityRail.proposal.legend.unserved') }}</li>
+      <li>
+        <span class="dot" [style.background]="newColor"></span
+        >{{ t('cityRail.proposal.legend.new') }}
+      </li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>{{ t('cityRail.proposal.network') }}</h2>
+    <p class="muted intro">{{ t('cityRail.proposal.networkIntro') }}</p>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>{{ t('cityRail.proposal.railway') }}</th>
+            <th>{{ t('cityRail.proposal.station') }}</th>
+            <th class="num">{{ t('cityRail.proposal.km') }}</th>
+            <th>{{ t('cityRail.proposal.kind') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of corridors(); track c.id) {
+            @for (s of c.stations; track s.name; let first = $first) {
+              <tr [class.group]="first">
+                @if (first) {
+                  <th scope="rowgroup" class="corridor" [attr.rowspan]="c.stations.length">
+                    <span class="line-swatch" [style.border-top-color]="c.color"></span>
+                    {{ c.name }}
+                    <span class="muted small block">
+                      {{
+                        t('cityRail.proposal.corridorFacts', {
+                          ref: c.ref,
+                          km: (c.km | number: '1.1-1'),
+                          spacing: (c.spacing | number: '1.1-1'),
+                        })
+                      }}
+                    </span>
+                    @if (!c.served) {
+                      <span class="tag warning">{{ t('cityRail.proposal.noTrainsToday') }}</span>
+                    }
+                  </th>
+                }
+                <td>{{ s.name }}</td>
+                <td class="num">{{ s.km | number: '1.1-1' }}</td>
+                <td>
+                  @if (s.kind !== 'served') {
+                    <span
+                      class="tag"
+                      [class.new]="s.kind === 'new'"
+                      [class.unserved]="s.kind === 'unserved'"
+                      >{{ t('cityRail.proposal.kinds.' + s.kind) }}</span
+                    >
+                  }
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  @if (rules(); as r) {
+    <section class="card">
+      <h2>{{ t('cityRail.proposal.rulesTitle') }}</h2>
+      <ul class="rules">
+        <li>
+          {{
+            t('cityRail.proposal.rules.interval', {
+              minutes: r.intervalMinutes,
+              first: r.firstDeparture,
+              last: r.lastDeparture,
+            })
+          }}
+        </li>
+        <li>{{ t('cityRail.proposal.rules.headway', { minutes: r.headwayMinutes }) }}</li>
+        <li>{{ t('cityRail.proposal.rules.turnaround', { minutes: r.turnaroundMinutes }) }}</li>
+        <li>
+          {{
+            t('cityRail.proposal.rules.dwell', { seconds: r.newStationDwell, hub: r.hubDwell / 60 })
+          }}
+        </li>
+        <li>{{ t('cityRail.proposal.rules.runTimes') }}</li>
+        @if (p.day) {
+          <li>
+            {{
+              t('cityRail.proposal.rules.trains', {
+                n: r.trainsConsidered,
+                day: (p.day | date: 'EEEE d MMMM'),
+              })
+            }}
+          </li>
+        }
+        <li>{{ t('cityRail.proposal.rules.notCounted') }}</li>
+      </ul>
+    </section>
+  }
+
+  <section class="card">
+    <h2>{{ t('cityRail.proposal.solutions') }}</h2>
+    @if (p.day) {
+      <ul class="solutions">
+        <li>
+          <a routerLink="/city-rail/proposal-1/radial">{{ t('cityRail.proposal.tabs.radial') }}</a>
+          <span class="muted">{{ t('cityRail.proposal.radialIntro') }}</span>
+        </li>
+        <li>
+          <a routerLink="/city-rail/proposal-1/through">{{
+            t('cityRail.proposal.tabs.through')
+          }}</a>
+          <span class="muted">{{ t('cityRail.proposal.throughIntro') }}</span>
+        </li>
+      </ul>
+    } @else {
+      <p class="muted">{{ t('cityRail.notLoaded') }}</p>
+    }
+  </section>
+} @else if (loading()) {
+  <app-skeleton kind="map" height="560px" [label]="t('cityRail.proposal.loading')" />
+  <app-skeleton kind="card" [count]="1" height="260px" />
+}

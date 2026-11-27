@@ -120,6 +120,29 @@ describe('Shell', () => {
     expect(aside.classList).not.toContain('open');
   });
 
+  it('opens and closes City Rail\u2019s submenu of its pages', () => {
+    localStorage.removeItem('sidebar-collapsed');
+    const { el, render } = renderPage(Shell, signedIn());
+    const parent = el.querySelector('aside button.parent') as HTMLButtonElement;
+    expect(text(parent)).toBe('City Rail');
+    expect(parent.getAttribute('aria-expanded')).toBe('false');
+    expect(el.querySelector('aside .sub')).toBeNull();
+
+    parent.click();
+    render();
+    expect(parent.getAttribute('aria-expanded')).toBe('true');
+    const sub = el.querySelector('aside .sub') as HTMLElement;
+    expect(sub.id).toBe(parent.getAttribute('aria-controls'));
+    expect([...sub.querySelectorAll('a')].map((a) => [text(a), a.getAttribute('href')])).toEqual([
+      ['Current state', '/city-rail/current'],
+      ['Proposal no. 1', '/city-rail/proposal-1'],
+    ]);
+
+    parent.click();
+    render();
+    expect(el.querySelector('aside .sub')).toBeNull();
+  });
+
   it('shows a progress bar under the header while the app waits for the backend', () => {
     const { el, render } = renderPage(Shell, signedIn());
     const activity = TestBed.inject(ApiActivity);

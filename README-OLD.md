@@ -176,6 +176,24 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   trains takes 3 minutes; changing buses 1 minute, plus the walk to another stop up to 300 m away (4.5 km/h, a fifth
   longer than straight). Worked out in the background at startup and after each import (some seconds), then kept for
   the day.
+- `GET /api/city-rail/proposal` — City Rail proposal no. 1 (`service/CityRailProposal`, `ProposalScheduler`): city
+  trains on the five railways from Białystok, shortened to Klepacze, Fasty, Lewickie, Wasilków and Kuriany (the railway
+  to Kuriany through Białystok Fabryczny has no passenger trains today), calling at every station, six new ones
+  included (`places/osm/city-rail-proposal.json`). Two solutions, each timetabled around the trains (Polregio and PKP
+  Intercity, calling or passing; passing times from their track, between their calls) of the weekday the trains are
+  counted on: `radial`, five lines from Białystok; `through`, Wasilków–Lewickie and Fasty–Kuriany through Białystok
+  (standing 2 minutes there) and Białystok–Klepacze. Every line runs at least hourly each way from about 05:00 to
+  23:00, keeps at least 10 minutes from any other train going the same way on the same railway at every station
+  (without catching up between stations; trains the other way aren't counted), and stands at least 5 minutes at its
+  ends. Each way, every minute of the hour is tried as the line's pattern, moving trains that would come too close as
+  little as it takes; where no time in an hour keeps clear of all, the least close is taken and the train is marked.
+  Run times: Polregio's medians between the stations its trains call at, shared out by distance where a new station
+  lies between, plus the time lost braking and starting there; to Kuriany, from the distance at up to 80 km/h,
+  starting and braking at 0.6 m/s², scaled as Polregio's times compare elsewhere; whole minutes. New stations have
+  Polregio's dwell at Białystok Starosielce (1 minute). Per line: stations with distances, track, length, average
+  distance between stations, run times, trains a day, the longest interval, trains (vehicles) needed, the closest any
+  of its trains comes to another, and its timetable both ways. Worked out in the background at startup and after each
+  import of the trains (some seconds), then kept for the day.
 - `GET /api/bus-lanes` — the city's bus lanes from OpenStreetMap (`places/osm/bus-lanes.json`, or the refreshed copy in
   `./config/map/bus-lanes.json`): each street section with how many lanes run each way and whether buses have a lane
   the other way too (on the section or the other carriageway), the sections grouped by street and direction, the
@@ -678,12 +696,23 @@ PGPASSWORD=transit psql -h localhost -U transit transit_test -c "CREATE EXTENSIO
   come. Hover a trip for details. Below, every trip of the day in the Trips page's list (`app-trip-list`, shared;
   `GET /api/trip-runs/day`): open one for its delay, speed, halts and map (`?trip=`, `?map=1`); it is marked on the
   timeline, and choosing a trip there opens it in the list. Loaded again every minute while the brigade is out.
-- City Rail (`/city-rail`, last in the sidebar, below a line): a map of the railways in and around the city with the
+- City Rail (last in the sidebar, below a line): a submenu that drops down with its two pages, Current state and
+  Proposal no. 1 (`/city-rail` opens the first).
+- City Rail, current state (`/city-rail/current`): a map of the railways in and around the city with the
   routes in their colours and their stations, and two tables of the routes with trains per day both ways: Polregio's,
   and all (with PKP Intercity's). The route pointed at, or chosen (`?route=`), is highlighted on the map. Last, train
   or bus in the city: a table of every pair of stations in the city with the fastest train and off-peak bus journey,
   the lines taken (point at them for every ride), the faster way in green and how much longer the bus takes; each
   station's bus stops below it.
+- City Rail, proposal no. 1 (`/city-rail/proposal-1`), with tabs for its three pages. Network: a map of the five
+  railways in their colours (the one to Kuriany, without passenger trains today, dashed) and their stations, the new
+  ones in orange and named; each railway's stations with their distance from Białystok (new ones and those without
+  trains today marked); what every timetable keeps to; and links to the two solutions. Solution 1, five lines from
+  Białystok (`/city-rail/proposal-1/radial`), and solution 2, lines through Białystok (`.../through`): the lines on the
+  map, each numbered (S1, S2, ...) in its colour; a table of the lines (length, stations, average distance between
+  them, run time there and back, average speed, trains a day, longest wait, trains needed, closest other train, in
+  red when closer than 10 minutes); and under it the timetable of the line chosen (`?line=S2`; a row of the table or
+  the line on the map chooses it), both ways, stations down and trains across, trains too close to another in red.
 - Network coverage: for each walking distance (400, 500, 600 m), tiles with the share of the city within it of the
   nearest bus stop, with and without the woods and the Biała valley, and a map (rolls up to its title) of the area
   near a stop with the woods hatched green and the valley hatched light blue; the woods and the valley's stretches

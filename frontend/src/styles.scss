@@ -616,6 +616,20 @@ svg .axis-label {
   }
 }
 
+/* A line's number on a map (the City Rail proposal): the badge alone, without Leaflet's white box. */
+.line-badge-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+
+  .route-badge {
+    font-size: 0.75rem;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 35%);
+  }
+}
+
 .grey-tiles {
   filter: grayscale(1) contrast(0.85) brightness(1.05);
 }

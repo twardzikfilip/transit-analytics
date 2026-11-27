@@ -58,3 +58,6 @@ fetch railways.json "[out:json][timeout:120];way[\"railway\"=\"rail\"](53.0,22.9
 
 # The railways in use in and around the city (build_railways.py cuts them 10 km from the city limits).
 fetch railways.json "[out:json][timeout:120];way[\"railway\"=\"rail\"](52.95,22.85,53.35,23.5);out tags geom;"
+
+# The streets at the new stations of the City Rail proposal (build_city_rail_proposal.py places them by the crossings).
+fetch rail-streets.json "[out:json][timeout:120];way[\"highway\"][\"name\"~\"^(Piasta|Szosa Baranowicka|Księdza Jerzego Popiełuszki|Leśna|Jurowiecka|Sitarska|Sokólska)$\"](53.0,22.95,53.25,23.35);out tags geom;"
