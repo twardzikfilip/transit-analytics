@@ -46,6 +46,21 @@
       <p class="muted note">{{ t('cityRail.note') }}</p>
     </section>
   }
+
+  @if (comparison() || comparisonLoading()) {
+    <section class="card routes">
+      <h2>{{ t('cityRail.vsBus.title') }}</h2>
+      @if (comparison(); as c) {
+        @if (c.day) {
+          <app-rail-bus-table [comparison]="c" />
+        } @else {
+          <p class="muted intro">{{ t('cityRail.notLoaded') }}</p>
+        }
+      } @else {
+        <app-skeleton kind="table" [count]="8" [label]="t('cityRail.vsBus.loading')" />
+      }
+    </section>
+  }
 } @else if (loading()) {
   <app-skeleton kind="map" height="560px" [label]="t('cityRail.loading')" />
   <app-skeleton kind="card" [count]="1" height="260px" />

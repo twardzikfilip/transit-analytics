@@ -1707,6 +1707,23 @@
     "routeOnly": "Trasa",
     "total": "Wszystkie trasy",
     "allTrains": "Wszystkie pociągi: Polregio i PKP Intercity",
-    "allIntro": "Te same trasy, z pociągami obu przewoźników łącznie."
+    "allIntro": "Te same trasy, z pociągami obu przewoźników łącznie.",
+    "vsBus": {
+      "title": "Pociąg czy autobus w mieście",
+      "loading": "Wyznaczanie połączeń",
+      "intro": "Najszybsze połączenie między każdymi dwiema stacjami w mieście w dniu {{day}}: pociągiem Polregio odjeżdżającym o dowolnej porze dnia oraz autobusem odjeżdżającym poza szczytem ({{offPeak}}) z przystanków najbliższych jednej stacji do przystanków najbliższych drugiej. W obu przypadkach do {{changes}} przesiadek.",
+      "from": "Skąd",
+      "to": "Dokąd",
+      "train": "Pociąg Polregio",
+      "bus": "Autobus (poza szczytem)",
+      "difference": "Autobus względem pociągu",
+      "min": "{{n}} min",
+      "none": "Brak połączenia",
+      "leg": "{{departure}} {{from}} → {{arrival}} {{to}} ({{line}})",
+      "note": "Od pierwszego odjazdu do ostatniego przyjazdu, z czekaniem na przesiadkę, ale bez czekania na pierwszy pociąg lub autobus i bez dojścia między stacją a jej przystankami. Przesiadka między pociągami zajmuje 3 minuty, między autobusami 1 minutę plus dojście do innego przystanku w promieniu 300 m. Szybszy sposób jest zielony; wskaż linie, aby zobaczyć każdy przejazd.",
+      "stops": "Przystanki autobusowe każdej stacji (najbliższy i te najwyżej 200 m dalej)",
+      "meters": "{{n}} m",
+      "noStops": "brak w promieniu 1 km"
+    }
   }
 }

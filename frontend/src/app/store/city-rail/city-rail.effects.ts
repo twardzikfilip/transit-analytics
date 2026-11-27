@@ -21,3 +21,19 @@ export const load = createEffect(
     ),
   { functional: true },
 );
+
+export const loadComparison = createEffect(
+  (actions$ = inject(Actions), api = inject(CityRailApi)) =>
+    actions$.pipe(
+      ofType(CityRailActions.loadComparison),
+      exhaustMap(() =>
+        api.comparison().pipe(
+          map((comparison) => CityRailActions.comparisonLoaded({ comparison })),
+          catchError((err: HttpErrorResponse) =>
+            of(CityRailActions.comparisonFailure({ error: errorMessage(err) })),
+          ),
+        ),
+      ),
+    ),
+  { functional: true },
+);

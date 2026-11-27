@@ -1667,6 +1667,23 @@
     "routeOnly": "Route",
     "total": "All routes",
     "allTrains": "All trains: Polregio and PKP Intercity",
-    "allIntro": "The same routes, with the trains of both operators together."
+    "allIntro": "The same routes, with the trains of both operators together.",
+    "vsBus": {
+      "title": "Train or bus in the city",
+      "loading": "Working out the journeys",
+      "intro": "The fastest journey between every two stations in the city on {{day}}: by Polregio train leaving at any time of the day, and by bus leaving off-peak ({{offPeak}}) from the bus stops nearest one station to those nearest the other. Up to {{changes}} changes either way.",
+      "from": "From",
+      "to": "To",
+      "train": "Polregio train",
+      "bus": "Bus (off-peak)",
+      "difference": "Bus against train",
+      "min": "{{n}} min",
+      "none": "No connection",
+      "leg": "{{departure}} {{from}} → {{arrival}} {{to}} ({{line}})",
+      "note": "From the first departure to the last arrival, waiting for a change included, but not the wait for the first train or bus, nor the walk between the station and its bus stops. Changing trains takes 3 minutes; changing buses 1 minute, plus the walk to another stop up to 300 m away. The faster way is in green; point at the lines to see every ride.",
+      "stops": "The bus stops of each station (the nearest, and those at most 200 m further)",
+      "meters": "{{n}} m",
+      "noStops": "none within 1 km"
+    }
   }
 }

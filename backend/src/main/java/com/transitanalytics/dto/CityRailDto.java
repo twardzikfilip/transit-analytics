@@ -58,4 +58,45 @@ public final class CityRailDto {
      */
     public record Departures(int fromCity, int toCity) {
     }
+
+    /**
+     * Train against bus between the stations in the city: the fastest Polregio journey and the fastest off-peak bus
+     * journey from the bus stops nearest each station, each with up to {@code maxChanges} changes.
+     *
+     * @param day        the weekday of the timetables compared; null while the trains' timetable isn't loaded
+     * @param offPeak    the times buses leave in ("HH:MM-HH:MM"); trains leave at any time of the day
+     * @param maxChanges at most this many changes a journey
+     * @param stations   the stations in the city, with their bus stops
+     * @param pairs      every station to every other
+     */
+    public record Comparison(LocalDate day, List<String> offPeak, int maxChanges, List<ComparedStation> stations,
+                             List<Pair> pairs) {
+    }
+
+    /** A station in the city and the bus stops nearest it, which bus journeys start and end at. */
+    public record ComparedStation(String name, List<NearStop> stops) {
+    }
+
+    /** @param meters straight from the station */
+    public record NearStop(String name, int meters) {
+    }
+
+    /**
+     * @param train the fastest by train; null when there is none
+     * @param bus   the fastest by bus off-peak; null when there is none
+     */
+    public record Pair(String from, String to, Journey train, Journey bus) {
+    }
+
+    /**
+     * @param minutes   from the first departure to the last arrival, changes included
+     * @param departure "HH:MM" of the first departure
+     * @param legs      one per ride; a change between two
+     */
+    public record Journey(int minutes, String departure, String arrival, List<Leg> legs) {
+    }
+
+    /** @param line the bus line, or the train's number */
+    public record Leg(String line, String from, String to, String departure, String arrival) {
+    }
 }
