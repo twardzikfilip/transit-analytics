@@ -248,6 +248,17 @@ describe('City rail proposal', () => {
     expect(text(el.querySelector('.controls'))).toContain('needs 4 of the 7 trains');
   });
 
+  it('takes at least the trains the least frequent timetable needs', () => {
+    useSvgMaps();
+    const { el } = renderPage(ProposalSolutionPage, loaded(), {}, [
+      solutionRoute('radial', { fleet: '1' }),
+    ]);
+
+    const [frequency, fleet] = [...el.querySelectorAll('.controls select')] as HTMLSelectElement[];
+    expect(frequency.value).toBe('1tp2h');
+    expect(fleet.value).toBe('3');
+  });
+
   it('puts the choice of one dropdown in the URL, in place of the other', () => {
     useSvgMaps();
     const { el } = renderPage(ProposalSolutionPage, loaded(), {}, [solutionRoute('radial')]);

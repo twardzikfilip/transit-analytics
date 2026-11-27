@@ -85,11 +85,11 @@ export class ProposalSolutionPage {
     return byDefault;
   });
 
+  /** The trains at most from the URL, at least what the least frequent variant needs. */
   private readonly fleetAsked = computed(() => {
     const fleet = Number(this.query().get('fleet'));
-    return this.query().get('fleet') !== null && Number.isInteger(fleet) && fleet > 0
-      ? fleet
-      : null;
+    if (this.query().get('fleet') === null || !Number.isInteger(fleet)) return null;
+    return Math.max(fleet, this.variants()[0]?.vehicles ?? 1);
   });
 
   /**

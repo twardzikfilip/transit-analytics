@@ -203,6 +203,8 @@ public class CityRailProposal {
     public void afterImport(GtfsImported imported) {
         CityRailProposalDto.Proposal current = cached;
         if (TimetableFeed.RAIL.equals(imported.feed()) && (current == null || current.solutions().isEmpty())) {
+            // The weekday comes from the report: forget the old one first, whichever listener runs first.
+            rail.afterImport(imported);
             cached = null;
             if (warmUp) {
                 warmUp();
