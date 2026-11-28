@@ -1745,10 +1745,11 @@
         "unused": "Dziś bez pociągów pasażerskich",
         "served": "Stacja",
         "unserved": "Stacja, na której dziś nie zatrzymuje się żaden pociąg",
-        "new": "Nowa stacja"
+        "new": "Nowa stacja",
+        "passed": "Stacja mijana bez zatrzymania"
       },
       "network": "Sieć",
-      "networkIntro": "Pociągi miejskie na pięciu liniach kolejowych z Białegostoku, skróconych do Klepaczy, Fast, Lewickich, Wasilkowa i Kurian; linią do Kurian, przez Białystok Fabryczny, nie jeżdżą dziś pociągi pasażerskie. Sześć nowych stacji: w stronę Kurian Białystok Jurowiecka (między ulicami Przytorową i Poleską, za wiaduktem nad ulicą Jurowiecką), Białystok Pieczurki (za przejazdem przez ulicę Piasta) i Białystok Zaścianki (za przejazdem przez ulicę Baranowicką); w stronę Wasilkowa Białystok Białostoczek (u zbiegu ulic Sitarskiej i Sokólskiej); w stronę Fast Białystok Leśna Dolina (za przejazdem pod ulicą Popiełuszki); w stronę Lewickich Ignatki-Osiedle (za przejazdem przez ulicę Leśną). Odległości po torze od stacji Białystok (OpenStreetMap).",
+      "networkIntro": "Pociągi miejskie na pięciu liniach kolejowych z Białegostoku, kończące bieg w Niewodnicy, Dobrzyniewie Dużym, Lewickich, Wasilkowie i Henrykowie; linią do Henrykowa, przez Białystok Fabryczny, nie jeżdżą dziś pociągi pasażerskie. Dziewięć nowych przystanków: w stronę Henrykowa Białystok Jurowiecka (między ulicami Przytorową i Poleską, za wiaduktem nad ul. Jurowiecką), Białystok Pieczurki (za przejazdem z ul. Piasta), Białystok Zaścianki (za przejazdem z ul. Baranowicką), Sobolewo (za przejazdem z ul. Sobolewską) i Henrykowo (za przejazdem z ul. Podleśną, przed Kurianami); w stronę Wasilkowa Białystok Białostoczek (u zbiegu ulic Sitarskiej i Sokólskiej); w stronę Dobrzyniewa Dużego Białystok Leśna Dolina (za przejazdem z ul. Popiełuszki) i Fasty Osada (przy przystanku autobusowym Fasty/Mleczarnia), a Fasty pociągi miejskie mijają bez zatrzymania; w stronę Lewickich Ignatki-Osiedle (za przejazdem z ul. Leśną). Odległości po torze od stacji Białystok (OpenStreetMap).",
       "railway": "Linia",
       "station": "Stacja",
       "km": "km",
@@ -1759,15 +1760,16 @@
       "kinds": {
         "served": "Stacja",
         "unserved": "Dziś bez pociągów",
-        "new": "Nowa"
+        "new": "Nowa",
+        "passed": "Bez postoju"
       },
       "rulesTitle": "Czego trzyma się każdy rozkład",
       "rules": {
-        "interval": "Każda linia kursuje co najmniej co {{minutes}} minut w każdą stronę, mniej więcej od {{first}} do {{last}}.",
+        "interval": "Każda linia kursuje co najmniej tak często, jak wybrana częstotliwość (raz na dwie godziny albo jeden, dwa lub trzy pociągi na godzinę) w każdą stronę, od około {{first}} do {{last}}.",
         "headway": "Każdy pociąg zachowuje co najmniej {{minutes}} minut odstępu od każdego innego pociągu jadącego w tę samą stronę tą samą linią, na każdej stacji, i nie dogania go między stacjami.",
         "turnaround": "Na końcu linii pociąg stoi co najmniej {{minutes}} minut, zanim pojedzie z powrotem.",
-        "dwell": "Na nowych stacjach (oraz w Białymstoku Fabrycznym i Kurianach) pociągi stoją {{seconds}} s, tyle co Polregio w Białymstoku Starosielcach, a przejeżdżając przez Białystok – {{hub}} minuty.",
-        "runTimes": "Czasy przejazdu to czasy Polregio między stacjami, na których stają jego pociągi; nowa stacja po drodze dodaje czas stracony na hamowanie i ruszanie. Do Kurian, gdzie nie jeździ żaden pociąg, wyliczone z odległości przy prędkości do 80 km/h, przeskalowane tak, jak czasy Polregio wypadają gdzie indziej.",
+        "dwell": "Pociągi stoją {{seconds}} s na nowych przystankach (i w Białymstoku Fabrycznym), tyle co Polregio w Białymstoku Starosielcach, a {{hub}} minuty w Białymstoku, gdy jadą przez niego.",
+        "runTimes": "Czasy przejazdu to czasy Polregio między stacjami, na których zatrzymują się jego pociągi; nowy przystanek po drodze dodaje czas stracony na hamowanie i ruszanie, a Fasty, mijane bez zatrzymania, go odejmują. Do Henrykowa, gdzie nie jeździ żaden pociąg, wyliczone z odległości przy prędkości do 80 km/h, przeskalowane tak, jak czasy Polregio wypadają gdzie indziej.",
         "trains": "Rozkład ułożony wokół {{n}} pociągów na tych liniach w dniu {{day}} (Polregio i PKP Intercity, zatrzymujących się lub przejeżdżających).",
         "notCounted": "Pociągi jadące w przeciwną stronę nie są brane pod uwagę: mijają się na stacjach lub na dwóch torach. Pociągów towarowych nie ma w rozkładzie."
       },
@@ -1775,7 +1777,7 @@
       "radialIntro": "Pięć linii, każda z Białegostoku do jednego końca.",
       "throughIntro": "Dwie linie przez Białystok, od jednego końca do drugiego, i jedna kończąca się w Białymstoku.",
       "linesTitle": "Linie",
-      "linesIntro": "Rozkład ułożony wokół pociągów z dnia {{day}}.",
+      "linesIntro": "Rozkład ułożony wokół pociągów z dnia {{day}}: analiza rozkładu w obecnym kształcie, policzona raz.",
       "line": "Linia",
       "length": "Długość",
       "stations": "Stacje",
@@ -1789,11 +1791,31 @@
       "kmValue": "{{km}} km",
       "kmh": "{{v}} km/h",
       "minutesBoth": "{{out}} / {{back}} min",
-      "tableNote": "Czas przejazdu: tam i z powrotem. Między stacjami: średnia odległość. Pociągi dziennie: w każdą stronę. Najdłuższa przerwa: między dwoma pociągami linii. Potrzebne pociągi: do obsługi rozkładu, każdy stojący na końcu co najmniej czas nawrotu. Najbliższy pociąg: najmniejszy odstęp któregokolwiek pociągu linii od innego jadącego w tę samą stronę tą samą linią.",
+      "tableNote": "Stacje: te, na których linia się zatrzymuje. Czas przejazdu: tam i z powrotem. Między stacjami: średnia odległość. Pociągi dziennie: w każdą stronę. Najdłuższe czekanie: między dwoma pociągami linii. Potrzebne pociągi: do obsługi rozkładu, każdy stoi na końcu co najmniej czas nawrotu. Najbliższy pociąg: najbliżej, jak którykolwiek jej pociąg zbliża się do innego jadącego w tę samą stronę tą samą linią kolejową.",
       "timetable": "{{name}}: rozkład jazdy",
-      "timetableIntro": "Odjazdy; na ostatniej stacji przyjazdy. Na końcach pociągi stoją co najmniej {{turnaround}} minut; linię obsługuje {{vehicles}} pociągów.",
-      "conflicts": "Na czerwono pociągi jadące bliżej innego niż wymagany odstęp, bo żadna pora w tej godzinie nie omija wszystkich: {{n}}.",
-      "towards": "Do: {{to}}"
+      "timetableIntro": "Odjazdy; na ostatniej stacji przyjazdy. Na końcach pociągi stoją przed powrotem {{min}}–{{max}} minut (co najmniej czas nawrotu); linię obsługuje {{vehicles}} pociągów.",
+      "conflicts": "Na czerwono pociągi zbliżające się do innego bardziej niż odstęp, bo żadna pora nie omija wszystkich: {{n}}.",
+      "towards": "Do: {{to}}",
+      "frequency": "Częstotliwość",
+      "frequencies": {
+        "1tp2h": "Co najmniej 1 pociąg na 2 godziny w każdą stronę",
+        "1tph": "Co najmniej 1 pociąg na godzinę w każdą stronę",
+        "2tph": "Co najmniej 2 pociągi na godzinę w każdą stronę",
+        "3tph": "Co najmniej 3 pociągi na godzinę w każdą stronę"
+      },
+      "fleet": "Najwyżej pociągów",
+      "fleetUsed": "Rozkład potrzebuje {{used}} z {{of}} pociągów. Wybierz częstotliwość, aby zobaczyć, ile pociągów potrzebuje, albo liczbę pociągów, aby zobaczyć najczęstszy rozkład, jaki obsłużą (taki sam na każdej linii).",
+      "kindsOfTrain": {
+        "city": "Kolej miejska",
+        "PR": "Polregio",
+        "IC": "PKP Intercity"
+      },
+      "agency": {
+        "PR": "Polregio",
+        "IC": "PKP Intercity"
+      },
+      "passes": "przejeżdża bez zatrzymania",
+      "tooClose": "Bliżej innego pociągu niż odstęp"
     }
   }
 }

@@ -99,12 +99,15 @@ export interface RailBusLeg {
 }
 
 /**
- * City Rail proposal no. 1: city trains on the five railways from Białystok, shortened to Klepacze, Fasty, Lewickie,
- * Wasilków and Kuriany, with new stations, and two ways of running them, each timetabled around today's trains.
+ * City Rail proposal no. 1: city trains on the five railways from Białystok, shortened to Niewodnica, Dobrzyniewo
+ * Duże, Lewickie, Wasilków and Henrykowo, with new stations, and two ways of running them, each timetabled at four
+ * frequencies around the trains of one weekday. Worked out once and stored.
  */
 export interface CityRailProposal {
   /** The weekday whose trains the timetables keep clear of, yyyy-MM-dd; null while the timetable isn't loaded. */
   day: string | null;
+  /** When the timetables were worked out (ISO); null without them. */
+  computedAt: string | null;
   rules: ProposalRules;
   /** The railways, from Białystok outwards. */
   corridors: ProposalCorridor[];
@@ -117,8 +120,6 @@ export interface ProposalRules {
   headwayMinutes: number;
   /** At least this long at an end before going back. */
   turnaroundMinutes: number;
-  /** At most this long between two trains of a line. */
-  intervalMinutes: number;
   /** "HH:MM". */
   firstDeparture: string;
   lastDeparture: string;
@@ -130,10 +131,11 @@ export interface ProposalRules {
   trainsConsidered: number;
 }
 
-export type ProposalStationKind = 'served' | 'unserved' | 'new';
+/** passed: trains call there today, the city trains run through without stopping. */
+export type ProposalStationKind = 'served' | 'unserved' | 'passed' | 'new';
 
 export interface ProposalCorridor {
-  /** Its end, in lower case ("klepacze"). */
+  /** Its end, in lower case ("niewodnica"). */
   id: string;
   /** The railway line's number. */
   ref: string;
@@ -152,8 +154,22 @@ export interface ProposalStation {
   km: number;
 }
 
+/** At least one train every two hours, or 1, 2 or 3 an hour, each way. */
+export type ProposalFrequency = '1tp2h' | '1tph' | '2tph' | '3tph';
+
 export interface ProposalSolution {
   id: 'radial' | 'through';
+  /** One per frequency, least frequent first. */
+  variants: ProposalVariant[];
+}
+
+/** A solution's lines at one frequency. */
+export interface ProposalVariant {
+  frequency: ProposalFrequency;
+  /** At most this long between two trains of a line, each way. */
+  periodMinutes: number;
+  /** Trains all its lines need together. */
+  vehicles: number;
   lines: ProposalLine[];
 }
 
@@ -169,17 +185,25 @@ export interface ProposalLine {
   trainsPerDay: number;
   maxIntervalMinutes: number;
   vehicles: number;
+  /** The shortest and longest a train stands at an end before going back, minutes. */
   minTurnaround: number;
+  maxTurnaround: number;
   /** The nearest any of its trains comes to another on the same railway and way; null when none. */
   closestMinutes: number | null;
   /** Its trains coming closer than the headway. */
   conflicts: number;
+  /** Its own trains and today's trains on its way, in order. */
   out: ProposalTrip[];
   back: ProposalTrip[];
 }
 
 export interface ProposalTrip {
-  /** "HH:MM" per station: the departure, at the last the arrival. */
-  times: string[];
+  /** city: the line's own; PR: Polregio; IC: PKP Intercity. */
+  kind: 'city' | 'PR' | 'IC';
+  /** The line's number, or the train's number and name ("16132/3 Dąbrowska"). */
+  label: string;
+  /** Per station: "HH:MM" (the departure, at its last the arrival), "|" passing, null not on the line there. */
+  times: (string | null)[];
+  /** Comes closer than the headway to another train (the line's own only). */
   conflict: boolean;
 }

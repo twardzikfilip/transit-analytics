@@ -4,7 +4,7 @@ import { LatLon, ProposalStationKind, Railway } from '../../../core/models/model
 import { t } from '../../../core/i18n/t';
 import { injectCityBoundaries } from '../../../shared/map/city-boundaries';
 import { leafletHost } from '../../../shared/map/leaflet-host';
-import { INK, RAILWAY_STYLES, WHITE } from '../../../shared/palette';
+import { INK, NEUTRAL_GREY, RAILWAY_STYLES, WHITE } from '../../../shared/palette';
 
 /** A line drawn on the proposal's map, in its colour, with its number in a badge at its ends. */
 export interface MapLine {
@@ -30,9 +30,10 @@ export interface MapStation {
 export const NEW_STATION_COLOR = '#e8590c';
 
 /**
- * The proposal's map: today's railways (grey), the lines on them in their colours, and the stations: those trains call
- * at today (white), those no train calls at today (white, dashed edge) and the new ones (orange, named). One line can
- * be highlighted: drawn wider and on top, the others fade.
+ * The proposal's map: today's railways (grey), the lines on them in their colours, and the stations, each named on
+ * pointing at it: those trains call at today (white), those no train calls at today (white, dashed edge), those the
+ * city trains pass (small, grey) and the new ones (orange). One line can be highlighted: drawn wider and on top, the
+ * others fade.
  */
 @Component({
   selector: 'app-proposal-map',
@@ -96,24 +97,16 @@ export class ProposalMap {
     }
     for (const s of stations) {
       const fresh = s.kind === 'new';
+      const passed = s.kind === 'passed';
       const marker = L.circleMarker([s.lat, s.lon], {
-        radius: fresh ? 6 : 4,
-        color: fresh ? WHITE : INK,
+        radius: fresh ? 6 : passed ? 3 : 4,
+        color: fresh ? WHITE : passed ? NEUTRAL_GREY : INK,
         weight: fresh ? 2 : 1.5,
         dashArray: s.kind === 'unserved' ? '2 2' : undefined,
-        fillColor: fresh ? NEW_STATION_COLOR : WHITE,
+        fillColor: fresh ? NEW_STATION_COLOR : passed ? NEUTRAL_GREY : WHITE,
         fillOpacity: 1,
       })
-        .bindTooltip(
-          text(s.name),
-          fresh
-            ? {
-                permanent: true,
-                direction: crowded(s, stations) ? 'left' : 'right',
-                offset: [crowded(s, stations) ? -6 : 6, 0],
-              }
-            : {},
-        )
+        .bindTooltip(text(s.name), { direction: 'top', offset: [0, -6] })
         .addTo(layer);
       this.markers.push(marker);
     }
@@ -145,20 +138,6 @@ export class ProposalMap {
     }
     if (known) this.markers.forEach((m) => (m instanceof L.CircleMarker ? m.bringToFront() : null));
   }
-}
-
-/**
- * Whether a new station's name would run into another's: one within 1.5 km to its east (names go to the right), so
- * its own goes to the left.
- */
-function crowded(s: MapStation, stations: MapStation[]): boolean {
-  return stations.some(
-    (o) =>
-      o !== s &&
-      o.kind === 'new' &&
-      o.lon > s.lon &&
-      L.latLng(o.lat, o.lon).distanceTo(L.latLng(s.lat, s.lon)) < 1500,
-  );
 }
 
 /** A name as an element, so it is never read as HTML. */

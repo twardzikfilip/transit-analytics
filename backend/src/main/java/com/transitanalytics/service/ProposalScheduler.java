@@ -1,6 +1,7 @@
 package com.transitanalytics.service;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -9,30 +10,28 @@ import java.util.Map;
 import java.util.PriorityQueue;
 
 /**
- * Timetables city rail lines around the trains that already run. A line runs about every hour each way, from
- * {@link #FIRST} to {@link #LAST}, and each of its trains keeps at least {@link #HEADWAY} from every other train going
- * the same way on the same railway, at every station of it (a train may not catch up with another between two
- * stations either). Trains going the other way aren't counted: they pass each other at stations or on double track.
+ * Timetables city rail lines around the trains that already run. A line runs at least once a period (two hours, an
+ * hour, half an hour or 20 minutes) each way, from {@link #FIRST} to {@link #LAST}, and each of its trains keeps at
+ * least {@link #HEADWAY} from every other train going the same way on the same railway, at every station of it (a
+ * train may not catch up with another between two stations either). Trains going the other way aren't counted: they
+ * pass each other at stations or on double track.
  * <p>
- * Each way, every minute of the hour is tried as the line's pattern ("every hour at :17"): a train of the pattern that
- * would come too close to another is moved, a minute at a time, as little as it takes, keeping at most
- * {@link #MAX_INTERVAL} after the previous one. The pair of patterns with the fewest trains still too close wins
- * (where no time in the hour keeps clear of all, the one coming least close is taken), then the one with the fewest
- * trains moved (a moved train may add one), then the one needing the fewest vehicles, each standing at least
- * {@link #TURNAROUND} at an end. Each line's trains then count as trains already running for the lines timetabled
- * after it. Times are seconds after midnight.
+ * Each way, every minute of the period is tried as the line's pattern ("every hour at :17"): a train of the pattern
+ * that would come too close to another is moved, a minute at a time, as little as it takes, keeping at most a period
+ * after the previous one. The pair of patterns with the fewest trains still too close wins (where no time keeps clear
+ * of all, the one coming least close is taken), then the one with the fewest trains (a moved train may add one), then
+ * the one needing the fewest vehicles, each standing at least {@link #TURNAROUND} at an end, then the shortest cycle.
+ * Each line's trains then count as trains already running for the lines timetabled after it. Times are seconds after
+ * midnight.
  */
 final class ProposalScheduler {
 
     static final int HEADWAY = 600;
     static final int TURNAROUND = 300;
-    static final int MAX_INTERVAL = 3600;
     static final int FIRST = 5 * 3600;
     static final int LAST = 23 * 3600;
-    private static final int HOUR = 3600;
+    static final int HOUR = 3600;
     private static final int MINUTE = 60;
-    /** The first train of the day is moved at most this far from its place in the pattern. */
-    private static final int MAX_SHIFT = 30 * 60;
     /** No other train on a stretch. */
     static final int NONE = Integer.MAX_VALUE;
 
@@ -65,37 +64,49 @@ final class ProposalScheduler {
 
     /**
      * @param minTurnaround the shortest time a vehicle stands at an end before its next trip, NONE when none does
+     * @param maxTurnaround the longest, 0 when none does
      */
-    record Timetable(Run out, Run back, List<Trip> outs, List<Trip> backs, int vehicles, int minTurnaround) {
+    record Timetable(Run out, Run back, List<Trip> outs, List<Trip> backs, int vehicles, int minTurnaround,
+                     int maxTurnaround) {
     }
 
     private final Map<Segment, List<Pass>> occupied = new HashMap<>();
+    /** At most this long between two trains of a line, each way: the pattern repeats with it. */
+    private final int period;
     private int nextTrain = -1;
 
-    /** @param running the trains running already */
-    ProposalScheduler(Collection<Pass> running) {
+    /**
+     * @param running the trains running already
+     * @param period  seconds; a whole number of minutes
+     */
+    ProposalScheduler(Collection<Pass> running, int period) {
+        this.period = period;
         running.forEach(p -> occupied.computeIfAbsent(p.segment(), k -> new ArrayList<>()).add(p));
     }
 
     /** Timetables a line both ways (back: from its last station to its first). */
     Timetable schedule(Run out, Run back) {
-        Placement[] outs = new Placement[HOUR / MINUTE];
-        Placement[] backs = new Placement[HOUR / MINUTE];
+        Placement[] outs = new Placement[period / MINUTE];
+        Placement[] backs = new Placement[period / MINUTE];
         for (int m = 0; m < outs.length; m++) {
             outs[m] = place(out, m * MINUTE, false);
             backs[m] = place(back, m * MINUTE, false);
         }
         int bestOut = 0;
         int bestBack = 0;
-        long best = Long.MAX_VALUE;
+        long[] best = {Long.MAX_VALUE, 0, 0};
         for (int o = 0; o < outs.length; o++) {
             for (int b = 0; b < backs.length; b++) {
                 // The fewest trains too close to another, then the fewest trains (a moved one may add one), then the
-                // fewest vehicles (the shortest cycle).
-                long score = ((long) (outs[o].tooClose() + backs[b].tooClose()) * 1000
-                        + outs[o].trips().size() + backs[b].trips().size()) * 100 * HOUR
-                        + cycle(out, back, o * MINUTE, b * MINUTE);
-                if (score < best) {
+                // fewest vehicles running them, then the shortest cycle.
+                long first = (long) (outs[o].tooClose() + backs[b].tooClose()) * 1000
+                        + outs[o].trips().size() + backs[b].trips().size();
+                if (first > best[0]) {
+                    continue;
+                }
+                long[] score = {first, circulate(out, back, outs[o].trips(), backs[b].trips()).vehicles(),
+                        cycle(out, back, o * MINUTE, b * MINUTE)};
+                if (Arrays.compare(score, best) < 0) {
                     best = score;
                     bestOut = o;
                     bestBack = b;
@@ -128,17 +139,18 @@ final class ProposalScheduler {
     }
 
     /** How long a vehicle takes to go out and back with the two patterns, standing long enough at each end. */
-    private static int cycle(Run out, Run back, int outMinute, int backMinute) {
-        int far = Math.floorMod(backMinute - outMinute - out.duration(), HOUR);
-        int near = Math.floorMod(outMinute - backMinute - back.duration(), HOUR);
-        return out.duration() + back.duration() + (far < TURNAROUND ? far + HOUR : far)
-                + (near < TURNAROUND ? near + HOUR : near);
+    private int cycle(Run out, Run back, int outMinute, int backMinute) {
+        int far = Math.floorMod(backMinute - outMinute - out.duration(), period);
+        int near = Math.floorMod(outMinute - backMinute - back.duration(), period);
+        return out.duration() + back.duration() + (far < TURNAROUND ? far + period : far)
+                + (near < TURNAROUND ? near + period : near);
     }
 
     /**
-     * The trains of one way (kept, or only tried): the pattern's, each moved as little as it takes to keep clear of the others, but at most
-     * {@link #MAX_INTERVAL} after the previous one. After a train moved early, the next is the pattern's next train
-     * at least half an hour later, so the line comes back to its pattern.
+     * The trains of one way (kept, or only tried): the pattern's, each moved as little as it takes to keep clear of the
+     * others, but at most a period after the previous one (the first at most half a period from its place). After a
+     * train moved early, the next is the pattern's next train at least half a period later, so the line comes back to
+     * its pattern.
      */
     private Placement place(Run run, int minute, boolean keep) {
         List<Trip> trips = new ArrayList<>();
@@ -146,8 +158,8 @@ final class ProposalScheduler {
         Integer previous = null;
         int target = FIRST + minute;
         while (target <= LAST) {
-            int earliest = previous == null ? target - MAX_SHIFT : previous + MINUTE;
-            int latest = previous == null ? target + MAX_SHIFT : previous + MAX_INTERVAL;
+            int earliest = previous == null ? target - period / 2 : previous + MINUTE;
+            int latest = previous == null ? target + period / 2 : previous + period;
             Integer chosen = null;
             int fallback = Math.min(Math.max(target, earliest), latest);
             int fallbackClosest = -1;
@@ -174,8 +186,8 @@ final class ProposalScheduler {
             occupy(run, trip);
             trips.add(trip);
             previous = start;
-            target = FIRST + minute + Math.max(0, ceilDiv(start + HOUR / 2 - FIRST - minute, HOUR)) * HOUR;
-            if (target > LAST && start < LAST - HOUR) {
+            target = FIRST + minute + Math.max(0, ceilDiv(start + period / 2 - FIRST - minute, period)) * period;
+            if (target > LAST && start < LAST - period) {
                 target = LAST; // the pattern's next train would be too late: one more, so the line runs until LAST
             }
         }
@@ -216,15 +228,18 @@ final class ProposalScheduler {
                 false, new PriorityQueue<>());
         int vehicles = 0;
         int minTurnaround = NONE;
+        int maxTurnaround = 0;
         for (Leg leg : legs) {
             PriorityQueue<Integer> here = waiting.get(leg.outward());
             if (!here.isEmpty() && here.peek() + TURNAROUND <= leg.start()) {
-                minTurnaround = Math.min(minTurnaround, leg.start() - here.poll());
+                int stood = leg.start() - here.poll();
+                minTurnaround = Math.min(minTurnaround, stood);
+                maxTurnaround = Math.max(maxTurnaround, stood);
             } else {
                 vehicles++;
             }
             waiting.get(!leg.outward()).add(leg.end());
         }
-        return new Timetable(out, back, outs, backs, vehicles, minTurnaround);
+        return new Timetable(out, back, outs, backs, vehicles, minTurnaround, maxTurnaround);
     }
 }

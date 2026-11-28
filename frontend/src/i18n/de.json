@@ -1705,10 +1705,11 @@
         "unused": "Heute ohne Personenzüge",
         "served": "Station",
         "unserved": "Station ohne Halt heute",
-        "new": "Neue Station"
+        "new": "Neue Station",
+        "passed": "Ohne Halt durchfahrener Bahnhof"
       },
       "network": "Das Netz",
-      "networkIntro": "Stadtzüge auf den fünf Strecken ab Białystok, verkürzt bis Klepacze, Fasty, Lewickie, Wasilków und Kuriany; auf der Strecke nach Kuriany über Białystok Fabryczny fahren heute keine Personenzüge. Sechs neue Stationen: Richtung Kuriany Białystok Jurowiecka (zwischen Przytorowa- und Poleska-Straße, hinter der Brücke über die Jurowiecka-Straße), Białystok Pieczurki (hinter dem Übergang der Piasta-Straße) und Białystok Zaścianki (hinter dem Übergang der Baranowicka-Straße); Richtung Wasilków Białystok Białostoczek (wo Sitarska- und Sokólska-Straße zusammentreffen); Richtung Fasty Białystok Leśna Dolina (hinter der Kreuzung mit der Popiełuszki-Straße); Richtung Lewickie Ignatki-Osiedle (hinter dem Übergang der Leśna-Straße). Entfernungen entlang des Gleises ab dem Bahnhof Białystok (OpenStreetMap).",
+      "networkIntro": "Stadtzüge auf den fünf Bahnstrecken ab Białystok, mit Endpunkten in Niewodnica, Dobrzyniewo Duże, Lewickie, Wasilków und Henrykowo; auf der Strecke nach Henrykowo über Białystok Fabryczny fahren heute keine Personenzüge. Neun neue Halte: Richtung Henrykowo Białystok Jurowiecka (zwischen Przytorowa- und Poleska-Straße, hinter der Brücke über die Jurowiecka-Straße), Białystok Pieczurki (hinter dem Übergang mit der Piasta-Straße), Białystok Zaścianki (hinter dem Übergang mit der Baranowicka-Straße), Sobolewo (hinter dem Übergang mit der Sobolewska-Straße) und Henrykowo (hinter dem Übergang mit der Podleśna-Straße, vor Kuriany); Richtung Wasilków Białystok Białostoczek (wo Sitarska- und Sokólska-Straße zusammentreffen); Richtung Dobrzyniewo Duże Białystok Leśna Dolina (hinter dem Übergang mit der Popiełuszki-Straße) und Fasty Osada (an der Bushaltestelle Fasty/Mleczarnia), Fasty durchfahren die Stadtzüge ohne Halt; Richtung Lewickie Ignatki-Osiedle (hinter dem Übergang mit der Leśna-Straße). Entfernungen entlang des Gleises ab Bahnhof Białystok (OpenStreetMap).",
       "railway": "Strecke",
       "station": "Station",
       "km": "km",
@@ -1719,15 +1720,16 @@
       "kinds": {
         "served": "Station",
         "unserved": "Heute ohne Halt",
-        "new": "Neu"
+        "new": "Neu",
+        "passed": "Ohne Halt"
       },
       "rulesTitle": "Woran sich jeder Fahrplan hält",
       "rules": {
-        "interval": "Jede Linie fährt mindestens alle {{minutes}} Minuten in jede Richtung, etwa von {{first}} bis {{last}}.",
+        "interval": "Jede Linie fährt mindestens so oft wie der gewählte Takt (alle zwei Stunden oder ein, zwei oder drei Züge pro Stunde) je Richtung, von etwa {{first}} bis {{last}}.",
         "headway": "Jeder Zug hält an jeder Station mindestens {{minutes}} Minuten Abstand zu jedem anderen Zug, der in dieselbe Richtung auf derselben Strecke fährt, und holt keinen zwischen zwei Stationen ein.",
         "turnaround": "An der Endstation steht ein Zug mindestens {{minutes}} Minuten, bevor er zurückfährt.",
-        "dwell": "An den neuen Stationen (und in Białystok Fabryczny und Kuriany) halten die Züge {{seconds}} s, so lange wie Polregio in Białystok Starosielce, und {{hub}} Minuten in Białystok bei der Durchfahrt.",
-        "runTimes": "Die Fahrzeiten sind die von Polregio zwischen den Stationen, an denen seine Züge halten; eine neue Station unterwegs fügt die Zeit fürs Bremsen und Anfahren hinzu. Nach Kuriany, wo kein Zug fährt, aus der Entfernung bei bis zu 80 km/h, skaliert wie die Zeiten von Polregio anderswo.",
+        "dwell": "Züge halten {{seconds}} s an den neuen Halten (und in Białystok Fabryczny), so lange wie Polregio in Białystok Starosielce, und {{hub}} Minuten in Białystok, wenn sie durchfahren.",
+        "runTimes": "Fahrzeiten sind die von Polregio zwischen den Bahnhöfen, an denen seine Züge halten; ein neuer Halt unterwegs fügt die beim Bremsen und Anfahren verlorene Zeit hinzu, das ohne Halt durchfahrene Fasty zieht sie ab. Nach Henrykowo, wo kein Zug fährt, aus der Entfernung bei bis zu 80 km/h berechnet und so skaliert, wie die Zeiten von Polregio anderswo ausfallen.",
         "trains": "Fahrplan um die {{n}} Züge auf diesen Strecken am {{day}} herum erstellt (Polregio und PKP Intercity, haltend oder durchfahrend).",
         "notCounted": "Züge in der Gegenrichtung zählen nicht: Sie begegnen sich in Stationen oder auf zweigleisiger Strecke. Güterzüge stehen nicht im Fahrplan."
       },
@@ -1735,7 +1737,7 @@
       "radialIntro": "Fünf Linien, jede von Białystok zu einem Endpunkt.",
       "throughIntro": "Zwei Linien durch Białystok von einem Endpunkt zum anderen, und eine, die in Białystok endet.",
       "linesTitle": "Die Linien",
-      "linesIntro": "Fahrplan um die Züge vom {{day}} herum erstellt.",
+      "linesIntro": "Um die Züge vom {{day}} herum geplant: eine Auswertung des Fahrplans, wie er ist, einmal berechnet.",
       "line": "Linie",
       "length": "Länge",
       "stations": "Stationen",
@@ -1749,11 +1751,31 @@
       "kmValue": "{{km}} km",
       "kmh": "{{v}} km/h",
       "minutesBoth": "{{out}} / {{back}} min",
-      "tableNote": "Fahrzeit: hin und zurück. Stationsabstand: der durchschnittliche. Züge pro Tag: je Richtung. Längste Wartezeit: zwischen zwei Zügen der Linie. Benötigte Züge: für den Fahrplan, jeder mindestens die Wendezeit an einem Endpunkt stehend. Nächster Zug: der geringste Abstand eines ihrer Züge zu einem anderen in derselben Richtung auf derselben Strecke.",
+      "tableNote": "Halte: die, an denen die Linie hält. Fahrzeit: hin und zurück. Zwischen Halten: der mittlere Abstand. Züge pro Tag: je Richtung. Längste Wartezeit: zwischen zwei Zügen der Linie. Benötigte Züge: um den Fahrplan zu fahren, jeder steht an einem Ende mindestens die Wendezeit. Nächster Zug: wie nah einer ihrer Züge einem anderen in derselben Richtung auf derselben Strecke kommt.",
       "timetable": "{{name}}: Fahrplan",
-      "timetableIntro": "Abfahrten; an der letzten Station Ankünfte. An den Endpunkten stehen die Züge mindestens {{turnaround}} Minuten; {{vehicles}} Züge bedienen die Linie.",
-      "conflicts": "In Rot Züge, die einem anderen näher kommen als der Mindestabstand, da keine Zeit in dieser Stunde allen ausweicht: {{n}}.",
-      "towards": "Nach {{to}}"
+      "timetableIntro": "Abfahrten; an der letzten Station Ankünfte. An den Endpunkten stehen die Züge vor der Rückfahrt {{min}}–{{max}} Minuten (mindestens die Wendezeit); {{vehicles}} Züge bedienen die Linie.",
+      "conflicts": "Rot: Züge, die einem anderen näher als der Mindestabstand kommen, da keine Zeit alle meidet: {{n}}.",
+      "towards": "Nach {{to}}",
+      "frequency": "Takt",
+      "frequencies": {
+        "1tp2h": "Mindestens 1 Zug alle 2 Stunden je Richtung",
+        "1tph": "Mindestens 1 Zug pro Stunde je Richtung",
+        "2tph": "Mindestens 2 Züge pro Stunde je Richtung",
+        "3tph": "Mindestens 3 Züge pro Stunde je Richtung"
+      },
+      "fleet": "Höchstens Züge",
+      "fleetUsed": "Der Fahrplan braucht {{used}} der {{of}} Züge. Wähle einen Takt, um zu sehen, wie viele Züge er braucht, oder eine Zahl von Zügen, um den dichtesten Fahrplan zu sehen, den sie fahren können (auf jeder Linie gleich).",
+      "kindsOfTrain": {
+        "city": "Stadtbahn",
+        "PR": "Polregio",
+        "IC": "PKP Intercity"
+      },
+      "agency": {
+        "PR": "Polregio",
+        "IC": "PKP Intercity"
+      },
+      "passes": "fährt ohne Halt durch",
+      "tooClose": "Näher an einem anderen Zug als der Mindestabstand"
     }
   }
 }

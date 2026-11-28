@@ -30,6 +30,9 @@ $lightblue_bkm: #2393ca;
   /* Text links: the primary colour darkened enough to read on white. */
   --link: #007a88;
   --danger: #dc3545;
+  /* Trains in City Rail's timetables: Polregio's green, PKP Intercity's blue. */
+  --polregio: #2b8a3e;
+  --intercity: #1c5cab;
   --sidebar-bg: var(--primary);
   --sidebar-fg: #ffffff;
   /* One radius and one shadow for cards, inputs, buttons, charts and maps. */
@@ -75,6 +78,8 @@ $lightblue_bkm: #2393ca;
   --accent-soft: #0f3a40;
   --link: #3cc6d6;
   --danger: #ea868f;
+  --polregio: #69db7c;
+  --intercity: #74a9f0;
   --sidebar-bg: color-mix(in srgb, var(--primary) 80%, #000);
   --shadow: 0 1px 3px rgb(0 0 0 / 40%), 0 1px 2px rgb(0 0 0 / 30%);
   --shadow-float: 0 4px 12px rgb(0 0 0 / 50%);

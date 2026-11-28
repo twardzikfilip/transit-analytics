@@ -177,23 +177,29 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   longer than straight). Worked out in the background at startup and after each import (some seconds), then kept for
   the day.
 - `GET /api/city-rail/proposal` — City Rail proposal no. 1 (`service/CityRailProposal`, `ProposalScheduler`): city
-  trains on the five railways from Białystok, shortened to Klepacze, Fasty, Lewickie, Wasilków and Kuriany (the railway
-  to Kuriany through Białystok Fabryczny has no passenger trains today), calling at every station, six new ones
-  included (`places/osm/city-rail-proposal.json`). Two solutions, each timetabled around the trains (Polregio and PKP
-  Intercity, calling or passing; passing times from their track, between their calls) of the weekday the trains are
-  counted on: `radial`, five lines from Białystok; `through`, Wasilków–Lewickie and Fasty–Kuriany through Białystok
-  (standing 2 minutes there) and Białystok–Klepacze. Every line runs at least hourly each way from about 05:00 to
-  23:00, keeps at least 10 minutes from any other train going the same way on the same railway at every station
+  trains on the five railways from Białystok, ending at Niewodnica, Dobrzyniewo Duże, Lewickie, Wasilków and Henrykowo
+  (the railway to Henrykowo through Białystok Fabryczny has no passenger trains today), calling at every station but
+  Fasty (passed without stopping), nine new ones included (`places/osm/city-rail-proposal.json`). Two solutions:
+  `radial`, five lines from Białystok; `through`, Wasilków–Lewickie and Dobrzyniewo Duże–Henrykowo through Białystok
+  (standing 2 minutes there) and Białystok–Niewodnica. Each is timetabled at four frequencies (`variants`:
+  `1tp2h`, `1tph`, `2tph`, `3tph`: at least one train every two hours, or 1, 2 or 3 an hour, each way, from about
+  05:00 to 23:00) around the trains (Polregio and PKP Intercity, calling or passing; passing times from their track,
+  between their calls) of the weekday the trains are counted on, with the trains (`vehicles`) all its lines need.
+  Every train keeps at least 10 minutes from any other train going the same way on the same railway at every station
   (without catching up between stations; trains the other way aren't counted), and stands at least 5 minutes at its
-  ends. Each way, every minute of the hour is tried as the line's pattern, moving trains that would come too close as
-  little as it takes; where no time in an hour keeps clear of all, the least close is taken and the train is marked.
-  Run times: Polregio's medians between the stations its trains call at, shared out by distance where a new station
-  lies between, plus the time lost braking and starting there; to Kuriany, from the distance at up to 80 km/h,
-  starting and braking at 0.6 m/s², scaled as Polregio's times compare elsewhere; whole minutes. New stations have
-  Polregio's dwell at Białystok Starosielce (1 minute). Per line: stations with distances, track, length, average
-  distance between stations, run times, trains a day, the longest interval, trains (vehicles) needed, the closest any
-  of its trains comes to another, and its timetable both ways. Worked out in the background at startup and after each
-  import of the trains (some seconds), then kept for the day.
+  ends. Each way, every minute of the period is tried as the line's pattern, moving trains that would come too close
+  as little as it takes; where no time keeps clear of all, the least close is taken and the train is marked; then the
+  patterns needing the fewest vehicles win. Run times: Polregio's medians between the stations its trains call at,
+  shared out by distance where a new station lies between, plus the time lost braking and starting there (minus it at
+  Fasty); to Henrykowo, from the distance at up to 80 km/h, starting and braking at 0.6 m/s², scaled as Polregio's
+  times compare elsewhere; whole minutes. New stations have Polregio's dwell at Białystok Starosielce (1 minute). Per
+  line: stations with distances, track, length, average distance between the stations it calls at, run times, trains
+  a day, the longest interval, trains needed, the shortest and longest time its trains stand at an end, the closest any of its trains comes to another, and its timetable both
+  ways (`out`, `back`): its own trains (`kind` `city`) and, in order among them, today's Polregio (`PR`) and PKP
+  Intercity (`IC`) trains on the part of its way they run on (`label`: number and name; `|` where a train passes,
+  null where it isn't on the line). An analysis of the timetable as it is, not a live view: worked out once, in the
+  background at startup, and stored in `city_rail_proposal_variant`; worked out again only when the network file or
+  `CityRailProposal.MODEL` changes (or, while none is stored, after the trains' timetable is imported).
 - `GET /api/bus-lanes` — the city's bus lanes from OpenStreetMap (`places/osm/bus-lanes.json`, or the refreshed copy in
   `./config/map/bus-lanes.json`): each street section with how many lanes run each way and whether buses have a lane
   the other way too (on the section or the other carriageway), the sections grouped by street and direction, the
@@ -705,14 +711,20 @@ PGPASSWORD=transit psql -h localhost -U transit transit_test -c "CREATE EXTENSIO
   the lines taken (point at them for every ride), the faster way in green and how much longer the bus takes; each
   station's bus stops below it.
 - City Rail, proposal no. 1 (`/city-rail/proposal-1`), with tabs for its three pages. Network: a map of the five
-  railways in their colours (the one to Kuriany, without passenger trains today, dashed) and their stations, the new
-  ones in orange and named; each railway's stations with their distance from Białystok (new ones and those without
-  trains today marked); what every timetable keeps to; and links to the two solutions. Solution 1, five lines from
-  Białystok (`/city-rail/proposal-1/radial`), and solution 2, lines through Białystok (`.../through`): the lines on the
-  map, each numbered (S1, S2, ...) in its colour; a table of the lines (length, stations, average distance between
-  them, run time there and back, average speed, trains a day, longest wait, trains needed, closest other train, in
-  red when closer than 10 minutes); and under it the timetable of the line chosen (`?line=S2`; a row of the table or
-  the line on the map chooses it), both ways, stations down and trains across, trains too close to another in red.
+  railways in their colours (the one to Henrykowo, without passenger trains today, dashed) and their stations, each
+  named on pointing at it (new ones in orange, Fasty, passed without stopping, small and grey); each railway's
+  stations with their distance from Białystok (new ones, passed ones and those without trains today marked); what
+  every timetable keeps to; and links to the two solutions. Solution 1, five lines from Białystok
+  (`/city-rail/proposal-1/radial`), and solution 2, lines through Białystok (`.../through`): at the top, a frequency
+  (`?freq=`, 1 train every 2 hours to 3 an hour) and the trains at most (`?fleet=`); choosing one decides the other
+  (a frequency shows the trains it needs; a number of trains, the most frequent variant they run, the same on every
+  line); it opens at 1 an hour and 10 trains (or what that needs, when more). Then the lines on the map, each
+  numbered (S1, S2, ...) in its colour; a table of the lines (length, stations, average distance between them, run
+  time there and back, average speed, trains a day, longest wait, trains needed, closest other train, in red
+  when closer than 10 minutes); and under it the timetable of the line chosen (`?line=S2`; a row of the table or the
+  line on the map chooses it), both ways, stations down and trains across (scrolling sideways), with today's Polregio
+  (green) and PKP Intercity (blue) trains on its way among the line's own, `|` where a train passes, trains too close
+  to another in red.
 - Network coverage: for each walking distance (400, 500, 600 m), tiles with the share of the city within it of the
   nearest bus stop, with and without the woods and the Biała valley, and a map (rolls up to its title) of the area
   near a stop with the woods hatched green and the valley hatched light blue; the woods and the valley's stretches
