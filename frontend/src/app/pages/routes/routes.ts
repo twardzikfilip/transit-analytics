@@ -8,6 +8,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { operatorLogo } from '../../shared/format/operator-logo';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
@@ -36,7 +37,6 @@ import {
 import { TravelCharts } from './travel-charts';
 import { VariantTiles } from './variant-tiles';
 import { VariantTable } from './variant-table';
-import { SpeedProfiles } from './speed-profiles';
 import { DepotRuns } from './depot-runs';
 import { leafletHost } from '../../shared/map/leaflet-host';
 import { injectBusLanes } from '../../shared/map/bus-lanes';
@@ -71,7 +71,6 @@ export const RARE_SHARE = 0.05;
     LocalNumberPipe,
     VariantTiles,
     VariantTable,
-    SpeedProfiles,
     DepotRuns,
     TravelCharts,
     BrigadeTimeline,
@@ -83,6 +82,7 @@ export const RARE_SHARE = 0.05;
 })
 export class RoutesPage {
   protected readonly t = t;
+  protected readonly operatorLogo = operatorLogo;
   protected readonly int = int;
   protected readonly decimal = decimal;
   protected readonly tn = tn;

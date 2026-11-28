@@ -72,8 +72,8 @@
   } @else {
     <p class="muted">{{ t('lineVehicles.noChanges') }}</p>
   }
+} @else if (loading()) {
+  <app-skeleton kind="lines" [count]="3" />
 } @else {
-  <p class="muted">
-    {{ t(loading() ? 'lineVehicles.loading' : 'lineVehicles.none') }}
-  </p>
+  <p class="muted">{{ t('lineVehicles.none') }}</p>
 }

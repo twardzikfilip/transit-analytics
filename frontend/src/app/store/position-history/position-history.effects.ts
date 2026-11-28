@@ -52,6 +52,21 @@ export const loadRoutes = createEffect(
   { functional: true },
 );
 
+/** The stops with the longest dwell, for the window, route and operator. */
+export const loadDwell = createEffect(
+  (actions$ = inject(Actions), api = inject(PositionHistoryApi)) =>
+    actions$.pipe(
+      ofType(PositionHistoryActions.load),
+      switchMap(({ query }) =>
+        api.dwell(query, query).pipe(
+          map((dwell) => PositionHistoryActions.dwellLoaded({ dwell })),
+          catchError(toFailure),
+        ),
+      ),
+    ),
+  { functional: true },
+);
+
 export const loadAgencies = createEffect(
   (actions$ = inject(Actions), api = inject(PositionHistoryApi)) =>
     actions$.pipe(

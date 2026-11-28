@@ -1,3 +1,4 @@
+import { Skeleton } from '../../shared/skeleton/skeleton';
 import { Component, input } from '@angular/core';
 import { RouteVehicles } from '../../core/models/models';
 import { spellsText } from './format';
@@ -10,7 +11,7 @@ import { t, tn } from '../../core/i18n/t';
  */
 @Component({
   selector: 'app-route-vehicles',
-  imports: [LocalDatePipe],
+  imports: [LocalDatePipe, Skeleton],
   templateUrl: './route-vehicles.html',
   styleUrl: './route-vehicles.scss',
 })

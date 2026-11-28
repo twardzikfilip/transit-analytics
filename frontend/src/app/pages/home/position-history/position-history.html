@@ -67,6 +67,61 @@
   <app-skeleton kind="tiles" [count]="4" [label]="t('history.loadingRecorded')" />
 }
 
+<!-- For all routes: the routes with the most and the least delay in the window, side by side. -->
+@if (!route()) {
+  @if (rankings(); as r) {
+    <div class="rankings" [class.loading]="loadingRoutes()">
+      <section class="card ranking most">
+        <h3>{{ t('history.mostDelay') }}</h3>
+        <ol>
+          @for (x of r.most; track x.route) {
+            <li>
+              <span class="route-badge" [appRouteBadge]="x.route">{{ x.route }}</span>
+              <strong>{{ formatDelay(x.meanDelaySeconds) }}</strong>
+            </li>
+          }
+        </ol>
+      </section>
+      <section class="card ranking least">
+        <h3>{{ t('history.leastDelay') }}</h3>
+        <ol>
+          @for (x of r.least; track x.route) {
+            <li>
+              <span class="route-badge" [appRouteBadge]="x.route">{{ x.route }}</span>
+              <strong>{{ formatDelay(x.meanDelaySeconds) }}</strong>
+            </li>
+          }
+        </ol>
+      </section>
+    </div>
+  } @else if (loadingRoutes()) {
+    <app-skeleton kind="tiles" [count]="2" [label]="t('history.loadingRankings')" />
+  }
+}
+
+<!-- The stops where buses dwell longest: the chosen route's, or every route's. -->
+@if (dwell(); as d) {
+  <section class="card dwell" [class.loading]="loadingDwell()">
+    <h3>{{ t(route() ? 'history.dwellRoute' : 'history.dwellAll', { route: route() }) }}</h3>
+    <p class="muted small">{{ t('history.dwellIntro') }}</p>
+    @if (d.length) {
+      <ol>
+        @for (s of d; track s.stop) {
+          <li>
+            <span class="stop">{{ s.stop }}</span>
+            <strong>{{ formatDelay(s.meanSeconds) }}</strong>
+            <span class="muted small">{{ tn('history.visits', s.visits) }}</span>
+          </li>
+        }
+      </ol>
+    } @else {
+      <p class="muted">{{ t('history.dwellNone') }}</p>
+    }
+  </section>
+} @else if (loadingDwell()) {
+  <app-skeleton kind="lines" [count]="5" [label]="t('history.loadingDwell')" />
+}
+
 <section class="card chart-card">
   <div class="chart-head">
     <div>

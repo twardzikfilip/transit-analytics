@@ -39,11 +39,16 @@
     }
     @for (row of rows(); track row.b.name) {
       <text
-        class="name"
+        class="name link"
         [attr.x]="0"
         [attr.y]="row.mid"
         dominant-baseline="middle"
+        role="link"
+        tabindex="0"
+        [attr.aria-label]="tr('depot.tl.openBrigade', { brigade: row.b.name })"
         (pointerenter)="showBrigade(row.b, label, row.mid)"
+        (click)="openBrigade(row.b)"
+        (keydown.enter)="openBrigade(row.b)"
       >
         {{ row.b.name }}
       </text>
@@ -76,14 +81,21 @@
       }
       @for (run of row.runs; track run.r.from) {
         <rect
-          class="run"
+          class="run link"
           [attr.x]="run.x"
           [attr.y]="row.barY"
           [attr.width]="run.w"
           height="12"
           rx="2"
           [style.fill]="run.color"
+          role="link"
+          tabindex="0"
+          [attr.aria-label]="
+            tr('depot.tl.openTrip', { brigade: row.b.name, time: clock(run.r.from) })
+          "
           (pointerenter)="showRun(row.b, run.r, run.x + run.w / 2, row.mid)"
+          (click)="openRun(row.b, run.r)"
+          (keydown.enter)="openRun(row.b, run.r)"
         />
         @if (run.r.kind !== 'main') {
           <rect

@@ -56,7 +56,10 @@ describe('Faulty trackers tile', () => {
       { provide: TripAnomalyApi, useValue: { faultyTrackers: () => of(report([tracker])) } },
     ]);
     expect(el.querySelector('.tile.alert')).not.toBeNull();
-    expect(text(el.querySelector('h2'))).toBe('Buses with a possibly faulty tracker 1');
+    // Folded at first: the title with the count shows, the list opens on a click.
+    const tile = el.querySelector('details.tile') as HTMLDetailsElement;
+    expect(tile.open).toBe(false);
+    expect(text(el.querySelector('summary h2'))).toBe('Buses with a possibly faulty tracker 1');
     const item = el.querySelector('li')!;
     expect(item.querySelector('a.bus')!.getAttribute('href')).toBe('/vehicles/46');
     expect(text(item)).toContain('43 of 129 trips (33%)');

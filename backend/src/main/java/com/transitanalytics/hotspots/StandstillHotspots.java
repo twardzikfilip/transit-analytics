@@ -287,7 +287,7 @@ public final class StandstillHotspots {
             return StopPlaces.meters(latDeg, lonDeg, lats[i], lons[i]) <= meters;
         }
 
-        List<T> near(double latDeg, double lonDeg, double meters) {
+        public List<T> near(double latDeg, double lonDeg, double meters) {
             return nearIndexes(latDeg, lonDeg, meters).stream().map(items::get).toList();
         }
     }

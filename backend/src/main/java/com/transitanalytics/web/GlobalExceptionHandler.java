@@ -4,6 +4,7 @@ import com.transitanalytics.common.NotFoundException;
 import com.transitanalytics.gtfs.GtfsFeedException;
 import com.transitanalytics.gtfs.GtfsImportInProgressException;
 import com.transitanalytics.security.TooManyLoginsException;
+import com.transitanalytics.security.UserExistsException;
 import com.transitanalytics.service.ExternalServiceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +32,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ProblemDetail badRequest(IllegalArgumentException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    @ExceptionHandler(UserExistsException.class)
+    public ProblemDetail userExists(UserExistsException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

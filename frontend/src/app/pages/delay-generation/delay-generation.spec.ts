@@ -290,7 +290,8 @@ describe('Delay generation page', () => {
       DelayGenerationActions.loadRoute({ window: CUSTOM, route: '99' }),
     );
     const { el, fixture } = renderPage(DelayGeneration, loading, { route: '99' });
-    expect(text(el.querySelector('.line-detail [role=status]'))).toBe('Loading line 99…');
+    expect(el.querySelector('.line-detail app-skeleton')).not.toBeNull();
+    expect(text(el.querySelector('.line-detail'))).not.toContain('Loading');
     const navigate = vi
       .spyOn(fixture.debugElement.injector.get(Router), 'navigate')
       .mockResolvedValue(true);

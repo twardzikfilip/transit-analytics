@@ -5,9 +5,6 @@
     [value]="date()"
     (change)="setDate($any($event.target).value)"
   />
-  @if (loadingDay()) {
-    <span class="muted" role="status">{{ t('common.loading') }}</span>
-  }
 </div>
 
 @if (shown(); as d) {

@@ -45,7 +45,9 @@ describe('position history reducer', () => {
   it('stores lines, delays and operators, and stops loading on failure', () => {
     let state = reduce(
       undefined,
-      PositionHistoryActions.routesLoaded({ routes: [{ route: '2', samples: 10 }] }),
+      PositionHistoryActions.routesLoaded({
+        routes: [{ route: '2', samples: 10, meanDelaySeconds: 60, delaySamples: 10 }],
+      }),
     );
     expect(state.routes).toHaveLength(1);
     state = reduce(

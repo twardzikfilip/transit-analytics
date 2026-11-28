@@ -63,8 +63,10 @@ class PositionHistoryIntegrationTest {
         assertThat(summary.samples()).isEqualTo(6);
 
         assertThat(history.fleet(FROM, TO, "IT-N1", "BKM").points()).hasSize(1);
-        assertThat(history.routes(FROM, TO, "BKM")).extracting(PositionHistoryDto.RouteActivity::route)
-                .containsExactly("IT-10", "IT-N1");
+        // Each route's mean delay, of its reports with one: IT-10 (60 + 120 + 90 + 600 - 30) / 5.
+        assertThat(history.routes(FROM, TO, "BKM"))
+                .extracting(r -> r.route() + " " + r.meanDelaySeconds() + " " + r.delaySamples())
+                .containsExactly("IT-10 168 5", "IT-N1 null 0");
 
     }
 

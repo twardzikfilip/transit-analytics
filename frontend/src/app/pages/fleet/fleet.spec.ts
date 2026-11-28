@@ -606,7 +606,8 @@ describe('Fleet page', () => {
       ),
       URL,
     );
-    expect(text(el.querySelector('[role=status]'))).toBe('Loading…');
+    // The progress bar and skeletons tell it loads; no text.
+    expect(text(el)).not.toContain('Loading');
     expect(text(el.querySelector('.tile .mini-list'))).toBe('No bus in service in this window.');
     expect(text(el)).toContain('No buses.');
   });

@@ -19,9 +19,30 @@ import {
   windowQuery,
 } from '../../../shared/time-window/time-window';
 import { bandRows, formatShare, windowLabel } from './delay-bands';
+import { RouteActivity } from '../../../core/models/models';
+import { RouteBadge } from '../../../shared/route-kind/route-kinds';
 import { Skeleton } from '../../../shared/skeleton/skeleton';
 import { LocalDatePipe, LocalNumberPipe } from '../../../shared/i18n/locale-pipes';
-import { t } from '../../../core/i18n/t';
+import { t, tn } from '../../../core/i18n/t';
+
+/** Routes with fewer reports with a delay in the window aren't ranked: a route seen twice doesn't lead. */
+export const MIN_DELAY_REPORTS = 50;
+/** How many routes each ranking lists. */
+export const RANKED = 10;
+
+/** The routes with the highest mean delay, and with the lowest (running early first), of enough reports. */
+export function delayRankings(routes: RouteActivity[]): {
+  most: RouteActivity[];
+  least: RouteActivity[];
+} {
+  const ranked = routes.filter(
+    (r) => r.meanDelaySeconds !== null && r.delaySamples >= MIN_DELAY_REPORTS,
+  );
+  const byDelay = [...ranked].sort(
+    (a, b) => a.meanDelaySeconds! - b.meanDelaySeconds! || a.route.localeCompare(b.route),
+  );
+  return { most: [...byDelay].reverse().slice(0, RANKED), least: byDelay.slice(0, RANKED) };
+}
 
 /** The city operator (Białystok's BKM), shown unless another operator is chosen. */
 export const CITY_AGENCY = 'BKM';
@@ -42,12 +63,20 @@ export function readAgency(params: ParamMap): string | null {
  */
 @Component({
   selector: 'app-position-history',
-  imports: [Skeleton, TimeSeriesChart, LocalNumberPipe, LocalDatePipe, TimeWindowPicker],
+  imports: [
+    Skeleton,
+    TimeSeriesChart,
+    LocalNumberPipe,
+    LocalDatePipe,
+    TimeWindowPicker,
+    RouteBadge,
+  ],
   templateUrl: './position-history.html',
   styleUrl: './position-history.scss',
 })
 export class PositionHistory {
   protected readonly t = t;
+  protected readonly tn = tn;
   private readonly store = inject(Store);
   private readonly navigate = injectSetQuery();
   private readonly params = toSignal(inject(ActivatedRoute).queryParamMap, { requireSync: true });
@@ -59,6 +88,18 @@ export class PositionHistory {
     positionHistoryFeature.selectLoadingSeries,
   );
   protected readonly query = this.store.selectSignal(positionHistoryFeature.selectQuery);
+  protected readonly loadingRoutes = this.store.selectSignal(
+    positionHistoryFeature.selectLoadingRoutes,
+  );
+  protected readonly dwell = this.store.selectSignal(positionHistoryFeature.selectDwell);
+  protected readonly loadingDwell = this.store.selectSignal(
+    positionHistoryFeature.selectLoadingDwell,
+  );
+  /** The routes with the most and the least delay in the window (all routes only). */
+  protected readonly rankings = computed(() => {
+    const r = delayRankings(this.routes());
+    return r.most.length ? r : null;
+  });
   private readonly delays = this.store.selectSignal(positionHistoryFeature.selectDelays);
   protected readonly delayBands = computed(() => bandRows(this.delays()));
   /** The window and route the loaded results cover, e.g. "Mon 16 Nov, 08:36 – 14:36 · all routes". */

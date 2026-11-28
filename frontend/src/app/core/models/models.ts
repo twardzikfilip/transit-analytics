@@ -18,3 +18,4 @@ export * from './network-coverage';
 export * from './trip-runs';
 export * from './versions';
 export * from './city-rail';
+export * from './users';

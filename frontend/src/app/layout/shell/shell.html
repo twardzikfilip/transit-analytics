@@ -49,6 +49,11 @@
               ><app-icon name="settings" />{{ t('nav.settings') }}</a
             >
           </li>
+          <li role="none" *appHasRole="'ADMIN'">
+            <a role="menuitem" routerLink="/users" (click)="menuOpen.set(false)"
+              ><app-icon name="users" />{{ t('nav.users') }}</a
+            >
+          </li>
           <li role="none">
             <a role="menuitem" routerLink="/sources" (click)="menuOpen.set(false)"
               ><app-icon name="sources" />{{ t('nav.sources') }}</a

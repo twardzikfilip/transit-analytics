@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard } from './core/auth/auth.guards';
+import { authGuard, roleGuard } from './core/auth/auth.guards';
 import { Shell } from './layout/shell/shell';
 
 export const routes: Routes = [
@@ -107,8 +107,14 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./pages/settings/settings.routes').then((m) => m.SETTINGS_ROUTES),
       },
-      // Admin-only pages go here, e.g.:
-      // { path: 'users', canActivate: [roleGuard], data: { roles: ['ADMIN'] }, loadComponent: ... },
+      // Admins only.
+      {
+        path: 'users',
+        title: 'titles.users',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN'] },
+        loadChildren: () => import('./pages/users/users.routes').then((m) => m.USERS_ROUTES),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

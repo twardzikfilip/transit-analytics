@@ -138,3 +138,56 @@ table.bands {
     text-align: right;
   }
 }
+
+/* The routes with the most and the least delay, side by side (stacked on a phone). */
+.rankings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  transition: opacity 0.15s;
+}
+
+.rankings.loading,
+.dwell.loading {
+  opacity: 0.6;
+}
+
+.ranking,
+.dwell {
+  h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1rem;
+  }
+
+  ol {
+    margin: 0;
+    padding-left: 1.5rem;
+  }
+
+  /* Numbered rows: the route or stop, its figure at the right. */
+  li {
+    padding: 0.2rem 0;
+
+    > * {
+      vertical-align: middle;
+    }
+
+    strong {
+      float: right;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+}
+
+.dwell {
+  margin-bottom: 1rem;
+
+  .stop {
+    margin-right: 0.5rem;
+  }
+}
+
+.small {
+  font-size: 0.85rem;
+}

@@ -1,4 +1,6 @@
-import { Component, computed, input, signal } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
+import { Router } from '@angular/router';
+import { serviceDayOf } from '../../shared/brigade/brigade-schedules';
 import { hostWidth } from '../../shared/host-width';
 import { Brigade, RouteVariant } from '../../core/models/models';
 import { clock, duration, hourTickStep } from '../../shared/format/time';
@@ -15,6 +17,27 @@ let nextId = 0;
 /** The two directions: BKM's light blue and green (styles.scss). */
 export const DIRECTION_COLORS = ['var(--lightblue-bkm)', 'var(--green-bkm)'];
 
+/**
+ * Trips on one of a brigade's trips today: today's service day (03:00 to 03:00) as the window, the brigade as the
+ * search, and the trip open (`?trip=<id>@<day>`, as the trip list keys it).
+ */
+export function tripsToday(
+  brigade: string,
+  trip: string | null,
+  now = new Date(),
+): Record<string, string> {
+  const day = serviceDayOf(now);
+  const next = new Date(`${day}T12:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + 1);
+  const params: Record<string, string> = {
+    from: `${day}T03:00`,
+    to: `${next.toISOString().slice(0, 10)}T03:00`,
+    q: brigade,
+  };
+  if (trip) params['trip'] = `${trip}@${day}`;
+  return params;
+}
+
 interface Hover {
   x: number;
   y: number;
@@ -26,7 +49,8 @@ interface Hover {
 /**
  * The day's brigades as a timeline: one row per bus, a bar per run (coloured by direction, yellow for a depot run,
  * hatched for a variant other than the base route), breaks of 30 minutes or more as a dashed, labelled gap, and the times the bus leaves
- * and returns to the depot at the row's ends.
+ * and returns to the depot at the row's ends. A brigade's name opens its page for today, and a run Trips on that trip
+ * today.
  */
 @Component({
   selector: 'app-brigade-timeline',
@@ -44,6 +68,7 @@ export class BrigadeTimeline {
   protected readonly colors = DIRECTION_COLORS;
   protected readonly hover = signal<Hover | null>(null);
   protected readonly clock = clock;
+  private readonly router = inject(Router);
 
   private readonly range = computed(() =>
     hourRange(this.brigades().flatMap((b) => [b.start, b.end])),
@@ -91,6 +116,16 @@ export class BrigadeTimeline {
       };
     }),
   );
+
+  /** The brigade's page, for today. */
+  protected openBrigade(b: Brigade): void {
+    void this.router.navigate(['/brigades', b.name]);
+  }
+
+  /** Trips, on this run's trip today. */
+  protected openRun(b: Brigade, r: Brigade['runs'][number]): void {
+    void this.router.navigate(['/trips'], { queryParams: tripsToday(b.name, r.trip) });
+  }
 
   protected showRun(b: Brigade, r: Brigade['runs'][number], x: number, y: number): void {
     const kind = r.depot

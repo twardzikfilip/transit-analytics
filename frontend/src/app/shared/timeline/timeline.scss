@@ -90,3 +90,17 @@ svg {
 .hit {
   fill: transparent;
 }
+
+/* A brigade's name or run that opens its page. */
+.link {
+  cursor: pointer;
+}
+
+text.link:hover,
+text.link:focus-visible {
+  text-decoration: underline;
+}
+
+rect.link:focus-visible {
+  outline: 2px solid var(--primary);
+}

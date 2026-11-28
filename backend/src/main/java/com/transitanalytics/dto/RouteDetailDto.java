@@ -180,8 +180,9 @@ public final class RouteDetailDto {
     /**
      * @param kind  the variant: "main", "longer", "shorter" or "depot"
      * @param depot "pull_out" or "pull_in" when this run goes from or to the depot, else null
+     * @param trip  its trip's id in the timetable (for Trips: what ran on it)
      */
-    public record Run(int from, int to, int direction, String headsign, String kind, String depot) {
+    public record Run(int from, int to, int direction, String headsign, String kind, String depot, String trip) {
     }
 
     /** A gap between two runs of at least {@code LineDetailService.BREAK_SECONDS}. */
@@ -196,12 +197,10 @@ public final class RouteDetailDto {
      * @param travelTimes travel time and speed of full runs by departure hour: the base route first, then each
      *                    longer variant
      * @param delays      average delay per 15 minutes of the day
-     * @param segments    speed between consecutive stops of the base route in peak hours, per direction
      * @param vehicles    which buses served the route (all recorded days, weekends too)
      */
     public record Performance(LocalDate firstDay, LocalDate lastDay, int weekdays, int fullRuns,
-                              List<TravelTimes> travelTimes, List<DelaySlot> delays, List<SegmentProfile> segments,
-                              Vehicles vehicles) {
+                              List<TravelTimes> travelTimes, List<DelaySlot> delays, Vehicles vehicles) {
     }
 
     /**
@@ -249,11 +248,4 @@ public final class RouteDetailDto {
     public record DelaySlot(int minute, double avgDelaySeconds, long samples) {
     }
 
-    /** @param runs full peak-hour runs the speeds are measured from */
-    public record SegmentProfile(int direction, String headsign, int runs, List<Segment> segments) {
-    }
-
-    /** @param kmh null when no run passed both stops */
-    public record Segment(String from, String to, double fromKm, double toKm, Double kmh) {
-    }
 }

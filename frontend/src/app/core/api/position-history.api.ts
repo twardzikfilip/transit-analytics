@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { DelayBand, FleetSeries, RouteActivity, WindowQuery } from '../models/models';
+import { DelayBand, FleetSeries, RouteActivity, StopDwell, WindowQuery } from '../models/models';
 import { windowParams } from './window-params';
 
 /** What a position-history request covers: a window, and optionally one route and one operator (null for all). */
@@ -28,6 +28,11 @@ export class PositionHistoryApi {
     return this.http.get<RouteActivity[]>('/api/positions/routes', {
       params: params(window, { route: null, agency }),
     });
+  }
+
+  /** The stops with the longest mean dwell: one route's, or every route's (an operator's). */
+  dwell(window: WindowQuery, filter: HistoryFilter): Observable<StopDwell[]> {
+    return this.http.get<StopDwell[]>('/api/positions/dwell', { params: params(window, filter) });
   }
 
   /** Operators on the feed, the city operator first. */

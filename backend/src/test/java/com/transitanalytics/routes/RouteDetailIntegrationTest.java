@@ -142,6 +142,9 @@ class RouteDetailIntegrationTest {
         assertThat(first.end()).isEqualTo(8 * 3600 + 5 * 60);
         assertThat(first.breaks()).containsExactly(new RouteDetailDto.Break(6 * 3600 + 25 * 60, 7 * 3600 + 30 * 60));
         assertThat(first.runs().get(2).kind()).isEqualTo("longer");
+        // Each run with its trip's id, for Trips.
+        assertThat(first.runs()).extracting(RouteDetailDto.Run::trip)
+                .containsExactly("IT-177-01_1", "IT-177-01_2", "IT-177-01_3", "IT-177-01_4");
         assertThat(d.brigades().get(1).runs().get(2).depot()).isEqualTo("pull_in");
     }
 
@@ -194,14 +197,6 @@ class RouteDetailIntegrationTest {
             assertThat(sw.spells()).extracting(RouteDetailDto.VehicleSpell::number).containsExactly("IT-LD1", "IT-LD3");
         });
         assertThat(p.delays()).containsExactly(new RouteDetailDto.DelaySlot(420, 120, 3));
-
-        RouteDetailDto.SegmentProfile toDelta = p.segments().get(0);
-        assertThat(toDelta.headsign()).isEqualTo("Delta");
-        assertThat(toDelta.runs()).isEqualTo(1);
-        // 1 km, 2 km and 1 km, each in 2 minutes.
-        assertThat(toDelta.segments()).extracting(RouteDetailDto.Segment::kmh).containsExactly(30.0, 60.0, 30.0);
-        assertThat(toDelta.segments().get(1).from()).isEqualTo("Beta");
-        assertThat(p.segments().get(1).runs()).isZero();
     }
 
     @Autowired

@@ -53,13 +53,19 @@ public class RouteTimetable {
     /** A variant counts as longer than the base route when it is this much longer. */
     static final double LONGER_MARGIN_KM = 0.2;
 
-    /** A timetable trip of the route. Times are seconds after midnight. */
+    /** A timetable trip of the route. Times are seconds after midnight; {@code tripId} its id in the timetable. */
     record TripRow(long id, String duty, int direction, String shapeId, String headsign, int start, int end,
-                   Double km, int stops, String firstStop, String lastStop, StopRef first, StopRef last) {
+                   Double km, int stops, String firstStop, String lastStop, StopRef first, StopRef last,
+                   String tripId) {
         TripRow(long id, String duty, int direction, String shapeId, String headsign, int start, int end,
                 Double km, int stops, String firstStop, String lastStop) {
             this(id, duty, direction, shapeId, headsign, start, end, km, stops, firstStop, lastStop,
-                    new StopRef(firstStop, null, null), new StopRef(lastStop, null, null));
+                    new StopRef(firstStop, null, null), new StopRef(lastStop, null, null), null);
+        }
+
+        TripRow(long id, String duty, int direction, String shapeId, String headsign, int start, int end,
+                Double km, int stops, String firstStop, String lastStop, StopRef first, StopRef last) {
+            this(id, duty, direction, shapeId, headsign, start, end, km, stops, firstStop, lastStop, first, last, null);
         }
 
         int duration() {
@@ -158,7 +164,7 @@ public class RouteTimetable {
         List<Object> args = new ArrayList<>(List.of(route.id()));
         args.addAll(services);
         List<TripRow> trips = jdbc.query("""
-                SELECT t.id, CASE WHEN %s THEN %s END AS duty,
+                SELECT t.id, t.gtfs_id, CASE WHEN %s THEN %s END AS duty,
                        coalesce(t.direction, 0) AS direction, t.shape_id, t.headsign,
                        extract(epoch FROM min(st.departure_time)::interval)::int AS start_s,
                        extract(epoch FROM max(st.arrival_time)::interval)::int AS end_s,
@@ -185,7 +191,7 @@ public class RouteTimetable {
                         new StopRef(stopName(rs.getString("first_stop")), (Double) rs.getObject("first_lat"),
                                 (Double) rs.getObject("first_lon")),
                         new StopRef(stopName(rs.getString("last_stop")), (Double) rs.getObject("last_lat"),
-                                (Double) rs.getObject("last_lon")));
+                                (Double) rs.getObject("last_lon")), rs.getString("gtfs_id"));
                 },
                 args.toArray());
         return new TripRows(trips, noDirection[0], noBrigades[0]);
@@ -257,7 +263,7 @@ public class RouteTimetable {
                 direction = toEnd < toStart ? 1 : 0;
             }
             return new TripRow(t.id(), t.duty(), direction, t.shapeId(), t.headsign(), t.start(), t.end(), t.km(),
-                    t.stops(), t.firstStop(), t.lastStop(), t.first(), t.last());
+                    t.stops(), t.firstStop(), t.lastStop(), t.first(), t.last(), t.tripId());
         }).toList();
     }
 
@@ -351,7 +357,7 @@ public class RouteTimetable {
         byDuty(trips).forEach((duty, list) -> {
             List<RouteDetailDto.Run> runs = list.stream().map(t -> new RouteDetailDto.Run(t.start(), t.end(),
                     t.direction(), t.headsign(), kinds.getOrDefault(variantKey(t.direction(), t.shapeId()), "main"),
-                    depot.get(t.id()))).toList();
+                    depot.get(t.id()), t.tripId())).toList();
             List<RouteDetailDto.Break> breaks = new ArrayList<>();
             for (int i = 1; i < list.size(); i++) {
                 int from = list.get(i - 1).end();

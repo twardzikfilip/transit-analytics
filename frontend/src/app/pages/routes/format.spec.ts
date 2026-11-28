@@ -1,10 +1,9 @@
-import { RouteRef, Segment } from '../../core/models/models';
+import { RouteRef } from '../../core/models/models';
 import {
   capacityLabel,
   geometryLabel,
   hourRange,
   routeTable,
-  slowestSegments,
   spellsText,
   subtypeLabel,
   variantKindLabel,
@@ -60,14 +59,6 @@ describe('route detail formatting', () => {
     expect(geometryLabel('arcantial')).toBe('Arcantial');
     expect(capacityLabel('tertiary')).toBe('Tertiary');
     expect(capacityLabel(null)).toBe('Not classified');
-  });
-
-  it('picks the slowest measured segments', () => {
-    const seg = (kmh: number | null): Segment => ({ from: 'a', to: 'b', fromKm: 0, toKm: 1, kmh });
-    expect(slowestSegments([seg(30), seg(null), seg(12), seg(20), seg(12), seg(40)])).toEqual([
-      2, 4, 3,
-    ]);
-    expect(slowestSegments([seg(null)])).toEqual([]);
   });
 
   it('pads the hour range', () => {

@@ -154,18 +154,6 @@ public class TripRunService {
     static final Duration SMOOTH = Duration.ofSeconds(15);
     /** Reports further apart than this aren't joined: where the bus went in between is unknown. */
     static final Duration REPORT_GAP = Duration.ofMinutes(2);
-    /**
-     * A bus within this distance of a stop is at it: the timetable has the stop's pole, and buses halt in a bay or
-     * across a junction from it.
-     */
-    static final double AT_STOP_METRES = 50;
-    /**
-     * Reports come about every 10 s, longer than a short halt: a bus pulling in, halting and pulling out still moves a
-     * few metres between two reports. So a step near the stop slower than this is a halt…
-     */
-    static final double HALT_KMH = 7;
-    /** …and the bus went past without stopping only when every step near the stop was at least this fast. */
-    static final double PASSED_KMH = 12;
 
     /**
      * One trip in detail: every report of its buses while they ran it, with how late and how fast they were; its
@@ -232,7 +220,7 @@ public class TripRunService {
             Report a = reports.get(before);
             double seconds = Duration.between(a.time(), r.time()).toMillis() / 1000.0;
             double metres = TripHandovers.metres(a, r);
-            boolean valid = Reports.paired(a, r) && seconds <= REPORT_GAP.getSeconds() && metres / seconds * 3.6 <= MAX_KMH;
+            boolean valid = Reports.paired(a, r) && Dwell.usable(metres, seconds);
             boolean standing = metres < Math.max(STANDING_METRES, STANDING_MPS * seconds);
             segments.add(new Segment(before, i, metres, seconds, standing, valid));
         }
@@ -271,37 +259,19 @@ public class TripRunService {
         return kmh;
     }
 
-    /**
-     * How long a bus halted within {@link #AT_STOP_METRES} of a place ({lat, lon}): the time of its steps there slower
-     * than {@link #HALT_KMH} (to about 10 s; at least 1 when it halted). 0 when every step there was at least
-     * {@link #PASSED_KMH}: it went past. Null when that can't be told: no step there, or one in between.
-     */
+    /** How long a bus halted near a place ({lat, lon}), from its usable steps there ({@link Dwell}). */
     static Integer dwell(List<Report> reports, List<Segment> segments, double[] place) {
-        double halted = 0;
-        boolean slow = false;
-        boolean unclear = false;
-        boolean any = false;
+        Dwell.Visit visit = new Dwell.Visit();
         for (Segment s : segments) {
             Report a = reports.get(s.from());
             Report b = reports.get(s.to());
-            boolean aNear = Geo.meters(new double[] {a.lat(), a.lon()}, place) <= AT_STOP_METRES;
-            boolean bNear = Geo.meters(new double[] {b.lat(), b.lon()}, place) <= AT_STOP_METRES;
-            if (!s.valid() || !aNear && !bNear) {
-                continue;
-            }
-            any = true;
-            double kmh = s.metres() / s.seconds() * 3.6;
-            if (kmh < HALT_KMH) {
-                slow = true;
-                halted += s.seconds();
-            } else if (kmh < PASSED_KMH) {
-                unclear = true;
+            boolean aNear = Geo.meters(new double[] {a.lat(), a.lon()}, place) <= Dwell.AT_STOP_METRES;
+            boolean bNear = Geo.meters(new double[] {b.lat(), b.lon()}, place) <= Dwell.AT_STOP_METRES;
+            if (s.valid() && (aNear || bNear)) {
+                visit.add(s.metres(), s.seconds());
             }
         }
-        if (slow) {
-            return Math.max(1, (int) Math.round(halted));
-        }
-        return !any || unclear ? null : 0;
+        return visit.seconds();
     }
 
     /** A gap in a bus's reports longer than this isn't counted in its average speed: where it went is unknown. */

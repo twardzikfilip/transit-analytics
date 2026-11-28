@@ -15,6 +15,7 @@
     "stops": "Stops",
     "trips": "Trips",
     "stopTimes": "Stop times",
+    "users": "Users",
     "sources": "Data sources",
     "pages": "Pages",
     "showPages": "Show pages",
@@ -57,7 +58,8 @@
     "cityRailCurrent": "City Rail: current state",
     "cityRailProposal": "City Rail: proposal no. 1",
     "cityRailRadial": "Proposal no. 1: five lines from Białystok",
-    "cityRailThrough": "Proposal no. 1: lines through Białystok"
+    "cityRailThrough": "Proposal no. 1: lines through Białystok",
+    "users": "Users"
   },
   "login": {
     "username": "Username",
@@ -123,8 +125,7 @@
     "days": {
       "one": "{{n}} day",
       "other": "{{n}} days"
-    },
-    "loading": "Loading…"
+    }
   },
   "time": {
     "from": "From",
@@ -339,7 +340,19 @@
     "stepDays": "per {{n}} day",
     "stepHours": "per {{n}} h",
     "stepMinutes": "per {{n}} min",
-    "stepMinute": "every minute"
+    "stepMinute": "every minute",
+    "mostDelay": "Most delay",
+    "leastDelay": "Least delay",
+    "loadingRankings": "Loading the routes with the most and least delay",
+    "dwellAll": "Longest dwell at stops",
+    "dwellRoute": "Longest dwell at stops of line {{route}}",
+    "dwellIntro": "Mean halt per bus at a stop along the way (passing without halting counts 0; halts over 10 minutes are breaks, left out). Stops with at least 20 visits.",
+    "dwellNone": "Not enough visits to stops in this window.",
+    "loadingDwell": "Loading the stops with the longest dwell",
+    "visits": {
+      "one": "{{count}} visit",
+      "other": "{{count}} visits"
+    }
   },
   "brigades": {
     "brigade": "Brigade",
@@ -805,7 +818,6 @@
     "loading": "Loading the delay map",
     "lineX": "Line {{route}}",
     "close": "Close",
-    "loadingLine": "Loading line {{route}}…",
     "noRuns": "No runs of this line were measured in this window.",
     "direction": "Direction",
     "towards": "Towards {{to}}",
@@ -1277,22 +1289,14 @@
       "fromTo": "From → to (stops reported)",
       "driven": "Driven",
       "length": "Length",
-      "lastDriven": "Last driven",
-      "brigade": "Brigade",
-      "leaves": "Leaves depot",
-      "returns": "Returns",
-      "runs": "Runs",
-      "inService": "In service",
-      "breaks": "Breaks"
+      "lastDriven": "Last driven"
     },
     "km": "{{n}} km",
     "vehicles": "Vehicles",
     "noTimetable": "No timetable yet. An admin can import it under Settings.",
     "variants": "Variants",
-    "speedBetween": "Speed between stops in peak hours",
     "brigades": "Brigades",
     "brigadesIntro": "Each bus's duty on a weekday, from the timetable: it leaves the depot for its first run and returns after its last. Short gaps are layovers at the terminus; gaps of 30 minutes or more are marked as breaks.",
-    "asTable": "Show as a table",
     "how": "How these are calculated",
     "how1": "<strong>Timetable figures</strong> use the regular weekday timetable. The <strong>base route</strong> of each direction is its most frequent variant; other variants are longer or shorter than it, or depot runs.",
     "how2": "<strong>Scheduled average speed:</strong> distance divided by travel time of the base route's slowest and fastest scheduled run. Time at stops counts.",
@@ -1340,7 +1344,6 @@
       "other": "{{count}} weekdays"
     },
     "fullRuns": "· {{n}} full runs of the base route and longer variants.",
-    "loading": "Loading real-time data…",
     "travelTime": "Travel time · {{title}}",
     "kmRuns": "· {{km}} km, {{runs}} full runs",
     "min": "min",
@@ -1410,19 +1413,6 @@
     }
   },
   "speed": {
-    "intro": "Average speed on each stretch between two stops, on full runs leaving 06:30–08:30 or 15:00–17:00. Each bar is as wide as the stretch is long; the three slowest are numbered.",
-    "towards": "Towards {{to}}",
-    "runs": "· {{n}} runs",
-    "from": "From",
-    "to": "To",
-    "distance": "Distance",
-    "speed": "Speed",
-    "none": "No full peak-hour runs recorded in this direction yet.",
-    "noRecorded": "No recorded runs.",
-    "kmFrom": " · {{km}} km, from km {{from}}",
-    "chartSlow": "{{from}} to {{to}} {{kmh}} km/h",
-    "chartLabel": "Speed between stops towards {{to}}. Slowest: {{slow}}.",
-    "noneMeasured": "none measured",
     "col": {
       "variant": "Variant",
       "fromTo": "From → to",
@@ -1462,7 +1452,9 @@
       "breakTitle": "{{brigade}}: break {{time}}",
       "breakDetail": "{{from}}–{{to}}, likely back at the depot",
       "brigadeTitle": "{{brigade}}: {{runs}} runs, {{time}} in service",
-      "brigadeDetail": "leaves the depot {{start}}, returns {{end}}"
+      "brigadeDetail": "leaves the depot {{start}}, returns {{end}}",
+      "openBrigade": "Open brigade {{brigade}} today",
+      "openTrip": "Open the trip of brigade {{brigade}} at {{time}} today"
     },
     "kind": {
       "longer": "longer",
@@ -1483,7 +1475,6 @@
     "daysOf": "{{n}} of {{total}}",
     "changes": "Vehicle changes during the day",
     "noChanges": "Every brigade kept the same bus all day.",
-    "loading": "Loading vehicles…",
     "none": "No vehicles recorded."
   },
   "tripNotes": {
@@ -1719,6 +1710,39 @@
       },
       "passes": "passes without stopping",
       "tooClose": "Closer to another train than the headway"
+    }
+  },
+  "users": {
+    "intro": "Who can sign in, and as what: admins can change data and manage users, guests only look.",
+    "newUser": "New User",
+    "username": "User name",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "role": "Role",
+    "created": "Added",
+    "actions": "Actions",
+    "you": "(you)",
+    "create": "Create",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "deleteUser": "Delete user {{name}}",
+    "deleteTitle": "Delete user",
+    "deleteQuestion": "Delete user {{name}}? They can't sign in any more.",
+    "loading": "Loading the users",
+    "roles": {
+      "ADMIN": "Admin",
+      "GUEST": "Guest"
+    },
+    "rules": "A name of {{min}}–{{max}} characters, no spaces, not starting with a digit. A password of at least {{password}} characters, with at least two of: lowercase, uppercase, digits, other characters.",
+    "errors": {
+      "required": "Required",
+      "spaces": "No spaces",
+      "startsWithDigit": "Can't start with a digit",
+      "nameLength": "{{min}} to {{max}} characters",
+      "taken": "This name is taken",
+      "passwordLength": "At least {{min}} characters",
+      "kinds": "At least two of: lowercase, uppercase, digits, other characters",
+      "mismatch": "The passwords don't match"
     }
   }
 }

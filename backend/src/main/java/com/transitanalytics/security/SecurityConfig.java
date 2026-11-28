@@ -40,6 +40,7 @@ public class SecurityConfig {
                         // API docs are public; calling the endpoints from Swagger UI still needs a token.
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                        .requestMatchers("/api/users/**").hasRole(RoleName.ADMIN)
                         .requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole(RoleName.ADMIN, RoleName.GUEST)
                         .requestMatchers("/api/**").hasRole(RoleName.ADMIN)
                         .anyRequest().authenticated())

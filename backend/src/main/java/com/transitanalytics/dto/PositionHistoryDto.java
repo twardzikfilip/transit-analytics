@@ -54,7 +54,22 @@ public final class PositionHistoryDto {
     public record DelayBand(Integer fromMinutes, Integer toMinutes, long vehicles, long reports) {
     }
 
-    /** A route with recordings in the window, for the route filter. */
-    public record RouteActivity(String route, long samples) {
+    /**
+     * A route with recordings in the window, for the route filter and the routes with the most and least delay.
+     *
+     * @param meanDelaySeconds its reports' mean delay, outliers left out; null when none had a delay
+     * @param delaySamples     the reports that mean is over
+     */
+    public record RouteActivity(String route, long samples, Long meanDelaySeconds, long delaySamples) {
+    }
+
+    /**
+     * A stop where buses dwell long: the mean of its visits in the window (a bus halting there, measured as a trip's
+     * stop is; passing without halting counts 0).
+     *
+     * @param meanSeconds the visits' mean dwell
+     * @param visits      buses' visits to it in the window
+     */
+    public record StopDwell(String stop, double meanSeconds, long visits) {
     }
 }

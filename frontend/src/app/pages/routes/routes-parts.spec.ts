@@ -1,17 +1,11 @@
 import { Type } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import {
-  Brigade,
-  DepotRun,
-  RouteDetail,
-  RouteVehicles,
-  SegmentProfile,
-} from '../../core/models/models';
-import { BrigadeTimeline } from './brigade-timeline';
+import { Brigade, DepotRun, RouteDetail, RouteVehicles } from '../../core/models/models';
+import { Router } from '@angular/router';
+import { BrigadeTimeline, tripsToday } from './brigade-timeline';
 import { DepotRuns } from './depot-runs';
 import { EndStops } from './end-stops';
 import { RouteVehiclesSection } from './route-vehicles';
-import { SegmentChart } from './segment-chart';
 import { VariantTiles } from './variant-tiles';
 
 /** Renders a component with its inputs set and returns its element. */
@@ -195,32 +189,10 @@ describe('Routes page parts', () => {
     expect(
       text(render(RouteVehiclesSection, { vehicles: { ...vehicles, switches: [] } })),
     ).toContain('Every brigade kept the same bus all day');
-    expect(text(render(RouteVehiclesSection, { vehicles: null, loading: true }))).toContain(
-      'Loading vehicles',
-    );
-  });
-
-  it('draws one bar per stretch and numbers the three slowest', () => {
-    const profile: SegmentProfile = {
-      direction: 0,
-      headsign: 'Kleosin',
-      runs: 12,
-      segments: [30, 12, 40, 18, 25].map((kmh, i) => ({
-        from: `S${i}`,
-        to: `S${i + 1}`,
-        fromKm: i,
-        toKm: i + 1,
-        kmh,
-      })),
-    };
-    const el = render(SegmentChart, { profile });
-    expect(el.querySelectorAll('rect.bar')).toHaveLength(5);
-    expect(el.querySelectorAll('rect.bar.slow')).toHaveLength(3);
-    expect([...el.querySelectorAll('.slowest li')].map(text)).toEqual([
-      'S1 → S2 12 km/h',
-      'S3 → S4 18 km/h',
-      'S4 → S5 25 km/h',
-    ]);
+    // Loading: a skeleton, no text.
+    const loading = render(RouteVehiclesSection, { vehicles: null, loading: true });
+    expect(loading.querySelector('app-skeleton')).not.toBeNull();
+    expect(text(loading)).not.toContain('Loading');
   });
 
   it('draws each brigade with its runs, depot runs and labelled breaks', () => {
@@ -237,6 +209,7 @@ describe('Routes page parts', () => {
           headsign: 'Dziesięciny',
           kind: 'depot',
           depot: 'pull_out',
+          trip: '005-06_D_1',
         },
         {
           from: at(6),
@@ -245,6 +218,7 @@ describe('Routes page parts', () => {
           headsign: 'Sybiraków',
           kind: 'main',
           depot: null,
+          trip: '005-06_P_2',
         },
         {
           from: at(13, 36),
@@ -253,6 +227,7 @@ describe('Routes page parts', () => {
           headsign: 'Dziesięciny',
           kind: 'main',
           depot: null,
+          trip: '005-06_P_9',
         },
       ],
       breaks: [{ from: at(9, 32), to: at(13, 36) }],
@@ -263,5 +238,32 @@ describe('Routes page parts', () => {
     expect((el.querySelector('rect.run') as SVGElement).style.fill).toBe('var(--depot)');
     expect(text(el.querySelector('.break-label'))).toBe('4 h 04');
     expect([...el.querySelectorAll('text.time')].map(text)).toEqual(['05:41', '17:50']);
+
+    // The name opens the brigade for today; a run opens Trips on its trip today.
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    (el.querySelector('text.name') as SVGElement).dispatchEvent(new MouseEvent('click'));
+    expect(navigate).toHaveBeenCalledWith(['/brigades', '005-06']);
+    (el.querySelectorAll('rect.run')[1] as SVGElement).dispatchEvent(new MouseEvent('click'));
+    expect(navigate).toHaveBeenLastCalledWith(['/trips'], {
+      queryParams: expect.objectContaining({
+        q: '005-06',
+        trip: expect.stringMatching(/^005-06_P_2@/),
+      }),
+    });
+  });
+
+  it('opens Trips on today\u2019s service day, from 03:00 to 03:00', () => {
+    // 01:30 on 29 Nov in Warsaw is still the service day of 28 Nov.
+    expect(tripsToday('103-05', 'T1', new Date('2026-11-29T00:30:00Z'))).toEqual({
+      from: '2026-11-28T03:00',
+      to: '2026-11-29T03:00',
+      q: '103-05',
+      trip: 'T1@2026-11-28',
+    });
+    expect(tripsToday('103-05', null, new Date('2026-11-30T12:00:00Z'))).toEqual({
+      from: '2026-11-30T03:00',
+      to: '2026-12-01T03:00',
+      q: '103-05',
+    });
   });
 });

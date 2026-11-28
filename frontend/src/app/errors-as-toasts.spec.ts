@@ -47,6 +47,7 @@ const PAGES = [
   '/city-rail/proposal-1/through',
   '/sources',
   '/settings',
+  '/users',
 ];
 
 const ADMIN = { token: 'jwt', username: 'admin', role: 'ADMIN' as const };

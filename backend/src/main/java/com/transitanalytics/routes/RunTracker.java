@@ -264,26 +264,6 @@ public final class RunTracker {
                 TimetableMath.round(median, decimals));
     }
 
-    /**
-     * Speed between consecutive stops of a route: total distance over total time of the runs, so the ±30 s error of
-     * each pass time averages out over many runs.
-     */
-    static RouteDetailDto.SegmentProfile segmentProfile(Variant main, List<FullRun> runs) {
-        List<StopPoint> stops = main.stops();
-        List<RouteDetailDto.Segment> segments = new ArrayList<>();
-        for (int k = 0; k + 1 < stops.size(); k++) {
-            double km = stops.get(k + 1).km() - stops.get(k).km();
-            double seconds = 0;
-            for (FullRun run : runs) {
-                seconds += run.times()[k + 1] - run.times()[k];
-            }
-            Double kmh = runs.isEmpty() || seconds <= 0 ? null
-                    : TimetableMath.round(km * runs.size() / (seconds / 3600), 1);
-            segments.add(new RouteDetailDto.Segment(stops.get(k).name(), stops.get(k + 1).name(),
-                    stops.get(k).km(), stops.get(k + 1).km(), kmh));
-        }
-        return new RouteDetailDto.SegmentProfile(main.direction(), main.headsign(), runs.size(), segments);
-    }
 
     static double[] kms(Variant v) {
         return v.stops().stream().mapToDouble(StopPoint::km).toArray();

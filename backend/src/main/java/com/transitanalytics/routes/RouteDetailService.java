@@ -357,13 +357,8 @@ public class RouteDetailService {
         TreeSet<LocalDate> days = new TreeSet<>();
         samples.forEach(s -> days.add(serviceDay(s.t())));
 
-        List<RouteDetailDto.SegmentProfile> segments = mains.values().stream()
-                .map(main -> segmentProfile(main, runs.stream()
-                        .filter(r -> r.variant() == main && inPeak(r.departure())).toList()))
-                .toList();
-
         return new RouteDetailDto.Performance(days.isEmpty() ? null : days.first(),
-                days.isEmpty() ? null : days.last(), days.size(), runs.size(), travelTimes, delays, segments,
+                days.isEmpty() ? null : days.last(), days.size(), runs.size(), travelTimes, delays,
                 vehicles(route.gtfsId(), liveAgency(route)));
     }
 
@@ -393,7 +388,7 @@ public class RouteDetailService {
         List<RouteDetailDto.DelaySlot> delays = delaySlots("abs(p.delay_seconds) <= %d AND p.route_name = ?"
                 .formatted(DelayOutliers.THRESHOLD_SECONDS), route);
         return new RouteDetailDto.Performance(days.isEmpty() ? null : days.get(0),
-                days.isEmpty() ? null : days.get(days.size() - 1), days.size(), 0, List.of(), delays, List.of(),
+                days.isEmpty() ? null : days.get(days.size() - 1), days.size(), 0, List.of(), delays,
                 vehicles(route, null));
     }
 
