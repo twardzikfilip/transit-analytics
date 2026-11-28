@@ -1,8 +1,8 @@
 package com.transitanalytics.recording;
 
 import com.transitanalytics.DbIntegrationTest;
-import com.transitanalytics.zbiorkom.FeedPosition;
 import com.transitanalytics.dto.PositionHistoryDto;
+import com.transitanalytics.zbiorkom.FeedPosition;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

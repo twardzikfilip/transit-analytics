@@ -44,7 +44,7 @@ class RouteCapacityClassifierTest {
     }
 
     @Test
-    void classesLinesByTheirBusesAndFrequency() {
+    void classesRoutesByTheirBusesAndFrequency() {
         var frequent = List.of(every(10, 5, 23), every(10, 5, 23));
         // MEGA every day and every 10 min: main.
         assertThat(classify(frequent, 0.9, 0.7, 0.6)).isEqualTo(RouteCapacity.MAIN);
@@ -54,11 +54,11 @@ class RouteCapacityClassifierTest {
         assertThat(classify(frequent, 0.9, 0.0, 0.0)).isEqualTo(RouteCapacity.PRIMARY);
         var sixteen = List.of(every(16, 5, 23), every(16, 5, 23));
         assertThat(classify(sixteen, 0.3, 0.0, 0.0)).isEqualTo(RouteCapacity.PRIMARY);
-        // Up to under 20 min at peak (lines 1-4 run every 17-19 min).
+        // Up to under 20 min at peak (routes 1-4 run every 17-19 min).
         var nineteen = List.of(every(19, 5, 23), every(19, 5, 23));
         assertThat(classify(nineteen, 0.8, 0.0, 0.0)).isEqualTo(RouteCapacity.PRIMARY);
         assertThat(classify(List.of(every(21, 5, 23)), 0.8, 0.0, 0.0)).isEqualTo(RouteCapacity.SECONDARY);
-        // No MEGA buses: secondary, however frequent; a MEGA line too rare for primary too.
+        // No MEGA buses: secondary, however frequent; a MEGA route too rare for primary too.
         assertThat(classify(frequent, 0.0, 0.0, 0.0)).isEqualTo(RouteCapacity.SECONDARY);
         assertThat(classify(List.of(every(30, 5, 23)), 1.0, 1.0, 1.0)).isEqualTo(RouteCapacity.SECONDARY);
         // Hourly or rarer: tertiary when regular, irregular when not.
@@ -69,7 +69,7 @@ class RouteCapacityClassifierTest {
     }
 
     @Test
-    void nightLinesGetNoCapacityClass() {
+    void nightRoutesGetNoCapacityClass() {
         assertThat(ClassificationConfigs.routes().capacity().skipSubtypes())
                 .containsExactly(com.transitanalytics.domain.RouteSubtype.NIGHT_URBAN);
     }

@@ -209,7 +209,7 @@
                   <span class="muted">{{ t('busLanes.bothWays') }}</span>
                 }
               </td>
-              <td class="lines" [title]="s.lines.join(', ')">{{ linesText(s.lines, 6) }}</td>
+              <td class="lines" [title]="s.routes.join(', ')">{{ routesText(s.routes, 6) }}</td>
             </tr>
           } @empty {
             <tr>

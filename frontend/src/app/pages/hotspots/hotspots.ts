@@ -13,7 +13,7 @@ import {
   sameQuery,
   windowQuery,
 } from '../../shared/time-window/time-window';
-import { approachText, hourText, linesText, lostTime, nearText, waitText } from './hotspot-format';
+import { approachText, hourText, routesText, lostTime, nearText, waitText } from './hotspot-format';
 import { HotspotMap } from './hotspot-map';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { LocalDatePipe } from '../../shared/i18n/locale-pipes';
@@ -27,7 +27,7 @@ export const FIRST_ROWS = 25;
 
 /**
  * Stop hotspots: places where buses stand still away from stops (traffic lights, junctions, congestion), on a map
- * and in a table, the most time lost first. The time window and line are in the URL.
+ * and in a table, the most time lost first. The time window and route are in the URL.
  */
 @Component({
   selector: 'app-hotspots',
@@ -47,21 +47,21 @@ export class Hotspots {
   protected readonly loading = this.store.selectSignal(hotspotsFeature.selectLoading);
 
   protected readonly defaultPreset = DEFAULT_PRESET;
-  /** The window and line in the URL (?range=1mo&line=21); a change loads their report. */
+  /** The window and route in the URL (?range=1mo&route=21); a change loads their report. */
   private readonly query$ = inject(ActivatedRoute).queryParamMap.pipe(
-    map((p): { window: TimeWindow; line: string | null } => ({
+    map((p): { window: TimeWindow; route: string | null } => ({
       window: readWindow(p, DEFAULT_PRESET),
-      line: p.get('line') || null,
+      route: p.get('route') || null,
     })),
-    distinctUntilChanged((a, b) => sameQuery(a, b) && a.line === b.line),
+    distinctUntilChanged((a, b) => sameQuery(a, b) && a.route === b.route),
   );
   private readonly query = toSignal(this.query$, { requireSync: true });
-  protected readonly line = computed(() => this.query().line);
-  /** The window's lines, and the chosen one even without standstills in it, so it stays selected. */
-  protected readonly lineOptions = computed(() => {
-    const lines = this.report()?.lines ?? [];
-    const line = this.line();
-    return line && !lines.includes(line) ? [line, ...lines] : lines;
+  protected readonly route = computed(() => this.query().route);
+  /** The window's routes, and the chosen one even without standstills in it, so it stays selected. */
+  protected readonly routeOptions = computed(() => {
+    const routes = this.report()?.routes ?? [];
+    const route = this.route();
+    return route && !routes.includes(route) ? [route, ...routes] : routes;
   });
 
   /** The hotspot chosen on the map or in the table. */
@@ -82,19 +82,19 @@ export class Hotspots {
   protected readonly waitText = waitText;
   protected readonly nearText = nearText;
   protected readonly approachText = approachText;
-  protected readonly linesText = linesText;
+  protected readonly routesText = routesText;
   protected readonly hourText = hourText;
 
   constructor() {
-    this.query$.pipe(takeUntilDestroyed()).subscribe(({ window, line }) => {
+    this.query$.pipe(takeUntilDestroyed()).subscribe(({ window, route }) => {
       this.selected.set(null);
       this.showAll.set(false);
-      this.store.dispatch(HotspotsActions.load({ window: windowQuery(window), line }));
+      this.store.dispatch(HotspotsActions.load({ window: windowQuery(window), route }));
     });
   }
 
-  protected setLine(line: string): void {
-    this.navigate({ line: line || null });
+  protected setRoute(route: string): void {
+    this.navigate({ route: route || null });
   }
 
   /** Chosen in the table: the map moves to it. */

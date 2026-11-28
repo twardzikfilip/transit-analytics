@@ -5,6 +5,6 @@
 export interface CityBoundaries {
   city: [number, number][];
   centre: [number, number][];
-  /** The smaller centre lines are classified by (geometry), set in the backend. */
-  lineCentre: [number, number][];
+  /** The smaller centre routes are classified by (geometry), set in the backend. */
+  routeCentre: [number, number][];
 }

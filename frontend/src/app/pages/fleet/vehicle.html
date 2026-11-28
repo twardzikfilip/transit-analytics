@@ -28,8 +28,8 @@
               days: tn('fleet.days', d.days.length),
             })
           }}
-          @if (d.lines.length) {
-            {{ t('fleet.lines', { lines: d.lines.join(', ') }) }}
+          @if (d.routes.length) {
+            {{ t('fleet.lines', { routes: d.routes.join(', ') }) }}
           }
           @if (d.lastSeen) {
             {{ t('fleet.lastInService', { when: d.lastSeen | date: 'EEE d MMM, HH:mm' }) }}
@@ -68,7 +68,7 @@
               <td class="nowrap">{{ dayLabel(i.day) }}</td>
               <td>{{ time(i.scheduledDeparture) }}</td>
               <td class="nowrap">
-                <span class="route-badge" [appLineBadge]="i.line">{{ i.line }}</span>
+                <span class="route-badge" [appRouteBadge]="i.route">{{ i.route }}</span>
                 <span class="muted">{{ i.brigade }}</span>
               </td>
               <td>
@@ -77,19 +77,19 @@
                   [class.danger]="i.kind === 'vehicle-changed'"
                   [class.warning]="i.kind === 'missed'"
                 >
-                  {{ t(i.kind === 'vehicle-changed' ? 'fleet.brokeDown' : 'fleet.missed') }}
+                  {{ t(i.kind === 'vehicle-changed' ? 'fleet.busChanged' : 'fleet.missed') }}
                 </span>
               </td>
               <td>
                 {{ phrasesText(i.note) }}
-                @if (i.story.length) {
+                @if (i.timeline.length) {
                   <button
                     type="button"
                     class="story-toggle"
                     [attr.aria-expanded]="storyOpen(i)"
                     (click)="toggleStory(i)"
                   >
-                    {{ storyOpen(i) ? '▾' : '▸' }} {{ t('fleet.steps', { n: i.story.length }) }}
+                    {{ storyOpen(i) ? '▾' : '▸' }} {{ t('fleet.timeline') }}
                   </button>
                 }
               </td>
@@ -97,7 +97,7 @@
             @if (storyOpen(i)) {
               <tr class="story-row">
                 <td colspan="5">
-                  <app-incident-story [story]="i.story" [timeline]="i.timeline" [paths]="i.paths" />
+                  <app-incident-story [timeline]="i.timeline" [paths]="i.paths" />
                 </td>
               </tr>
             }

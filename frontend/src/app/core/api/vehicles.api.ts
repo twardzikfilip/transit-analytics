@@ -33,8 +33,8 @@ export class FleetApi {
   /** One bus's number, e.g. "230" (for its page's title). */
   number(id: number): Observable<string> {
     return this.http
-      .get<{ vehicleNumber: string }>(`/api/vehicles/${id}`)
-      .pipe(map((v) => v.vehicleNumber));
+      .get<{ number: string }>(`/api/fleet/vehicles/${id}/info`)
+      .pipe(map((v) => v.number));
   }
 
   /** One bus in a window: its runs per day and the abnormal trips it was involved in. */

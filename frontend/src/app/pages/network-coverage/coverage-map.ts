@@ -17,8 +17,8 @@ const PANES = { covered: 410, woods: 420, valley: 425, border: 430, stops: 440 }
 
 /**
  * The city limits, the area within `radius` m of the nearest stop (a circle around each, drawn as one area: solid
- * circles on a pane that is see-through as a whole), the woods, light green with lines, and the uninhabited valley of
- * the river Biała, light blue with lines.
+ * circles on a pane that is see-through as a whole), the woods, light green with routes, and the uninhabited valley of
+ * the river Biała, light blue with routes.
  */
 @Component({
   selector: 'app-coverage-map',

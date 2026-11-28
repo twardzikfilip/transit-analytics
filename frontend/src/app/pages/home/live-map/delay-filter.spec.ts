@@ -3,8 +3,8 @@ import {
   agencies,
   delayedOver,
   ofAgency,
-  ofLineType,
-  parseLineType,
+  ofRouteType,
+  parseRouteType,
   parseMinDelay,
 } from './delay-filter';
 
@@ -16,7 +16,6 @@ describe('live map delay filter', () => {
     agency: 'BKM',
     model: null,
     routeName: '18',
-    routeColor: null,
     subtype: 'urban',
     brigade: null,
     headsign: null,
@@ -70,12 +69,12 @@ describe('live map delay filter', () => {
     const regional = { ...bus('r', 0), subtype: 'regional' as const };
     const unknown = { ...bus('x', 0), subtype: null };
     const all = [urban, night, suburban, regional, unknown];
-    expect(ofLineType(all, null)).toEqual(all);
-    expect(ofLineType(all, 'urban')).toEqual([urban, night]);
-    expect(ofLineType(all, 'suburban')).toEqual([suburban]);
-    expect(ofLineType(all, 'regional')).toEqual([regional]);
-    expect(parseLineType('suburban')).toBe('suburban');
-    expect(parseLineType('night_urban')).toBeNull();
-    expect(parseLineType(null)).toBeNull();
+    expect(ofRouteType(all, null)).toEqual(all);
+    expect(ofRouteType(all, 'urban')).toEqual([urban, night]);
+    expect(ofRouteType(all, 'suburban')).toEqual([suburban]);
+    expect(ofRouteType(all, 'regional')).toEqual([regional]);
+    expect(parseRouteType('suburban')).toBe('suburban');
+    expect(parseRouteType('night_urban')).toBeNull();
+    expect(parseRouteType(null)).toBeNull();
   });
 });

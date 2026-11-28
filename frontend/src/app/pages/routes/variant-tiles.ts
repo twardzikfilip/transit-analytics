@@ -1,14 +1,14 @@
 import { Component, computed, input } from '@angular/core';
-import { LineDetail, TimePeriod, VariantKind } from '../../core/models/models';
+import { RouteDetail, TimePeriod, VariantKind } from '../../core/models/models';
 import { regularityGrade, regularityMeaning } from '../../shared/regularity';
 import { LocalNumberPipe } from '../../shared/i18n/locale-pipes';
 import { t } from '../../core/i18n/t';
 
 /**
- * How evenly a line's departures are spread on a weekday, in peak and off-peak hours: the coefficient of variation
+ * How evenly a route's departures are spread on a weekday, in peak and off-peak hours: the coefficient of variation
  * of the gaps between them (0 = perfectly even), null with too few departures; and when those hours are.
  */
-export interface LineRegularity {
+export interface RouteRegularity {
   peakCv: number | null;
   offPeakCv: number | null;
   peak: TimePeriod[];
@@ -16,7 +16,7 @@ export interface LineRegularity {
 }
 
 /**
- * The line's summary tiles: length, scheduled travel time and speed (base route, then every variant), zone 2,
+ * The route's summary tiles: length, scheduled travel time and speed (base route, then every variant), zone 2,
  * brigades, and how regular its departures are in peak and off-peak hours.
  */
 @Component({
@@ -27,9 +27,9 @@ export interface LineRegularity {
 })
 export class VariantTiles {
   protected readonly t = t;
-  readonly detail = input.required<LineDetail>();
-  /** The line's regularity; null while it loads or for a line without weekday statistics. */
-  readonly regularity = input<LineRegularity | null>(null);
+  readonly detail = input.required<RouteDetail>();
+  /** The route's regularity; null while it loads or for a route without weekday statistics. */
+  readonly regularity = input<RouteRegularity | null>(null);
 
   protected readonly grade = regularityGrade;
   protected readonly meaning = regularityMeaning;

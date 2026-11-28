@@ -182,13 +182,13 @@ export function tripEvents(r: TripRun): { at: string; text: string }[] {
   return events.sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
 }
 
-/** The samples of one value as points of a line, broken where the bus changes or nothing was sampled for 2 min. */
+/** The samples of one value as points of a route, broken where the bus changes or nothing was sampled for 2 min. */
 export function linePoints<P extends { at: string; bus: string }>(
   samples: P[],
   value: (p: P) => number | null,
 ): { time: number; value: number }[][] {
-  const lines: { time: number; value: number }[][] = [];
-  let line: { time: number; value: number }[] = [];
+  const routes: { time: number; value: number }[][] = [];
+  let route: { time: number; value: number }[] = [];
   let previous: P | null = null;
   for (const p of samples) {
     const v = value(p);
@@ -196,14 +196,14 @@ export function linePoints<P extends { at: string; bus: string }>(
       previous !== null &&
       (previous.bus !== p.bus || Date.parse(p.at) - Date.parse(previous.at) > 2 * MINUTE);
     if (v === null || broken) {
-      if (line.length) lines.push(line);
-      line = [];
+      if (route.length) routes.push(route);
+      route = [];
     }
-    if (v !== null) line.push({ time: Date.parse(p.at), value: v });
+    if (v !== null) route.push({ time: Date.parse(p.at), value: v });
     previous = p;
   }
-  if (line.length) lines.push(line);
-  return lines;
+  if (route.length) routes.push(route);
+  return routes;
 }
 
 /** How long the bus stood at a stop: "Stood 0:35 at the stop", "Didn't stop", or nothing when not seen near it. */

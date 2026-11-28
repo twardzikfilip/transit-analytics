@@ -9,8 +9,6 @@ import { AssumedTimetable } from '../../shared/assumed-timetable';
 import { injectSetQuery } from '../../shared/url-query';
 import { BrigadesActions } from '../../store/brigades/brigades.actions';
 import { brigadesFeature } from '../../store/brigades/brigades.reducer';
-import { TripRunsActions } from '../../store/trip-runs/trip-runs.actions';
-import { tripRunsFeature } from '../../store/trip-runs/trip-runs.reducer';
 import { listSpan } from '../trips/trip-layout';
 import { REFRESH_MS, TripList } from '../trips/trip-list';
 import { BrigadeDayChart } from './brigade-day-chart';
@@ -57,19 +55,11 @@ export class BrigadePage {
     const d = this.day();
     return d && d.brigade === this.brigade() ? d : null;
   });
-  private readonly loadedTrips = this.store.selectSignal(tripRunsFeature.selectDay);
-  protected readonly loadingTrips = this.store.selectSignal(tripRunsFeature.selectLoadingDay);
-  /** The same day's trips as on the Trips page; null while another brigade's or day's are in the store. */
-  protected readonly tripDay = computed(() => {
-    const trips = this.loadedTrips();
-    const d = this.shown();
-    return trips && d && trips.brigade === d.brigade && trips.serviceDay === d.serviceDay
-      ? trips
-      : null;
-  });
+  /** The trips as scheduled and run, for the chart. */
+  protected readonly scheduled = computed(() => (this.shown()?.trips ?? []).map((r) => r.trip));
   /** The list's time axis: the brigade's day, from its first trip to its last. */
   protected readonly tripSpan = computed(() => {
-    const trips = this.tripDay()?.trips ?? [];
+    const trips = this.shown()?.trips ?? [];
     return trips.length
       ? listSpan({ trips, shownFrom: trips[0].trip.departure, to: trips[0].trip.arrival })
       : null;
@@ -78,7 +68,7 @@ export class BrigadePage {
   protected readonly selected = computed(() => {
     const open = this.params().get('trip');
     const d = this.shown();
-    const i = d?.trips.findIndex((trip) => `${trip.tripId}@${d.serviceDay}` === open) ?? -1;
+    const i = d?.trips.findIndex((r) => `${r.trip.tripId}@${d.serviceDay}` === open) ?? -1;
     return i < 0 ? null : i;
   });
 
@@ -105,12 +95,10 @@ export class BrigadePage {
       });
   }
 
-  /** The brigade's day, and its trips for the list. */
   private load(): void {
-    const brigade = this.brigade();
-    const date = this.params().get('date');
-    this.store.dispatch(BrigadesActions.loadDay({ brigade, date }));
-    this.store.dispatch(TripRunsActions.loadDay({ brigade, date }));
+    this.store.dispatch(
+      BrigadesActions.loadDay({ brigade: this.brigade(), date: this.params().get('date') }),
+    );
   }
 
   protected setDate(date: string): void {
@@ -127,7 +115,7 @@ export class BrigadePage {
   protected chooseTrip(i: number): void {
     const d = this.shown();
     if (!d) return;
-    const key = `${d.trips[i].tripId}@${d.serviceDay}`;
+    const key = `${d.trips[i].trip.tripId}@${d.serviceDay}`;
     const opens = this.selected() !== i;
     this.navigate({ trip: opens ? key : null, map: null });
     if (!opens) return;
@@ -142,7 +130,7 @@ export class BrigadePage {
 /** Whether a brigade is out, or its last trip may not be judged yet: its day still changes. */
 export function underWay(day: BrigadeDay | null, now: number): boolean {
   if (!day?.trips.length) return false;
-  const first = Math.min(...day.trips.map((trip) => Date.parse(trip.departure)));
-  const last = Math.max(...day.trips.map((trip) => Date.parse(trip.arrival)));
+  const first = Math.min(...day.trips.map((r) => Date.parse(r.trip.departure)));
+  const last = Math.max(...day.trips.map((r) => Date.parse(r.trip.arrival)));
   return now >= first && now <= last + SETTLES_MS;
 }

@@ -53,7 +53,7 @@ export function readQuery(params: ParamMap, now = new Date()): TripRunQuery & { 
 /**
  * Trips: every trip scheduled to run in the time window (last hour by default), each with what ran on one time line,
  * the scheduled bar over the actual one: the bus's delay along the way in colour, where it stood still, a change of
- * bus and an early end ({@link TripList}). Searchable by bus, brigade, line or destination; open a trip for its delay and speed over
+ * bus and an early end ({@link TripList}). Searchable by bus, brigade, route or destination; open a trip for its delay and speed over
  * the whole trip. The window, search, page and open trip are in the URL; short windows reload every minute.
  */
 @Component({

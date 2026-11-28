@@ -4,8 +4,8 @@ import { HotspotReport, WindowQuery } from '../../core/models/models';
 export const HotspotsActions = createActionGroup({
   source: 'Hotspots',
   events: {
-    /** `line`: only that line's standstills; null for all lines. */
-    Load: props<{ window: WindowQuery; line: string | null }>(),
+    /** `line`: only that route's standstills; null for all routes. */
+    Load: props<{ window: WindowQuery; route: string | null }>(),
     Loaded: props<{ report: HotspotReport }>(),
     Failure: props<{ error: string }>(),
   },

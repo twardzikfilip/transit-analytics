@@ -10,7 +10,6 @@ import { AuthActions } from './auth/auth.actions';
 import { login, loginSuccess, logout } from './auth/auth.effects';
 import { GtfsImportActions } from './gtfs-import/gtfs-import.actions';
 import { importFeed, loadFeeds, reloadAfterImport } from './gtfs-import/gtfs-import.effects';
-import { RoutesActions } from './routes/routes.actions';
 import { StopsActions } from './stops/stops.actions';
 import { loadStops } from './stops/stops.effects';
 
@@ -69,11 +68,11 @@ describe('store effects', () => {
       page: { number: 0, size: 20, totalElements: 0, totalPages: 0 },
     } as unknown as Page<Stop>;
     const list = vi.fn(() => of(page));
-    const query = { page: 0, size: 20, sort: 'name', filters: { q: 'rynek' } };
+    const query = { page: 0, size: 20, filters: { q: 'rynek' } };
     expect(
       run((a) => loadStops(a, { list } as unknown as StopApi), StopsActions.load({ query })),
     ).toEqual([StopsActions.loadSuccess({ result: page })]);
-    expect(list).toHaveBeenCalledWith(0, 20, 'name', { q: 'rynek' });
+    expect(list).toHaveBeenCalledWith(0, 20, { q: 'rynek' });
 
     const failing = {
       list: () => throwError(() => new HttpErrorResponse({ status: 500, statusText: 'Error' })),
@@ -85,7 +84,7 @@ describe('store effects', () => {
     expect((out[0] as { type: string }).type).toBe(StopsActions.failure.type);
   });
 
-  it('imports a feed, then reloads the feeds, and the routes if anything was imported', () => {
+  it('imports a feed, then reloads the feeds', () => {
     const result = { feed: 'rail', unchanged: false } as never;
     const feeds = [{ key: 'rail' }] as never;
     const api = {
@@ -100,7 +99,6 @@ describe('store effects', () => {
     ]);
     expect(run(reloadAfterImport, GtfsImportActions.importSuccess({ result }))).toEqual([
       GtfsImportActions.loadFeeds(),
-      RoutesActions.load(),
     ]);
     const same = { feed: 'rail', unchanged: true } as never;
     expect(run(reloadAfterImport, GtfsImportActions.importSuccess({ result: same }))).toEqual([

@@ -24,8 +24,8 @@ public final class TripRunDto {
         public static final int MAX_HOURS = 24;
     }
 
-    /** A brigade's trips on a service day, in departure order; none when it doesn't run then. */
-    public record Day(LocalDate serviceDay, String brigade, List<Trip> trips) {
+    /** A brigade's trips on a service day, in departure order (none when it doesn't run then), and how the day went. */
+    public record Day(LocalDate serviceDay, String brigade, BrigadeDto.Summary summary, List<Trip> trips) {
     }
 
     /**
@@ -35,24 +35,11 @@ public final class TripRunDto {
      * @param trip       the trip, its outcome and what ran, as on the brigade's day
      * @param samples    the bus's delay and speed while it ran the trip, about every minute, in time order
      * @param stands     where a bus stood still on the way for {@code STAND_MINUTES} or more (not at the trip's ends)
-     * @param stops      the trip's stops in order, when each was scheduled and when the bus passed it
      * @param averageKmh its buses' average speed over the trip: the way they drove over the time it took, stops and
      *                   waits included; null when not seen running
      */
     public record Trip(LocalDate serviceDay, String brigade, BrigadeDto.Trip trip, List<Sample> samples,
-                       List<Stand> stands, List<StopTime> stops, Integer averageKmh) {
-    }
-
-    /**
-     * A stop of the trip.
-     *
-     * @param index     its number on the trip (1-based)
-     * @param scheduled when the bus was due to leave it
-     * @param passed    when a bus was first seen heading beyond it (for the last stop: the last bus's arrival, when
-     *                  it got there); null when no bus was seen past it
-     * @param delay     the feed's delay then (seconds), null when unknown
-     */
-    public record StopTime(int index, String name, Instant scheduled, Instant passed, Integer delay) {
+                       List<Stand> stands, Integer averageKmh) {
     }
 
     /**
@@ -81,7 +68,7 @@ public final class TripRunDto {
      *
      * @param points the reports in time order
      * @param route  the trip's route shape, {lat, lon}; empty when the timetable has none
-     * @param stops  the trip's stops in order, with where they are
+     * @param stops  the trip's stops in order: where they are, when due and passed, and how long a bus stood
      */
     public record Detail(String tripId, List<DetailPoint> points, List<double[]> route, List<DetailStop> stops) {
     }
@@ -89,11 +76,16 @@ public final class TripRunDto {
     /**
      * A stop of the trip: its number on the trip (1-based), name and place.
      *
+     * @param scheduled    when the bus was due to leave it
+     * @param passed       when a bus was first seen heading beyond it (for the last stop: the last bus's arrival, when
+     *                     it got there); null when no bus was seen past it
+     * @param delay        the feed's delay then (seconds), null when unknown
      * @param dwellSeconds how long a bus halted within {@code AT_STOP_METRES} of it, roughly (reports come about
      *                     every 10 s); 0 when it clearly went past without stopping; null when that can't be told
      *                     (not seen near it, or moving slowly there)
      */
-    public record DetailStop(int index, String name, double lat, double lon, Integer dwellSeconds) {
+    public record DetailStop(int index, String name, double lat, double lon, Instant scheduled, Instant passed,
+                             Integer delay, Integer dwellSeconds) {
     }
 
     /**

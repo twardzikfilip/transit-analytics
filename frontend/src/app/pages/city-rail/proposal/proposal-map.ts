@@ -30,7 +30,7 @@ export interface MapStation {
 export const NEW_STATION_COLOR = '#e8590c';
 
 /**
- * The proposal's map: today's railways (grey), the lines on them in their colours, and the stations, each named on
+ * The proposal's map: today's railways (grey), the routes on them in their colours, and the stations, each named on
  * pointing at it: those trains call at today (white), those no train calls at today (white, dashed edge), those the
  * city trains pass (small, grey) and the new ones (orange). One line can be highlighted: drawn wider and on top, the
  * others fade.
@@ -47,7 +47,7 @@ export const NEW_STATION_COLOR = '#e8590c';
 export class ProposalMap {
   protected readonly t = t;
   readonly railways = input<Railway[]>([]);
-  readonly lines = input.required<MapLine[]>();
+  readonly routes = input.required<MapLine[]>();
   readonly stations = input.required<MapStation[]>();
   readonly highlighted = input<string | null>(null);
   /** A line clicked on the map. */
@@ -65,16 +65,16 @@ export class ProposalMap {
 
   constructor() {
     effect(() => {
-      if (this.host.ready()) this.draw(this.railways(), this.lines(), this.stations());
+      if (this.host.ready()) this.draw(this.railways(), this.routes(), this.stations());
     });
     effect(() => {
       const chosen = this.highlighted();
-      this.lines();
+      this.routes();
       if (this.host.ready()) this.highlight(chosen);
     });
   }
 
-  private draw(railways: Railway[], lines: MapLine[], stations: MapStation[]): void {
+  private draw(railways: Railway[], routes: MapLine[], stations: MapStation[]): void {
     const { map, layer } = this.host;
     layer.clearLayers();
     this.drawn = new Map();
@@ -83,17 +83,17 @@ export class ProposalMap {
       L.polyline(r.points, RAILWAY_STYLES[r.spur ? 'spur' : 'line']).addTo(layer);
     }
     const bounds = L.latLngBounds([]);
-    for (const line of lines) {
-      const drawn = L.polyline(line.points, {
-        color: line.color,
+    for (const route of routes) {
+      const drawn = L.polyline(route.points, {
+        color: route.color,
         weight: 5,
-        dashArray: line.dashed ? '10 8' : undefined,
+        dashArray: route.dashed ? '10 8' : undefined,
       })
-        .bindTooltip(text(line.name), { sticky: true })
-        .on('click', () => this.choose.emit(line.id))
+        .bindTooltip(text(route.name), { sticky: true })
+        .on('click', () => this.choose.emit(route.id))
         .addTo(layer);
-      this.drawn.set(line.id, drawn);
-      line.points.forEach((p) => bounds.extend(p));
+      this.drawn.set(route.id, drawn);
+      route.points.forEach((p) => bounds.extend(p));
     }
     for (const s of stations) {
       const fresh = s.kind === 'new';
@@ -110,18 +110,18 @@ export class ProposalMap {
         .addTo(layer);
       this.markers.push(marker);
     }
-    for (const line of lines) {
-      for (const at of line.badges) {
+    for (const route of routes) {
+      for (const at of route.badges) {
         const badge = L.marker(at, {
           icon: L.divIcon({
             className: 'line-badge-icon',
-            html: `<span class="route-badge" style="--route-color:${line.color}">${escape(line.id)}</span>`,
+            html: `<span class="route-badge" style="--route-color:${route.color}">${escape(route.id)}</span>`,
             iconSize: [36, 22],
             iconAnchor: [18, 11],
           }),
           keyboard: false,
         })
-          .on('click', () => this.choose.emit(line.id))
+          .on('click', () => this.choose.emit(route.id))
           .addTo(layer);
         this.markers.push(badge);
       }

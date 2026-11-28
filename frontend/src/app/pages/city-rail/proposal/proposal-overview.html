@@ -1,6 +1,6 @@
 @if (proposal(); as p) {
   <section class="card map-card">
-    <app-proposal-map [railways]="railways()" [lines]="lines()" [stations]="stations()" />
+    <app-proposal-map [railways]="railways()" [routes]="routes()" [stations]="stations()" />
     <ul class="legend inset muted">
       <li><span class="swatch railway"></span>{{ t('cityRail.railways') }}</li>
       <li>

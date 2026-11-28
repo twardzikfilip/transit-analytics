@@ -1,8 +1,8 @@
 package com.transitanalytics.gtfs;
 
+import com.transitanalytics.common.NotFoundException;
 import com.transitanalytics.domain.CityTime;
 import com.transitanalytics.domain.TimetableFeed;
-import com.transitanalytics.service.NotFoundException;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationRegistry;
 import org.slf4j.Logger;
@@ -25,7 +25,7 @@ import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
 /**
- * Imports timetables (GTFS): Białystok's from komunikacja.bialystok.pl (the main one), and other operators' lines
+ * Imports timetables (GTFS): Białystok's from komunikacja.bialystok.pl (the main one), and other operators' routes
  * configured under {@code app.gtfs.extra}, each into its own share of the timetable. One import runs at a time. A
  * download that is the same as the feed's last import is not imported again.
  */
@@ -139,7 +139,7 @@ public class GtfsFeedService {
                     key, bytes, ms, loaded.rows(), loaded.skipped(), loaded.ignoredFiles());
             Instant now = Instant.now();
             imported.remember(key, new ImportedFeeds.Last(fingerprint, now, bytes));
-            // Whatever depends on the timetable (the lines' classes) is worked out again.
+            // Whatever depends on the timetable (the routes' classes) is worked out again.
             events.publishEvent(new GtfsImported(key, now));
             return new GtfsImportResult(key, url, bytes, now, ms, loaded.rows(), loaded.skipped(),
                     loaded.ignoredFiles(), false);

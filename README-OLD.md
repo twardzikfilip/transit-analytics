@@ -58,11 +58,10 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
 
 - `GET /api/version` → `{backend, recorder}`, each `{version, released}`: the versions running (`recorder` null when it doesn't answer)
 - `POST /api/auth/login` `{username, password}` → `{token, username, role}`; `GET /api/auth/me`
-- CRUD (`GET` list paged with `?page=&size=&sort=`, `GET /{id}`, `POST`, `PUT /{id}`, `DELETE /{id}`) on
-  `/api/vehicles`, `/api/users`, `/api/roles`, and the timetable (GTFS) tables
-  `/api/agencies`, `/api/routes`, `/api/stops`, `/api/trips`, `/api/stop-times`, `/api/calendar-dates`,
-  `/api/shape-points`. Timetable lists take filters as query parameters, e.g. `/api/trips?routeId=17&direction=1`,
-  `/api/stop-times?stopId=260&sort=departureTime&sort=id`, `/api/stops?q=dworzec` (Swagger lists them all).
+- Timetable rows for the Stops and Stop times pages, a page at a time (`?page=&size=`, 50 by default, trains left
+  out): `GET /api/stops?q=&zoneId=` (by name; `q` is text in the name or code) and
+  `GET /api/stop-times?tripId=&stopId=` (a trip's calls in order, a stop's by departure). The timetable can't be
+  edited through the API: the next import would replace it anyway.
 - Position history (recorded time series), each with a window `from`/`to` (ISO-8601, `to` exclusive, at most a year;
   see *Time windows* below), an optional `route` (line) and an optional `agency` (operator, e.g. `BKM`; all operators
   when left out — the Home page asks for BKM unless another operator is chosen):
@@ -72,15 +71,15 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
     vehicles seen*. The last is always larger, because vehicles start and end their runs during the window.
   - `GET /api/positions/delays` — vehicles and reports per delay band: on time (under 2 min late, or early), 2–5,
     5–10, and 10 min or more. A vehicle counts in every band it was in.
-  - `GET /api/positions/routes` — lines recorded in the window.
+  - `GET /api/positions/routes` — routes recorded in the window.
   - `GET /api/positions/agencies` — the operators on the feed, BKM first, for the operator filter.
-- `GET /api/lines/stats` — per line, from the regular weekday timetable: length (main route, km), shortest and
-  longest end-to-end travel time, average speed, interval, regularity (coefficient of variation of the gaps between
+- `GET /api/routes/stats` — per route, from the regular weekday timetable: length (main route, km), average speed,
+  interval, regularity (coefficient of variation of the gaps between
   departures, graded A–F as in TCQSM) and vehicles in peak (06:30–08:30, 15:00–17:00) and off-peak
-  (08:30–15:00, 17:00–20:00) hours, the same periods as on every timetable page; and, recorded, each line's mean
+  (08:30–15:00, 17:00–20:00) hours, the same periods as on every timetable page; and, recorded, each route's mean
   delay in peak and off-peak hours on weekdays of the last `delayDays` (28) days (`peakDelaySeconds`,
   `offPeakDelaySeconds`; from the hourly `route_delay_hourly` aggregate, an hour counting in the part of the day its
-  middle falls in). Routes ranks the lines by these and shows each line's regularity; the definitions are on the
+  middle falls in). Routes ranks the routes by these and shows each route's regularity; the definitions are on the
   Routes page.
 - **Time windows.** Every report over recorded positions (position history, Fleet, hotspots, delay generation,
   abnormal trips) takes `from` and `to` (ISO-8601 instants, `to` exclusive). Both are optional: `to` defaults to now,
@@ -102,11 +101,12 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   5 GB free on the backend's disk, with a table over 1 GB, or with `DAY_SUMMARIES_ENABLED=false`.
 - `DELETE /api/admin/day-summaries?from=&to=&report=` (admin): drops stored days (service days, both included) of one
   report (`hotspots`, `delay-generation`, `bus-lanes`, `fleet`, `trip-outcomes`) or of all, to work them out again (trip outcomes are kept until they have been).
-- Routes (`{line}` is the route's GTFS id, e.g. `103`):
-  - `GET /api/lines` — all lines in numeric order, with their subtype, `geometry` and `capacityClass` (see
-    *Vehicle and line classes*): the timetable's, and the lines only seen on the live feed (other operators' regional
-    lines, 400–499 and 700), which have no `id` and no classes.
-  - `GET /api/lines/{line}/detail` — the route's `id` (for its trips), its `geometry` and `capacityClass`, and `url` (its timetable on the operator's
+- Routes (`{route}` is the route's GTFS id, e.g. `103`):
+  - `GET /api/routes` — all routes in numeric order, with their subtype, `geometry` and `capacityClass` (see
+    *Vehicle and line classes*): the timetable's, and the routes only seen on the live feed (other operators' regional
+    routes, 400–499 and 700), which have no `id` and no classes. Pages colour route labels by the subtype. The routes
+    only seen live come from the hourly delay aggregate (`route_delay_hourly`), far quicker to read than the positions.
+  - `GET /api/routes/{route}/detail` — the route's `id` (for its trips), its `geometry` and `capacityClass`, and `url` (its timetable on the operator's
     website); from the weekday timetable: every variant (direction and shape, with its route
     shape, stops, length, trips and scheduled travel times; the most frequent one per direction is the base route,
     the others are longer, shorter or depot runs) with its scheduled travel times and average speeds, the base
@@ -116,10 +116,10 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
     where a brigade starts its next run within 30 min; end stops less than 500 m from each other (e.g. arrival and
     departure platforms) are one, named after the stop where runs end. Depot-run stops are grouped the same way. A depot run starts or ends elsewhere, as a brigade's first or
     last run or next to a break of 30 min or more. A long wait at a standard end stop is a break.
-  - `GET /api/lines/{line}/performance` — from recorded positions on weekdays: travel time and average speed of full
+  - `GET /api/routes/{route}/performance` — from recorded positions on weekdays: travel time and average speed of full
     runs by departure hour (min, max, mean, median), per route pattern (base route, each longer variant; both
     directions), average delay per 15 minutes, and speed between consecutive stops for runs leaving in peak hours.
-    Also, from all recorded days, the buses that served the line: days per bus, the most used bus per brigade, and
+    Also, from all recorded days, the buses that served the route: days per bus, the most used bus per brigade, and
     brigades that changed bus during a day. A stop counts as passed midway between the two
     reports that bracket it (one a minute), so single runs are accurate to about ±30 s.
 - `GET /api/corridors` — important corridors from the weekday timetable, built in three steps: (1) for each set of
@@ -143,19 +143,20 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   used by the live map: transit-recorder's latest snapshot (at most 10 s old), or straight from zbiorkom.live when the
   recorder doesn't answer. Vehicles seen for the first time are added to the vehicle table (number, type, agency,
   model; the backend adds its class, capacity and operating company within 5 minutes). The agency `default` is stored as `BKM`, and GTFS type codes become names
-  (`3` → `BUS`). Each position carries its line's `subtype` (the stored one, else from the name, for other operators'
-  lines). If zbiorkom.live fails or times out, the endpoint returns 502.
+  (`3` → `BUS`). Each position carries its route's `subtype` (the stored one, else from the name, for other operators'
+  routes). If zbiorkom.live fails or times out, the endpoint returns 502.
 - `GET /api/fleet?from=&to=[&agency=BKM&agency=…]` — Fleet, from recorded positions: buses in use and in the fleet
   (every bus ever seen on the feed) and per model, per size class (`classes`) and per make (`makes`), the 10 most and least used (hours in service and lines), every
-  bus's hours (unused ones with 0), and the buses that broke down (replaced midway through a trip and not used again
-  that day, as on Abnormal trips) with when they served a line again and how many days that took. `agency`
+  bus's hours (unused ones with 0), and the bus changes (`busChanges`: buses replaced midway through a trip and not
+  used again that day, as on Abnormal trips) with when they served a line again and how many hours that took (`hoursOut`). `agency`
   (repeatable) limits everything to those operators' buses; `agencies` lists every operator of the fleet. The last
   month is computed at startup in the background.
-- `GET /api/fleet/vehicles/{id}?from=&to=` — one bus: its runs (consecutive reports on one line, brigade and headsign)
+- `GET /api/fleet/vehicles/{id}?from=&to=` — one bus: its runs (consecutive reports on one route, brigade and headsign)
   and breaks of 30 min or more per service day, hours per day, and the abnormal trips it was involved in (trips it
-  broke down on, each with its `story` and `timeline` as on Abnormal trips and the `paths` of both buses over that
-  time from their recorded positions, and its brigade's trips it missed).
-- `GET /api/hotspots?from=&to=[&line=21]` — Stop hotspots: where buses of the timetable's lines stand
+  was changed on, each with its short `note` and `timeline` as on Abnormal trips and the `paths` of both buses over
+  that time from their recorded positions, and its brigade's trips it missed).
+- `GET /api/fleet/vehicles/{id}/info` — one bus: its number, model, class and companies (the title of its page).
+- `GET /api/hotspots?from=&to=[&route=21]` — Stop hotspots: where buses of the timetable's lines stand
   still away from stops. A standstill is two or more reports in a row within 10 m (up to 5 min; longer ones are
   layovers or breakdowns); those within 50 m of a stop or 150 m of a terminal are left out. The rest are clustered
   with DBSCAN (25 m, at least 5 standstills, 3 different buses) into hotspots, the most time lost first, each with
@@ -171,33 +172,37 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
 - `GET /api/city-rail/comparison` — train against bus between the railway stations in the city limits (Białystok,
   Bacieczki, Starosielce, Zielone Wzgórza, Nowe Miasto, Stadion): for every pair, the fastest Polregio journey leaving
   at any time and the fastest bus journey (every bus timetable) leaving off-peak (08:30–15:00, 17:00–20:00), both on
-  the weekday the trains are counted on, with up to two changes (`service/RailBusComparison`, `JourneyPlanner`: a
+  the weekday the trains are counted on, with up to two changes (`rail/RailBusComparison`, `JourneyPlanner`: a
   round-based search, as RAPTOR). A station's bus stops are the nearest one and those at most 200 m further. Changing
   trains takes 3 minutes; changing buses 1 minute, plus the walk to another stop up to 300 m away (4.5 km/h, a fifth
   longer than straight). Worked out in the background at startup and after each import (some seconds), then kept for
   the day.
-- `GET /api/city-rail/proposal` — City Rail proposal no. 1 (`service/CityRailProposal`, `ProposalScheduler`): city
+- `GET /api/city-rail/proposal` — City Rail proposal no. 1 (`rail/proposal/`: `CityRailProposal` puts together
+  `ProposalNetwork`, `TrainPaths`, `RunTimeModel`, `ProposalScheduler`, `ProposalTimetables` and
+  `ProposalStore`; the trains of the day from `data/RailTrains`): city
   trains on the five railways from Białystok, ending at Niewodnica, Dobrzyniewo Duże, Lewickie, Wasilków and Henrykowo
   (the railway to Henrykowo through Białystok Fabryczny has no passenger trains today), calling at every station but
   Fasty (passed without stopping), nine new ones included (`places/osm/city-rail-proposal.json`). Two solutions:
-  `radial`, five lines from Białystok; `through`, Wasilków–Lewickie and Dobrzyniewo Duże–Henrykowo through Białystok
+  `radial`, five routes from Białystok; `through`, Wasilków–Juchnowiec Dolny and Dobrzyniewo Duże–Henrykowo through Białystok
   (standing 2 minutes there) and Białystok–Niewodnica. Each is timetabled at four frequencies (`variants`:
   `1tp2h`, `1tph`, `2tph`, `3tph`: at least one train every two hours, or 1, 2 or 3 an hour, each way, from about
   05:00 to 23:00) around the trains (Polregio and PKP Intercity, calling or passing; passing times from their track,
-  between their calls) of the weekday the trains are counted on, with the trains (`vehicles`) all its lines need.
+  between their calls) of the weekday the trains are counted on, with the trains (`vehicles`) all its routes need. This
+  answer has the railways, the rules and each frequency's trains; a frequency's routes come one at a time from
+  `GET /api/city-rail/proposal/{solution}/{frequency}` (404 for none such).
   Every train keeps at least 10 minutes from any other train going the same way on the same railway at every station
   (without catching up between stations; trains the other way aren't counted), and stands at least 5 minutes at its
-  ends. Each way, every minute of the period is tried as the line's pattern, moving trains that would come too close
+  ends. Each way, every minute of the period is tried as the route's pattern, moving trains that would come too close
   as little as it takes; where no time keeps clear of all, the least close is taken and the train is marked; then the
   patterns needing the fewest vehicles win. Run times: Polregio's medians between the stations its trains call at,
   shared out by distance where a new station lies between, plus the time lost braking and starting there (minus it at
   Fasty); to Henrykowo, from the distance at up to 80 km/h, starting and braking at 0.6 m/s², scaled as Polregio's
   times compare elsewhere; whole minutes. New stations have Polregio's dwell at Białystok Starosielce (1 minute). Per
-  line: stations with distances, track, length, average distance between the stations it calls at, run times, trains
+  route: stations with distances, track, length, average distance between the stations it calls at, run times, trains
   a day, the longest interval, trains needed, the shortest and longest time its trains stand at an end, the closest any of its trains comes to another, and its timetable both
   ways (`out`, `back`): its own trains (`kind` `city`) and, in order among them, today's Polregio (`PR`) and PKP
   Intercity (`IC`) trains on the part of its way they run on (`label`: number and name; `|` where a train passes,
-  null where it isn't on the line). An analysis of the timetable as it is, not a live view: worked out once, in the
+  null where it isn't on the route). An analysis of the timetable as it is, not a live view: worked out once, in the
   background at startup, and stored in `city_rail_proposal_variant`; worked out again only when the network file or
   `CityRailProposal.MODEL` changes (or, while none is stored, after the trains' timetable is imported).
 - `GET /api/bus-lanes` — the city's bus lanes from OpenStreetMap (`places/osm/bus-lanes.json`, or the refreshed copy in
@@ -213,7 +218,7 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   weekday peak and off-peak speed, peak slowdown, and delay gained per km (within a trip) on lanes, the same streets
   the other way, and elsewhere; by weekday hour; and per stretch (street and direction) with the other way's figures.
   Service days that are over are read once and kept; the last week is read at startup. Cached for 2 minutes.
-  Line details (`/api/lines/{line}/detail`) give `busLanes`: how much of each direction's main route runs on bus
+  Route details (`/api/routes/{route}/detail`) give `busLanes`: how much of each direction's main route runs on bus
   lanes, with those parts.
 - `GET /api/delay-generation?from=&to=` — Delay generation: how much delay buses gain (or recover)
   between consecutive stops, on the timetable's lines. A passage is a report whose next stop moved on by one; the
@@ -225,7 +230,7 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   stretch. Feed stop names are matched to the timetable's by name (without the stop code and "NŻ") and the nearest
   position. Service days that are over are read once and kept; the last month is read at startup in the
   background. Cached for 2 minutes.
-- `GET /api/delay-generation/lines/{line}?from=&to=` — one line: per headsign, its stretches in route order with
+- `GET /api/delay-generation/routes/{route}?from=&to=` — one route: per headsign, its stretches in route order with
   the average, median and 90th percentile change, the share of buses gaining a minute or more, the delay on leaving,
   and the average by hour of the day; its brigades by delay gained per run; and example runs (the most delay gained
   overall, and on each stretch) with the time and delay on leaving every stop.
@@ -235,16 +240,15 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   delay (within 20 min; the headsign only breaks ties, as the feed's don't always read as the timetable's); blank
   brigades are taken from the same bus's neighbouring reports. A report whose delay is over half an hour (no use for
   placing it) stays on the trip of the same bus's report up to 5 min before, when line, brigade and headsign are the
-  same: a bus broken down mid-trip, its delay growing, would otherwise look like it started the brigade's next trip. Outcomes: run in full (first seen heading to one of
+  same: a bus standing mid-trip, its delay growing, would otherwise look like it started the brigade's next trip. Outcomes: run in full (first seen heading to one of
   the first 3 stops, last to one of the last 2), detour (3 reports in a row over 150 m from the route shape),
   bus changed (run in full by two buses of the brigade, each reporting 3+ times on it, one after the other: the
   first past the first 3 stops and at least 200 m along, the second further than the first got; it took over at the
   same place within 300 m or heading to the same or next stop; a change on a partial trip is in its note;
   each change says where the replacement came from, and whether the replaced bus was used again that day: moving
-  500 m away and reporting a brigade for 10 minutes, else it's possibly broken down — then how long it stood where
+  500 m away and reporting a brigade for 10 minutes, else it's not used again (`not-used`) — then how long it stood where
   it stopped and whether it went silent, moved off (how far) or still stands there. On a detour, `detourPath` (the bus's reports off the route, with three either side) and `detourRoute` (the
-  usual route within 600 m of it), for a map. Each change is also told step by
-  step (`story`: what each bus did when, in time order) with a time line per bus (`timeline`: running, standing,
+  usual route within 600 m of it), for a map. Each change has a time line per bus (`timeline`: running, standing,
   moving off, on its way without the brigade, on the brigade)),
   short-turned (the bus, reporting all along, joined midway, or left the trip more than 3 stops before the end and
   didn't drive on to it; within the last 3 stops only when it turned onto its brigade's next trip, 3 min or more less
@@ -254,9 +258,10 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   back within 15 min), missed (not run while the brigade ran other trips; with where the brigade's bus was instead)
   and cancelled (no bus on the brigade all day). Trips during gaps in recording (3+ minutes without any report)
   aren't judged; trips are judged as soon as it's clear what the bus did. Counts overall and per line, and the
-  abnormal trips (the latest 2000) with brigade, buses, stops seen, delays and a note. The `note` and each step's
-  `text` are lists of phrases, `{key, params}`: the page writes them in the reader's language from `tripNotes.<key>`
-  in its translations (`shared/i18n/phrases.ts`); a value is text, a number or another phrase. Each finished
+  abnormal trips (the latest 2000) with brigade, buses, stops seen, delays and a note. The `note` is one to three
+  short phrases (`trips/AnomalyNotes`), `{key, params}`, e.g. "Lost at stop 8/25" or "Bus 230 → 412 at stop 4/5 ·
+  230 not used again": the page writes them in the reader's language from `tripNotes.<key>` in its
+  translations (`shared/i18n/phrases.ts`), separated by dots. Each finished
   service day is judged once; the running day again after a minute. The last month is judged at startup in the background.
 - `GET /api/trip-anomalies/faulty-trackers` — buses whose tracker probably fails: over the last 7 days, no-signal
   trips on 3 days or more, 5 trips or more, and at least 10% of the trips the bus ran (fewer is chance). Each with its
@@ -267,28 +272,25 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
   outcome as on Abnormal trips, what ran as on the brigade's day (each bus's part, from which stop to which, when),
   the bus's delay and speed about every minute while it ran (speed averaged over the minute; over 100 km/h is a GPS
   jump), and where it stood still on the way for 3 min or more (within 40 m; not waiting at the first stop or
-  arrived at the last), with how much later it was afterwards; its stops with when each was due and when a bus
-  passed it (its first report heading beyond the stop), and its average speed (the way its buses drove over the time
+  arrived at the last), with how much later it was afterwards, and its average speed (the way its buses drove over the time
   it took, stops and waits included; gaps over 3 min and GPS jumps left out). `q` finds a bus by its number (the trips it ran), a
   brigade or a line (exactly), or part of a destination. The outcomes are Abnormal trips' when it has the day
   current; else the page's brigades are judged on their own, from the day's reports of their buses.
-- `GET /api/trip-runs/day?brigade=&date=` — one brigade's trips of a service day (today's without `date`), each as in the
-  list above, all of them in departure order; `{serviceDay, brigade, trips}`.
 - `GET /api/trip-runs/{date}/{brigade}/{tripId}` — one trip in detail, asked for when it is opened: every report of
   its buses while they ran it (about every 10 s) with its delay and speed — 0 when the bus stood still (moved under
   5 m, or 0.4 m/s over a longer interval: GPS jitter), else the average over 15 s either side; none for a bus's first
-  report, after a 2 min gap or across a GPS jump — the trip's route shape, and its stops with where they are and how
-  long a bus halted within 50 m of each (the stop's pole is often across a junction from where buses halt): its steps
+  report, after a 2 min gap or across a GPS jump — the trip's route shape, and its stops with where they are, when
+  each was due and when a bus passed it (its first report heading beyond the stop), and how long a bus halted within
+  50 m of each (the stop's pole is often across a junction from where buses halt): its steps
   there under 7 km/h, as reports come every 10 s, longer than a short halt (to about 10 s); 0 when every step there was
   12 km/h or more; null when that can't be told. 404 when the brigade
   has no such trip that day.
-- `GET /api/routes/subtypes` — every line of the timetable by name with its kind (`urban`, `suburban`,
-  `night_urban`, `regional`), for colouring line labels.
 - `GET /api/brigades?date=&agency=` — the brigades of an operator (default: the city's, BKM) on a service day (default:
   today's): each with all its lines (a brigade with any trip of the agency is listed), trip count and first and last
   times, plus every operator: the city's agency (`BKM`), and each other operator's feed as one (`wschodexpress`).
   Other operators' brigades are learnt from the recordings (see below).
-- `GET /api/brigades/{brigade}/day?date=` — a brigade's day: each trip as scheduled with what actually ran (a part per
+- `GET /api/brigades/{brigade}/day?date=` — a brigade's day (today's without `date`), its trips in departure order,
+  each as in the Trips list (`/api/trip-runs`), and a summary: each trip as scheduled with what actually ran (a part per
   bus, from the first to the last stop it was seen heading to, timed by the reported delays), the parts not run (lost,
   missed, cancelled, turned short, skipped at a bus change) or not seen (the bus stopped reporting), its outcome as on
   Abnormal trips, and a summary (trips run in full, left on time between 1 min early and 3 min late, median start
@@ -319,7 +321,8 @@ source. A file of the same path in `./config/places/` where the backend runs ove
 Configured in three YAML files, not in code: `backend/src/main/resources/classification/vehicles.yml`, `routes.yml`
 and `operators.yml`
 (each explains its rules at the top). A copy in `./config/classification/` where the backend runs overrides the
-built-in one without rebuilding; restart to apply.
+built-in one without rebuilding; restart to apply. A company's lines are listed under `routes:`; an override still
+using the old `lines:` stops the backend at startup, naming the company.
 
 - **Vehicle class** (`vehicle.vehicle_class`): `mini` (under 8 m), `midi` (8 to 10.5 m), `maxi` (12 to 14.9 m),
   `mega` (15 m and more) or `double_decker` (`DD` in the model name). A model's length comes from its entry in
@@ -340,7 +343,7 @@ built-in one without rebuilding; restart to apply.
   the organiser, `route.agency`); stored when lines are classified.
 - **A bus's operating company** (`vehicle.operating_agency`): for BKM's buses KPKM, KPK or KZK, by the bus's number
   (`vehicles` in `classification/operators.yml`; null for a number in no range); for others their agency. Stored with
-  the vehicle class, at startup and for every newly registered bus. `operatingAgency` in `/api/vehicles` and
+  the vehicle class, at startup and for every newly registered bus. `operatingAgency` in
   `/api/fleet`; a bus's page shows the company's logo next to its number (`frontend/public/images/operators`).
 - **Line capacity** (`route.capacity_class`; not for night lines, which get a geometry only — `skip-subtypes`): from
   the weekday departures (lines without weekday service: the service they run most) and the share of the line's recorded reports made by MEGA buses over the last 28 days, per day type. Ordered rules:
@@ -418,10 +421,8 @@ replaces them. Public holidays (Christmas Eve included) get the last known Sunda
   (those of the City Rail network), with its whole run: about 440 trips, the train number as `trip.short_name`,
   platform and track in the stop's id. A station a train passes without a call has no time. For the City Rail page
   only: Routes, Stops, Stop times, Brigades, Delay generation, Stop hotspots and Abnormal trips leave its rows
-  (`TimetableFeed.RAIL`) out. An import replaces the timetable, so every day's trains are also kept for good
-  (`gtfs/RailArchive`): `rail_train` (a train and its exact run, once), `rail_train_call` and `rail_train_day`. Days from
-  today on are as the newest file has them, past days as last published.
-- **Brigades learnt from the recordings** (`service/RecordedBrigades`, `BrigadeLearning`): these feeds name no
+  (`TimetableFeed.RAIL`) out. An import replaces the timetable; past days' trains aren't kept.
+- **Brigades learnt from the recordings** (`brigades/RecordedBrigades`, `BrigadeLearning`): these feeds name no
   brigades (no block ids), but their buses report brigade numbers on the live feed. The numbers repeat from line to
   line ("1" on line 400 and "1" on line 414 are different buses), and a bus runs some lines together under one number
   (414, 415 and 416). So a brigade is a number on a group of lines (the lines one bus ran under it on some day,
@@ -543,7 +544,7 @@ Interactive docs: Swagger UI at http://localhost:8080/swagger-ui.html, OpenAPI J
 the secured endpoints, call `POST /api/auth/login`, copy the `token`, click **Authorize** and paste it. Set
 `API_DOCS_ENABLED=false` to turn both off (e.g. in production).
 
-Access rules: reads need ADMIN or GUEST; writes need ADMIN; `/api/users` and `/api/roles` are ADMIN only.
+Access rules: reads need ADMIN or GUEST; writes need ADMIN.
 
 Adding a new entity: migration `V<n>__*.sql` → entity in `domain/` → repository → DTO record → service extending
 `CrudService` → controller extending `CrudController`.
@@ -593,7 +594,7 @@ PGPASSWORD=transit psql -h localhost -U transit transit_test -c "CREATE EXTENSIO
   built in, the others load from `/i18n/` when chosen. Templates and code translate with `t('key', params)` and
   counts with `tn('key', n)` (`core/i18n/t.ts`, plural forms per language); the `date` and `number` pipes follow the
   language (`shared/i18n/locale-pipes.ts`). `translations.spec.ts` checks every language has every text, the same
-  placeholders and all its plural forms. Texts from the backend (breakdown stories, trip notes, error details) and
+  placeholders and all its plural forms. Texts from the backend (trip notes, error details) and
   data names stay as they are.
 - Loading: while a page waits for its data it shows skeletons shaped like what is coming (tiles, charts, maps,
   tables; `shared/skeleton`, ngx-skeleton-loader, in the theme's colours), and a thin bar runs under the header while
@@ -663,14 +664,15 @@ PGPASSWORD=transit psql -h localhost -U transit transit_test -c "CREATE EXTENSIO
   expandable list and its lines linking to Routes. Store slice `corridors`, registered by its lazy route.
 - Fleet (`/vehicles`; `/fleet` leads there, and a former `?vehicle=7` link to the bus's page): tiles with the buses in use, the fleet by model, by size class (smallest first) and by make (the model
   name's first word) — bars of in use / in the fleet, the 10 most and least used
-  buses and the buses that broke down (when, and how many days until they were back, or that they aren't yet); a
+  buses and the bus changes (tile "Bus changes": when, and how long in days and hours until the bus was back, or that it
+  isn't yet); a
   bar chart of every bus's hours, the most used first; and a search by number or model (title "Fleet Overview"). A
   chosen bus opens its page, `/vehicles/7` (its id; title "Vehicle 230", its number; the time window kept; the way
   back is a chevron at the left of the header), with its runs and breaks as a timeline (a row per day, or per run for a window of a day or less), its hours per
-  day (days with an abnormal trip marked) and the abnormal trips it broke down on or missed. Each breakdown is told
-  step by step (open at first, folds away): a time line of the bus and its replacement (a lane per bus: on the trip,
-  standing still, moving off or on its way without a brigade, on the brigade; the steps numbered on its axis), then
-  the numbered steps in words, then a map of where both buses went over that time (the one that broke down in
+  day (days with an abnormal trip marked) and the abnormal trips it was changed on or missed. Each bus change shows
+  (open at first, folds away) a time line of the bus and its replacement (a lane per bus: on the trip,
+  standing still, moving off or on its way without a brigade, on the brigade), then a map of where both buses went
+  over that time (the replaced one in
   orange, ringed where last seen; the one that took over in blue). Store slice `fleet`,
   registered by its lazy route.
 - Stop hotspots: where buses lose time standing still away from stops (traffic lights, junctions, congestion), as
@@ -700,7 +702,7 @@ PGPASSWORD=transit psql -h localhost -U transit transit_test -c "CREATE EXTENSIO
   set off, a dashed line from the scheduled to the actual start, parts not run hatched red, parts the bus wasn't seen on
   hatched grey, markers for a bus change, a lost trip and a detour, and outlines for trips without data or still to
   come. Hover a trip for details. Below, every trip of the day in the Trips page's list (`app-trip-list`, shared;
-  `GET /api/trip-runs/day`): open one for its delay, speed, halts and map (`?trip=`, `?map=1`); it is marked on the
+  `GET /api/brigades/{brigade}/day`, one request for the timeline and the list): open one for its delay, speed, halts and map (`?trip=`, `?map=1`); it is marked on the
   timeline, and choosing a trip there opens it in the list. Loaded again every minute while the brigade is out.
 - City Rail (last in the sidebar, below a line): a submenu that drops down with its two pages, Current state and
   Proposal no. 1 (`/city-rail` opens the first).
@@ -734,8 +736,8 @@ PGPASSWORD=transit psql -h localhost -U transit transit_test -c "CREATE EXTENSIO
 - Abnormal trips: the trips of any time window (preset windows up to 12 hours refresh every minute). Cards count the trips by outcome (click a kind to list only those), a table shows the
   lines with abnormal trips, and the trips table lists each abnormal trip with its kind, scheduled times, line and
   brigade, buses, the stops it was seen on, its delays and what happened (filter by line, or by bus). Bus changes show
-  where the new bus came from and whether the old one was possibly broken down or reassigned, and how long a broken
-  one stood and what it did next. Each breakdown is told step by step, with a time line, on the bus's page under
+  where the new bus came from and whether the old one was used again or reassigned, and how long an unused
+  one stood and what it did next. Each bus change has a time line on the bus's page under
   Fleet. Each detour gets a map on a line of its own under its trip: the usual route around it in blue, the bus's
   path in orange with its reports as dots. Store slice
   `tripAnomalies`, registered by its lazy route.
@@ -756,8 +758,8 @@ PGPASSWORD=transit psql -h localhost -U transit transit_test -c "CREATE EXTENSIO
   Routes links a line's trips here (`/trips?q=103`).
 - Line labels everywhere (Routes, its map and table, Corridors, Stop times, Abnormal trips, Delay generation,
   Brigades, a bus's page, Trips, the live map) take their kind's colour: indigo urban (#4b0082), green suburban
-  (#03bf03), blue regional (#0021ff), black night lines (`--line-*` in `styles.scss`; `LineBadge` and `LineKinds` in `shared/line-kind`, which
-  ask `/api/routes/subtypes` once and classify a line not in the timetable by its name).
+  (#03bf03), blue regional (#0021ff), black night lines (`--line-*` in `styles.scss`; `RouteBadge` and `RouteKinds` in `shared/route-kind`, which
+  ask `/api/routes` once and classify a route not in the timetable by its name).
 - Timetable pages (read-only): Stop times of a trip; Stops (search, zone) → departure board of a stop. Filters and the page number live in the URL, so every view can be
   linked and the back button works.
 

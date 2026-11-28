@@ -7,7 +7,7 @@ import { distinctUntilChanged, map } from 'rxjs';
 import {
   DelayExample,
   DelayGenerationReport,
-  DelayLineSummary,
+  DelayRouteSummary,
   DelayStretch,
 } from '../../core/models/models';
 import { localTime } from '../../shared/format/time';
@@ -16,14 +16,14 @@ import { delayGenerationFeature } from '../../store/delay-generation/delay-gener
 import { TimeWindowPicker } from '../../shared/time-window/time-window-picker';
 import { readWindow, sameQuery, windowQuery } from '../../shared/time-window/time-window';
 import { changeClass, lateOrEarlyText, minutesPerDay, signedChange } from './delay-scale';
-import { LineHeatmap } from './line-heatmap';
+import { RouteHeatmap } from './route-heatmap';
 import { MIN_MAP_RUNS, StretchMap } from './stretch-map';
 import { TripProfile } from './trip-profile';
 import { int, percent } from '../../shared/format/number';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { LocalDatePipe } from '../../shared/i18n/locale-pipes';
 import { t, tn } from '../../core/i18n/t';
-import { LineBadge } from '../../shared/line-kind/line-kinds';
+import { RouteBadge } from '../../shared/route-kind/route-kinds';
 
 /** Stretches listed where delay is created, and where it is recovered. */
 export const CREATED_ROWS = 15;
@@ -54,16 +54,16 @@ export const DEFAULT_PRESET = '1w';
 
 /**
  * Delay generation: where on the network buses gain delay between stops (and where they recover it), on a map and
- * in tables, then for a chosen line, when and on which stretches, with example runs and how their delay built up.
- * The window, part of the day and line are in the URL.
+ * in tables, then for a chosen route, when and on which stretches, with example runs and how their delay built up.
+ * The window, part of the day and route are in the URL.
  */
 @Component({
   selector: 'app-delay-generation',
   imports: [
-    LineBadge,
+    RouteBadge,
     Skeleton,
     LocalDatePipe,
-    LineHeatmap,
+    RouteHeatmap,
     StretchMap,
     TripProfile,
     TimeWindowPicker,
@@ -82,9 +82,9 @@ export class DelayGeneration {
   /** A share in whole percent, "42%". */
   protected readonly wholePercent = (share: number) => percent(share, { digits: 0 });
   protected readonly loading = this.store.selectSignal(delayGenerationFeature.selectLoading);
-  protected readonly lineReport = this.store.selectSignal(delayGenerationFeature.selectLine);
-  protected readonly lineLoading = this.store.selectSignal(
-    delayGenerationFeature.selectLineLoading,
+  protected readonly routeReport = this.store.selectSignal(delayGenerationFeature.selectRoute);
+  protected readonly routeLoading = this.store.selectSignal(
+    delayGenerationFeature.selectRouteLoading,
   );
 
   protected readonly defaultPreset = DEFAULT_PRESET;
@@ -93,12 +93,12 @@ export class DelayGeneration {
     map((p) => readWindow(p, DEFAULT_PRESET)),
     distinctUntilChanged((a, b) => sameQuery({ window: a }, { window: b })),
   );
-  private readonly line$ = this.params.pipe(
-    map((p) => p.get('line') || null),
+  private readonly route$ = this.params.pipe(
+    map((p) => p.get('route') || null),
     distinctUntilChanged(),
   );
   protected readonly window = toSignal(this.window$, { requireSync: true });
-  protected readonly line = toSignal(this.line$, { requireSync: true });
+  protected readonly route = toSignal(this.route$, { requireSync: true });
   private readonly bandKey = toSignal(this.params.pipe(map((p) => p.get('part'))), {
     requireSync: true,
   });
@@ -124,19 +124,19 @@ export class DelayGeneration {
       .sort((a, b) => a.minutesPerDay - b.minutesPerDay)
       .slice(0, RECOVERED_ROWS),
   );
-  /** Lines by the delay their buses gain altogether, the most first. */
-  protected readonly lines = computed(() =>
-    [...(this.report()?.lines ?? [])].sort(
+  /** Routes by the delay their buses gain altogether, the most first. */
+  protected readonly routes = computed(() =>
+    [...(this.report()?.routes ?? [])].sort(
       (a, b) => b.generatedMinutesPerDay - a.generatedMinutesPerDay,
     ),
   );
 
-  // The chosen line: a direction, a stretch in it, and an example run.
+  // The chosen route: a direction, a stretch in it, and an example run.
   protected readonly directionIndex = signal(0);
   protected readonly stretchIndex = signal<number | null>(null);
   protected readonly exampleId = signal<number | null>(null);
   protected readonly direction = computed(
-    () => this.lineReport()?.directions[this.directionIndex()] ?? null,
+    () => this.routeReport()?.directions[this.directionIndex()] ?? null,
   );
   protected readonly stretch = computed(() => {
     const i = this.stretchIndex();
@@ -144,7 +144,7 @@ export class DelayGeneration {
   });
   /** The chosen stretch's runs that gained the most there; else the direction's runs that gained the most. */
   protected readonly examples = computed((): DelayExample[] => {
-    const report = this.lineReport();
+    const report = this.routeReport();
     const ids = this.stretch()?.exampleIds ?? this.direction()?.exampleIds ?? [];
     return ids.map((id) => report?.examples.find((e) => e.id === id)).filter((e) => !!e);
   });
@@ -160,18 +160,18 @@ export class DelayGeneration {
     this.window$.pipe(takeUntilDestroyed()).subscribe((window) => {
       this.store.dispatch(DelayGenerationActions.load({ window: windowQuery(window) }));
     });
-    // A line (or another window for it) loads the line; no line clears it.
+    // A route (or another window for it) loads the route; no route clears it.
     effect(() => {
       const window = windowQuery(this.window());
-      const line = this.line();
+      const route = this.route();
       untracked(() => {
         this.directionIndex.set(0);
         this.stretchIndex.set(null);
         this.exampleId.set(null);
         this.store.dispatch(
-          line
-            ? DelayGenerationActions.loadLine({ window, line })
-            : DelayGenerationActions.clearLine(),
+          route
+            ? DelayGenerationActions.loadRoute({ window, route })
+            : DelayGenerationActions.clearRoute(),
         );
       });
     });
@@ -181,10 +181,10 @@ export class DelayGeneration {
     this.navigate({ part: key === 'all' ? null : key });
   }
 
-  protected chooseLine(line: string | null): void {
-    this.navigate({ line });
-    if (line) {
-      // The line's section shows straight away (loading): bring it into view.
+  protected chooseRoute(route: string | null): void {
+    this.navigate({ route });
+    if (route) {
+      // The route's section shows straight away (loading): bring it into view.
       setTimeout(() =>
         document.getElementById('line-detail')?.scrollIntoView?.({ behavior: 'smooth' }),
       );
@@ -210,7 +210,7 @@ export class DelayGeneration {
     return changeClass(seconds).dark;
   }
 
-  protected worst(l: DelayLineSummary): string {
+  protected worst(l: DelayRouteSummary): string {
     return l.worstFrom ? `${l.worstFrom} → ${l.worstTo}` : '—';
   }
 

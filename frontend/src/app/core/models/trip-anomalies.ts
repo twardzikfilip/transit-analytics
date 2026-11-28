@@ -25,17 +25,17 @@ export interface TripAnomalySummary {
   notRecorded: number;
   /** Not judged yet: under way, or not due. */
   pending: number;
-  /** Of the bus changes, those whose replaced bus wasn't used again that day: possibly broken down. */
-  changedBrokenDown: number;
-  /** Of the bus changes, those whose replaced bus was used later on another line or brigade. */
+  /** Of the bus changes, those whose replaced bus wasn't used again that day. */
+  changedNotUsed: number;
+  /** Of the bus changes, those whose replaced bus was used later on another route or brigade. */
   changedReassigned: number;
 }
 
 /** On a change of bus, what became of the replaced bus that day. */
-export type ChangeFate = 'broken-down' | 'reassigned' | 'returned';
+export type ChangeFate = 'not-used' | 'reassigned' | 'returned';
 
-export interface TripAnomalyLine {
-  line: string;
+export interface TripAnomalyRoute {
+  route: string;
   judged: number;
   completed: number;
   detours: number;
@@ -52,7 +52,7 @@ export interface AbnormalTrip {
   /** What was seen, in phrases. */
   note: Phrase[];
   tripId: string;
-  line: string;
+  route: string;
   brigade: string | null;
   headsign: string | null;
   firstStop: string;
@@ -81,8 +81,8 @@ export interface AbnormalTrip {
   detourPath: [number, number][];
   detourRoute: [number, number][];
   changeFate: ChangeFate | null;
-  /** The line and brigade the replacement bus ran before taking over; null when it hadn't run another that day. */
-  replacementLine: string | null;
+  /** The route and brigade the replacement bus ran before taking over; null when it hadn't run another that day. */
+  replacementRoute: string | null;
   replacementBrigade: string | null;
   /** How long the trip stood still at the change: from the old bus stopping to the new bus's first report. */
   changeMinutes: number | null;
@@ -94,8 +94,6 @@ export interface AbnormalTrip {
   joinStop: string | null;
   /** Stops between the two neither bus was seen heading to; 0 when the new bus took over at the same place. */
   skippedStops: number | null;
-  /** On a change of bus, when the replaced bus stopped for good. */
-  changeAt: string | null;
   /** When the replaced bus wasn't used again: how long it stood where it stopped (minutes)… */
   stoodMinutes: number | null;
   /** …what it did next… */
@@ -103,24 +101,17 @@ export interface AbnormalTrip {
   /** …and its last report that day, and how far that was from where it stopped. */
   stoodLastSeen: string | null;
   stoodLastSeenMeters: number | null;
-  /** On a change of bus, what happened step by step, in time order; empty otherwise. */
-  story: IncidentStep[];
   /** On a change of bus, what each bus did when, for a time line; empty otherwise. */
   timeline: IncidentSpan[];
 }
 
-export interface IncidentStep {
-  at: string;
-  text: Phrase[];
-}
-
 /**
- * A sentence (or part of one) about a trip, for the page to write in the reader's language: a key under `tripNotes`
- * and its values; a value can itself be a phrase. Written by `phrasesText` (`shared/i18n/phrases.ts`).
+ * A short phrase about a trip, for the page to write in the reader's language: a key under `tripNotes` and its values.
+ * Written by `phrasesText` (`shared/i18n/phrases.ts`).
  */
 export interface Phrase {
   key: string;
-  params: Record<string, string | number | Phrase>;
+  params: Record<string, string | number>;
 }
 
 /**
@@ -145,8 +136,8 @@ export interface TripAnomalyReport {
   from: string;
   to: string;
   summary: TripAnomalySummary;
-  /** Lines with the most abnormal trips first. */
-  lines: TripAnomalyLine[];
+  /** Routes with the most abnormal trips first. */
+  routes: TripAnomalyRoute[];
   /** Abnormal trips in the window; `trips` holds the latest of them. */
   tripsTotal: number;
   /** The latest scheduled departure first. */
@@ -174,5 +165,5 @@ export interface FaultyTracker {
   trips: number;
   days: number;
   lastNoSignal: string;
-  lines: string[];
+  routes: string[];
 }

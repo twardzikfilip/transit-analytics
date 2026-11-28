@@ -22,7 +22,7 @@ import { useSvgMaps } from './testing/page-testing';
 /** What the backend says; it must only ever appear in a toast. */
 const BACKEND_SAYS = 'Backend explanation 7f3a: nothing to see here';
 
-/** Each page, and the pages' parts that load on their own (a vehicle, a line, a brigade's day). */
+/** Each page, and the pages' parts that load on their own (a vehicle, a route, a brigade's day). */
 const PAGES = [
   '/home',
   '/brigades',
@@ -33,7 +33,7 @@ const PAGES = [
   '/hotspots',
   '/bus-lanes',
   '/delay-generation',
-  '/delay-generation?line=103',
+  '/delay-generation?route=103',
   '/routes',
   '/routes/route/103',
   '/corridors',

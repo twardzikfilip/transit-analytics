@@ -15,7 +15,7 @@ const PANE = 'city-boundaries';
 export function drawCityBoundaries(
   map: L.Map,
   boundaries: CityBoundaries,
-  centre: 'centre' | 'lineCentre' = 'centre',
+  centre: 'centre' | 'routeCentre' = 'centre',
 ): L.LayerGroup {
   if (!map.getPane(PANE)) map.createPane(PANE).style.zIndex = '350';
   const layer = (ring: [number, number][], style: (typeof BOUNDARY_STYLES)['city' | 'centre']) =>
@@ -36,7 +36,7 @@ export function drawCityBoundaries(
 
 /** Fetches the boundaries and draws them on the map once it exists; call in a component's injection context. */
 export function injectCityBoundaries(
-  centre: 'centre' | 'lineCentre' = 'centre',
+  centre: 'centre' | 'routeCentre' = 'centre',
 ): (map: L.Map) => void {
   const api = inject(BoundaryApi);
   const destroyRef = inject(DestroyRef);

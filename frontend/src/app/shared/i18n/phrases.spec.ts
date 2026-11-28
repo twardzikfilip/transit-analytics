@@ -4,20 +4,9 @@ import { Phrase } from '../../core/models/models';
 import { provideTestI18n } from '../../testing/i18n-testing';
 import { phrasesText } from './phrases';
 
-const takeover: Phrase[] = [
-  {
-    key: 'stepTakesOver',
-    params: {
-      bus: '412',
-      joined: { key: 'stopsFurtherOn', params: { n: 5 } },
-      stop: 'Lipowa',
-      index: 10,
-      total: 25,
-      away: { key: 'kilometres', params: { n: 1.5 } },
-      other: '319',
-    },
-  },
-  { key: 'stepNoBusFor', params: { n: 17 } },
+const change: Phrase[] = [
+  { key: 'busChanged', params: { bus: '319', other: '412', index: 10, total: 25 } },
+  { key: 'detour', params: { meters: 1500 } },
 ];
 
 describe('phrases from the backend', () => {
@@ -28,27 +17,23 @@ describe('phrases from the backend', () => {
     await language.ready();
   }
 
-  it('writes phrases in English, with the parts inside them and counts in their forms', async () => {
+  it('writes short phrases in English, one after another', async () => {
     await speak('en');
-    expect(phrasesText(takeover)).toBe(
-      'Bus 412 takes over 5 stops further on, heading to Lipowa (stop 10 of 25), 1.5 km from where bus 319 ' +
-        'stopped. The trip had no bus for 17 min.',
-    );
+    expect(phrasesText(change)).toBe('Bus 319 → 412 at stop 10/25 · Detour 1,500 m');
     expect(phrasesText(null)).toBe('');
   });
 
-  it('follows the language: its words, its plural forms and its numbers', async () => {
+  it('follows the language: its words and its numbers', async () => {
     await speak('pl');
-    expect(phrasesText(takeover)).toBe(
-      'Autobus 412 przejmuje kurs 5 przystanków dalej, w drodze do przystanku Lipowa (10 z 25), 1,5 km od ' +
-        'miejsca, gdzie stanął autobus 319. Kurs był bez autobusu przez 17 min.',
-    );
+    expect(phrasesText(change)).toBe('Autobus 319 → 412 na przystanku 10/25 · Objazd 1500 m');
     localStorage.removeItem('language');
   });
 
-  it('writes French decimals with a comma', async () => {
+  it('writes French numbers its way', async () => {
     await speak('fr');
-    expect(phrasesText([{ key: 'kilometres', params: { n: 4.2 } }])).toBe('4,2 km');
+    expect(phrasesText([{ key: 'busLate', params: { bus: '7', n: 12 } }])).toBe(
+      'Bus 7 en retard de 12 min',
+    );
     localStorage.removeItem('language');
   });
 });

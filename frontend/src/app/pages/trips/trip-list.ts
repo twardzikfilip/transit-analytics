@@ -4,7 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { catchError, of, startWith, switchMap } from 'rxjs';
 import { TripRunApi } from '../../core/api/api.services';
 import { TripRun, TripRunDetail } from '../../core/models/models';
-import { LineBadge } from '../../shared/line-kind/line-kinds';
+import { RouteBadge } from '../../shared/route-kind/route-kinds';
 import { phrasesText } from '../../shared/i18n/phrases';
 import { formatDelay, localTime } from '../../shared/format/time';
 import { CHANGE_COLOR, DELAY_STOPS, NOT_RUN_COLOR, NOT_SEEN_COLOR } from '../../shared/palette';
@@ -31,7 +31,7 @@ export function tripKey(r: TripRun): string {
  */
 @Component({
   selector: 'app-trip-list',
-  imports: [RouterLink, LineBadge, TripLane, TripAxis, TripLanePatterns, TripDetail, TripMap],
+  imports: [RouterLink, RouteBadge, TripLane, TripAxis, TripLanePatterns, TripDetail, TripMap],
   templateUrl: './trip-list.html',
   styleUrl: './trip-list.scss',
 })

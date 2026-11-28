@@ -1,5 +1,5 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import { DelayGenerationReport, DelayLineReport, WindowQuery } from '../../core/models/models';
+import { DelayGenerationReport, DelayRouteReport, WindowQuery } from '../../core/models/models';
 
 export const DelayGenerationActions = createActionGroup({
   source: 'Delay Generation',
@@ -7,9 +7,9 @@ export const DelayGenerationActions = createActionGroup({
     Load: props<{ window: WindowQuery }>(),
     Loaded: props<{ report: DelayGenerationReport }>(),
     Failure: props<{ error: string }>(),
-    'Load Line': props<{ window: WindowQuery; line: string }>(),
-    'Line Loaded': props<{ report: DelayLineReport }>(),
-    'Line Failure': props<{ error: string }>(),
-    'Clear Line': emptyProps(),
+    'Load Route': props<{ window: WindowQuery; route: string }>(),
+    'Route Loaded': props<{ report: DelayRouteReport }>(),
+    'Route Failure': props<{ error: string }>(),
+    'Clear Route': emptyProps(),
   },
 });

@@ -1,8 +1,8 @@
 package com.transitanalytics.web;
 
+import com.transitanalytics.common.ReportWindows;
+import com.transitanalytics.delays.DelayGenerationService;
 import com.transitanalytics.dto.DelayGenerationDto;
-import com.transitanalytics.service.DelayGenerationService;
-import com.transitanalytics.service.ReportWindows;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,10 +28,10 @@ public class DelayGenerationController {
     }
 
     @Operation(summary = "Delay generated on every stretch of the network",
-            description = "In a time window, on the timetable's lines: the change in the "
+            description = "In a time window, on the timetable's routes: the change in the "
                     + "feed's delay between leaving one stop and leaving the next (positive: delay generated), "
-                    + "averaged per directed stretch (all lines together, measured at least 5 times) for the whole "
-                    + "day and per part of it, and each line's average gain from first stop to last. Per-day "
+                    + "averaged per directed stretch (all routes together, measured at least 5 times) for the whole "
+                    + "day and per part of it, and each route's average gain from first stop to last. Per-day "
                     + "figures are over the days with recordings. Cached for 2 minutes.")
     @GetMapping
     public DelayGenerationDto.Report report(
@@ -40,15 +40,15 @@ public class DelayGenerationController {
         return delays.report(windows.resolve(from, to));
     }
 
-    @Operation(summary = "Delay generated along one line",
+    @Operation(summary = "Delay generated along one route",
             description = "Per headsign: every stretch in route order with its average, median and 90th percentile "
                     + "change in delay, the share of runs gaining a minute or more, and the average per hour of the "
-                    + "day; the line's brigades by delay gained per run; and example runs (the most delay gained "
+                    + "day; the route's brigades by delay gained per run; and example runs (the most delay gained "
                     + "overall, and on each stretch) with the delay on leaving every stop.")
-    @GetMapping("/lines/{line}")
-    public DelayGenerationDto.LineReport line(
-            @PathVariable String line,
+    @GetMapping("/routes/{route}")
+    public DelayGenerationDto.RouteReport route(
+            @PathVariable String route,
             @RequestParam(required = false) Instant from, @RequestParam(required = false) Instant to) {
-        return delays.line(windows.resolve(from, to), line);
+        return delays.route(windows.resolve(from, to), route);
     }
 }

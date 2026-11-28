@@ -90,8 +90,8 @@ export interface RailBusJourney {
 }
 
 export interface RailBusLeg {
-  /** The bus line, or the train's number. */
-  line: string;
+  /** The bus route, or the train's number. */
+  route: string;
   from: string;
   to: string;
   departure: string;
@@ -106,12 +106,10 @@ export interface RailBusLeg {
 export interface CityRailProposal {
   /** The weekday whose trains the timetables keep clear of, yyyy-MM-dd; null while the timetable isn't loaded. */
   day: string | null;
-  /** When the timetables were worked out (ISO); null without them. */
-  computedAt: string | null;
   rules: ProposalRules;
   /** The railways, from Białystok outwards. */
   corridors: ProposalCorridor[];
-  /** Empty while the timetable isn't loaded. */
+  /** Empty while the timetable isn't loaded. Each frequency's routes come one at a time: ProposalVariant. */
   solutions: ProposalSolution[];
 }
 
@@ -160,20 +158,21 @@ export type ProposalFrequency = '1tp2h' | '1tph' | '2tph' | '3tph';
 export interface ProposalSolution {
   id: 'radial' | 'through';
   /** One per frequency, least frequent first. */
-  variants: ProposalVariant[];
+  variants: ProposalChoice[];
 }
 
-/** A solution's lines at one frequency. */
-export interface ProposalVariant {
+/** A frequency of a solution, and the trains all its routes need together. */
+export interface ProposalChoice {
   frequency: ProposalFrequency;
-  /** At most this long between two trains of a line, each way. */
-  periodMinutes: number;
-  /** Trains all its lines need together. */
   vehicles: number;
-  lines: ProposalLine[];
 }
 
-export interface ProposalLine {
+/** A solution's routes at one frequency (GET /api/city-rail/proposal/{solution}/{frequency}). */
+export interface ProposalVariant extends ProposalChoice {
+  routes: ProposalRoute[];
+}
+
+export interface ProposalRoute {
   /** "S1". */
   id: string;
   stations: { name: string; kind: ProposalStationKind; km: number }[];
@@ -198,12 +197,12 @@ export interface ProposalLine {
 }
 
 export interface ProposalTrip {
-  /** city: the line's own; PR: Polregio; IC: PKP Intercity. */
+  /** city: the route's own; PR: Polregio; IC: PKP Intercity. */
   kind: 'city' | 'PR' | 'IC';
-  /** The line's number, or the train's number and name ("16132/3 Dąbrowska"). */
+  /** The route's number, or the train's number and name ("16132/3 Dąbrowska"). */
   label: string;
-  /** Per station: "HH:MM" (the departure, at its last the arrival), "|" passing, null not on the line there. */
+  /** Per station: "HH:MM" (the departure, at its last the arrival), "|" passing, null not on the route there. */
   times: (string | null)[];
-  /** Comes closer than the headway to another train (the line's own only). */
+  /** Comes closer than the headway to another train (the route's own only). */
   conflict: boolean;
 }

@@ -45,7 +45,7 @@
             </button>
             <span class="muted model">{{ u.vehicle.model ?? '—' }}</span>
             <span class="num">{{ t('fleet.hours', { n: decimal(u.hours) }) }}</span>
-            <span class="muted lines">{{ u.lines.join(', ') }}</span>
+            <span class="muted lines">{{ u.routes.join(', ') }}</span>
           </li>
         } @empty {
           <li class="muted">{{ t('fleet.noBusInService') }}</li>
@@ -63,7 +63,7 @@
             </button>
             <span class="muted model">{{ u.vehicle.model ?? '—' }}</span>
             <span class="num">{{ t('fleet.hours', { n: decimal(u.hours) }) }}</span>
-            <span class="muted lines">{{ u.lines.join(', ') }}</span>
+            <span class="muted lines">{{ u.routes.join(', ') }}</span>
           </li>
         } @empty {
           <li class="muted">{{ t('fleet.noBusInService') }}</li>
@@ -71,12 +71,12 @@
       </ol>
     </section>
 
-    <section class="card tile breakdowns">
-      <h2>{{ t('fleet.brokenDown') }}</h2>
-      <p class="hero">{{ r.breakdowns.length }}</p>
+    <section class="card tile bus-changes">
+      <h2>{{ t('fleet.busChanges') }}</h2>
+      <p class="hero">{{ r.busChanges.length }}</p>
       <p class="muted">{{ t('fleet.replacedMidway') }}</p>
       <ul class="mini-list">
-        @for (b of r.breakdowns; track b.vehicle.id + b.at) {
+        @for (b of r.busChanges; track b.vehicle.id + b.at) {
           <li>
             <button type="button" class="link" (click)="choose(b.vehicle.id)">
               {{ b.vehicle.number }}
@@ -84,7 +84,7 @@
             <span class="muted model">{{ b.vehicle.model ?? '—' }}</span>
             <span class="nowrap">{{ b.at | date: 'EEE d MMM, HH:mm' }}</span>
             <span class="tag" [class.danger]="!b.returned" [class.warning]="!!b.returned">{{
-              daysOutText(b)
+              hoursOutText(b)
             }}</span>
           </li>
         }

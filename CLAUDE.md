@@ -8,8 +8,15 @@ the short version for working on the code.
 
 - `backend/`: Spring Boot 4, Java 17 (no `List.getFirst()` and other Java 21 API), Gradle (Kotlin DSL), JdbcTemplate
   over PostgreSQL + TimescaleDB (`position_sample` hypertable), Flyway migrations in `src/main/resources/db/migration`.
-  Packages under `com.transitanalytics`: `web` (controllers), `service`, `recording` (position history),
-  `dto`, `gtfs` (import), `zbiorkom` (live feed), `geo`, `buslanes`, `classification`, `security`.
+  No JPA: every read and write is SQL through JdbcTemplate. Packages under `com.transitanalytics`, one per feature:
+  `web` (controllers), `dto`, `domain` (shared records and enums), `common` (report windows, caches, stored days),
+  `data` (shared readers, so features don't write their own SQL for the same data: `Timetables` (trips of a day),
+  `Reports` (recorded positions, and pairs of consecutive ones with one rule for all features), `Shapes`,
+  `RailTrains`),
+  `timetable` (service days, routes, stops), `routes`, `trips` (abnormal trips, trip runs), `brigades`, `fleet`,
+  `corridors`, `delays`, `hotspots`, `buslanes`, `coverage`, `rail` (with `rail.proposal`), `recording` (position
+  history), `gtfs` (import), `zbiorkom` (live feed), `geo`, `classification`, `security`. A transit line is a
+  *route* in code and API (`/api/routes`, `route` fields); UI texts still say "line".
   - `backend/zbiorkom-feed/` (live feed client, shared) and `backend/recorder/` (the app that stores positions).
   - Settings in `src/main/resources/map/*.yml` and `classification/`; `./config/...` files override them.
   - Place data (borders, woods, Biała valley, residents) in `src/main/resources/places/` (see its README): generated

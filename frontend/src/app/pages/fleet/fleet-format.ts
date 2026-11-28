@@ -1,4 +1,4 @@
-import { Breakdown, FleetVehicle, VehicleDetail, VehicleUsage } from '../../core/models/models';
+import { BusChange, FleetVehicle, VehicleDetail, VehicleUsage } from '../../core/models/models';
 import { Bar } from '../../shared/bar-chart/bar-chart';
 import { clock } from '../../shared/format/time';
 import { intlLocale, t, tn } from '../../core/i18n/t';
@@ -37,10 +37,15 @@ export function searchVehicles(usage: VehicleUsage[], query: string, limit = 8):
     .map((x) => x.u);
 }
 
-/** "back after 1.5 days" or "not back yet (3 days)". */
-export function daysOutText(b: Breakdown): string {
-  const days = tn('fleet.days', b.daysOut);
-  return t(b.returned ? 'fleet.backAfter' : 'fleet.notBackYet', { days });
+/** Whole hours as days and hours: "1 d 5 h", or "5 h" under a day. */
+export function daysHours(hours: number): string {
+  const days = Math.floor(hours / 24);
+  return days ? t('fleet.daysHours', { days, hours: hours % 24 }) : t('fleet.hoursOnly', { hours });
+}
+
+/** "back after 1 d 5 h" or "not back yet (3 d 0 h)". */
+export function hoursOutText(b: BusChange): string {
+  return t(b.returned ? 'fleet.backAfter' : 'fleet.notBackYet', { days: daysHours(b.hoursOut) });
 }
 
 /** A share in whole percent (67 for 2 of 3); 0 of 0 is 0. */
@@ -61,9 +66,9 @@ export interface TimelineRow {
   breaks: { from: number; to: number }[];
 }
 
-function runText(run: { line: string; brigade: string | null; headsign: string | null }): string {
+function runText(run: { route: string; brigade: string | null; headsign: string | null }): string {
   return (
-    t('fleet.runLine', { line: run.line }) +
+    t('fleet.runLine', { route: run.route }) +
     (run.brigade ? t('fleet.runBrigade', { brigade: run.brigade }) : '') +
     (run.headsign ? ` → ${run.headsign}` : '')
   );
@@ -98,7 +103,7 @@ export function timelineRows(detail: VehicleDetail, perRun: boolean): TimelineRo
       runs: d.runs.map((r) => ({
         from: r.from,
         to: r.to,
-        text: r.line,
+        text: r.route,
         title: `${clock(r.from)}–${clock(r.to)}`,
         detail: runText(r),
       })),
@@ -110,12 +115,12 @@ export function timelineRows(detail: VehicleDetail, perRun: boolean): TimelineRo
     const offset = (Date.parse(d.start) - origin) / 1000;
     return d.runs.map((r) => ({
       key: `${d.day}|${r.from}`,
-      label: `${r.line} ${clock(r.from + offset)}`,
+      label: `${r.route} ${clock(r.from + offset)}`,
       runs: [
         {
           from: r.from + offset,
           to: r.to + offset,
-          text: r.headsign ?? r.line,
+          text: r.headsign ?? r.route,
           title: `${clock(r.from)}–${clock(r.to)}`,
           detail: runText(r),
         },
@@ -152,8 +157,8 @@ export function usageBars(usage: VehicleUsage[]): Bar[] {
     title: `${u.vehicle.number}: ${t('fleet.hours', { n: decimal(u.hours) })}`,
     detail: [
       u.vehicle.model,
-      u.lines.length
-        ? t('fleet.linesList', { lines: u.lines.join(', ') })
+      u.routes.length
+        ? t('fleet.linesList', { routes: u.routes.join(', ') })
         : t('fleet.notInService'),
     ]
       .filter(Boolean)

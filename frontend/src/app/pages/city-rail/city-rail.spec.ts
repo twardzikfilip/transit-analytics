@@ -74,8 +74,8 @@ const REPORT: CityRailReport = {
   ],
 };
 
-const leg = (line: string, from: string, to: string, departure: string, arrival: string) => ({
-  line,
+const leg = (route: string, from: string, to: string, departure: string, arrival: string) => ({
+  route,
   from,
   to,
   departure,
@@ -151,8 +151,8 @@ async function render(
   return page;
 }
 
-/** The routes' lines on the map, in their colours: [colour, width, opacity]. */
-const lines = (el: HTMLElement) =>
+/** The routes' routes on the map, in their colours: [colour, width, opacity]. */
+const routes = (el: HTMLElement) =>
   [...el.querySelectorAll('.leaflet-overlay-pane path')]
     .filter((p) => ['#2a78d6', '#eb6834'].includes(p.getAttribute('stroke') ?? ''))
     .map((p) => ['stroke', 'stroke-width', 'stroke-opacity'].map((a) => p.getAttribute(a)));
@@ -180,7 +180,7 @@ describe('City rail page', () => {
     expect([...all.querySelectorAll('tfoot td.num')].map(text)).toEqual(['40', '42', '24', '26']);
     expect(text(all)).toContain('Warszawa');
     expect(text(rows[0])).toContain('Kuźnica Białostocka, Suwałki');
-    expect(lines(el)).toEqual([
+    expect(routes(el)).toEqual([
       ['#2a78d6', '5', '1'],
       ['#eb6834', '5', '1'],
     ]);
@@ -192,18 +192,18 @@ describe('City rail page', () => {
     row.dispatchEvent(new Event('mouseenter'));
     fixture.detectChanges();
     // Drawn last: on top.
-    expect(lines(el)).toEqual([
+    expect(routes(el)).toEqual([
       ['#2a78d6', '5', '0.3'],
       ['#eb6834', '8', '1'],
     ]);
     row.dispatchEvent(new Event('mouseleave'));
     fixture.detectChanges();
-    expect(lines(el).map((l) => l[1])).toEqual(['5', '5']);
+    expect(routes(el).map((l) => l[1])).toEqual(['5', '5']);
   });
 
   it('highlights the route chosen in the URL', async () => {
     const { el } = await render(REPORT, { route: 'Czarny Blok' });
-    expect(lines(el).map((l) => l[1])).toEqual(['5', '8']);
+    expect(routes(el).map((l) => l[1])).toEqual(['5', '8']);
     expect(el.querySelector('tbody .name')!.getAttribute('aria-pressed')).toBe('true');
   });
 

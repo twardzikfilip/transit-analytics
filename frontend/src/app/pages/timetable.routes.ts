@@ -1,8 +1,6 @@
 import { Routes } from '@angular/router';
 import { provideEffects } from '@ngrx/effects';
 import { provideState } from '@ngrx/store';
-import * as routesEffects from '../store/routes/routes.effects';
-import { routesFeature } from '../store/routes/routes.reducer';
 import * as stopTimesEffects from '../store/stop-times/stop-times.effects';
 import { stopTimesFeature } from '../store/stop-times/stop-times.reducer';
 import * as stopsEffects from '../store/stops/stops.effects';
@@ -16,10 +14,9 @@ export const TIMETABLE_ROUTES: Routes = [
   {
     path: '',
     providers: [
-      provideState(routesFeature),
       provideState(stopsFeature),
       provideState(stopTimesFeature),
-      provideEffects(routesEffects, stopsEffects, stopTimesEffects),
+      provideEffects(stopsEffects, stopTimesEffects),
     ],
     children: [
       {

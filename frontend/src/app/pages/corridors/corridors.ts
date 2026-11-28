@@ -9,7 +9,7 @@ import { Skeleton } from '../../shared/skeleton/skeleton';
 import { t } from '../../core/i18n/t';
 
 /**
- * Important corridors: stretches of at least four consecutive stops shared by two or more lines, from the weekday
+ * Important corridors: stretches of at least four consecutive stops shared by two or more routes, from the weekday
  * timetable, with their buses, intervals and regularity in peak and off-peak hours.
  */
 @Component({

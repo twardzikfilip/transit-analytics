@@ -1,7 +1,7 @@
 package com.transitanalytics.zbiorkom;
 
-import com.transitanalytics.dto.VersionDto;
 import com.transitanalytics.dto.VersionDto.Release;
+import com.transitanalytics.dto.VersionDto;
 import com.transitanalytics.web.VersionController;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.support.StaticListableBeanFactory;

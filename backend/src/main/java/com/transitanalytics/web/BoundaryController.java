@@ -28,7 +28,7 @@ public class BoundaryController {
     @Operation(summary = "Białystok's city limits and centre",
             description = "Closed rings of [latitude, longitude] pairs: the city (OpenStreetMap relation 2910925) and "
                     + "Osiedle Centrum (relation 4091287), © OpenStreetMap contributors, ODbL; and the smaller "
-                    + "centre lines are classified by (lineCentre, set in classification/routes.yml).")
+                    + "centre routes are classified by (lineCentre, set in classification/routes.yml).")
     @GetMapping
     public ResponseEntity<BoundaryDto> boundaries() {
         // Fixed while the app runs: let browsers keep it for an hour.

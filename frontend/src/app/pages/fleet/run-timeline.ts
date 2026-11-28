@@ -21,7 +21,7 @@ interface Hover {
 
 /**
  * A bus's runs as a timeline, like a brigade's on Routes: one row per day (or per run), a bar per run labelled with
- * its line when there is room, and breaks of 30 minutes or more as a dashed, labelled gap.
+ * its route when there is room, and breaks of 30 minutes or more as a dashed, labelled gap.
  */
 @Component({
   selector: 'app-run-timeline',

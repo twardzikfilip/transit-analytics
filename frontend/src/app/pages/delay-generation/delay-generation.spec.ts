@@ -7,17 +7,17 @@ import { DelayGenerationApi } from '../../core/api/api.services';
 import {
   DelayExample,
   DelayGenerationReport,
-  DelayLineReport,
-  DelayLineStretch,
+  DelayRouteReport,
+  DelayRouteStretch,
   DelayStretch,
 } from '../../core/models/models';
 import { DelayGenerationActions } from '../../store/delay-generation/delay-generation.actions';
-import { load, loadLine } from '../../store/delay-generation/delay-generation.effects';
+import { load, loadRoute } from '../../store/delay-generation/delay-generation.effects';
 import { delayGenerationFeature } from '../../store/delay-generation/delay-generation.reducer';
 import { renderPage, stateAfter, text, useSvgMaps } from '../../testing/page-testing';
 import { DelayGeneration, bandStretches } from './delay-generation';
 import { changeClass, lateOrEarlyText, minutesPerDay, signedChange } from './delay-scale';
-import { activeHours, cellText } from './line-heatmap';
+import { activeHours, cellText } from './route-heatmap';
 import { offsetLine } from './stretch-map';
 import { scheduledTime } from './trip-profile';
 import { t } from '../../core/i18n/t';
@@ -34,7 +34,7 @@ const stretch = (from: string, to: string, mean: number, runs = 100): DelayStret
   fromLon: 23.15,
   toLat: 53.133,
   toLon: 23.15,
-  lines: ['2', '4'],
+  routes: ['2', '4'],
   runs: [runs, 4],
   meanSeconds: [mean, 50],
 });
@@ -52,9 +52,9 @@ function report(): DelayGenerationReport {
       stretch('Hetmańska', 'Marczukowska', -23, 500),
       stretch('Rare', 'Stretch', 90, 4),
     ],
-    lines: [
+    routes: [
       {
-        line: '10',
+        route: '10',
         runs: 200,
         meanGainSeconds: 30,
         medianGainSeconds: 20,
@@ -65,7 +65,7 @@ function report(): DelayGenerationReport {
         worstMeanSeconds: null,
       },
       {
-        line: '21',
+        route: '21',
         runs: 370,
         meanGainSeconds: 78.5,
         medianGainSeconds: 79,
@@ -79,12 +79,12 @@ function report(): DelayGenerationReport {
   };
 }
 
-const lineStretch = (
+const routeStretch = (
   from: string,
   to: string,
   mean: number,
   examples: number[],
-): DelayLineStretch => ({
+): DelayRouteStretch => ({
   from,
   to,
   fromSeq: 1,
@@ -113,11 +113,11 @@ const example = (id: number, vehicle: string, delays: number[]): DelayExample =>
   })),
 });
 
-function lineReport(): DelayLineReport {
+function routeReport(): DelayRouteReport {
   return {
     from: '2026-11-10T13:00:00Z',
     to: '2026-11-17T13:00:00Z',
-    line: '21',
+    route: '21',
     days: 4,
     directions: [
       {
@@ -125,8 +125,8 @@ function lineReport(): DelayLineReport {
         runs: 188,
         meanGainSeconds: 58,
         stretches: [
-          lineStretch('Piastowska', 'Pałacowa', 21, []),
-          lineStretch('Pałacowa', 'Rzeka Biała', 31, [2]),
+          routeStretch('Piastowska', 'Pałacowa', 21, []),
+          routeStretch('Pałacowa', 'Rzeka Biała', 31, [2]),
         ],
         exampleIds: [1, 2],
       },
@@ -137,11 +137,11 @@ function lineReport(): DelayLineReport {
   };
 }
 
-function withLine() {
+function withRoute() {
   return stateAfter(
     delayGenerationFeature,
     DelayGenerationActions.loaded({ report: report() }),
-    DelayGenerationActions.lineLoaded({ report: lineReport() }),
+    DelayGenerationActions.routeLoaded({ report: routeReport() }),
   );
 }
 
@@ -166,7 +166,7 @@ describe('Delay generation page', () => {
     );
 
     expect(store.dispatch).toHaveBeenCalledWith(DelayGenerationActions.load({ window: CUSTOM }));
-    expect(store.dispatch).toHaveBeenCalledWith(DelayGenerationActions.clearLine());
+    expect(store.dispatch).toHaveBeenCalledWith(DelayGenerationActions.clearRoute());
     expect(text(el.querySelector('.summary'))).toContain('8520 runs measured over 4 days recorded');
     expect(el.querySelectorAll('app-stretch-map path.leaflet-interactive')).toHaveLength(3);
 
@@ -180,10 +180,10 @@ describe('Delay generation page', () => {
     expect(text(el.querySelector('table.recovered tbody tr td:nth-child(2)'))).toBe(
       'Hetmańska → Marczukowska',
     );
-    const lines = [...el.querySelectorAll('table.lines-table tbody tr')].map((r) =>
+    const routes = [...el.querySelectorAll('table.lines-table tbody tr')].map((r) =>
       [...r.querySelectorAll('td')].map(text),
     );
-    expect(lines[0]).toEqual([
+    expect(routes[0]).toEqual([
       '21',
       '370',
       '+1:19',
@@ -192,7 +192,7 @@ describe('Delay generation page', () => {
       '121 min',
       'Piłsudskiego → Rzeka Biała (+0:46)',
     ]);
-    expect(lines[1][6]).toBe('—');
+    expect(routes[1][6]).toBe('—');
   });
 
   it('switches the window, part of the day and line through the URL', () => {
@@ -220,34 +220,34 @@ describe('Delay generation page', () => {
     });
     (el.querySelector('table.lines-table tbody tr') as HTMLElement).click();
     expect(navigate).toHaveBeenLastCalledWith([], {
-      queryParams: { line: '21' },
+      queryParams: { route: '21' },
       queryParamsHandling: 'merge',
     });
 
-    setQuery({ ...URL_WINDOW, part: 'am-peak', line: '21' });
+    setQuery({ ...URL_WINDOW, part: 'am-peak', route: '21' });
     fixture.detectChanges();
     expect(store.dispatch).toHaveBeenCalledWith(DelayGenerationActions.load({ window: CUSTOM }));
     expect(store.dispatch).toHaveBeenLastCalledWith(
-      DelayGenerationActions.loadLine({ window: CUSTOM, line: '21' }),
+      DelayGenerationActions.loadRoute({ window: CUSTOM, route: '21' }),
     );
     // In the morning peak only one stretch was measured 5 times or more.
     expect(text(el.querySelector('table.created tbody'))).toContain('No stretch gains delay');
   });
 
   it('shows a line: directions, stretches by hour, the runs that gained most and their profile', () => {
-    const { el, render } = renderPage(DelayGeneration, withLine(), { line: '21' });
+    const { el, render } = renderPage(DelayGeneration, withRoute(), { route: '21' });
 
     const directions = [...el.querySelectorAll('.directions button')].map(text);
     expect(directions).toEqual([
       'Towards Zielone Wzgórza 188 runs, +0:58',
       'Towards Piastowska 187 runs, +1:39',
     ]);
-    const rows = el.querySelectorAll('app-line-heatmap tbody tr');
+    const rows = el.querySelectorAll('app-route-heatmap tbody tr');
     expect(rows).toHaveLength(2);
     expect(text(rows[1].querySelector('td.stretch'))).toBe(
       'Pałacowa → Rzeka Biała 170 buses · leaving 0:50 late · median +0:31',
     );
-    expect([...el.querySelectorAll('app-line-heatmap th.hour')].map(text)).toEqual(['7', '8']);
+    expect([...el.querySelectorAll('app-route-heatmap th.hour')].map(text)).toEqual(['7', '8']);
     expect([...rows[1].querySelectorAll('td.cell')].map(text)).toEqual(['+31', '0']);
 
     // The direction's runs that gained the most; the first is profiled.
@@ -273,7 +273,7 @@ describe('Delay generation page', () => {
     // The other direction has no runs to show.
     (el.querySelectorAll('.directions button')[1] as HTMLButtonElement).click();
     render();
-    expect(el.querySelectorAll('app-line-heatmap tbody tr')).toHaveLength(0);
+    expect(el.querySelectorAll('app-route-heatmap tbody tr')).toHaveLength(0);
     expect(text(el.querySelector('table.examples tbody'))).toContain('No run gained');
     expect([...el.querySelectorAll('table.brigades tbody tr td')].map(text)).toEqual([
       '021-06',
@@ -287,16 +287,16 @@ describe('Delay generation page', () => {
     const loading = stateAfter(
       delayGenerationFeature,
       DelayGenerationActions.loaded({ report: report() }),
-      DelayGenerationActions.loadLine({ window: CUSTOM, line: '99' }),
+      DelayGenerationActions.loadRoute({ window: CUSTOM, route: '99' }),
     );
-    const { el, fixture } = renderPage(DelayGeneration, loading, { line: '99' });
+    const { el, fixture } = renderPage(DelayGeneration, loading, { route: '99' });
     expect(text(el.querySelector('.line-detail [role=status]'))).toBe('Loading line 99…');
     const navigate = vi
       .spyOn(fixture.debugElement.injector.get(Router), 'navigate')
       .mockResolvedValue(true);
     (el.querySelector('.line-head button') as HTMLButtonElement).click();
     expect(navigate).toHaveBeenLastCalledWith([], {
-      queryParams: { line: null },
+      queryParams: { route: null },
       queryParamsHandling: 'merge',
     });
   });
@@ -304,10 +304,10 @@ describe('Delay generation page', () => {
   it('shows a line without runs, and a failure', () => {
     const empty = stateAfter(
       delayGenerationFeature,
-      DelayGenerationActions.lineLoaded({ report: { ...lineReport(), directions: [] } }),
-      DelayGenerationActions.lineFailure({ error: 'Server error' }),
+      DelayGenerationActions.routeLoaded({ report: { ...routeReport(), directions: [] } }),
+      DelayGenerationActions.routeFailure({ error: 'Server error' }),
     );
-    const { el } = renderPage(DelayGeneration, empty, { line: '21' });
+    const { el } = renderPage(DelayGeneration, empty, { route: '21' });
     // The error itself is a toast (core/api/error-toasts.ts), not text on the page.
     expect(text(el)).not.toContain('Server error');
     expect(text(el.querySelector('.line-detail'))).toContain('No runs of this line were measured');
@@ -330,14 +330,14 @@ describe('delay generation helpers', () => {
     expect(minutesPerDay(30, 400, 4)).toBe(50);
     expect(minutesPerDay(30, 400, 0)).toBe(200);
     expect(scheduledTime('2026-11-16T15:41:00Z', 120)).toBe('16:39');
-    expect(activeHours([lineStretch('A', 'B', 10, [])])).toEqual([7, 8]);
+    expect(activeHours([routeStretch('A', 'B', 10, [])])).toEqual([7, 8]);
     expect([cellText(31.4), cellText(-0.3), cellText(-6.2)]).toEqual(['+31', '0', '−6']);
     expect(bandStretches(report(), 1).map((s) => s.stretch.from)).toEqual([]);
     expect(bandStretches(report(), 0)).toHaveLength(3);
   });
 
   it('draws each direction to the right of its way', () => {
-    // Heading north: the line moves east (greater longitude), at the same latitude.
+    // Heading north: the route moves east (greater longitude), at the same latitude.
     const [a, b] = offsetLine([53.13, 23.15], [53.14, 23.15], 3, 14);
     expect(a[0]).toBeCloseTo(53.13, 6);
     expect(a[1]).toBeGreaterThan(23.15);
@@ -380,14 +380,19 @@ describe('delay generation effects', () => {
   });
 
   it('loads a line, reports a failure, and does nothing on clear', () => {
-    const r = lineReport();
-    const api = { line: vi.fn(() => of(r)) };
-    const action = DelayGenerationActions.loadLine({ window: { from: 'A', to: 'B' }, line: '21' });
-    expect(run(loadLine, api, action)).toEqual([DelayGenerationActions.lineLoaded({ report: r })]);
-    expect(api.line).toHaveBeenCalledWith({ from: 'A', to: 'B' }, '21');
-    expect(run(loadLine, { line: failing }, action)).toEqual([
-      DelayGenerationActions.lineFailure({ error: 'Down' }),
+    const r = routeReport();
+    const api = { route: vi.fn(() => of(r)) };
+    const action = DelayGenerationActions.loadRoute({
+      window: { from: 'A', to: 'B' },
+      route: '21',
+    });
+    expect(run(loadRoute, api, action)).toEqual([
+      DelayGenerationActions.routeLoaded({ report: r }),
     ]);
-    expect(run(loadLine, api, DelayGenerationActions.clearLine())).toEqual([]);
+    expect(api.route).toHaveBeenCalledWith({ from: 'A', to: 'B' }, '21');
+    expect(run(loadRoute, { route: failing }, action)).toEqual([
+      DelayGenerationActions.routeFailure({ error: 'Down' }),
+    ]);
+    expect(run(loadRoute, api, DelayGenerationActions.clearRoute())).toEqual([]);
   });
 });

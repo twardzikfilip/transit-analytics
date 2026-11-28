@@ -15,13 +15,6 @@ export interface TripRunPage {
   trips: TripRun[];
 }
 
-/** A brigade's trips on a service day (GET /api/trip-runs/day), in departure order. */
-export interface TripRunDay {
-  serviceDay: string;
-  brigade: string;
-  trips: TripRun[];
-}
-
 /** A scheduled trip and how it ran. */
 export interface TripRun {
   /** yyyy-MM-dd; trips after midnight belong to the day before. */
@@ -32,22 +25,8 @@ export interface TripRun {
   samples: TripSample[];
   /** Where a bus stood still on the way for 3 min or more. */
   stands: TripStand[];
-  /** The trip's stops in order, when each was due and when a bus passed it. */
-  stops: TripStopTime[];
   /** Its buses' average speed over the trip, stops and waits included; null when not seen running. */
   averageKmh: number | null;
-}
-
-export interface TripStopTime {
-  /** Its number on the trip (1-based). */
-  index: number;
-  name: string;
-  /** When the bus was due to leave it. */
-  scheduled: string;
-  /** When a bus was first seen heading beyond it (the last stop: its arrival); null when not seen. */
-  passed: string | null;
-  /** The delay then (seconds); null when unknown. */
-  delay: number | null;
 }
 
 export interface TripSample {
@@ -92,7 +71,7 @@ export interface TripRunDetail {
   points: TripDetailPoint[];
   /** The route shape, [lat, lon]; empty when the timetable has none. */
   route: [number, number][];
-  /** The trip's stops in order. */
+  /** The trip's stops in order, when each was due and when a bus passed it. */
   stops: TripDetailStop[];
 }
 
@@ -113,6 +92,12 @@ export interface TripDetailStop {
   name: string;
   lat: number;
   lon: number;
+  /** When the bus was due to leave it. */
+  scheduled: string;
+  /** When a bus was first seen heading beyond it (the last stop: its arrival); null when not seen. */
+  passed: string | null;
+  /** The delay then (seconds); null when unknown. */
+  delay: number | null;
   /** How long a bus stood within 30 m of it (s); 0 went past without stopping; null not seen near it. */
   dwellSeconds: number | null;
 }

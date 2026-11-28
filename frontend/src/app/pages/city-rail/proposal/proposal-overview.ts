@@ -45,7 +45,7 @@ export class ProposalOverview {
     }),
   );
 
-  protected readonly lines = computed<MapLine[]>(() =>
+  protected readonly routes = computed<MapLine[]>(() =>
     this.corridors().map((c) => ({
       id: c.id,
       color: c.color,

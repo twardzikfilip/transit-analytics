@@ -9,11 +9,11 @@ import { windowParams } from './window-params';
 export class HotspotApi {
   private readonly http = inject(HttpClient);
 
-  /** The report for a window, for one line or (null) all of them. */
-  report(window: WindowQuery, line: string | null = null): Observable<HotspotReport> {
+  /** The report for a window, for one route or (null) all of them. */
+  report(window: WindowQuery, route: string | null = null): Observable<HotspotReport> {
     const params = windowParams(window);
     return this.http.get<HotspotReport>('/api/hotspots', {
-      params: line ? { ...params, line } : params,
+      params: route ? { ...params, route } : params,
     });
   }
 }

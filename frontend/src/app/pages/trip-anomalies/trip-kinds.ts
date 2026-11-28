@@ -2,20 +2,20 @@ import {
   AbnormalTrip,
   ChangeFate,
   TripAnomalyKind,
-  TripAnomalyLine,
+  TripAnomalyRoute,
   TripAnomalySummary,
 } from '../../core/models/models';
 import { duration, formatDelay } from '../../shared/format/time';
 import { km, shareOf } from '../../shared/format/number';
 import { t, tn } from '../../core/i18n/t';
 
-/** Kinds of abnormal trip, the most serious first, with where their count is in the summary and per line. */
+/** Kinds of abnormal trip, the most serious first, with where their count is in the summary and per route. */
 export const KINDS: {
   key: TripAnomalyKind;
   /** Translation keys of its name and its explanation. */
   label: string;
   description: string;
-  count: keyof TripAnomalySummary & keyof TripAnomalyLine;
+  count: keyof TripAnomalySummary & keyof TripAnomalyRoute;
 }[] = [
   {
     key: 'cancelled',
@@ -64,17 +64,17 @@ export const KINDS: {
 /** What became of the replaced bus, in short. */
 export function changeFateLabel(fate: ChangeFate): string {
   switch (fate) {
-    case 'broken-down':
+    case 'not-used':
     case 'reassigned':
     case 'returned':
       return t(`anomalies.fate.${fate}`);
   }
 }
 
-/** Where the replacement bus came from: "from line 29 (029-05)", "from the depot". */
+/** Where the replacement bus came from: "from route 29 (029-05)", "from the depot". */
 export function replacementFrom(trip: AbnormalTrip): string {
-  return trip.replacementLine
-    ? t('anomalies.fromLine', { line: trip.replacementLine, brigade: trip.replacementBrigade })
+  return trip.replacementRoute
+    ? t('anomalies.fromLine', { route: trip.replacementRoute, brigade: trip.replacementBrigade })
     : t('anomalies.fromDepot');
 }
 
@@ -128,7 +128,7 @@ export function coverage(trip: AbnormalTrip): string {
   return t('anomalies.stopsOf', { from: trip.fromStop, to: trip.toStop, total: trip.stops });
 }
 
-/** Abnormal trips per line, all kinds together. */
-export function abnormalCount(line: TripAnomalyLine): number {
-  return line.judged - line.completed;
+/** Abnormal trips per route, all kinds together. */
+export function abnormalCount(route: TripAnomalyRoute): number {
+  return route.judged - route.completed;
 }

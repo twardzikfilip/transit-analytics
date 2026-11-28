@@ -1,16 +1,16 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
-import { LineDetail, LinePerformance, LineRef } from '../../core/models/models';
+import { RouteDetail, RoutePerformance, RouteRef } from '../../core/models/models';
 
 export const RouteDetailActions = createActionGroup({
   source: 'Route Detail',
   events: {
-    /** Loads the lines to pick from. */
-    'Load Lines': emptyProps(),
-    'Lines Loaded': props<{ lines: LineRef[] }>(),
-    /** Loads a line's timetable detail and, separately (it takes longer), its measured performance. */
-    Select: props<{ line: string }>(),
-    'Detail Loaded': props<{ detail: LineDetail }>(),
-    'Performance Loaded': props<{ line: string; performance: LinePerformance }>(),
+    /** Loads the routes to pick from. */
+    'Load Routes': emptyProps(),
+    'Routes Loaded': props<{ routes: RouteRef[] }>(),
+    /** Loads a route's timetable detail and, separately (it takes longer), its measured performance. */
+    Select: props<{ route: string }>(),
+    'Detail Loaded': props<{ detail: RouteDetail }>(),
+    'Performance Loaded': props<{ route: string; performance: RoutePerformance }>(),
     Failure: props<{ error: string }>(),
   },
 });

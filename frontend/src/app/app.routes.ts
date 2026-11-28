@@ -26,7 +26,7 @@ export const routes: Routes = [
       { path: 'live-map', redirectTo: 'home' },
       { path: 'positions', redirectTo: 'home' },
       { path: 'delays', redirectTo: 'home' },
-      // Line statistics: each line's regularity is now on Routes.
+      // Route statistics: each route's regularity is now on Routes.
       { path: 'lines', redirectTo: 'routes' },
       {
         path: 'hotspots',

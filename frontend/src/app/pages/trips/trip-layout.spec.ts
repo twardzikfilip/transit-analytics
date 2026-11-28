@@ -20,7 +20,7 @@ const trip = (kind: TripRun['trip']['kind']): TripRun => ({
   brigade: '103-05',
   trip: {
     tripId: 't',
-    line: '103',
+    route: '103',
     headsign: null,
     from: 'A',
     to: 'B',
@@ -51,7 +51,6 @@ const trip = (kind: TripRun['trip']['kind']): TripRun => ({
     { at: at('14:08'), bus: '230', delay: 700, kmh: 10, stop: 5 },
   ],
   stands: [],
-  stops: [],
   averageKmh: null,
 });
 
@@ -107,14 +106,14 @@ describe('Trip layout', () => {
   });
 
   it("reads a drawn line's value at a moment, nothing where it isn't drawn", () => {
-    const lines = [
+    const routes = [
       [
         { time: 0, value: 0 },
         { time: 60, value: 6 },
       ],
       [{ time: 200, value: 3 }],
     ];
-    expect([0, 30, 60, 100, 200, 300].map((time) => valueAt(lines, time))).toEqual([
+    expect([0, 30, 60, 100, 200, 300].map((time) => valueAt(routes, time))).toEqual([
       0,
       3,
       6,
@@ -136,6 +135,9 @@ describe('Trip layout', () => {
       name: `S${index}`,
       lat: 0,
       lon: 0,
+      scheduled: at('14:00'),
+      passed: null,
+      delay: null,
       dwellSeconds,
     });
     expect(

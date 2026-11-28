@@ -2,20 +2,20 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { catchError, exhaustMap, map, of, switchMap } from 'rxjs';
-import { LineDetailApi } from '../../core/api/api.services';
+import { RouteDetailApi } from '../../core/api/api.services';
 import { errorMessage } from '../paged';
 import { RouteDetailActions } from './route-detail.actions';
 
 const toFailure = (err: HttpErrorResponse) =>
   of(RouteDetailActions.failure({ error: errorMessage(err) }));
 
-export const loadLines = createEffect(
-  (actions$ = inject(Actions), api = inject(LineDetailApi)) =>
+export const loadRoutes = createEffect(
+  (actions$ = inject(Actions), api = inject(RouteDetailApi)) =>
     actions$.pipe(
-      ofType(RouteDetailActions.loadLines),
+      ofType(RouteDetailActions.loadRoutes),
       exhaustMap(() =>
-        api.lines().pipe(
-          map((lines) => RouteDetailActions.linesLoaded({ lines })),
+        api.routes().pipe(
+          map((routes) => RouteDetailActions.routesLoaded({ routes })),
           catchError(toFailure),
         ),
       ),
@@ -23,13 +23,13 @@ export const loadLines = createEffect(
   { functional: true },
 );
 
-/** Picking another line cancels the previous line's requests. */
+/** Picking another route cancels the previous route's requests. */
 export const loadDetail = createEffect(
-  (actions$ = inject(Actions), api = inject(LineDetailApi)) =>
+  (actions$ = inject(Actions), api = inject(RouteDetailApi)) =>
     actions$.pipe(
       ofType(RouteDetailActions.select),
-      switchMap(({ line }) =>
-        api.detail(line).pipe(
+      switchMap(({ route }) =>
+        api.detail(route).pipe(
           map((detail) => RouteDetailActions.detailLoaded({ detail })),
           catchError(toFailure),
         ),
@@ -39,12 +39,12 @@ export const loadDetail = createEffect(
 );
 
 export const loadPerformance = createEffect(
-  (actions$ = inject(Actions), api = inject(LineDetailApi)) =>
+  (actions$ = inject(Actions), api = inject(RouteDetailApi)) =>
     actions$.pipe(
       ofType(RouteDetailActions.select),
-      switchMap(({ line }) =>
-        api.performance(line).pipe(
-          map((performance) => RouteDetailActions.performanceLoaded({ line, performance })),
+      switchMap(({ route }) =>
+        api.performance(route).pipe(
+          map((performance) => RouteDetailActions.performanceLoaded({ route, performance })),
           catchError(toFailure),
         ),
       ),

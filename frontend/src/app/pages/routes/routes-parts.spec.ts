@@ -3,14 +3,14 @@ import { TestBed } from '@angular/core/testing';
 import {
   Brigade,
   DepotRun,
-  LineDetail,
-  LineVehicles,
+  RouteDetail,
+  RouteVehicles,
   SegmentProfile,
 } from '../../core/models/models';
 import { BrigadeTimeline } from './brigade-timeline';
 import { DepotRuns } from './depot-runs';
 import { EndStops } from './end-stops';
-import { LineVehiclesSection } from './line-vehicles';
+import { RouteVehiclesSection } from './route-vehicles';
 import { SegmentChart } from './segment-chart';
 import { VariantTiles } from './variant-tiles';
 
@@ -69,7 +69,7 @@ describe('Routes page parts', () => {
       ],
       brigades: [{}, {}],
       brigadesKnown: true,
-    } as unknown as LineDetail;
+    } as unknown as RouteDetail;
 
     const el = render(VariantTiles, { detail });
 
@@ -81,7 +81,7 @@ describe('Routes page parts', () => {
     expect(text(el)).toContain('15 trips a weekday');
     const brigades = () => [...el.querySelectorAll('.tile')][4];
     expect(text(brigades().querySelector('strong'))).toBe('2');
-    // Regularity not known yet (or for a line without weekday statistics).
+    // Regularity not known yet (or for a route without weekday statistics).
     expect(text(el.querySelector('.tile.regularity strong'))).toBe('—');
 
     // Another operator's timetable without brigades: says so instead of 0.
@@ -158,7 +158,7 @@ describe('Routes page parts', () => {
   });
 
   it('lists the vehicles, the most used per brigade and changes during a day', () => {
-    const vehicles: LineVehicles = {
+    const vehicles: RouteVehicles = {
       days: 7,
       vehicles: [
         {
@@ -181,7 +181,7 @@ describe('Routes page parts', () => {
         },
       ],
     };
-    const el = render(LineVehiclesSection, { vehicles });
+    const el = render(RouteVehiclesSection, { vehicles });
     expect(cells(el.querySelector('tbody tr'))).toEqual([
       '032',
       'Yutong U12',
@@ -193,9 +193,9 @@ describe('Routes page parts', () => {
     );
 
     expect(
-      text(render(LineVehiclesSection, { vehicles: { ...vehicles, switches: [] } })),
+      text(render(RouteVehiclesSection, { vehicles: { ...vehicles, switches: [] } })),
     ).toContain('Every brigade kept the same bus all day');
-    expect(text(render(LineVehiclesSection, { vehicles: null, loading: true }))).toContain(
+    expect(text(render(RouteVehiclesSection, { vehicles: null, loading: true }))).toContain(
       'Loading vehicles',
     );
   });

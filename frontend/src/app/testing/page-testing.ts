@@ -24,7 +24,7 @@ export const TEST_BOUNDARIES: CityBoundaries = {
     [53.14, 23.17],
     [53.12, 23.14],
   ],
-  lineCentre: [
+  routeCentre: [
     [53.125, 23.15],
     [53.125, 23.16],
     [53.135, 23.16],
@@ -169,7 +169,7 @@ export const text = (el: Element | null | undefined) =>
   (el?.textContent ?? '').replace(/\s+/g, ' ').trim();
 
 /**
- * jsdom has no canvas, so maps that prefer Leaflet's canvas renderer (many markers or lines) would fail. This makes
+ * jsdom has no canvas, so maps that prefer Leaflet's canvas renderer (many markers or routes) would fail. This makes
  * Leaflet fall back to its SVG renderer, which jsdom supports. Call it before rendering a page with such a map.
  */
 export function useSvgMaps(): void {

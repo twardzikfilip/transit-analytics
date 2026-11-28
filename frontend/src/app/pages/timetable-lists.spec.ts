@@ -39,7 +39,7 @@ describe('timetable list pages', () => {
 
     expect(store.dispatch).toHaveBeenCalledWith(
       StopsActions.load({
-        query: { page: 1, size: 50, sort: 'name', filters: { q: 'ry', zoneId: '2' } },
+        query: { page: 1, size: 50, filters: { q: 'ry', zoneId: '2' } },
       }),
     );
     expect([...el.querySelectorAll('tbody tr td:first-child')].map(text)).toEqual(['51', '52']);
@@ -76,7 +76,7 @@ describe('timetable list pages', () => {
     setQuery({ zoneId: '1' });
     expect(store.dispatch).toHaveBeenLastCalledWith(
       StopsActions.load({
-        query: { page: 0, size: 50, sort: 'name', filters: { q: null, zoneId: '1' } },
+        query: { page: 0, size: 50, filters: { q: null, zoneId: '1' } },
       }),
     );
   });
@@ -104,7 +104,7 @@ describe('timetable list pages', () => {
     const trip = renderPage(StopTimes, state, { tripId: '5' });
     expect(trip.store.dispatch).toHaveBeenCalledWith(
       StopTimesActions.load({
-        query: { page: 0, size: 50, sort: 'stopSequence', filters: { tripId: '5', stopId: null } },
+        query: { page: 0, size: 50, filters: { tripId: '5', stopId: null } },
       }),
     );
     expect(text(trip.el.querySelector('h2.subtitle'))).toBe('Trip 103 → Choroszcz');
@@ -119,7 +119,6 @@ describe('timetable list pages', () => {
         query: {
           page: 0,
           size: 50,
-          sort: ['departureTime', 'id'],
           filters: { tripId: null, stopId: '7' },
         },
       }),

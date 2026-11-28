@@ -20,7 +20,7 @@ interface NavGroup {
   /** Its heading's translation key; null: no heading (Home, on its own at the top). */
   label: string | null;
   items: NavItem[];
-  /** A line above it. */
+  /** A route above it. */
   divider?: boolean;
 }
 

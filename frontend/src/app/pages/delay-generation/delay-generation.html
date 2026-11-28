@@ -65,7 +65,7 @@
                 </td>
                 <td class="num">{{ int(s.runs / r.days) }}</td>
                 <td class="num">{{ t('delayGen.minutes', { n: int(s.minutesPerDay) }) }}</td>
-                <td class="lines">{{ s.stretch.lines.join(', ') }}</td>
+                <td class="lines">{{ s.stretch.routes.join(', ') }}</td>
               </tr>
             } @empty {
               <tr>
@@ -107,7 +107,7 @@
                 </td>
                 <td class="num">{{ int(s.runs / r.days) }}</td>
                 <td class="num">{{ t('delayGen.minutes', { n: int(s.minutesPerDay) }) }}</td>
-                <td class="lines">{{ s.stretch.lines.join(', ') }}</td>
+                <td class="lines">{{ s.stretch.routes.join(', ') }}</td>
               </tr>
             } @empty {
               <tr>
@@ -143,16 +143,16 @@
           </tr>
         </thead>
         <tbody>
-          @for (l of lines(); track l.line) {
+          @for (l of routes(); track l.route) {
             <tr
-              [class.selected]="line() === l.line"
-              [attr.aria-selected]="line() === l.line"
+              [class.selected]="route() === l.route"
+              [attr.aria-selected]="route() === l.route"
               tabindex="0"
-              (click)="chooseLine(line() === l.line ? null : l.line)"
-              (keydown.enter)="chooseLine(line() === l.line ? null : l.line)"
+              (click)="chooseRoute(route() === l.route ? null : l.route)"
+              (keydown.enter)="chooseRoute(route() === l.route ? null : l.route)"
             >
               <td>
-                <span class="route-badge" [appLineBadge]="l.line">{{ l.line }}</span>
+                <span class="route-badge" [appRouteBadge]="l.route">{{ l.route }}</span>
               </td>
               <td class="num">{{ l.runs }}</td>
               <td class="num">
@@ -185,16 +185,16 @@
   <app-skeleton kind="chart" />
 }
 
-@if (line(); as chosen) {
-  <section class="card line-detail" [class.loading]="lineLoading()" id="line-detail">
+@if (route(); as chosen) {
+  <section class="card line-detail" [class.loading]="routeLoading()" id="line-detail">
     <div class="line-head">
-      <h2>{{ t('delayGen.lineX', { line: chosen }) }}</h2>
-      <button type="button" (click)="chooseLine(null)">{{ t('delayGen.close') }}</button>
+      <h2>{{ t('delayGen.lineX', { route: chosen }) }}</h2>
+      <button type="button" (click)="chooseRoute(null)">{{ t('delayGen.close') }}</button>
     </div>
-    @if (lineLoading() && !lineReport()) {
-      <p class="muted" role="status">{{ t('delayGen.loadingLine', { line: chosen }) }}</p>
+    @if (routeLoading() && !routeReport()) {
+      <p class="muted" role="status">{{ t('delayGen.loadingLine', { route: chosen }) }}</p>
     }
-    @if (lineReport(); as lr) {
+    @if (routeReport(); as lr) {
       @if (lr.directions.length === 0) {
         <p class="muted">{{ t('delayGen.noRuns') }}</p>
       } @else {
@@ -218,7 +218,7 @@
       @if (direction(); as d) {
         <h3>{{ t('delayGen.whereWhen') }}</h3>
         <p class="muted">{{ t('delayGen.whereWhenIntro') }}</p>
-        <app-line-heatmap
+        <app-route-heatmap
           [stretches]="d.stretches"
           [selected]="stretchIndex()"
           (choose)="chooseStretch($event)"

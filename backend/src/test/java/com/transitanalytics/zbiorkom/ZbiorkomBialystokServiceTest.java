@@ -2,7 +2,7 @@ package com.transitanalytics.zbiorkom;
 
 import com.transitanalytics.domain.RouteSubtype;
 import com.transitanalytics.dto.LivePositionDto;
-import com.transitanalytics.service.LineSubtypes;
+import com.transitanalytics.timetable.RouteSubtypes;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -39,7 +39,7 @@ class ZbiorkomBialystokServiceTest {
         RestClient.Builder builder = RestClient.builder().baseUrl("http://recorder.test");
         recorder = MockRestServiceServer.bindTo(builder).build();
         feed = mock(BialystokFeed.class);
-        LineSubtypes subtypes = mock(LineSubtypes.class);
+        RouteSubtypes subtypes = mock(RouteSubtypes.class);
         given(subtypes.of("18")).willReturn(RouteSubtype.URBAN);
         service = new ZbiorkomBialystokService(new RecorderClient(builder.build(), JsonMapper.builder().build()),
                 feed, subtypes, Clock.fixed(NOW, ZoneOffset.UTC));
@@ -60,7 +60,7 @@ class ZbiorkomBialystokServiceTest {
     }
 
     @Test
-    void takesTheRecordersLatestSnapshotAndAddsTheKindOfLine() {
+    void takesTheRecordersLatestSnapshotAndAddsTheKindOfRoute() {
         recorder.expect(requestTo(LATEST))
                 .andRespond(withSuccess(snapshot("2026-11-19T11:59:58Z"), MediaType.APPLICATION_JSON));
 

@@ -74,7 +74,7 @@
       <p class="muted">
         {{
           t('history.chartIntro', {
-            lines: route() ? t('history.lineX', { line: route() }) : t('history.allLines'),
+            routes: route() ? t('history.lineX', { route: route() }) : t('history.allLines'),
             step: stepLabel(),
           })
         }}

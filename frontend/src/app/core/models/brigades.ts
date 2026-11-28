@@ -1,3 +1,4 @@
+import { TripRun } from './trip-runs';
 import { Phrase } from './trip-anomalies';
 
 /**
@@ -15,8 +16,8 @@ export interface BrigadeAgency {
 
 export interface BrigadeRef {
   brigade: string;
-  /** The lines it runs, on any day. */
-  lines: string[];
+  /** The routes it runs, on any day. */
+  routes: string[];
 }
 
 /** Every brigade of an agency, whatever day it runs. */
@@ -67,7 +68,7 @@ export interface MissingPart {
 
 export interface BrigadeTrip {
   tripId: string;
-  line: string;
+  route: string;
   headsign: string | null;
   from: string;
   to: string;
@@ -100,5 +101,6 @@ export interface BrigadeDay {
   brigade: string;
   serviceDay: string;
   summary: BrigadeSummary;
-  trips: BrigadeTrip[];
+  /** In departure order, each with what ran, as on the Trips page. */
+  trips: TripRun[];
 }

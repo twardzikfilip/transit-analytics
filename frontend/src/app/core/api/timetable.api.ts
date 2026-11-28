@@ -1,32 +1,18 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import {
-  GtfsFeed,
-  GtfsImportResult,
-  Route,
-  Stop,
-  StopTime,
-  TimetableCoverage,
-} from '../models/models';
-import { CrudApiService } from './crud-api.service';
+import { GtfsFeed, GtfsImportResult, Stop, StopTime, TimetableCoverage } from '../models/models';
+import { PagedApi } from './paged-api';
 
 @Injectable({ providedIn: 'root' })
-export class RouteApi extends CrudApiService<Route, unknown> {
-  constructor() {
-    super('/api/routes');
-  }
-}
-
-@Injectable({ providedIn: 'root' })
-export class StopApi extends CrudApiService<Stop, unknown> {
+export class StopApi extends PagedApi<Stop> {
   constructor() {
     super('/api/stops');
   }
 }
 
 @Injectable({ providedIn: 'root' })
-export class StopTimeApi extends CrudApiService<StopTime, unknown> {
+export class StopTimeApi extends PagedApi<StopTime> {
   constructor() {
     super('/api/stop-times');
   }

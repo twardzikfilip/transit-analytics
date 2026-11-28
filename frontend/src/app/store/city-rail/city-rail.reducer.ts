@@ -1,5 +1,10 @@
 import { ActionReducer, createFeature, createReducer, on } from '@ngrx/store';
-import { CityRailProposal, CityRailReport, RailBusComparison } from '../../core/models/models';
+import {
+  CityRailProposal,
+  CityRailReport,
+  ProposalVariant,
+  RailBusComparison,
+} from '../../core/models/models';
 import { CityRailActions } from './city-rail.actions';
 
 export interface CityRailState {
@@ -12,6 +17,9 @@ export interface CityRailState {
   /** City Rail proposal no. 1, loaded by its pages. */
   proposal: CityRailProposal | null;
   proposalLoading: boolean;
+  /** The routes of the solution and frequency shown, and which they are. */
+  variant: { solution: string; variant: ProposalVariant } | null;
+  variantLoading: boolean;
 }
 
 const initialState: CityRailState = {
@@ -22,6 +30,8 @@ const initialState: CityRailState = {
   comparisonLoading: false,
   proposal: null,
   proposalLoading: false,
+  variant: null,
+  variantLoading: false,
 };
 
 const reducer: ActionReducer<CityRailState> = createReducer(
@@ -49,6 +59,17 @@ const reducer: ActionReducer<CityRailState> = createReducer(
   on(CityRailActions.proposalFailure, (state, { error }) => ({
     ...state,
     proposalLoading: false,
+    error,
+  })),
+  on(CityRailActions.loadVariant, (state) => ({ ...state, variantLoading: true })),
+  on(CityRailActions.variantLoaded, (state, { solution, variant }) => ({
+    ...state,
+    variant: { solution, variant },
+    variantLoading: false,
+  })),
+  on(CityRailActions.variantFailure, (state, { error }) => ({
+    ...state,
+    variantLoading: false,
     error,
   })),
 );

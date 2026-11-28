@@ -57,7 +57,6 @@ export interface LaneFigures {
   offPeakSpeed: number | null;
   delayPerKm: number | null;
   peakDelayPerKm: number | null;
-  offPeakDelayPerKm: number | null;
   /** How much slower at peak than off-peak, %. */
   peakSlowdown: number | null;
 }
@@ -70,7 +69,6 @@ export interface LaneHour {
   laneDelayPerKm: number | null;
   otherDelayPerKm: number | null;
   laneKm: number;
-  otherKm: number;
 }
 
 export interface LaneStretchFigures {
@@ -78,7 +76,7 @@ export interface LaneStretchFigures {
   name: string;
   heading: LaneHeading;
   km: number;
-  lines: string[];
+  routes: string[];
   figures: LaneFigures;
   /** The same street the other way, where it has no bus lane; null when it has one there too. */
   opposite: LaneFigures | null;
@@ -98,8 +96,8 @@ export interface BusLaneReport {
   stretches: LaneStretchFigures[];
 }
 
-/** How much of one direction of a line's main route runs on bus lanes. */
-export interface LineBusLanes {
+/** How much of one direction of a route's main route runs on bus lanes. */
+export interface RouteBusLanes {
   direction: number;
   from: string;
   to: string;

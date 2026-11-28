@@ -1,9 +1,9 @@
 package com.transitanalytics.web;
 
+import com.transitanalytics.common.ReportWindow;
+import com.transitanalytics.common.ReportWindows;
 import com.transitanalytics.dto.PositionHistoryDto;
 import com.transitanalytics.recording.PositionHistoryService;
-import com.transitanalytics.service.ReportWindow;
-import com.transitanalytics.service.ReportWindows;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -36,7 +36,7 @@ public class PositionHistoryController {
     public PositionHistoryDto.FleetSeries fleet(
             @Parameter(description = "Start, inclusive (ISO-8601); the first recording when absent", example = "2026-11-16T05:00:00Z") @RequestParam(required = false) Instant from,
             @Parameter(description = "End, exclusive (ISO-8601); now when absent", example = "2026-11-16T17:00:00Z") @RequestParam(required = false) Instant to,
-            @Parameter(description = "Line, e.g. 103; all lines when left out") @RequestParam(required = false) String route,
+            @Parameter(description = "Route, e.g. 103; all routes when left out") @RequestParam(required = false) String route,
             @Parameter(description = "Operator, e.g. BKM; all operators when left out") @RequestParam(required = false) String agency) {
         ReportWindow w = windows.resolve(from, to);
         return history.fleet(w.from(), w.to(), blankToNull(route), blankToNull(agency));
@@ -53,7 +53,7 @@ public class PositionHistoryController {
         return history.delays(w.from(), w.to(), blankToNull(route), blankToNull(agency));
     }
 
-    @Operation(summary = "Lines recorded in a time window", description = "For the line filter, in line order.")
+    @Operation(summary = "Routes recorded in a time window", description = "For the route filter, in route order.")
     @GetMapping("/routes")
     public List<PositionHistoryDto.RouteActivity> routes(@RequestParam(required = false) Instant from, @RequestParam(required = false) Instant to,
             @Parameter(description = "Operator, e.g. BKM; all operators when left out") @RequestParam(required = false) String agency) {

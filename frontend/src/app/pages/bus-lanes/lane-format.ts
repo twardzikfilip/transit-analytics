@@ -53,9 +53,9 @@ export function slowdownText(f: LaneFigures | null | undefined): string {
   return s > 0 ? t('busLanes.slower', { n: int(s) }) : t('busLanes.faster', { n: int(-s) });
 }
 
-/** Lines as text, the first few then "+n". */
-export function linesText(lines: string[], first = 8): string {
-  return lines.length <= first
-    ? lines.join(', ')
-    : `${lines.slice(0, first).join(', ')} +${lines.length - first}`;
+/** Routes as text, the first few then "+n". */
+export function routesText(routes: string[], first = 8): string {
+  return routes.length <= first
+    ? routes.join(', ')
+    : `${routes.slice(0, first).join(', ')} +${routes.length - first}`;
 }

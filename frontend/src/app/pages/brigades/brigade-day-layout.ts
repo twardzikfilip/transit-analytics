@@ -116,7 +116,7 @@ export function tripRows(trips: BrigadeTrip[], scale: TimeScale) {
       y: ACTUAL_Y[i % 2],
       color: TRIP_COLORS[i % 2],
       scheduled,
-      label: fit(`${localTime(t.departure)} ${t.line} → ${shortStop(t.headsign ?? t.to)}`, room),
+      label: fit(`${localTime(t.departure)} ${t.route} → ${shortStop(t.headsign ?? t.to)}`, room),
       runs,
       missing,
       noData:

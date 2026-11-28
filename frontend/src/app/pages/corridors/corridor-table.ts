@@ -5,15 +5,15 @@ import { regularityGrade, regularityMeaning } from '../../shared/regularity';
 import { CorridorSortKey, DEFAULT_SORT, nextCorridorSort, sortCorridors } from './sort';
 import { LocalNumberPipe } from '../../shared/i18n/locale-pipes';
 import { t } from '../../core/i18n/t';
-import { LineBadge } from '../../shared/line-kind/line-kinds';
+import { RouteBadge } from '../../shared/route-kind/route-kinds';
 
 /**
- * The corridors in a sortable table (busiest first): stops (expandable), lines (outlined when running only part of
+ * The corridors in a sortable table (busiest first): stops (expandable), routes (outlined when running only part of
  * the corridor), length, buses, and interval and regularity in peak and off-peak hours.
  */
 @Component({
   selector: 'app-corridor-table',
-  imports: [LineBadge, LocalNumberPipe, RouterLink],
+  imports: [RouteBadge, LocalNumberPipe, RouterLink],
   templateUrl: './corridor-table.html',
   styleUrl: './corridor-table.scss',
 })

@@ -4,7 +4,7 @@ import { BehaviorSubject, of } from 'rxjs';
 import {
   CityRailProposal,
   ProposalFrequency,
-  ProposalLine,
+  ProposalRoute,
   ProposalVariant,
 } from '../../../core/models/models';
 import { CityRailActions } from '../../../store/city-rail/city-rail.actions';
@@ -16,7 +16,7 @@ import { ProposalSolutionPage } from './proposal-solution';
 
 const HUB = { name: 'Białystok', kind: 'served' as const, lat: 53.1336, lon: 23.1354, km: 0 };
 
-function line(id: string, to: string, conflicts = 0): ProposalLine {
+function route(id: string, to: string, conflicts = 0): ProposalRoute {
   return {
     id,
     stations: [
@@ -49,20 +49,20 @@ function line(id: string, to: string, conflicts = 0): ProposalLine {
   };
 }
 
-/** The same lines at each frequency, needing these many trains. */
-function variants(lines: ProposalLine[], vehicles: number[]): ProposalVariant[] {
+/** The same routes at each frequency, needing these many trains. */
+function variants(routes: ProposalRoute[], vehicles: number[]): ProposalVariant[] {
   const frequencies: ProposalFrequency[] = ['1tp2h', '1tph', '2tph', '3tph'];
-  return frequencies.map((frequency, i) => ({
-    frequency,
-    periodMinutes: [120, 60, 30, 20][i],
-    vehicles: vehicles[i],
-    lines,
-  }));
+  return frequencies.map((frequency, i) => ({ frequency, vehicles: vehicles[i], routes }));
 }
+
+/** Each solution's variants, as the backend sends them one at a time. */
+const VARIANTS: Record<string, ProposalVariant[]> = {
+  radial: variants([route('S4', 'Wasilków'), route('S5', 'Henrykowo', 1)], [3, 4, 8, 12]),
+  through: variants([route('S1', 'Wasilków')], [1, 2, 4, 6]),
+};
 
 const PROPOSAL: CityRailProposal = {
   day: '2026-11-27',
-  computedAt: '2026-11-27T23:58:53Z',
   rules: {
     headwayMinutes: 10,
     turnaroundMinutes: 5,
@@ -102,20 +102,22 @@ const PROPOSAL: CityRailProposal = {
       ],
     },
   ],
-  solutions: [
-    {
-      id: 'radial',
-      variants: variants([line('S4', 'Wasilków'), line('S5', 'Henrykowo', 1)], [3, 4, 8, 12]),
-    },
-    { id: 'through', variants: variants([line('S1', 'Wasilków')], [1, 2, 4, 6]) },
-  ],
+  solutions: (['radial', 'through'] as const).map((id) => ({
+    id,
+    variants: VARIANTS[id].map(({ frequency, vehicles }) => ({ frequency, vehicles })),
+  })),
 };
 
-const loaded = () =>
+/** The proposal, and the routes of a solution at a frequency, loaded. */
+const loaded = (solution = 'radial', frequency = '1tph') =>
   stateAfter(
     cityRailFeature,
     CityRailActions.loadProposal(),
     CityRailActions.proposalLoaded({ proposal: PROPOSAL }),
+    CityRailActions.variantLoaded({
+      solution,
+      variant: VARIANTS[solution].find((v) => v.frequency === frequency)!,
+    }),
   );
 
 /** The solution page's route: which solution, and the URL's query. */
@@ -183,7 +185,7 @@ describe('City rail proposal', () => {
       'Białystok Białostoczek New',
       'Wasilków',
     ]);
-    // The line's trains beside today's: Polregio's and Intercity's, by their numbers.
+    // The route's trains beside today's: Polregio's and Intercity's, by their numbers.
     expect([...out.querySelectorAll('thead th.time')].map(text)).toEqual([
       'S4',
       '10355',
@@ -227,7 +229,7 @@ describe('City rail proposal', () => {
 
   it('with a frequency chosen, shows the trains it needs', () => {
     useSvgMaps();
-    const { el } = renderPage(ProposalSolutionPage, loaded(), {}, [
+    const { el } = renderPage(ProposalSolutionPage, loaded('radial', '2tph'), {}, [
       solutionRoute('radial', { freq: '2tph' }),
     ]);
 
@@ -250,7 +252,7 @@ describe('City rail proposal', () => {
 
   it('takes at least the trains the least frequent timetable needs', () => {
     useSvgMaps();
-    const { el } = renderPage(ProposalSolutionPage, loaded(), {}, [
+    const { el } = renderPage(ProposalSolutionPage, loaded('radial', '1tp2h'), {}, [
       solutionRoute('radial', { fleet: '1' }),
     ]);
 
@@ -282,7 +284,7 @@ describe('City rail proposal', () => {
   it('shows the line chosen in the URL, with its trains too close to another marked', () => {
     useSvgMaps();
     const { el } = renderPage(ProposalSolutionPage, loaded(), {}, [
-      solutionRoute('radial', { line: 'S5' }),
+      solutionRoute('radial', { route: 'S5' }),
     ]);
 
     expect(text(el.querySelector('.timetable h2'))).toContain('S5 Białystok – Henrykowo');
@@ -297,9 +299,28 @@ describe('City rail proposal', () => {
     (el.querySelectorAll('table.lines tbody tr')[1] as HTMLElement).click();
 
     expect(navigate).toHaveBeenCalledWith([], {
-      queryParams: { line: 'S5' },
+      queryParams: { route: 'S5' },
       queryParamsHandling: 'merge',
     });
+  });
+
+  it('loads the lines of the frequency chosen, and waits for them', () => {
+    useSvgMaps();
+    const state = stateAfter(
+      cityRailFeature,
+      CityRailActions.proposalLoaded({ proposal: PROPOSAL }),
+      CityRailActions.loadVariant({ solution: 'radial', frequency: '3tph' }),
+    );
+    const { el, store } = renderPage(ProposalSolutionPage, state, {}, [
+      solutionRoute('radial', { freq: '3tph' }),
+    ]);
+
+    expect(store.dispatch).toHaveBeenCalledWith(
+      CityRailActions.loadVariant({ solution: 'radial', frequency: '3tph' }),
+    );
+    expect(el.querySelector('.controls select')).not.toBeNull();
+    expect(el.querySelector('table.lines')).toBeNull();
+    expect(el.querySelector('app-skeleton')).not.toBeNull();
   });
 
   it('says so while the trains are not loaded', () => {

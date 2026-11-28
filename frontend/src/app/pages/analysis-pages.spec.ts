@@ -4,10 +4,10 @@ import { of } from 'rxjs';
 import { BrigadeApi } from '../core/api/api.services';
 import {
   CorridorReport,
-  LineDetail,
-  LinePerformance,
-  LineStats,
-  LineStatsReport,
+  RouteDetail,
+  RoutePerformance,
+  RouteStats,
+  RouteStatsReport,
   LivePosition,
 } from '../core/models/models';
 import { CorridorsActions } from '../store/corridors/corridors.actions';
@@ -19,15 +19,15 @@ import { positionHistoryFeature } from '../store/position-history/position-histo
 import { RouteDetailActions } from '../store/route-detail/route-detail.actions';
 import { routeDetailFeature } from '../store/route-detail/route-detail.reducer';
 import { renderPage, stateAfter, useSvgMaps, text } from '../testing/page-testing';
-import { LineStatsActions } from '../store/line-stats/line-stats.actions';
-import { lineStatsFeature } from '../store/line-stats/line-stats.reducer';
+import { RouteStatsActions } from '../store/route-stats/route-stats.actions';
+import { routeStatsFeature } from '../store/route-stats/route-stats.reducer';
 import { Corridors } from './corridors/corridors';
 import { LiveMap } from './home/live-map/live-map';
 import { PositionHistory } from './home/position-history/position-history';
 import { RoutesPage } from './routes/routes';
 import { RoutesOverview } from './routes/routes-overview';
 
-/** A compact replay row: vehicle, latitude, longitude, delay, line and brigade indexes. */
+/** A compact replay row: vehicle, latitude, longitude, delay, route and brigade indexes. */
 type ReplayRow = [number, number, number, number | null, number | null, number | null];
 
 afterEach(() => {
@@ -44,8 +44,8 @@ describe('Important corridors page', () => {
       from,
       to: 'Z',
       stops: [from, 'B', 'C', 'Z'],
-      lines: ['1', '2'],
-      throughLines: ['1', '2'],
+      routes: ['1', '2'],
+      throughRoutes: ['1', '2'],
       km: 1,
       buses: 300,
       oneWay,
@@ -352,9 +352,9 @@ describe('Position history controls', () => {
     agency.dispatchEvent(new Event('change'));
     expect(navigate).toHaveBeenLastCalledWith(...merge({ agency: 'all', route: null }));
 
-    const line = el.querySelectorAll('select:not(.window-preset)')[1] as HTMLSelectElement;
-    line.value = '';
-    line.dispatchEvent(new Event('change'));
+    const route = el.querySelectorAll('select:not(.window-preset)')[1] as HTMLSelectElement;
+    route.value = '';
+    route.dispatchEvent(new Event('change'));
     expect(navigate).toHaveBeenLastCalledWith(...merge({ route: null }));
   });
 });
@@ -372,7 +372,6 @@ describe('Live map (Home)', () => {
     agency,
     model: null,
     routeName: '103',
-    routeColor: null,
     brigade,
     headsign: 'Choroszcz',
     latitude: 53.13,
@@ -442,23 +441,23 @@ describe('Live map (Home)', () => {
       queryParamsHandling: 'merge',
     });
 
-    const lines = el.querySelector('select.line-type') as HTMLSelectElement;
-    expect([...lines.options].map((o) => o.textContent?.trim())).toEqual([
+    const routes = el.querySelector('select.line-type') as HTMLSelectElement;
+    expect([...routes.options].map((o) => o.textContent?.trim())).toEqual([
       'All lines',
       'Urban',
       'Suburban',
       'Regional (4xx)',
     ]);
-    lines.value = 'suburban';
-    lines.dispatchEvent(new Event('change'));
+    routes.value = 'suburban';
+    routes.dispatchEvent(new Event('change'));
     expect(navigate).toHaveBeenLastCalledWith([], {
-      queryParams: { mapLineType: 'suburban' },
+      queryParams: { mapRouteType: 'suburban' },
       queryParamsHandling: 'merge',
     });
 
     (el.querySelector('button.reset') as HTMLButtonElement).click();
     expect(navigate).toHaveBeenLastCalledWith([], {
-      queryParams: { mapMinDelay: null, mapAgency: null, mapLineType: null },
+      queryParams: { mapMinDelay: null, mapAgency: null, mapRouteType: null },
       queryParamsHandling: 'merge',
     });
   });
@@ -467,8 +466,8 @@ describe('Live map (Home)', () => {
     useSvgMaps();
     const now = Date.now();
     const at = (minutes: number) => new Date(now + minutes * 60_000).toISOString();
-    const run = (line: string, from: number, to: number) => ({
-      line,
+    const run = (route: string, from: number, to: number) => ({
+      route,
       headsign: 'Choroszcz',
       from: 'Piastowska',
       to: 'Choroszcz',
@@ -503,7 +502,7 @@ describe('Live map (Home)', () => {
     expect(late.classList).toContain('late');
     expect(late.style.getPropertyValue('--delay')).toBe('#d7301f');
     expect(late.querySelector('.arrow')!.getAttribute('style')).toContain('rotate(90deg)');
-    // On time: no ring; no bearing: no arrow; a line not classified: by its name (5: urban).
+    // On time: no ring; no bearing: no arrow; a route not classified: by its name (5: urban).
     expect(text(early)).toBe('5');
     expect(early.classList).not.toContain('late');
     expect(early.querySelector('.arrow')).toBeNull();
@@ -536,10 +535,10 @@ describe('Live map (Home)', () => {
 });
 
 describe('Routes page', () => {
-  const lines = [
+  const routes = [
     {
       id: 1,
-      line: '5',
+      route: '5',
       name: '5',
       subtype: 'urban' as const,
       geometry: 'arcantial' as const,
@@ -548,7 +547,7 @@ describe('Routes page', () => {
     },
     {
       id: 2,
-      line: '103',
+      route: '103',
       name: '103',
       subtype: 'suburban' as const,
       geometry: 'arcantial' as const,
@@ -560,11 +559,11 @@ describe('Routes page', () => {
   it('lists every line, a row per kind and a column per geometry; choosing one opens its page', () => {
     const { el, store, fixture } = renderPage(
       RoutesOverview,
-      stateAfter(routeDetailFeature, RouteDetailActions.linesLoaded({ lines })),
+      stateAfter(routeDetailFeature, RouteDetailActions.routesLoaded({ routes })),
     );
-    expect(store.dispatch).toHaveBeenCalledWith(RouteDetailActions.loadLines());
-    expect(store.dispatch).toHaveBeenCalledWith(LineStatsActions.load());
-    // A row per kind of line, a column per geometry; the buttons show the capacity class.
+    expect(store.dispatch).toHaveBeenCalledWith(RouteDetailActions.loadRoutes());
+    expect(store.dispatch).toHaveBeenCalledWith(RouteStatsActions.load());
+    // A row per kind of route, a column per geometry; the buttons show the capacity class.
     const table = el.querySelector('table.lines')!;
     expect([...table.querySelectorAll('tbody th')].map(text)).toEqual(['Urban', 'Suburban']);
     expect([...table.querySelectorAll('thead th')].map(text)).toEqual([
@@ -612,25 +611,22 @@ describe('Routes page', () => {
         offPeakRegularityCv: 0.3,
         peakDelaySeconds: peakDelay,
         offPeakDelaySeconds: null,
-      }) as unknown as LineStats;
+      }) as unknown as RouteStats;
     const report = {
       serviceId: 'P_1349',
-      validDays: 59,
-      firstDate: null,
-      lastDate: null,
       peak: [{ from: '06:30', to: '08:30' }],
       offPeak: [{ from: '08:30', to: '15:00' }],
       delayDays: 28,
-      lines: [
+      routes: [
         stat('1', 12.5, 90),
         stat('2', 20, -30),
         stat('3', null, 200),
         ...Array.from({ length: 10 }, (_, i) => stat(String(10 + i), 5 + i, 0)),
       ],
-    } as LineStatsReport;
+    } as RouteStatsReport;
     const { el, render } = renderPage(RoutesOverview, {
-      ...stateAfter(routeDetailFeature, RouteDetailActions.linesLoaded({ lines })),
-      ...stateAfter(lineStatsFeature, LineStatsActions.loaded({ report })),
+      ...stateAfter(routeDetailFeature, RouteDetailActions.routesLoaded({ routes })),
+      ...stateAfter(routeStatsFeature, RouteStatsActions.loaded({ report })),
     });
     const tiles = [...el.querySelectorAll('.rankings .ranking')];
     expect(tiles.map((t) => text(t.querySelector('h2')))).toEqual([
@@ -643,7 +639,7 @@ describe('Routes page', () => {
       'Delay off-peak',
       'Frequency off-peak',
     ]);
-    // "line value" per row.
+    // "route value" per row.
     const ranks = (tile: Element) =>
       [...tile.querySelectorAll('.ranked li')].map((li) =>
         li.querySelector('a')
@@ -652,7 +648,7 @@ describe('Routes page', () => {
       );
     const length = el.querySelector('.ranking[data-key=length]')!;
     const rows = () => ranks(length);
-    // The 10 longest; a line without a length is left out.
+    // The 10 longest; a route without a length is left out.
     expect(rows()).toHaveLength(10);
     expect(rows()[0]).toBe('2 20.0 km');
     expect(rows()[1]).toBe('19 14.0 km');
@@ -682,7 +678,7 @@ describe('Routes page', () => {
     useSvgMaps();
     const detail = {
       id: 2,
-      line: '103',
+      route: '103',
       name: '103',
       subtype: 'suburban',
       geometry: 'arcantial',
@@ -795,7 +791,7 @@ describe('Routes page', () => {
           onLanes: [],
         },
       ],
-    } as unknown as LineDetail;
+    } as unknown as RouteDetail;
     const performance = {
       firstDay: '2026-11-06',
       lastDay: '2026-11-16',
@@ -805,44 +801,41 @@ describe('Routes page', () => {
       delays: [],
       segments: [],
       vehicles: { days: 7, vehicles: [], brigades: [], switches: [] },
-    } as LinePerformance;
-    // Every line's weekday statistics: the chosen line's (route 2) regularity goes in its tile.
-    const lineStats = {
+    } as RoutePerformance;
+    // Every route's weekday statistics: the chosen route's (route 2) regularity goes in its tile.
+    const routeStats = {
       serviceId: 'P_1349',
-      validDays: 59,
-      firstDate: '2026-11-02',
-      lastDate: '2027-01-29',
       peak: [{ from: '06:30', to: '08:30' }],
       offPeak: [{ from: '08:30', to: '15:00' }],
-      lines: [
+      routes: [
         { routeId: 1, peakRegularityCv: 0.9, offPeakRegularityCv: 0.9 },
         { routeId: 2, peakRegularityCv: 0.18, offPeakRegularityCv: 0.45 },
       ],
-    } as unknown as LineStatsReport;
+    } as unknown as RouteStatsReport;
     const { el, store, fixture } = renderPage(
       RoutesPage,
       {
         ...stateAfter(
           routeDetailFeature,
-          RouteDetailActions.linesLoaded({ lines }),
-          RouteDetailActions.select({ line: '103' }),
+          RouteDetailActions.routesLoaded({ routes }),
+          RouteDetailActions.select({ route: '103' }),
           RouteDetailActions.detailLoaded({ detail }),
-          RouteDetailActions.performanceLoaded({ line: '103', performance }),
+          RouteDetailActions.performanceLoaded({ route: '103', performance }),
         ),
-        ...stateAfter(lineStatsFeature, LineStatsActions.loaded({ report: lineStats })),
+        ...stateAfter(routeStatsFeature, RouteStatsActions.loaded({ report: routeStats })),
       },
       {},
       [],
-      { line: '103' },
+      { route: '103' },
     );
 
-    expect(store.dispatch).toHaveBeenCalledWith(LineStatsActions.load());
-    // The way back comes first; no lines to pick on a route's own page.
+    expect(store.dispatch).toHaveBeenCalledWith(RouteStatsActions.load());
+    // The way back comes first; no routes to pick on a route's own page.
     expect(text(el.firstElementChild)).toBe('‹ All routes');
     expect(el.querySelector('table.lines')).toBeNull();
     expect(text(el.querySelector('.tile.regularity strong'))).toBe('A peak · D off-peak');
     expect(text(el.querySelector('.tile.regularity'))).toContain('Peak 06:30–08:30');
-    expect(store.dispatch).toHaveBeenCalledWith(RouteDetailActions.select({ line: '103' }));
+    expect(store.dispatch).toHaveBeenCalledWith(RouteDetailActions.select({ route: '103' }));
     expect(text(el.querySelector('.line-title h2'))).toBe('Piastowska ⇄ Choroszcz/Cmentarz');
     // Every depot's area, the operator's named; a dashed way from it to where brigades start.
     await fixture.whenStable();
@@ -858,7 +851,7 @@ describe('Routes page', () => {
       'Depot to where buses start or end their day (dashed)',
     );
     expect(text(el.querySelector('.map-legend'))).toContain('City centre (for line classes)');
-    // City limits and the line-classification centre, under the line.
+    // City limits and the line-classification centre, under the route.
     expect(el.querySelectorAll('.leaflet-city-boundaries-pane path').length).toBeGreaterThan(0);
     // Who runs it.
     expect(text(el.querySelector('.line-title .operator'))).toContain(
@@ -888,10 +881,10 @@ describe('Routes page', () => {
   it("adds a row of regional lines, and shows one that isn't in the timetable from recordings", () => {
     useSvgMaps();
     const regional = [
-      ...lines,
+      ...routes,
       {
         id: null,
-        line: '700',
+        route: '700',
         name: '700',
         subtype: 'regional' as const,
         geometry: null,
@@ -901,7 +894,7 @@ describe('Routes page', () => {
     ];
     const detail = {
       id: null,
-      line: '700',
+      route: '700',
       name: '700',
       subtype: 'regional',
       serviceId: null,
@@ -950,7 +943,7 @@ describe('Routes page', () => {
           },
         ],
       },
-    } as unknown as LineDetail;
+    } as unknown as RouteDetail;
     const performance = {
       firstDay: '2026-11-06',
       lastDay: '2026-11-16',
@@ -973,13 +966,13 @@ describe('Routes page', () => {
         brigades: [],
         switches: [],
       },
-    } as unknown as LinePerformance;
+    } as unknown as RoutePerformance;
     const state = stateAfter(
       routeDetailFeature,
-      RouteDetailActions.linesLoaded({ lines: regional }),
-      RouteDetailActions.select({ line: '700' }),
+      RouteDetailActions.routesLoaded({ routes: regional }),
+      RouteDetailActions.select({ route: '700' }),
       RouteDetailActions.detailLoaded({ detail }),
-      RouteDetailActions.performanceLoaded({ line: '700', performance }),
+      RouteDetailActions.performanceLoaded({ route: '700', performance }),
     );
     const overview = renderPage(RoutesOverview, state).el;
     expect([...overview.querySelectorAll('table.lines tbody th')].map(text)).toEqual([
@@ -987,19 +980,19 @@ describe('Routes page', () => {
       'Suburban',
       'Regional',
     ]);
-    // Other operators' lines aren't classified: a column of their own.
+    // Other operators' routes aren't classified: a column of their own.
     expect(text(overview.querySelector('table.lines thead th:last-child'))).toBe('Not classified');
     const seven = [...overview.querySelectorAll('.chip')].find((b) => text(b) === '700')!;
     expect(seven.classList).toContain('capacity-none');
 
     TestBed.resetTestingModule();
-    const { el, fixture } = renderPage(RoutesPage, state, {}, [], { line: '700' });
+    const { el, fixture } = renderPage(RoutesPage, state, {}, [], { route: '700' });
     expect(el.querySelector('.line-classes')).toBeNull();
     expect(text(el.querySelector('.line-title h2'))).toBe('Line 700');
     expect(el.querySelectorAll('.line-links a')).toHaveLength(0);
     expect(text(el)).toContain("isn't in the city timetable: it is run by another operator");
     expect(el.querySelector('app-variant-tiles')).toBeNull();
-    expect(text(el.querySelector('app-line-vehicles'))).toContain('BIA 1050');
+    expect(text(el.querySelector('app-route-vehicles'))).toContain('BIA 1050');
     // Where its buses went, from the recordings: on the map and listed, the most driven first.
     expect((el.querySelector('.map-card') as HTMLElement).hidden).toBe(false);
     const rows = [...el.querySelectorAll('table.recorded-variants tbody tr')];

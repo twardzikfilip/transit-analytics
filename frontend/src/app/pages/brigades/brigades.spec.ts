@@ -27,11 +27,9 @@ import {
 import { t } from '../../core/i18n/t';
 import { PageBack } from '../../core/title/page-back';
 import { BrigadePage, underWay } from './brigade';
-import { tripRunsFeature } from '../../store/trip-runs/trip-runs.reducer';
-import { TripRunsActions } from '../../store/trip-runs/trip-runs.actions';
 import { TripRun } from '../../core/models/trip-runs';
 import { TripRunApi } from '../../core/api/trip-runs.api';
-import { BrigadesPage, groupByLine } from './brigades';
+import { BrigadesPage, groupByRoute } from './brigades';
 
 const at = (hhmm: string) => `2026-11-18T${hhmm}:00Z`;
 
@@ -65,7 +63,7 @@ function trip(
 ): BrigadeTrip {
   return {
     tripId: id,
-    line: '103',
+    route: '103',
     headsign: 'Choroszcz/Cmentarz',
     from: 'Piastowska',
     to: 'Choroszcz/Cmentarz',
@@ -88,22 +86,39 @@ const LIST: BrigadeList = {
     { id: 'wschodexpress', name: 'Gmina Dobrzyniewo Duże, Gmina Zabłudów' },
   ],
   brigades: [
-    { brigade: '103-05', lines: ['103'] },
-    { brigade: '016-02', lines: ['16'] },
+    { brigade: '103-05', routes: ['103'] },
+    { brigade: '016-02', routes: ['16'] },
   ],
 };
 
-function day(): BrigadeDay {
+/** The brigade's trips as scheduled and run. */
+function scheduled(): BrigadeTrip[] {
   const lost = trip('T3', '07:00', '07:40', 'lost', [run('209', '07:01', '07:20', 60, 1, 9)]);
   lost.missing = [{ fromStop: 9, toStop: 20, from: at('07:20'), to: at('07:40'), why: 'not-run' }];
-  lost.note = [
-    {
-      key: 'lostForGood',
-      params: { bus: '209', stop: 'Lipowa', index: 8, total: 25, time: '07:20' },
-    },
+  lost.note = [{ key: 'lostAt', params: { index: 8, total: 25 } }];
+  return [
+    trip('T1', '05:00', '05:40', 'completed', [run('209', '05:00', '05:41', 10)]),
+    trip('T2', '06:00', '06:40', 'vehicle-changed', [
+      run('209', '06:02', '06:15', 120, 1, 8),
+      run('486', '06:25', '06:45', 300, 9, 20),
+    ]),
+    lost,
+    trip('T4', '08:20', '09:00', 'pending'),
   ];
+}
+
+const tripRun = (trip: BrigadeTrip): TripRun => ({
+  serviceDay: '2026-11-18',
+  brigade: '103-05',
+  trip,
+  samples: [],
+  stands: [],
+  averageKmh: null,
+});
+
+function day(brigade = '103-05'): BrigadeDay {
   return {
-    brigade: '103-05',
+    brigade,
     serviceDay: '2026-11-18',
     summary: {
       trips: 4,
@@ -116,15 +131,7 @@ function day(): BrigadeDay {
       maxDelay: 400,
       buses: ['209', '486'],
     },
-    trips: [
-      trip('T1', '05:00', '05:40', 'completed', [run('209', '05:00', '05:41', 10)]),
-      trip('T2', '06:00', '06:40', 'vehicle-changed', [
-        run('209', '06:02', '06:15', 120, 1, 8),
-        run('486', '06:25', '06:45', 300, 9, 20),
-      ]),
-      lost,
-      trip('T4', '08:20', '09:00', 'pending'),
-    ],
+    trips: scheduled().map(tripRun),
   };
 }
 
@@ -150,15 +157,15 @@ describe('Brigades page', () => {
   });
 
   it('groups brigades by their own line, in natural order', () => {
-    const ref = (brigade: string, lines: string[]): BrigadeRef => ({ brigade, lines });
-    const groups = groupByLine([
+    const ref = (brigade: string, routes: string[]): BrigadeRef => ({ brigade, routes });
+    const groups = groupByRoute([
       ref('103-10', ['103']),
       ref('N1-01', ['N1']),
       ref('002-01', ['100', '2']),
       ref('103-02', ['103', '3']),
       ref('010-01', ['10']),
     ]);
-    expect(groups.map((g) => [g.line, g.brigades.map((b) => b.brigade)])).toEqual([
+    expect(groups.map((g) => [g.route, g.brigades.map((b) => b.brigade)])).toEqual([
       ['2', ['002-01']],
       ['10', ['010-01']],
       ['103', ['103-02', '103-10']],
@@ -174,10 +181,10 @@ describe('Brigades page', () => {
     expect(store.dispatch).not.toHaveBeenCalledWith(
       expect.objectContaining({ brigade: expect.anything() }),
     );
-    // One row per line, lines in natural order; every brigade shown.
-    const lines = [...el.querySelectorAll('.brigade-lines dt .route-badge')];
-    expect(lines.map(text)).toEqual(['16', '103']);
-    expect(lines.map((l) => l.getAttribute('aria-label'))).toEqual(['Line 16', 'Line 103']);
+    // One row per route, routes in natural order; every brigade shown.
+    const routes = [...el.querySelectorAll('.brigade-lines dt .route-badge')];
+    expect(routes.map(text)).toEqual(['16', '103']);
+    expect(routes.map((l) => l.getAttribute('aria-label'))).toEqual(['Line 16', 'Line 103']);
     expect([...el.querySelectorAll('.brigade-chips button')].map(text)).toEqual([
       '016-02',
       '103-05',
@@ -239,37 +246,17 @@ describe('Brigade page', () => {
     expect(el.querySelector('app-brigade-day-chart svg')).not.toBeNull();
   });
 
-  const tripRun = (trip: BrigadeTrip): TripRun => ({
-    serviceDay: '2026-11-18',
-    brigade: '103-05',
-    trip,
-    samples: [],
-    stands: [],
-    stops: [],
-    averageKmh: null,
-  });
   const withTrips = (query: Record<string, string> = {}, tripsOf = '103-05') =>
     renderPage(
       BrigadePage,
-      {
-        ...stateAfter(brigadesFeature, BrigadesActions.dayLoaded({ day: day() })),
-        ...stateAfter(
-          tripRunsFeature,
-          TripRunsActions.dayLoaded({
-            day: { serviceDay: '2026-11-18', brigade: tripsOf, trips: day().trips.map(tripRun) },
-          }),
-        ),
-      },
+      stateAfter(brigadesFeature, BrigadesActions.dayLoaded({ day: day(tripsOf) })),
       { date: '2026-11-18', ...query },
       [{ provide: TripRunApi, useValue: { detail: () => of(null) } }],
       { brigade: '103-05' },
     );
 
   it("lists the day's trips as the Trips page does, the open one in the URL and marked on the chart", () => {
-    const { el, store } = withTrips();
-    expect(store.dispatch).toHaveBeenCalledWith(
-      TripRunsActions.loadDay({ brigade: '103-05', date: '2026-11-18' }),
-    );
+    const { el } = withTrips();
     const rows = el.querySelectorAll('app-trip-list .trip');
     expect(rows).toHaveLength(4);
     expect(text(rows[1])).toContain('209 → 486');
@@ -278,7 +265,7 @@ describe('Brigade page', () => {
     expect(el.querySelector('app-trip-detail')).toBeNull();
     TestBed.resetTestingModule();
 
-    const third = day().trips[2].tripId;
+    const third = scheduled()[2].tripId;
     const open = withTrips({ trip: `${third}@2026-11-18` }).el;
     expect(open.querySelectorAll('app-trip-detail')).toHaveLength(1);
     expect(text(open.querySelector('.facts'))).toContain('Not run: stops 9–20');
@@ -293,7 +280,7 @@ describe('Brigade page', () => {
       .mockResolvedValue(true);
     el.querySelectorAll('app-brigade-day-chart g.trip')[1].dispatchEvent(new MouseEvent('click'));
     expect(navigate.mock.calls[0][1]?.queryParams).toEqual({
-      trip: `${day().trips[1].tripId}@2026-11-18`,
+      trip: `${scheduled()[1].tripId}@2026-11-18`,
       map: null,
     });
     TestBed.resetTestingModule();
@@ -301,7 +288,7 @@ describe('Brigade page', () => {
   });
 
   it('keeps up with the day only while the brigade is out', () => {
-    const times = day().trips.flatMap((x) => [Date.parse(x.departure), Date.parse(x.arrival)]);
+    const times = scheduled().flatMap((x) => [Date.parse(x.departure), Date.parse(x.arrival)]);
     const [first, last] = [Math.min(...times), Math.max(...times)];
     expect(underWay(day(), first - 1)).toBe(false);
     expect(underWay(day(), first)).toBe(true);
@@ -331,10 +318,10 @@ describe('Brigade day chart', () => {
   }
 
   it('draws each trip scheduled, in alternating colours, and what ran under it', () => {
-    const el = chart(day().trips);
-    const scheduled = [...el.querySelectorAll('rect.scheduled')];
-    expect(scheduled).toHaveLength(4);
-    expect(scheduled.map((r) => r.getAttribute('fill'))).toEqual([
+    const el = chart(scheduled());
+    const bars = [...el.querySelectorAll('rect.scheduled')];
+    expect(bars).toHaveLength(4);
+    expect(bars.map((r) => r.getAttribute('fill'))).toEqual([
       TRIP_COLORS[0],
       TRIP_COLORS[1],
       TRIP_COLORS[0],
@@ -351,7 +338,7 @@ describe('Brigade day chart', () => {
 
   it('describes a hovered trip', () => {
     const fixture = TestBed.createComponent(BrigadeDayChart);
-    fixture.componentRef.setInput('trips', day().trips);
+    fixture.componentRef.setInput('trips', scheduled());
     fixture.detectChanges();
     (fixture.nativeElement as HTMLElement)
       .querySelectorAll('g.trip')[2]
@@ -361,9 +348,7 @@ describe('Brigade day chart', () => {
     expect(tip).toContain('103 → Choroszcz/Cmentarz');
     expect(tip).toContain('Lost');
     expect(tip).toContain('bus 209');
-    expect(tip).toContain(
-      "Bus 209 stopped reporting heading to Lipowa (stop 8 of 25) at 07:20 and wasn't seen again",
-    );
+    expect(tip).toContain('Lost at stop 8/25');
   });
 
   it('fits labels into the room they have', () => {
@@ -379,9 +364,9 @@ describe('Brigade formats', () => {
     expect(departureDelayText(20)).toBe('on time');
     expect(departureDelayText(90)).toBe('+1:30');
     expect(departureDelayText(-45)).toBe('−0:45');
-    expect(busesText(day().trips[1])).toBe('209 → 486');
-    expect(busesText(day().trips[3])).toBe('–');
-    expect(actualSpan(day().trips[3])).toBe('–');
+    expect(busesText(scheduled()[1])).toBe('209 → 486');
+    expect(busesText(scheduled()[3])).toBe('–');
+    expect(actualSpan(scheduled()[3])).toBe('–');
     expect(share(2, 3)).toBe('67%');
     expect(share(0, 0)).toBe('–');
     expect(shortStop('Choroszcz/Cmentarz')).toBe('Cmentarz');

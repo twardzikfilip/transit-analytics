@@ -1,8 +1,8 @@
 package com.transitanalytics.web;
 
+import com.transitanalytics.common.ReportWindows;
 import com.transitanalytics.dto.TripRunDto;
-import com.transitanalytics.service.ReportWindows;
-import com.transitanalytics.service.TripRunService;
+import com.transitanalytics.trips.TripRunService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -33,24 +33,14 @@ public class TripRunController {
                     + "order, 50 a page: its outcome as on Abnormal trips, what ran (each bus's part, from which stop "
                     + "to which, when), the bus's delay and speed about every minute, and where it stood still for 3 "
                     + "min or more on the way. Of a window longer than 24 h, its last 24 h. The search finds a bus "
-                    + "(its number), a brigade or a line (exactly), or part of a destination.")
+                    + "(its number), a brigade or a route (exactly), or part of a destination.")
     @GetMapping
     public TripRunDto.Page trips(
             @Parameter(description = "Start (ISO-8601); the first recording when absent") @RequestParam(required = false) Instant from,
             @Parameter(description = "End, exclusive (ISO-8601); now when absent") @RequestParam(required = false) Instant to,
-            @Parameter(description = "Bus number, brigade, line, or part of a destination") @RequestParam(required = false) String q,
+            @Parameter(description = "Bus number, brigade, route, or part of a destination") @RequestParam(required = false) String q,
             @Parameter(description = "Page, from 0") @RequestParam(defaultValue = "0") int page) {
         return trips.page(windows.resolve(from, to), q, Math.max(0, page));
-    }
-
-    @Operation(summary = "A brigade's trips on a service day, each with what ran",
-            description = "Every trip of one brigade from the service day's start to its end (its night trips after "
-                    + "03:00 too), in departure order, not paged; each as in the list of a time window.")
-    @GetMapping("/day")
-    public TripRunDto.Day day(
-            @Parameter(description = "Brigade, e.g. 103-05") @RequestParam String brigade,
-            @Parameter(description = "Service day, e.g. 2026-11-23; today's when absent") @RequestParam(required = false) LocalDate date) {
-        return trips.day(date, brigade);
     }
 
     @Operation(summary = "One trip in detail: every report, speed, and the stops with how long the bus stood",

@@ -13,8 +13,6 @@ import { injectSetQuery } from './url-query';
 export function listQuery(options: {
   filters: string[];
   size: number;
-  /** Sort for the current filters, e.g. by stop sequence when looking at one trip. */
-  sort: (filters: Filters) => string | string[];
   onChange: (query: PageQuery) => void;
 }) {
   const route = inject(ActivatedRoute);
@@ -25,7 +23,7 @@ export function listQuery(options: {
     const filters: Filters = {};
     for (const key of options.filters) filters[key] = map.get(key);
     const page = Math.max(1, Number(map.get('page')) || 1);
-    return { page: page - 1, size: options.size, sort: options.sort(filters), filters };
+    return { page: page - 1, size: options.size, filters };
   };
 
   route.queryParamMap

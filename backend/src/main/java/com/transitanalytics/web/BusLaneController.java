@@ -2,11 +2,11 @@ package com.transitanalytics.web;
 
 import com.transitanalytics.buslanes.BusLaneData;
 import com.transitanalytics.buslanes.BusLaneProperties;
+import com.transitanalytics.buslanes.BusLaneReportService;
 import com.transitanalytics.buslanes.BusLanes;
+import com.transitanalytics.common.ReportWindows;
 import com.transitanalytics.dto.BusLaneDto;
-import com.transitanalytics.service.BusLaneReportService;
 import com.transitanalytics.service.ExternalServiceException;
-import com.transitanalytics.service.ReportWindows;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
 
-import static com.transitanalytics.service.TimetableMath.round;
+import static com.transitanalytics.timetable.TimetableMath.round;
 
 @Tag(name = "Bus lanes", description = "Bus lanes from OpenStreetMap, and speeds and delays on them")
 @RestController
@@ -57,7 +57,7 @@ public class BusLaneController {
     }
 
     @Operation(summary = "Speeds and delays on bus lanes and elsewhere",
-            description = "In a time window, on the timetable's lines, inside the city: every pair of consecutive "
+            description = "In a time window, on the timetable's routes, inside the city: every pair of consecutive "
                     + "position reports of a bus (5-90 s apart) counts as on a bus lane when its middle is within "
                     + "15 m of one and the bus heads its way. Speeds include stops; delay change is the delay gained "
                     + "per km. Layovers at termini are left out. Peak and off-peak are weekday 06:30-08:30 and "

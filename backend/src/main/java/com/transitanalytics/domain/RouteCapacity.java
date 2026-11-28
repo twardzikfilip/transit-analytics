@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.Locale;
 
 /**
- * How much a line carries, from its buses and frequency (rules set in {@code classification/routes.yml}): main,
+ * How much a route carries, from its buses and frequency (rules set in {@code classification/routes.yml}): main,
  * primary, secondary, tertiary or irregular, from the strongest to the weakest.
  */
 public enum RouteCapacity {
@@ -16,10 +16,8 @@ public enum RouteCapacity {
         return name().toLowerCase(Locale.ROOT);
     }
 
-    @jakarta.persistence.Converter(autoApply = true)
-    public static class Converter extends LowercaseEnumConverter<RouteCapacity> {
-        public Converter() {
-            super(RouteCapacity.class);
-        }
+    /** From its stored lowercase name; null for null. */
+    public static RouteCapacity of(String value) {
+        return value == null ? null : valueOf(value.toUpperCase(Locale.ROOT));
     }
 }

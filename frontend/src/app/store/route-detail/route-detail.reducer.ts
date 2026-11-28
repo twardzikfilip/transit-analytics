@@ -1,23 +1,23 @@
 import { ActionReducer, createFeature, createReducer, on } from '@ngrx/store';
-import { LineDetail, LinePerformance, LineRef } from '../../core/models/models';
+import { RouteDetail, RoutePerformance, RouteRef } from '../../core/models/models';
 import { RouteDetailActions } from './route-detail.actions';
 
 export interface RouteDetailState {
-  lines: LineRef[];
-  /** The selected line (route GTFS id). */
-  line: string | null;
-  /** Timetable detail of the selected line; the previous line's stays while the next one loads. */
-  detail: LineDetail | null;
-  /** Measured performance of the selected line, or null while it loads. */
-  performance: LinePerformance | null;
+  routes: RouteRef[];
+  /** The selected route (route GTFS id). */
+  route: string | null;
+  /** Timetable detail of the selected route; the previous route's stays while the next one loads. */
+  detail: RouteDetail | null;
+  /** Measured performance of the selected route, or null while it loads. */
+  performance: RoutePerformance | null;
   loadingDetail: boolean;
   loadingPerformance: boolean;
   error: string | null;
 }
 
 const initialState: RouteDetailState = {
-  lines: [],
-  line: null,
+  routes: [],
+  route: null,
   detail: null,
   performance: null,
   loadingDetail: false,
@@ -27,10 +27,10 @@ const initialState: RouteDetailState = {
 
 const reducer: ActionReducer<RouteDetailState> = createReducer(
   initialState,
-  on(RouteDetailActions.linesLoaded, (state, { lines }) => ({ ...state, lines })),
-  on(RouteDetailActions.select, (state, { line }) => ({
+  on(RouteDetailActions.routesLoaded, (state, { routes }) => ({ ...state, routes })),
+  on(RouteDetailActions.select, (state, { route }) => ({
     ...state,
-    line,
+    route,
     performance: null,
     loadingDetail: true,
     loadingPerformance: true,
@@ -41,8 +41,8 @@ const reducer: ActionReducer<RouteDetailState> = createReducer(
     detail,
     loadingDetail: false,
   })),
-  on(RouteDetailActions.performanceLoaded, (state, { line, performance }) =>
-    line === state.line ? { ...state, performance, loadingPerformance: false } : state,
+  on(RouteDetailActions.performanceLoaded, (state, { route, performance }) =>
+    route === state.route ? { ...state, performance, loadingPerformance: false } : state,
   ),
   on(RouteDetailActions.failure, (state, { error }) => ({
     ...state,

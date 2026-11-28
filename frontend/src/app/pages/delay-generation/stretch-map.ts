@@ -121,7 +121,7 @@ export class StretchMap {
                 perDay: Math.round(s.runs[band] / Math.max(1, this.days())),
               }),
             ) +
-            `<br>${escapeHtml(t('delayGen.tipLines', { lines: s.lines.join(', ') }))}`,
+            `<br>${escapeHtml(t('delayGen.tipRoutes', { routes: s.routes.join(', ') }))}`,
           { sticky: true },
         )
         .addTo(layer);

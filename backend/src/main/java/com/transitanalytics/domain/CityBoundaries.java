@@ -1,8 +1,8 @@
 package com.transitanalytics.domain;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.transitanalytics.geo.Geo;
 import com.transitanalytics.geo.PlaceData;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.util.Comparator;
 import java.util.List;

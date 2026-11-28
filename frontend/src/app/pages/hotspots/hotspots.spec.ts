@@ -9,7 +9,7 @@ import { HotspotsActions } from '../../store/hotspots/hotspots.actions';
 import { load } from '../../store/hotspots/hotspots.effects';
 import { hotspotsFeature } from '../../store/hotspots/hotspots.reducer';
 import { renderPage, stateAfter, text, useSvgMaps } from '../../testing/page-testing';
-import { approachText, hourText, linesText, lostTime, nearText, waitText } from './hotspot-format';
+import { approachText, hourText, routesText, lostTime, nearText, waitText } from './hotspot-format';
 import { MAX_RADIUS, radiusFor } from './hotspot-map';
 import { FIRST_ROWS, Hotspots } from './hotspots';
 
@@ -27,9 +27,9 @@ const hotspot = (id: number, hours: number): Hotspot => ({
   p90Seconds: 75,
   nearestStop: id === 1 ? 'Częstochowska/Piłsudskiego' : `Stop ${id}`,
   nearestStopMeters: 70,
-  lines: [
-    { line: '21', hours: 0.8 },
-    { line: '9', hours: 0.5 },
+  routes: [
+    { route: '21', hours: 0.8 },
+    { route: '9', hours: 0.5 },
   ],
   approaches: [
     { heading: 'E', share: 0.81 },
@@ -42,8 +42,8 @@ function report(count = 2): HotspotReport {
   return {
     from: '2026-11-10T13:00:00Z',
     to: '2026-11-17T13:00:00Z',
-    line: null,
-    lines: ['9', '21'],
+    route: null,
+    routes: ['9', '21'],
     days: 7,
     standstills: 4574,
     standstillHours: 47.9,
@@ -68,11 +68,11 @@ describe('Stop hotspots page', () => {
     const { el, store } = renderPage(
       Hotspots,
       stateAfter(hotspotsFeature, HotspotsActions.loaded({ report: report() })),
-      { from: '2026-11-01T06:00', to: '2026-11-17T06:00', line: '21' },
+      { from: '2026-11-01T06:00', to: '2026-11-17T06:00', route: '21' },
     );
 
     expect(store.dispatch).toHaveBeenCalledWith(
-      HotspotsActions.load({ window: CUSTOM, line: '21' }),
+      HotspotsActions.load({ window: CUSTOM, route: '21' }),
     );
     expect(text(el.querySelector('.summary'))).toBe(
       'Buses stood still away from stops 4574 times, for 47.9 h (6.8 h a day over 7 days recorded). ' +
@@ -138,7 +138,7 @@ describe('Stop hotspots page', () => {
       .mockResolvedValue(true);
 
     expect(store.dispatch).toHaveBeenCalledWith(
-      HotspotsActions.load({ window: CUSTOM, line: null }),
+      HotspotsActions.load({ window: CUSTOM, route: null }),
     );
     expect(text(el.querySelector('table.hotspots tbody'))).toContain('No place where buses');
     (el.querySelectorAll('app-time-window .presets button')[6] as HTMLButtonElement).click();
@@ -152,17 +152,17 @@ describe('Stop hotspots page', () => {
     select.value = '9';
     select.dispatchEvent(new Event('change'));
     expect(navigate).toHaveBeenLastCalledWith([], {
-      queryParams: { line: '9' },
+      queryParams: { route: '9' },
       queryParamsHandling: 'merge',
     });
 
-    setQuery({ from: '2026-11-01T06:00', to: '2026-11-17T06:00', line: '9' });
+    setQuery({ from: '2026-11-01T06:00', to: '2026-11-17T06:00', route: '9' });
     expect(store.dispatch).toHaveBeenLastCalledWith(
-      HotspotsActions.load({ window: CUSTOM, line: '9' }),
+      HotspotsActions.load({ window: CUSTOM, route: '9' }),
     );
     const loads = (store.dispatch as unknown as { mock: { calls: unknown[][] } }).mock.calls.length;
-    setQuery({ from: '2026-11-01T06:00', to: '2026-11-17T06:00', line: '9', other: 'x' });
-    // Same window and line: no reload.
+    setQuery({ from: '2026-11-01T06:00', to: '2026-11-17T06:00', route: '9', other: 'x' });
+    // Same window and route: no reload.
     expect((store.dispatch as unknown as { mock: { calls: unknown[][] } }).mock.calls).toHaveLength(
       loads,
     );
@@ -179,7 +179,7 @@ describe('Stop hotspots page', () => {
       short: '↖ 33%',
       long: '33% heading north-west',
     });
-    expect(linesText(['1', '2', '3', '4', '5', '6'].map((line) => ({ line, hours: 1 })))).toBe(
+    expect(routesText(['1', '2', '3', '4', '5', '6'].map((route) => ({ route, hours: 1 })))).toBe(
       '1, 2, 3, 4 +2',
     );
     expect(hourText(23)).toBe('23–00');
@@ -194,7 +194,7 @@ describe('hotspots effect', () => {
     const actions = new Subject<unknown>();
     const out: unknown[] = [];
     load(actions as unknown as Actions, api as HotspotApi).subscribe((a) => out.push(a));
-    actions.next(HotspotsActions.load({ window: { from: 'A', to: 'B' }, line: '10' }));
+    actions.next(HotspotsActions.load({ window: { from: 'A', to: 'B' }, route: '10' }));
     return out;
   };
 

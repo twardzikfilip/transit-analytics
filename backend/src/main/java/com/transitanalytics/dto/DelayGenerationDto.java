@@ -23,21 +23,21 @@ public final class DelayGenerationDto {
      *
      * @param days       service days with recordings in the window; per-day figures are over these
      * @param runs       runs measured (a bus on one trip, from stop to stop)
-     * @param stretches  directed stretches between consecutive stops, all lines together
-     * @param lines      each line's delay gained per run
+     * @param stretches  directed stretches between consecutive stops, all routes together
+     * @param routes      each route's delay gained per run
      */
     public record Report(Instant from, Instant to, int days, int runs, List<Band> bands,
-                         List<Stretch> stretches, List<LineSummary> lines) {
+                         List<Stretch> stretches, List<RouteSummary> routes) {
     }
 
     /**
-     * One direction between two consecutive stops, all lines together.
+     * One direction between two consecutive stops, all routes together.
      *
      * @param runs         buses measured on it, per band (aligned with {@link Report#bands()})
      * @param meanSeconds  their average change in delay per band (positive: delay generated), null without runs
      */
     public record Stretch(String from, String to, double fromLat, double fromLon, double toLat, double toLon,
-                          List<String> lines, List<Integer> runs, List<Double> meanSeconds) {
+                          List<String> routes, List<Integer> runs, List<Double> meanSeconds) {
     }
 
     /**
@@ -46,13 +46,13 @@ public final class DelayGenerationDto {
      * @param generatedMinutesPerDay  delay gained by all its runs together, per recorded day
      * @param worstFrom               the stretch generating the most delay altogether (null when none)
      */
-    public record LineSummary(String line, int runs, double meanGainSeconds, int medianGainSeconds,
+    public record RouteSummary(String route, int runs, double meanGainSeconds, int medianGainSeconds,
                               double gainingShare, double generatedMinutesPerDay, String worstFrom, String worstTo,
                               Double worstMeanSeconds) {
     }
 
-    /** One line: per direction, where and when delay is generated, with example runs. */
-    public record LineReport(Instant from, Instant to, String line, int days,
+    /** One route: per direction, where and when delay is generated, with example runs. */
+    public record RouteReport(Instant from, Instant to, String route, int days,
                              List<Direction> directions, List<BrigadeGain> brigades, List<Example> examples) {
     }
 
@@ -62,12 +62,12 @@ public final class DelayGenerationDto {
      * @param stretches  in route order
      * @param exampleIds the runs that gained the most delay (ids in {@link LineReport#examples()})
      */
-    public record Direction(String headsign, int runs, double meanGainSeconds, List<LineStretch> stretches,
+    public record Direction(String headsign, int runs, double meanGainSeconds, List<RouteStretch> stretches,
                             List<Integer> exampleIds) {
     }
 
     /**
-     * A stretch of one direction of a line.
+     * A stretch of one direction of a route.
      *
      * @param meanSeconds   average change in delay (positive: generated)
      * @param gainingShare  share of runs gaining a minute or more here
@@ -75,12 +75,12 @@ public final class DelayGenerationDto {
      * @param byHour        average change by hour of the day (local time, index 0–23), null with under 3 runs
      * @param exampleIds    runs that gained the most here (a minute or more)
      */
-    public record LineStretch(String from, String to, int fromSeq, int runs, double meanSeconds, int medianSeconds,
+    public record RouteStretch(String from, String to, int fromSeq, int runs, double meanSeconds, int medianSeconds,
                               int p90Seconds, double gainingShare, double delayBefore, List<Double> byHour,
                               List<Integer> exampleIds) {
     }
 
-    /** A brigade's runs on the line: how much delay they gain. */
+    /** A brigade's runs on the route: how much delay they gain. */
     public record BrigadeGain(String brigade, int runs, double meanGainSeconds, int maxGainSeconds) {
     }
 

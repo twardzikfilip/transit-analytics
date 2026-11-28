@@ -1,5 +1,6 @@
 package com.transitanalytics.recording;
 
+import com.transitanalytics.timetable.TimetableMath;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -34,8 +35,8 @@ class PositionHistoryServiceTest {
     }
 
     @Test
-    void sortsLinesNaturally() {
-        assertThat(List.of("N1", "100", "2", "10", "453", "N2").stream().sorted(com.transitanalytics.service.TimetableMath.LINE_ORDER))
+    void sortsRoutesNaturally() {
+        assertThat(List.of("N1", "100", "2", "10", "453", "N2").stream().sorted(com.transitanalytics.timetable.TimetableMath.ROUTE_ORDER))
                 .containsExactly("2", "10", "100", "453", "N1", "N2");
     }
 

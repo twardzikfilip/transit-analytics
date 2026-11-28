@@ -12,7 +12,7 @@
       d.name
     }}</span>
     <div>
-      <h2>{{ termini() || t('routes.lineX', { line: d.name }) }}</h2>
+      <h2>{{ termini() || t('routes.lineX', { route: d.name }) }}</h2>
       <span class="muted">{{ t('routes.lineKind.' + d.subtype) }}</span>
       @if (d.operator; as o) {
         <p class="operator">
@@ -78,7 +78,7 @@
     </div>
     <nav class="line-links" [attr.aria-label]="t('routes.more')">
       @if (d.id !== null) {
-        <a [routerLink]="['/trips']" [queryParams]="{ q: d.line }">{{ t('routes.trips') }}</a>
+        <a [routerLink]="['/trips']" [queryParams]="{ q: d.route }">{{ t('routes.trips') }}</a>
       }
       @if (d.url) {
         <a [href]="d.url" target="_blank" rel="noopener">{{ t('routes.onWebsite') }}</a>
@@ -149,7 +149,7 @@
 
 @if (detail(); as d) {
   @if (d.id === null) {
-    <p class="muted">{{ t('routes.notInTimetable', { line: d.name }) }}</p>
+    <p class="muted">{{ t('routes.notInTimetable', { route: d.name }) }}</p>
     @if (recorded(); as r) {
       <section class="card section recorded">
         <h2>{{ t('routes.whereWent') }}</h2>
@@ -209,7 +209,7 @@
     </section>
     <section class="card section">
       <h2>{{ t('routes.vehicles') }}</h2>
-      <app-line-vehicles
+      <app-route-vehicles
         [vehicles]="performance()?.vehicles ?? null"
         [loading]="loadingPerformance()"
       />
@@ -287,7 +287,7 @@
 
     <section class="card section">
       <h2>{{ t('routes.vehicles') }}</h2>
-      <app-line-vehicles
+      <app-route-vehicles
         [vehicles]="performance()?.vehicles ?? null"
         [loading]="loadingPerformance()"
       />

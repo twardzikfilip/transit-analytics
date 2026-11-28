@@ -110,14 +110,14 @@
   }
 }
 
-/* Breakdowns list more per row: two tiles wide where there is room. */
+/* Bus changes list more per row: two tiles wide where there is room. */
 @media (min-width: 900px) {
-  .breakdowns {
+  .bus-changes {
     grid-column: span 2;
   }
 }
 
-.breakdowns .mini-list li {
+.bus-changes .mini-list li {
   grid-template-columns: 3.5rem minmax(0, 1fr) auto auto;
 
   .tag {
@@ -193,7 +193,7 @@ button.link {
   padding-left: 1.2rem;
 }
 
-/* A breakdown told step by step under its row: a time line of both buses, then the numbered steps. */
+/* A bus change under its row: a time line of both buses, then a map. */
 .story-toggle {
   display: block;
   margin-top: 6px;

@@ -96,7 +96,7 @@ public final class CityRailDto {
     public record Journey(int minutes, String departure, String arrival, List<Leg> legs) {
     }
 
-    /** @param line the bus line, or the train's number */
-    public record Leg(String line, String from, String to, String departure, String arrival) {
+    /** @param route the bus route, or the train's number */
+    public record Leg(String route, String from, String to, String departure, String arrival) {
     }
 }

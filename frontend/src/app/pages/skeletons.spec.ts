@@ -14,8 +14,8 @@ import { FleetActions } from '../store/fleet/fleet.actions';
 import { fleetFeature } from '../store/fleet/fleet.reducer';
 import { HotspotsActions } from '../store/hotspots/hotspots.actions';
 import { hotspotsFeature } from '../store/hotspots/hotspots.reducer';
-import { LineStatsActions } from '../store/line-stats/line-stats.actions';
-import { lineStatsFeature } from '../store/line-stats/line-stats.reducer';
+import { RouteStatsActions } from '../store/route-stats/route-stats.actions';
+import { routeStatsFeature } from '../store/route-stats/route-stats.reducer';
 import { RouteDetailActions } from '../store/route-detail/route-detail.actions';
 import { routeDetailFeature } from '../store/route-detail/route-detail.reducer';
 import { StopsActions } from '../store/stops/stops.actions';
@@ -75,7 +75,7 @@ const LOADING: [string, Type<unknown>, Record<string, unknown>, Record<string, s
   [
     'Stop hotspots',
     Hotspots,
-    stateAfter(hotspotsFeature, HotspotsActions.load({ window: WINDOW, line: null })),
+    stateAfter(hotspotsFeature, HotspotsActions.load({ window: WINDOW, route: null })),
     {},
   ],
   [
@@ -102,8 +102,8 @@ const LOADING: [string, Type<unknown>, Record<string, unknown>, Record<string, s
     'Routes',
     RoutesOverview,
     {
-      ...stateAfter(routeDetailFeature, RouteDetailActions.loadLines()),
-      ...stateAfter(lineStatsFeature, LineStatsActions.load()),
+      ...stateAfter(routeDetailFeature, RouteDetailActions.loadRoutes()),
+      ...stateAfter(routeStatsFeature, RouteStatsActions.load()),
     },
     {},
   ],
@@ -111,17 +111,17 @@ const LOADING: [string, Type<unknown>, Record<string, unknown>, Record<string, s
     'a route',
     RoutesPage,
     {
-      ...stateAfter(routeDetailFeature, RouteDetailActions.select({ line: '103' })),
-      ...stateAfter(lineStatsFeature),
+      ...stateAfter(routeDetailFeature, RouteDetailActions.select({ route: '103' })),
+      ...stateAfter(routeStatsFeature),
     },
-    { line: '103' },
+    { route: '103' },
   ],
   [
     'Stops',
     Stops,
     stateAfter(
       stopsFeature,
-      StopsActions.load({ query: { page: 0, size: 20, sort: 'name', filters: {} } }) as Action,
+      StopsActions.load({ query: { page: 0, size: 20, filters: {} } }) as Action,
     ),
     {},
   ],

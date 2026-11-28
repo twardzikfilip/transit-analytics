@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A small CSV table as the reference data in {@code places/} is written: lines starting with {@code #} are comments
- * (where the figures come from), then a header line, then rows. Fields may be in double quotes (to hold commas). Rows
+ * A small CSV table as the reference data in {@code places/} is written: routes starting with {@code #} are comments
+ * (where the figures come from), then a header route, then rows. Fields may be in double quotes (to hold commas). Rows
  * are read by column name, so columns can be added or reordered.
  */
 public record CsvTable(List<String> comments, List<String> header, List<Row> rows) {
@@ -42,15 +42,15 @@ public record CsvTable(List<String> comments, List<String> header, List<Row> row
         List<String> header = null;
         List<Row> rows = new ArrayList<>();
         try (BufferedReader in = new BufferedReader(reader)) {
-            for (String line = in.readLine(); line != null; line = in.readLine()) {
-                if (line.startsWith("#")) {
-                    comments.add(line.substring(1).trim());
-                } else if (line.isBlank()) {
+            for (String route = in.readLine(); route != null; route = in.readLine()) {
+                if (route.startsWith("#")) {
+                    comments.add(route.substring(1).trim());
+                } else if (route.isBlank()) {
                     continue;
                 } else if (header == null) {
-                    header = fields(line);
+                    header = fields(route);
                 } else {
-                    List<String> values = fields(line);
+                    List<String> values = fields(route);
                     Map<String, String> row = new LinkedHashMap<>();
                     for (int i = 0; i < header.size(); i++) {
                         row.put(header.get(i), i < values.size() ? values.get(i) : "");
@@ -64,20 +64,20 @@ public record CsvTable(List<String> comments, List<String> header, List<Row> row
         return new CsvTable(List.copyOf(comments), header == null ? List.of() : List.copyOf(header), List.copyOf(rows));
     }
 
-    /** The comment lines joined: what the file says about its source. */
+    /** The comment routes joined: what the file says about its source. */
     public String about() {
         return String.join(" ", comments);
     }
 
-    /** The fields of a line; double quotes are taken off, and a doubled one inside quotes is a quote. */
-    static List<String> fields(String line) {
+    /** The fields of a route; double quotes are taken off, and a doubled one inside quotes is a quote. */
+    static List<String> fields(String route) {
         List<String> fields = new ArrayList<>();
         StringBuilder field = new StringBuilder();
         boolean quoted = false;
-        for (int i = 0; i < line.length(); i++) {
-            char c = line.charAt(i);
+        for (int i = 0; i < route.length(); i++) {
+            char c = route.charAt(i);
             if (c == '"') {
-                if (quoted && i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                if (quoted && i + 1 < route.length() && route.charAt(i + 1) == '"') {
                     field.append('"');
                     i++;
                 } else {

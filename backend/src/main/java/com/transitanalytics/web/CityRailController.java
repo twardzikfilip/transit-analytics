@@ -1,13 +1,15 @@
 package com.transitanalytics.web;
 
+import com.transitanalytics.common.NotFoundException;
 import com.transitanalytics.dto.CityRailDto;
 import com.transitanalytics.dto.CityRailProposalDto;
-import com.transitanalytics.service.CityRailProposal;
-import com.transitanalytics.service.CityRailService;
-import com.transitanalytics.service.RailBusComparison;
+import com.transitanalytics.rail.CityRailService;
+import com.transitanalytics.rail.RailBusComparison;
+import com.transitanalytics.rail.proposal.CityRailProposal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -49,15 +51,24 @@ public class CityRailController {
     }
 
     @Operation(summary = "City Rail proposal no. 1",
-            description = "City trains on the five railways from Białystok, shortened to Klepacze, Fasty, Lewickie, "
-                    + "Wasilków and Kuriany (the railway to Kuriany has no passenger trains today), calling at every "
-                    + "station, the new ones included. Two ways of running them, each timetabled around the trains "
-                    + "(Polregio and PKP Intercity) of the weekday the trains are counted on: five lines from "
-                    + "Białystok (radial), or two lines through Białystok and one ending there (through). Each line "
-                    + "runs at least every hour each way from 05:00 to 23:00, keeps at least 10 minutes from any other "
-                    + "train going the same way on the same railway, and stands at least 5 minutes at its ends.")
+            description = "City trains on the five railways from Białystok, to Niewodnica, Dobrzyniewo Duże, "
+                    + "Juchnowiec Dolny, Wasilków and Henrykowo, with new stations. Two ways of running them: five "
+                    + "routes from Białystok (radial), or two routes through Białystok and one ending there (through), "
+                    + "each timetabled at four frequencies around today's trains of one weekday. Worked out once and "
+                    + "stored. This gives the railways, the rules and each frequency's trains; the routes come from "
+                    + "/proposal/{solution}/{frequency}.")
     @GetMapping("/proposal")
     public CityRailProposalDto.Proposal proposal() {
         return proposal.proposal();
+    }
+
+    @Operation(summary = "One solution's routes and timetables at a frequency",
+            description = "The routes of radial or through at 1tp2h, 1tph, 2tph or 3tph: their stations, lengths, run "
+                    + "times, trains needed and turnarounds, and both ways' timetables beside today's Polregio and PKP "
+                    + "Intercity trains. 404 when there is no such solution or frequency.")
+    @GetMapping("/proposal/{solution}/{frequency}")
+    public CityRailProposalDto.Variant variant(@PathVariable String solution, @PathVariable String frequency) {
+        return proposal.variant(solution, frequency)
+                .orElseThrow(() -> new NotFoundException("Proposal variant", solution + "/" + frequency));
     }
 }

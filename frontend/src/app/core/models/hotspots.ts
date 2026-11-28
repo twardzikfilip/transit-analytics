@@ -1,7 +1,7 @@
 /** Stop hotspots: where buses stand still away from stops, from recorded positions. */
 
-export interface HotspotLineTime {
-  line: string;
+export interface HotspotRouteTime {
+  route: string;
   hours: number;
 }
 
@@ -32,8 +32,8 @@ export interface Hotspot {
   /** The nearest stop, to tell where it is. */
   nearestStop: string | null;
   nearestStopMeters: number;
-  /** Time per line, the most first. */
-  lines: HotspotLineTime[];
+  /** Time per route, the most first. */
+  routes: HotspotRouteTime[];
   /** Directions the buses were heading, by share of the time (10% or more). */
   approaches: HotspotApproach[];
   /** Hour of the day (local time) with the most time lost. */
@@ -43,10 +43,10 @@ export interface Hotspot {
 export interface HotspotReport {
   from: string;
   to: string;
-  /** The line the report is limited to, or null for all. */
-  line: string | null;
-  /** Lines with standstills in the window, to choose from. */
-  lines: string[];
+  /** The route the report is limited to, or null for all. */
+  route: string | null;
+  /** Routes with standstills in the window, to choose from. */
+  routes: string[];
   /** Service days with recorded standstills in the window; per-day figures are over these. */
   days: number;
   /** Standstills away from stops and terminals, and their time altogether. */

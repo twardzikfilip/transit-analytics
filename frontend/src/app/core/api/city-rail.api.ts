@@ -1,7 +1,12 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { CityRailProposal, CityRailReport, RailBusComparison } from '../models/models';
+import {
+  CityRailProposal,
+  CityRailReport,
+  ProposalVariant,
+  RailBusComparison,
+} from '../models/models';
 
 @Injectable({ providedIn: 'root' })
 export class CityRailApi {
@@ -19,5 +24,12 @@ export class CityRailApi {
   /** City Rail proposal no. 1, timetabled around today's trains. */
   proposal(): Observable<CityRailProposal> {
     return this.http.get<CityRailProposal>('/api/city-rail/proposal');
+  }
+
+  /** One solution's routes and timetables at a frequency. */
+  variant(solution: string, frequency: string): Observable<ProposalVariant> {
+    return this.http.get<ProposalVariant>(
+      `/api/city-rail/proposal/${encodeURIComponent(solution)}/${encodeURIComponent(frequency)}`,
+    );
   }
 }

@@ -31,9 +31,9 @@ export { CHART_HEIGHT, MIN_PX_PER_MIN, fit } from './brigade-day-layout';
 
 /**
  * A brigade's day on one time line: each scheduled trip as a bar (consecutive trips alternating in colour, labelled
- * with line and destination), and under it what actually ran, in the same colour, a bar per bus (labelled with the
+ * with route and destination), and under it what actually ran, in the same colour, a bar per bus (labelled with the
  * bus and how late it set off). Parts nobody ran are hatched red, parts no bus was seen on grey; trips without data
- * are outlined. A thin line joins each scheduled start to the actual one, so lateness shows as a slant; markers flag
+ * are outlined. A thin route joins each scheduled start to the actual one, so lateness shows as a slant; markers flag
  * a change of bus, a lost trip and a detour. Hover a trip for its details; click to choose it.
  */
 @Component({

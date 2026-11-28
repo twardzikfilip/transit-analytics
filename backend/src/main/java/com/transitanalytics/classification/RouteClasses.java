@@ -1,14 +1,15 @@
 package com.transitanalytics.classification;
 
-import com.transitanalytics.domain.TimetableFeed;
+import com.transitanalytics.data.Shapes;
+import com.transitanalytics.common.WarmUp;
 import com.transitanalytics.domain.CityBoundaries;
 import com.transitanalytics.domain.CityTime;
 import com.transitanalytics.domain.RouteCapacity;
 import com.transitanalytics.domain.RouteGeometry;
 import com.transitanalytics.domain.RouteSubtype;
+import com.transitanalytics.domain.TimetableFeed;
 import com.transitanalytics.gtfs.GtfsImported;
-import com.transitanalytics.service.WarmUp;
-import com.transitanalytics.service.WeekdayTimetable;
+import com.transitanalytics.timetable.WeekdayTimetable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -29,7 +30,7 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Classifies the lines of the configured operators by geometry and capacity ({@code classification/routes.yml}), notes
+ * Classifies the routes of the configured operators by geometry and capacity ({@code classification/routes.yml}), notes
  * the company operating each ({@code classification/operators.yml}),
  * and stores them on the routes: at startup, after a timetable import and every night.
  */
@@ -41,12 +42,13 @@ public class RouteClasses {
     /** Kinds of day the MEGA share is measured on. */
     enum DayType { WEEKDAY, SATURDAY, SUNDAY }
 
-    /** What was worked out for a line: its classes and what they rest on. */
-    public record Classified(long routeId, String line, RouteGeometry geometry, RouteCapacity capacity,
+    /** What was worked out for a route: its classes and what they rest on. */
+    public record Classified(long routeId, String route, RouteGeometry geometry, RouteCapacity capacity,
                              RouteCapacityClassifier.Inputs inputs, String operatingAgency) {
     }
 
     private final JdbcTemplate jdbc;
+    private final Shapes shapes;
     private final WeekdayTimetable weekdayTimetable;
     private final Clock clock;
     private final RouteClassProperties properties;
@@ -54,9 +56,10 @@ public class RouteClasses {
     private final RouteGeometryClassifier geometry;
     private final RouteCapacityClassifier capacity;
 
-    public RouteClasses(JdbcTemplate jdbc, WeekdayTimetable weekdayTimetable, Clock clock,
+    public RouteClasses(JdbcTemplate jdbc, Shapes shapes, WeekdayTimetable weekdayTimetable, Clock clock,
                         RouteClassProperties properties, OperatorProperties operators) {
         this.jdbc = jdbc;
+        this.shapes = shapes;
         this.operators = operators;
         this.weekdayTimetable = weekdayTimetable;
         this.clock = clock;
@@ -82,84 +85,65 @@ public class RouteClasses {
         WarmUp.inBackground("route-classes", RouteClasses.class, this::classifyAll);
     }
 
-    /** Every night: the buses running each line change from day to day. */
+    /** Every night: the buses running each route change from day to day. */
     @Scheduled(cron = "${app.route-classes.refresh-cron}", zone = CityTime.ZONE_ID)
     public void nightly() {
         classifyAll();
     }
 
-    /** Classifies every line and stores the classes; lines of other operators are left unclassified. */
+    /** Classifies every route and stores the classes; routes of other operators are left unclassified. */
     public synchronized List<Classified> classifyAll() {
-        List<Line> lines = jdbc.query("""
+        List<Route> routes = jdbc.query("""
                 SELECT r.id, r.gtfs_id, coalesce(nullif(r.short_name, ''), r.long_name) AS name, r.subtype,
                        a.name AS agency
                 FROM route r LEFT JOIN agency a ON a.id = r.agency_id""",
-                (rs, i) -> new Line(rs.getLong("id"), rs.getString("gtfs_id"), rs.getString("name"),
+                (rs, i) -> new Route(rs.getLong("id"), rs.getString("gtfs_id"), rs.getString("name"),
                         RouteSubtype.of(rs.getString("subtype")), rs.getString("agency")));
-        Map<Long, List<double[]>> shapes = mainShapes();
+        Map<Long, List<double[]>> shapes = this.shapes.mainOfRoutes();
         Map<Long, Map<Integer, List<Integer>>> departures = departures();
         Map<String, Map<DayType, Double>> mega = megaShares();
 
         List<Classified> classified = new ArrayList<>();
         List<Object[]> updates = new ArrayList<>();
-        for (Line line : lines) {
+        for (Route route : routes) {
             RouteGeometry g = null;
             RouteCapacity c = null;
             RouteCapacityClassifier.Inputs inputs = null;
             OperatorProperties.Company company = null;
-            if (line.agency() != null && properties.agencies().contains(line.agency())) {
-                g = properties.geometry().overrides().getOrDefault(line.name(),
-                        geometry.classify(shapes.get(line.id())));
-                // Recorded reports name the line by its timetable id.
-                Map<DayType, Double> shares = mega.getOrDefault(line.gtfsId(), Map.of());
-                Map<Integer, List<Integer>> byDirection = departures.getOrDefault(line.id(), Map.of());
+            if (route.agency() != null && properties.agencies().contains(route.agency())) {
+                g = properties.geometry().overrides().getOrDefault(route.name(),
+                        geometry.classify(shapes.get(route.id())));
+                // Recorded reports name the route by its timetable id.
+                Map<DayType, Double> shares = mega.getOrDefault(route.gtfsId(), Map.of());
+                Map<Integer, List<Integer>> byDirection = departures.getOrDefault(route.id(), Map.of());
                 inputs = capacity.inputs(byDirection.values(), shares.get(DayType.WEEKDAY),
                         shares.get(DayType.SATURDAY), shares.get(DayType.SUNDAY));
-                boolean skipped = properties.capacity().skipSubtypes().contains(line.subtype());
-                c = skipped ? null : properties.capacity().overrides().getOrDefault(line.name(),
+                boolean skipped = properties.capacity().skipSubtypes().contains(route.subtype());
+                c = skipped ? null : properties.capacity().overrides().getOrDefault(route.name(),
                         byDirection.isEmpty() ? null : capacity.classify(inputs));
-                company = operators.companyOf(line.name());
-                classified.add(new Classified(line.id(), line.name(), g, c, inputs,
+                company = operators.companyOf(route.name());
+                classified.add(new Classified(route.id(), route.name(), g, c, inputs,
                         company == null ? null : company.code()));
             }
-            updates.add(new Object[] {lowercase(g), lowercase(c), company == null ? null : company.code(), line.id()});
+            updates.add(new Object[] {lowercase(g), lowercase(c), company == null ? null : company.code(), route.id()});
         }
         jdbc.batchUpdate("UPDATE route SET geometry = ?, capacity_class = ?, operating_agency = ? WHERE id = ?",
                 updates);
-        log.info("Lines classified: {} of {} lines", classified.size(), lines.size());
+        log.info("Lines classified: {} of {} lines", classified.size(), routes.size());
         return classified;
     }
 
-    private record Line(long id, String gtfsId, String name, RouteSubtype subtype, String agency) {
+    private record Route(long id, String gtfsId, String name, RouteSubtype subtype, String agency) {
     }
 
     private static String lowercase(Enum<?> value) {
         return value == null ? null : value.name().toLowerCase(Locale.ROOT);
     }
 
-    /** Each line's main route shape: its most common one, preferring the first direction. */
-    private Map<Long, List<double[]>> mainShapes() {
-        Map<Long, List<double[]>> shapes = new HashMap<>();
-        jdbc.query("""
-                WITH used AS (
-                    SELECT route_id, feed, coalesce(direction, 0) AS dir, shape_id, count(*) AS n
-                    FROM trip WHERE shape_id IS NOT NULL GROUP BY 1, 2, 3, 4),
-                main AS (
-                    SELECT DISTINCT ON (route_id) route_id, feed, shape_id FROM used
-                    ORDER BY route_id, (dir <> 0), n DESC, shape_id)
-                SELECT m.route_id, sp.latitude, sp.longitude
-                FROM main m JOIN shape_point sp ON sp.feed = m.feed AND sp.shape_id = m.shape_id
-                ORDER BY m.route_id, sp.sequence""",
-                rs -> {
-                    shapes.computeIfAbsent(rs.getLong("route_id"), k -> new ArrayList<>())
-                            .add(new double[] {rs.getDouble("latitude"), rs.getDouble("longitude")});
-                });
-        return shapes;
-    }
 
     /**
-     * Each line's departures (first stop of each trip, seconds after midnight) per direction, on the weekday service;
-     * a line without weekday service (night lines) on the service it runs most.
+     * Each route's departures (first stop of each trip, seconds after midnight) per direction, on the weekday service;
+     * a route without weekday service (night routes) on the service it runs most.
      */
     private Map<Long, Map<Integer, List<Integer>>> departures() {
         Map<Long, Map<Integer, List<Integer>>> departures = new HashMap<>();
@@ -184,7 +168,7 @@ public class RouteClasses {
         return departures;
     }
 
-    /** Per line name and day type, the share of position reports made by MEGA buses (buses of a known class). */
+    /** Per route name and day type, the share of position reports made by MEGA buses (buses of a known class). */
     private Map<String, Map<DayType, Double>> megaShares() {
         Map<String, Map<DayType, Double>> shares = new HashMap<>();
         jdbc.query("""

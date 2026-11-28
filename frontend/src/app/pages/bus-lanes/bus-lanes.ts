@@ -17,7 +17,7 @@ import { BusLanesActions } from '../../store/bus-lanes/bus-lanes.actions';
 import { busLanesFeature } from '../../store/bus-lanes/bus-lanes.reducer';
 import { BusLaneMap } from './bus-lane-map';
 import { LaneDirectionMap } from './lane-direction-map';
-import { delayPerKmText, headingText, linesText, slowdownText, speedText } from './lane-format';
+import { delayPerKmText, headingText, routesText, slowdownText, speedText } from './lane-format';
 import { kmh } from '../../shared/format/number';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { LocalDatePipe, LocalNumberPipe } from '../../shared/i18n/locale-pipes';
@@ -162,7 +162,7 @@ export class BusLanesPage {
   protected readonly delayPerKmText = delayPerKmText;
   protected readonly slowdownText = slowdownText;
   protected readonly headingText = headingText;
-  protected readonly linesText = linesText;
+  protected readonly routesText = routesText;
   protected readonly kmh = kmh;
   protected readonly perKm = (v: number) => delayPerKmText(v);
 

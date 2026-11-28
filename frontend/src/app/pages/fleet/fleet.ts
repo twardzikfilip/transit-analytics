@@ -15,7 +15,13 @@ import {
 } from '../../shared/time-window/time-window';
 import { FleetActions } from '../../store/fleet/fleet.actions';
 import { FleetState, fleetFeature, hasFreshReport } from '../../store/fleet/fleet.reducer';
-import { daysOutText, hoursAxis, wholePercent, usageBars, vehicleClassLabel } from './fleet-format';
+import {
+  hoursOutText,
+  hoursAxis,
+  wholePercent,
+  usageBars,
+  vehicleClassLabel,
+} from './fleet-format';
 import { CountBars } from './count-bars';
 import { VehicleSearch } from './vehicle-search';
 import { Skeleton } from '../../shared/skeleton/skeleton';
@@ -54,7 +60,7 @@ export function openVehicle(router: Router, id: number): void {
 }
 
 /**
- * Fleet overview: how the buses were used in a time window (in use, by model, the most and least used, breakdowns,
+ * Fleet overview: how the buses were used in a time window (in use, by model, the most and least used, bus changes,
  * every bus's hours). A bus found by number or model, or clicked, opens its own page ({@link VehiclePage}). The
  * window and operators are in the URL.
  */
@@ -82,7 +88,7 @@ export class Fleet {
     return r ? wholePercent(r.inUse, r.fleet) : 0;
   });
   protected readonly classLabel = vehicleClassLabel;
-  protected readonly daysOutText = daysOutText;
+  protected readonly hoursOutText = hoursOutText;
   protected readonly hoursAxis = hoursAxis;
 
   constructor() {

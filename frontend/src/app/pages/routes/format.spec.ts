@@ -1,9 +1,9 @@
-import { LineRef, Segment } from '../../core/models/models';
+import { RouteRef, Segment } from '../../core/models/models';
 import {
   capacityLabel,
   geometryLabel,
   hourRange,
-  lineTable,
+  routeTable,
   slowestSegments,
   spellsText,
   subtypeLabel,
@@ -12,25 +12,25 @@ import {
 
 describe('route detail formatting', () => {
   it('puts the lines in a table of kinds of line by geometry', () => {
-    const line = (
+    const route = (
       name: string,
-      subtype: LineRef['subtype'],
-      geometry: LineRef['geometry'] = 'radial',
-    ): LineRef => ({
+      subtype: RouteRef['subtype'],
+      geometry: RouteRef['geometry'] = 'radial',
+    ): RouteRef => ({
       id: 1,
-      line: name,
+      route: name,
       name,
       subtype,
       geometry,
       capacityClass: null,
       operatingAgency: null,
     });
-    const table = lineTable([
-      line('1', 'urban', 'diameter'),
-      line('N1', 'night_urban'),
-      line('100', 'suburban', 'feeder'),
-      line('2', 'urban', 'diameter'),
-      line('5', 'urban'),
+    const table = routeTable([
+      route('1', 'urban', 'diameter'),
+      route('N1', 'night_urban'),
+      route('100', 'suburban', 'feeder'),
+      route('2', 'urban', 'diameter'),
+      route('5', 'urban'),
     ]);
     expect(table.columns.map((c) => c.label)).toEqual([
       'Radial',
@@ -50,7 +50,7 @@ describe('route detail formatting', () => {
     ]);
     expect(table.rows[1].cells[4].map((l) => l.name)).toEqual(['100']);
 
-    const withRegional = lineTable([line('1', 'urban'), line('700', 'regional', null)]);
+    const withRegional = routeTable([route('1', 'urban'), route('700', 'regional', null)]);
     expect(withRegional.columns.at(-1)).toEqual({
       label: 'Not classified',
       description: "Other operators' lines: not classified.",

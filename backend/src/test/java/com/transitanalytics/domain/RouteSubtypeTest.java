@@ -7,7 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class RouteSubtypeTest {
 
     @Test
-    void classifiesSubtypeByLineName() {
+    void classifiesSubtypeByRouteName() {
         assertThat(RouteSubtype.classify("1")).isEqualTo(RouteSubtype.URBAN);
         assertThat(RouteSubtype.classify("50")).isEqualTo(RouteSubtype.URBAN);
         assertThat(RouteSubtype.classify("99")).isEqualTo(RouteSubtype.URBAN);
