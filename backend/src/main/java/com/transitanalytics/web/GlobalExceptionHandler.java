@@ -1,13 +1,13 @@
 package com.transitanalytics.web;
 
+import com.transitanalytics.common.NotFoundException;
 import com.transitanalytics.gtfs.GtfsFeedException;
 import com.transitanalytics.gtfs.GtfsImportInProgressException;
+import com.transitanalytics.security.TooManyLoginsException;
 import com.transitanalytics.service.ExternalServiceException;
-import com.transitanalytics.service.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
-import com.transitanalytics.security.TooManyLoginsException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;

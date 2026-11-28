@@ -1,7 +1,7 @@
 import { SEQUENTIAL_BLUE } from '../../shared/palette';
 import { niceTicks } from '../../shared/time-series-chart/chart-geometry';
 
-/** Line width in px for the busiest stretch; the others are thinner in proportion. */
+/** Route width in px for the busiest stretch; the others are thinner in proportion. */
 export const MAX_WIDTH = 14;
 const MIN_WIDTH = 1;
 

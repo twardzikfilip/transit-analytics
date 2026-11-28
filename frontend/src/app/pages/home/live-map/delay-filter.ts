@@ -29,23 +29,23 @@ export function agencies(positions: LivePosition[], selected = ''): string[] {
   return [...names].sort((a, b) => a.localeCompare(b));
 }
 
-/** The kinds of line to filter by; urban takes in the night lines, which are urban too. */
-export const LINE_TYPES: { key: LineType; label: string; subtypes: RouteSubtype[] }[] = [
+/** The kinds of route to filter by; urban takes in the night routes, which are urban too. */
+export const ROUTE_TYPES: { key: RouteType; label: string; subtypes: RouteSubtype[] }[] = [
   { key: 'urban', label: 'live.types.urban', subtypes: ['urban', 'night_urban'] },
   { key: 'suburban', label: 'live.types.suburban', subtypes: ['suburban'] },
   { key: 'regional', label: 'live.types.regional', subtypes: ['regional'] },
 ];
 
-export type LineType = 'urban' | 'suburban' | 'regional';
+export type RouteType = 'urban' | 'suburban' | 'regional';
 
-/** Reads the kind of line from the URL; null (all lines) when unset or unknown. */
-export function parseLineType(value: string | null): LineType | null {
-  return LINE_TYPES.find((t) => t.key === value)?.key ?? null;
+/** Reads the kind of route from the URL; null (all routes) when unset or unknown. */
+export function parseRouteType(value: string | null): RouteType | null {
+  return ROUTE_TYPES.find((t) => t.key === value)?.key ?? null;
 }
 
-/** Vehicles on lines of one kind; null = all. A vehicle whose line's kind isn't known is left out by a filter. */
-export function ofLineType(positions: LivePosition[], type: LineType | null): LivePosition[] {
-  const kind = LINE_TYPES.find((t) => t.key === type);
+/** Vehicles on routes of one kind; null = all. A vehicle whose route's kind isn't known is left out by a filter. */
+export function ofRouteType(positions: LivePosition[], type: RouteType | null): LivePosition[] {
+  const kind = ROUTE_TYPES.find((t) => t.key === type);
   return kind
     ? positions.filter((p) => p.subtype !== null && kind.subtypes.includes(p.subtype))
     : positions;

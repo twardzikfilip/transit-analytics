@@ -25,7 +25,7 @@ const HEIGHT = SPEED.top + SPEED.height + 8;
  * One trip in detail, on its own time line: scheduled and actual bars (the actual one coloured by delay), and under
  * them the bus's delay and its speed over the whole trip, in two charts on the same time axis. Where a bus stood
  * still is shaded across all of them; a change of bus and an early end are marked. Hover for the values at a moment.
- * Each stop is a tick on the scheduled bar (when it was due) and a dot on the delay and speed lines (where the bus
+ * Each stop is a tick on the scheduled bar (when it was due) and a dot on the delay and speed routes (where the bus
  * passed it); hover one for its name and times, with a guide down the charts, to see between which stops delay grew
  * or the bus stood.
  * A button beside the actual bar shows the trip on a map, coloured by delay the same way.
@@ -48,7 +48,7 @@ const HEIGHT = SPEED.top + SPEED.height + 8;
       [attr.width]="width()"
       [attr.height]="height"
       role="img"
-      [attr.aria-label]="t('trips.detail.label', { line: run().trip.line })"
+      [attr.aria-label]="t('trips.detail.label', { route: run().trip.route })"
       (mousemove)="hover($event)"
       (mouseleave)="hovered.set(null)"
     >
@@ -163,8 +163,8 @@ const HEIGHT = SPEED.top + SPEED.height + 8;
         />
         <text class="value-tick" [attr.x]="LEFT - 4" [attr.y]="delayY(tick) + 4">{{ tick }}</text>
       }
-      @for (line of delayLines(); track $index) {
-        <polyline class="delay-line" [attr.points]="line" />
+      @for (route of delayLines(); track $index) {
+        <polyline class="delay-line" [attr.points]="route" />
       }
 
       <!-- Speed, km/h -->
@@ -179,8 +179,8 @@ const HEIGHT = SPEED.top + SPEED.height + 8;
         />
         <text class="value-tick" [attr.x]="LEFT - 4" [attr.y]="speedY(tick) + 4">{{ tick }}</text>
       }
-      @for (line of speedLines(); track $index) {
-        <polyline class="speed-line" [attr.points]="line" />
+      @for (route of speedLines(); track $index) {
+        <polyline class="speed-line" [attr.points]="route" />
       }
 
       <!-- Where the bus passed each stop, on the delay and speed lines. -->
@@ -405,7 +405,7 @@ export class TripDetail {
   protected readonly t = t;
   readonly run = input.required<TripRun>();
   /**
-   * The trip in detail, once loaded: the speed line then follows every report (0 where the bus stood still), and the
+   * The trip in detail, once loaded: the speed route then follows every report (0 where the bus stood still), and the
    * stops tell how long it stood at each. Until then the speed is the per-minute samples'.
    */
   readonly detail = input<TripRunDetail | null>(null);
@@ -449,15 +449,15 @@ export class TripDetail {
       .map((d) => d / 60);
     return niceTicks(Math.max(1, ...minutes), 4, Math.min(0, ...minutes));
   });
-  /** The speed line's pieces: every report's speed once the detail is in, else the per-minute samples'. */
+  /** The speed route's pieces: every report's speed once the detail has them, else the per-minute samples'. */
   private readonly speedPoints = computed(() => {
     const detail = this.detail();
-    return detail
+    return detail?.points.length
       ? linePoints(detail.points, (p) => p.kmh)
       : linePoints(this.run().samples, (p) => p.kmh);
   });
   protected readonly speedTicks = computed(() => {
-    const kmh = this.speedPoints().flatMap((line) => line.map((p) => p.value));
+    const kmh = this.speedPoints().flatMap((route) => route.map((p) => p.value));
     return niceTicks(Math.max(40, ...kmh), 4);
   });
 
@@ -470,13 +470,13 @@ export class TripDetail {
   }
 
   protected readonly delayLines = computed(() =>
-    linePoints(this.run().samples, (p) => (p.delay === null ? null : p.delay / 60)).map((line) =>
-      line.map((p) => `${this.scale().x(p.time)},${this.delayY(p.value)}`).join(' '),
+    linePoints(this.run().samples, (p) => (p.delay === null ? null : p.delay / 60)).map((route) =>
+      route.map((p) => `${this.scale().x(p.time)},${this.delayY(p.value)}`).join(' '),
     ),
   );
   protected readonly speedLines = computed(() =>
-    this.speedPoints().map((line) =>
-      line.map((p) => `${this.scale().x(p.time)},${this.speedY(p.value)}`).join(' '),
+    this.speedPoints().map((route) =>
+      route.map((p) => `${this.scale().x(p.time)},${this.speedY(p.value)}`).join(' '),
     ),
   );
 
@@ -499,7 +499,7 @@ export class TripDetail {
         ? roundOrDash(valueAt(this.speedPoints(), Date.parse(p.at)))
         : (p.kmh ?? '–'),
       stop: p.stop,
-      stopName: this.run().stops[p.stop - 1]?.name ?? '–',
+      stopName: this.detail()?.stops[p.stop - 1]?.name ?? '–',
     };
   });
 
@@ -507,12 +507,12 @@ export class TripDetail {
   /** Each stop's place on the bars: when it was due, and when the bus passed it (null: not seen). */
   /**
    * Each stop's place: when it was due (on the scheduled bar), and where the bus passed it on the delay and speed
-   * lines: the lines' value at that moment (null where they aren't drawn).
+   * routes: the routes' value at that moment (null where they aren't drawn).
    */
   protected readonly stopMarks = computed(() => {
     const delays = linePoints(this.run().samples, (p) => (p.delay === null ? null : p.delay / 60));
     const speeds = this.speedPoints();
-    return this.run().stops.map((stop) => {
+    return (this.detail()?.stops ?? []).map((stop) => {
       const passed = stop.passed ? Date.parse(stop.passed) : null;
       const delay = passed === null ? null : valueAt(delays, passed);
       const kmh = passed === null ? null : valueAt(speeds, passed);
@@ -538,7 +538,7 @@ export class TripDetail {
       due: localTime(m.stop.scheduled),
       passed: m.stop.passed ? localTime(m.stop.passed) : null,
       delay: departureDelayText(m.stop.delay),
-      dwell: dwellText(this.detail()?.stops[m.stop.index - 1]?.dwellSeconds),
+      dwell: dwellText(m.stop.dwellSeconds),
     };
   });
 
@@ -565,15 +565,15 @@ function panelY(panel: { top: number; height: number }, ticks: number[], value: 
 }
 
 /**
- * A drawn line's value at a moment: between two of its points, the straight line between them; at a point, its
- * value; null where no line is drawn (before, after or between its pieces).
+ * A drawn route's value at a moment: between two of its points, the straight route between them; at a point, its
+ * value; null where no route is drawn (before, after or between its pieces).
  */
-export function valueAt(lines: { time: number; value: number }[][], time: number): number | null {
-  for (const line of lines) {
-    for (let i = 0; i < line.length; i++) {
-      const a = line[i];
+export function valueAt(routes: { time: number; value: number }[][], time: number): number | null {
+  for (const route of routes) {
+    for (let i = 0; i < route.length; i++) {
+      const a = route[i];
       if (a.time === time) return a.value;
-      const b = line[i + 1];
+      const b = route[i + 1];
       if (b && a.time < time && time < b.time) {
         return a.value + ((b.value - a.value) * (time - a.time)) / (b.time - a.time);
       }

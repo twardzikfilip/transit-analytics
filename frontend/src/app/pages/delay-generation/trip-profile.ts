@@ -17,7 +17,7 @@ export function scheduledTime(left: string, delaySeconds: number): string {
 }
 
 /**
- * One run's delay on leaving each stop: a line chart (stops evenly along the x axis, delay in minutes up), the
+ * One run's delay on leaving each stop: a route chart (stops evenly along the x axis, delay in minutes up), the
  * chosen stretch drawn bold, and a table with the times and the change at each stop.
  */
 @Component({

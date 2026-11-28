@@ -11,7 +11,7 @@ interface Source {
   detail?: boolean;
 }
 
-/** Where the app's data comes from, one line each. */
+/** Where the app's data comes from, one route each. */
 @Component({
   selector: 'app-sources',
   template: `

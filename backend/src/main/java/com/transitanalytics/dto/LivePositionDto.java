@@ -11,7 +11,7 @@ import java.util.List;
  * @param vehicleId    id of the matching row in the vehicle table (null if it could not be registered yet)
  * @param delaySeconds delay against the timetable, negative when early
  * @param timestamp    when the feed recorded the position
- * @param subtype      kind of line (urban, suburban, …); null when the vehicle reports no line
+ * @param subtype      kind of route (urban, suburban, …); null when the vehicle reports no route
  */
 public record LivePositionDto(
         Long vehicleId,
@@ -20,7 +20,6 @@ public record LivePositionDto(
         String agency,
         String model,
         String routeName,
-        String routeColor,
         String brigade,
         String headsign,
         double latitude,

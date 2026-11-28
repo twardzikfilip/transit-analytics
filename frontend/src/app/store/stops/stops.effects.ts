@@ -6,6 +6,6 @@ import { StopsActions } from './stops.actions';
 
 export const loadStops = createEffect(
   (actions$ = inject(Actions), api = inject(StopApi)) =>
-    pagedLoadEffect(StopsActions, (q) => api.list(q.page, q.size, q.sort, q.filters))(actions$),
+    pagedLoadEffect(StopsActions, (q) => api.list(q.page, q.size, q.filters))(actions$),
   { functional: true },
 );

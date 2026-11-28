@@ -1,6 +1,6 @@
 import { Component, computed, input, signal } from '@angular/core';
 import { hostWidth } from '../../shared/host-width';
-import { Brigade, LineVariant } from '../../core/models/models';
+import { Brigade, RouteVariant } from '../../core/models/models';
 import { clock, duration, hourTickStep } from '../../shared/format/time';
 import { hourRange } from './format';
 import { t as tr } from '../../core/i18n/t';
@@ -37,7 +37,7 @@ export class BrigadeTimeline {
   protected readonly tr = tr;
   readonly brigades = input.required<Brigade[]>();
   /** Base routes of the directions, for the legend. */
-  readonly mains = input<LineVariant[]>([]);
+  readonly mains = input<RouteVariant[]>([]);
 
   protected readonly width = hostWidth(800, 320);
   protected readonly hatchId = `hatch-${nextId++}`;

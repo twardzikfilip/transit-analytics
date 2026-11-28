@@ -10,10 +10,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * How lines are classified, from {@code classification/routes.yml} (the rules are explained there).
+ * How routes are classified, from {@code classification/routes.yml} (the rules are explained there).
  *
- * @param agencies    the operators whose lines are classified (agency names as in the timetable)
- * @param refreshCron when lines are classified again (Warsaw time)
+ * @param agencies    the operators whose routes are classified (agency names as in the timetable)
+ * @param refreshCron when routes are classified again (Warsaw time)
  */
 @ConfigurationProperties("app.route-classes")
 public record RouteClassProperties(List<String> agencies, String refreshCron, Geometry geometry, Capacity capacity) {
@@ -25,7 +25,7 @@ public record RouteClassProperties(List<String> agencies, String refreshCron, Ge
     /**
      * @param centre          the city centre, [latitude, longitude] points in order; empty: Osiedle Centrum
      *                        ({@link com.transitanalytics.domain.CityBoundaries#CENTRE})
-     * @param centralTermini  places outside the centre that count as central for a line ending there
+     * @param centralTermini  places outside the centre that count as central for a route ending there
      */
     public record Geometry(List<List<Double>> centre, double centreMarginMeters, double terminusMarginMeters,
                            List<CentralTerminus> centralTermini, double centralTerminusMarginMeters,
@@ -52,12 +52,12 @@ public record RouteClassProperties(List<String> agencies, String refreshCron, Ge
         }
     }
 
-    /** A central interchange outside the centre (a line ending there is radial), as [latitude, longitude]. */
+    /** A central interchange outside the centre (a route ending there is radial), as [latitude, longitude]. */
     public record CentralTerminus(String name, double latitude, double longitude) {
     }
 
     /**
-     * @param skipSubtypes kinds of line given no capacity class (night lines)
+     * @param skipSubtypes kinds of route given no capacity class (night routes)
      * @param peak         peak windows, "HH:MM-HH:MM"; by default the app's ({@link CityTime#PEAK})
      * @param rules        tried in order; the first whose conditions all hold gives the class
      */
@@ -73,11 +73,11 @@ public record RouteClassProperties(List<String> agencies, String refreshCron, Ge
         }
     }
 
-    /** How often a line runs MEGA buses. */
+    /** How often a route runs MEGA buses. */
     public enum Mega {
         /** On every day type it runs, at least the every-day share. */
         EVERY_DAY,
-        /** On weekdays at least the "some" share (every-day lines too). */
+        /** On weekdays at least the "some" share (every-day routes too). */
         SOME,
         /** Less than that. */
         NONE,

@@ -19,7 +19,7 @@ public final class BrigadeDto {
     }
 
     /** One trip of the brigade, from its first stop to its last. */
-    public record Run(String line, String headsign, String from, String to, Instant departure, Instant arrival) {
+    public record Run(String route, String headsign, String from, String to, Instant departure, Instant arrival) {
     }
 
     /**
@@ -38,17 +38,9 @@ public final class BrigadeDto {
     /**
      * A brigade to pick.
      *
-     * @param lines the lines it runs, on any day
+     * @param routes the routes it runs, on any day
      */
-    public record BrigadeRef(String brigade, List<String> lines) {
-    }
-
-    /**
-     * A brigade's service day: each trip scheduled, and what actually ran, from the recorded positions.
-     *
-     * @param trips in departure order
-     */
-    public record Day(String brigade, LocalDate serviceDay, Summary summary, List<Trip> trips) {
+    public record BrigadeRef(String brigade, List<String> routes) {
     }
 
     /**
@@ -74,7 +66,7 @@ public final class BrigadeDto {
      * @param missing   parts of the trip nobody ran, in scheduled time: before, between and after the runs (a trip
      *                  not run at all is missing whole)
      */
-    public record Trip(String tripId, String line, String headsign, String from, String to, int direction,
+    public record Trip(String tripId, String route, String headsign, String from, String to, int direction,
                        Instant departure, Instant arrival, int stops, String kind, List<TripAnomalyDto.Phrase> note,
                        List<ActualRun> runs,
                        List<Missing> missing) {

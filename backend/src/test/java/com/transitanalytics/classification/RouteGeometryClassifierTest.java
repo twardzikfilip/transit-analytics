@@ -21,12 +21,12 @@ class RouteGeometryClassifierTest {
 
     private final RouteGeometryClassifier classifier = new RouteGeometryClassifier(RULES, CENTRE);
 
-    private static List<double[]> line(double[]... points) {
+    private static List<double[]> route(double[]... points) {
         return List.of(points);
     }
 
     @Test
-    void classesLinesByHowTheyRunRelativeToTheCentre() {
+    void classesRoutesByHowTheyRunRelativeToTheCentre() {
         double[] middle = {53.13, 23.16};
         double[] north = {53.17, 23.16};
         double[] south = {53.09, 23.16};
@@ -34,43 +34,43 @@ class RouteGeometryClassifierTest {
         double[] northEast = {53.16, 23.20};
         double[] west = {53.13, 23.10};
         // From the centre out north.
-        assertThat(classifier.classify(line(middle, north))).isEqualTo(RouteGeometry.RADIAL);
+        assertThat(classifier.classify(route(middle, north))).isEqualTo(RouteGeometry.RADIAL);
         // North to south through the centre.
-        assertThat(classifier.classify(line(north, middle, south))).isEqualTo(RouteGeometry.DIAMETER);
+        assertThat(classifier.classify(route(north, middle, south))).isEqualTo(RouteGeometry.DIAMETER);
         // North to east through the centre: 90° apart.
-        assertThat(classifier.classify(line(north, middle, east))).isEqualTo(RouteGeometry.ARCANTIAL);
+        assertThat(classifier.classify(route(north, middle, east))).isEqualTo(RouteGeometry.ARCANTIAL);
         // Out of the centre and back on the same side: a loop, radial.
-        assertThat(classifier.classify(line(north, middle, new double[] {53.17, 23.17})))
+        assertThat(classifier.classify(route(north, middle, new double[] {53.17, 23.17})))
                 .isEqualTo(RouteGeometry.RADIAL);
         // West to north-east round the centre, never in it.
-        assertThat(classifier.classify(line(west, new double[] {53.16, 23.12}, new double[] {53.17, 23.16},
+        assertThat(classifier.classify(route(west, new double[] {53.16, 23.12}, new double[] {53.17, 23.16},
                 northEast))).isEqualTo(RouteGeometry.TANGENTIAL);
         // From far north to 2 km north of the centre: short of it.
-        assertThat(classifier.classify(line(new double[] {53.20, 23.16}, new double[] {53.155, 23.16})))
+        assertThat(classifier.classify(route(new double[] {53.20, 23.16}, new double[] {53.155, 23.16})))
                 .isEqualTo(RouteGeometry.FEEDER);
         // From the station (2 km west of the centre) through the centre out east: radial, the station is central.
         double[] station = {53.13, 23.13};
-        assertThat(classifier.classify(line(station, middle, east))).isEqualTo(RouteGeometry.RADIAL);
+        assertThat(classifier.classify(route(station, middle, east))).isEqualTo(RouteGeometry.RADIAL);
         // From 300 m off the station: not at it, so through the centre at 180°, a diameter.
-        assertThat(classifier.classify(line(new double[] {53.13, 23.1255}, middle, east)))
+        assertThat(classifier.classify(route(new double[] {53.13, 23.1255}, middle, east)))
                 .isEqualTo(RouteGeometry.DIAMETER);
         // South-west up past the west of the centre, north-west and back west: the ends 22° apart, but it swings
-        // 100° round the centre, tangential (like line 23).
+        // 100° round the centre, tangential (like route 23).
         double[] southWest = {53.10, 23.12};
-        assertThat(classifier.classify(line(southWest, west, new double[] {53.16, 23.12}, new double[] {53.11, 23.10})))
+        assertThat(classifier.classify(route(southWest, west, new double[] {53.16, 23.12}, new double[] {53.11, 23.10})))
                 .isEqualTo(RouteGeometry.TANGENTIAL);
-        assertThat(classifier.classify(line(north))).isNull();
+        assertThat(classifier.classify(route(north))).isNull();
         assertThat(classifier.classify(null)).isNull();
     }
 
     @Test
     void measuresDistancesToTheCentreAndTheAngleBetweenTheEnds() {
-        RouteGeometryClassifier.Measures m = classifier.measure(line(new double[] {53.13, 23.16},
+        RouteGeometryClassifier.Measures m = classifier.measure(route(new double[] {53.13, 23.16},
                 new double[] {53.145, 23.16}));
         assertThat(m.firstEndToCentre()).isZero();
         assertThat(m.lastEndToCentre()).isCloseTo(1113, within(5.0));
         assertThat(m.closestToCentre()).isZero();
-        RouteGeometryClassifier.Measures back = classifier.measure(line(new double[] {53.10, 23.16},
+        RouteGeometryClassifier.Measures back = classifier.measure(route(new double[] {53.10, 23.16},
                 new double[] {53.13, 23.10}, new double[] {53.11, 23.12}));
         assertThat(back.sweep()).isCloseTo(90, within(1.0));
         assertThat(back.angleBetweenEnds()).isLessThan(60);
@@ -86,12 +86,12 @@ class RouteGeometryClassifierTest {
         double[] poleska = {53.14202, 23.15931};
         double[] monteCassino = {53.13315, 23.13838};
         // From Rynek Kościuszki out north-west: radial.
-        assertThat(real.classify(line(rynek, wysokiStoczek))).isEqualTo(RouteGeometry.RADIAL);
+        assertThat(real.classify(route(rynek, wysokiStoczek))).isEqualTo(RouteGeometry.RADIAL);
         // Round the centre by Monte Cassino, św. Rocha and Poleska, not into it: tangential.
-        assertThat(real.classify(line(new double[] {53.115, 23.135}, monteCassino, stRoch, poleska,
+        assertThat(real.classify(route(new double[] {53.115, 23.135}, monteCassino, stRoch, poleska,
                 new double[] {53.150, 23.175}))).isEqualTo(RouteGeometry.TANGENTIAL);
         // The same, on into Lipowa and Rynek Kościuszki and out east: through the centre.
-        assertThat(real.classify(line(new double[] {53.115, 23.135}, monteCassino, stRoch, rynek,
+        assertThat(real.classify(route(new double[] {53.115, 23.135}, monteCassino, stRoch, rynek,
                 new double[] {53.135, 23.20}))).isEqualTo(RouteGeometry.ARCANTIAL);
         assertThat(rules.centreRing(CityBoundaries.CENTRE).length).isEqualTo(9);
     }

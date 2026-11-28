@@ -1,7 +1,7 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
 import { DelayBand, FleetSeries, RouteActivity } from '../../core/models/models';
 
-/** A time window ([from, to), ISO instants), and optionally a line and an operator (null for all). */
+/** A time window ([from, to), ISO instants), and optionally a route and an operator (null for all). */
 export interface HistoryQuery {
   /** Null for all time. */
   from: string | null;
@@ -13,7 +13,7 @@ export interface HistoryQuery {
 export const PositionHistoryActions = createActionGroup({
   source: 'Position History',
   events: {
-    /** Loads the chart series, the delay bands and the line list for a window. */
+    /** Loads the chart series, the delay bands and the route list for a window. */
     Load: props<{ query: HistoryQuery }>(),
     'Fleet Loaded': props<{ series: FleetSeries }>(),
     'Routes Loaded': props<{ routes: RouteActivity[] }>(),

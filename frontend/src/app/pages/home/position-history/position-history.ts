@@ -36,8 +36,8 @@ export function readAgency(params: ParamMap): string | null {
 }
 
 /**
- * Recorded vehicle positions over a time window, for a line and an operator: vehicles running and mean delay (per
- * poll, i.e. per minute, for windows up to 24 h), and the delay distribution. The window, line and operator are in
+ * Recorded vehicle positions over a time window, for a route and an operator: vehicles running and mean delay (per
+ * poll, i.e. per minute, for windows up to 24 h), and the delay distribution. The window, route and operator are in
  * the URL (range/from/to, route, agency); nothing else on the page uses them.
  */
 @Component({
@@ -61,7 +61,7 @@ export class PositionHistory {
   protected readonly query = this.store.selectSignal(positionHistoryFeature.selectQuery);
   private readonly delays = this.store.selectSignal(positionHistoryFeature.selectDelays);
   protected readonly delayBands = computed(() => bandRows(this.delays()));
-  /** The window and line the loaded results cover, e.g. "Mon 16 Nov, 08:36 – 14:36 · all lines". */
+  /** The window and route the loaded results cover, e.g. "Mon 16 Nov, 08:36 – 14:36 · all routes". */
   protected readonly coverage = computed(() => {
     const q = this.query();
     if (!q) return '';
@@ -72,14 +72,14 @@ export class PositionHistory {
       : t('history.until', { when: windowLabel(q.to, q.to).split(' – ')[0] });
     return t('history.coverage', {
       window,
-      lines: q.route ? t('history.lineLower', { line: q.route }) : t('history.allLinesLower'),
+      routes: q.route ? t('history.lineLower', { route: q.route }) : t('history.allLinesLower'),
       operators: q.agency ?? t('history.allOperatorsLower'),
     });
   });
 
   protected readonly showTable = signal(false);
 
-  /** URL state: the line ('' for all) and the operator (null for all). */
+  /** URL state: the route ('' for all) and the operator (null for all). */
   protected readonly route = computed(() => this.params().get('route') ?? '');
   protected readonly agency = computed(() => readAgency(this.params()));
   /** The operators to choose from: the loaded ones, plus the chosen one so it shows before they load. */
@@ -167,7 +167,7 @@ export class PositionHistory {
     this.navigate({ route: route || null });
   }
 
-  /** Another operator has other lines, so the line filter is cleared. */
+  /** Another operator has other routes, so the route filter is cleared. */
   protected setAgency(agency: string): void {
     this.navigate({ agency: agency === CITY_AGENCY ? null : agency, route: null });
   }

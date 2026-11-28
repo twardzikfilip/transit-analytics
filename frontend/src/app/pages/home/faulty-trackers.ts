@@ -4,7 +4,7 @@ import { RouterLink } from '@angular/router';
 import { catchError, map, of } from 'rxjs';
 import { TripAnomalyApi } from '../../core/api/api.services';
 import { FaultyTracker, FaultyTrackers as Report } from '../../core/models/models';
-import { LineBadge } from '../../shared/line-kind/line-kinds';
+import { RouteBadge } from '../../shared/route-kind/route-kinds';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { LocalDatePipe } from '../../shared/i18n/locale-pipes';
 import { shareOf } from '../../shared/format/number';
@@ -25,7 +25,7 @@ export function trackerTrips(f: FaultyTracker): string {
  */
 @Component({
   selector: 'app-faulty-trackers',
-  imports: [RouterLink, LineBadge, Skeleton, LocalDatePipe],
+  imports: [RouterLink, RouteBadge, Skeleton, LocalDatePipe],
   template: `
     @if (report(); as r) {
       <section
@@ -56,8 +56,8 @@ export function trackerTrips(f: FaultyTracker): string {
                 <span>{{ trips(f) }}</span>
                 <span class="muted">{{ tn('home.trackers.days', f.days) }}</span>
                 <span class="lines">
-                  @for (l of f.lines; track l) {
-                    <span class="route-badge" [appLineBadge]="l">{{ l }}</span>
+                  @for (l of f.routes; track l) {
+                    <span class="route-badge" [appRouteBadge]="l">{{ l }}</span>
                   }
                 </span>
                 <span class="muted">{{

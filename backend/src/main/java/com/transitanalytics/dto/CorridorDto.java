@@ -2,7 +2,7 @@ package com.transitanalytics.dto;
 
 import java.util.List;
 
-/** Important corridors: stretches of consecutive stops that several lines share, from the weekday timetable. */
+/** Important corridors: stretches of consecutive stops that several routes share, from the weekday timetable. */
 public final class CorridorDto {
 
     private CorridorDto() {
@@ -15,7 +15,7 @@ public final class CorridorDto {
      * @param segments  every stretch between two consecutive stops, for the maps (quietest first, so busy ones are
      *                  drawn on top)
      */
-    public record Report(String serviceId, List<LineStatsDto.Period> peak, List<LineStatsDto.Period> offPeak,
+    public record Report(String serviceId, List<RouteStatsDto.Period> peak, List<RouteStatsDto.Period> offPeak,
                          List<Corridor> corridors, List<SegmentLoad> segments) {
     }
 
@@ -30,22 +30,22 @@ public final class CorridorDto {
     }
 
     /**
-     * A stretch of at least four stops shared by two or more lines on each part, in both directions where the lines
+     * A stretch of at least four stops shared by two or more routes on each part, in both directions where the routes
      * run back the same way. Stops, start and end are those of the busier direction. Buses, interval and regularity
      * are measured on each stretch between two stops (all buses using it) and averaged along the corridor, weighted
      * by length.
      *
-     * @param lines              every line running on the corridor (in line order)
-     * @param throughLines       the lines running all of it; the others run part of it
+     * @param routes              every route running on the corridor (in route order)
+     * @param throughLines       the routes running all of it; the others run part of it
      * @param km                 length, averaged over the directions
      * @param buses              weekday buses on the corridor's stretches (averaged along it), both directions
-     * @param oneWay             true when the lines don't run it back the same way
+     * @param oneWay             true when the routes don't run it back the same way
      * @param peakIntervalMin    average minutes between buses in peak hours, averaged along it and over directions
      * @param offPeakIntervalMin the same off-peak
      * @param peakCv             regularity: coefficient of variation of the gaps between buses (0 = perfectly even)
      * @param offPeakCv          the same off-peak
      */
-    public record Corridor(String from, String to, List<String> stops, List<String> lines, List<String> throughLines,
+    public record Corridor(String from, String to, List<String> stops, List<String> routes, List<String> throughRoutes,
                            Double km, int buses,
                            boolean oneWay, Double peakIntervalMin, Double offPeakIntervalMin, Double peakCv,
                            Double offPeakCv) {

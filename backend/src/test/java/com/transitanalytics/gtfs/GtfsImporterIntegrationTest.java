@@ -81,7 +81,7 @@ class GtfsImporterIntegrationTest {
 
     @Test
     void loadsFeedSkipsBrokenReferencesAndKeepsIdsOnReimport() throws IOException {
-        // Rows other feeds loaded (e.g. PKS Nova's line 500) stay: the counts are the whole tables. Not their stop
+        // Rows other feeds loaded (e.g. PKS Nova's route 500) stay: the counts are the whole tables. Not their stop
         // times at the city's stops: those stops go with this feed replacing the city's, and their stop times too.
         Map<String, Long> others = Map.of(
                 "agency", count("SELECT count(*) FROM agency WHERE feed <> 'bialystok'"),

@@ -1,0 +1,281 @@
+package com.transitanalytics.brigades;
+
+import com.transitanalytics.data.Reports;
+import com.transitanalytics.data.Shapes;
+import com.transitanalytics.data.Timetables;
+import com.transitanalytics.DbIntegrationTest;
+import com.transitanalytics.EnglishPhrases;
+import com.transitanalytics.TimetableFixture;
+import com.transitanalytics.common.NotFoundException;
+import com.transitanalytics.common.ReportWindow;
+import com.transitanalytics.dto.BrigadeDto;
+import com.transitanalytics.dto.TripRunDto;
+import com.transitanalytics.recording.PositionSampleWriter;
+import com.transitanalytics.timetable.ServiceDay;
+import com.transitanalytics.trips.TripAnomalyService;
+import com.transitanalytics.trips.TripRunService;
+import com.transitanalytics.zbiorkom.FeedPosition;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneOffset;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+/**
+ * Monday 5 January 2099, 09:00: brigade ITB-01 of route IT-BD (agency IT-BDA) with three trips: run in full by bus A,
+ * lost by bus A at its second stop, and run by bus B; brigade ITB-02 never comes out. Rolled back.
+ */
+@DbIntegrationTest
+@Transactional
+class BrigadeDayIntegrationTest {
+
+    private static final LocalDate DAY = LocalDate.of(2099, 1, 5);
+
+    @Autowired
+    JdbcTemplate jdbc;
+
+    @Autowired
+    TripAnomalyService anomalies;
+
+    @Autowired
+    Timetables timetables;
+
+    @Autowired
+    Reports reports;
+
+    @Autowired
+    Shapes shapes;
+
+    @Autowired
+    PositionSampleWriter writer;
+
+    @Test
+    void showsEachTripScheduledAndWhatRan() {
+        var timetable = new TimetableFixture(jdbc, "IT_BD");
+        long route = timetable.route("IT-BD", "IT-BD");
+        long agency = jdbc.queryForObject("""
+                INSERT INTO agency (gtfs_id, name, url, timezone)
+                VALUES ('IT-BDA', 'Test agency', 'https://example.org', 'Europe/Warsaw') RETURNING id""", Long.class);
+        jdbc.update("UPDATE route SET agency_id = ? WHERE id = ?", agency, route);
+        timetable.shape("IT-BD-S");
+        for (int i = 1; i <= 4; i++) {
+            double at = 53.10 + (i - 1) * 0.02;
+            jdbc.update("INSERT INTO stop (gtfs_id, code, name, latitude, longitude) VALUES (?, ?, ?, ?, ?)",
+                    "IT-BD" + i, "IT-BD" + i, "IT-BD " + i, at, 23.10 + (i - 1) * 0.02);
+        }
+        String[] stops = {"IT-BD1", "IT-BD2", "IT-BD3", "IT-BD4"};
+        timetable.trip(route, "ITB-01_IT_BD_1", 0, "IT-BD 4", "IT-BD-S", "07:00", 6, stops);
+        timetable.trip(route, "ITB-01_IT_BD_2", 0, "IT-BD 4", "IT-BD-S", "07:30", 6, stops);
+        timetable.trip(route, "ITB-01_IT_BD_3", 0, "IT-BD 4", "IT-BD-S", "08:00", 6, stops);
+        timetable.trip(route, "ITB-02_IT_BD_1", 0, "IT-BD 4", "IT-BD-S", "07:00", 6, stops);
+        // Another operator's feed, whose timetable doesn't name brigades.
+        long otherRoute = timetable.route("IT-BX", "IT-BX");
+        long otherAgency = jdbc.queryForObject("""
+                INSERT INTO agency (feed, gtfs_id, name, url, timezone)
+                VALUES ('it', 'IT-BXA', 'Other operator', 'https://example.org', 'Europe/Warsaw') RETURNING id""",
+                Long.class);
+        jdbc.update("UPDATE route SET feed = 'it', agency_id = ? WHERE id = ?", otherAgency, otherRoute);
+        long otherTrip = timetable.trip(otherRoute, "IT-BX-1", 0, "IT-BD 4", "IT-BD-S", "07:00", 6, stops);
+        jdbc.update("UPDATE trip SET feed = 'it' WHERE id = ?", otherTrip);
+
+        long a = vehicle("IT-BD-A");
+        long b = vehicle("IT-BD-B");
+        drive(a, "ITB-01", "06:59:40", 60, 1, 1, 2, 2, 3, 3, 4, 4, 4, 4);
+        // Heading to stop 2, then gone (recording goes on: another bus reports all morning).
+        drive(a, "ITB-01", "07:29:40", 30, 1, 1, 2, 2);
+        drive(b, "ITB-01", "07:59:40", 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 4);
+        long other = vehicle("IT-BD-C");
+        for (Instant t = local("06:50:00"); t.isBefore(local("08:59:00")); t = t.plusSeconds(60)) {
+            report(other, "ITB-99", t, 0, 1);
+        }
+
+        var service = new BrigadeDayService(jdbc);
+        var runs = new TripRunService(timetables, reports, shapes, anomalies, Clock.fixed(local("09:00:00"), ZoneOffset.UTC));
+
+        BrigadeDto.BrigadeList list = service.brigades("IT-BDA");
+        assertThat(list.agency()).isEqualTo("IT-BDA");
+        assertThat(list.agencies()).extracting(BrigadeDto.Agency::id).contains("IT-BDA");
+        assertThat(list.brigades()).extracting(BrigadeDto.BrigadeRef::brigade).containsExactly("ITB-01", "ITB-02");
+        assertThat(list.brigades().get(0).routes()).containsExactly("IT-BD");
+        assertThat(service.brigades("IT-NONE").agency()).as("unknown: the main agency").isNotEqualTo("IT-NONE");
+        BrigadeDto.BrigadeList unnamed = service.brigades("it");
+        assertThat(unnamed.agencies()).as("every agency is offered").extracting(BrigadeDto.Agency::id)
+                .contains("IT-BDA", "it");
+        assertThat(unnamed.agency()).isEqualTo("it");
+        assertThat(service.brigades("it-IT-BXA").agency()).as("a former key of one of its agencies").isEqualTo("it");
+        assertThat(unnamed.brigades()).as("its timetable names no brigades").isEmpty();
+
+        TripRunDto.Day day = runs.day(DAY, "ITB-01");
+        List<BrigadeDto.Trip> trips = day.trips().stream().map(TripRunDto.Trip::trip).toList();
+        assertThat(trips).extracting(BrigadeDto.Trip::kind).containsExactly("completed", "lost", "completed");
+        BrigadeDto.Trip first = trips.get(0);
+        assertThat(first.from()).isEqualTo("IT-BD 1");
+        assertThat(first.to()).isEqualTo("IT-BD 4");
+        assertThat(first.runs()).singleElement().satisfies(r -> {
+            assertThat(r.bus()).isEqualTo("IT-BD-A");
+            assertThat(r.fromStop()).isEqualTo(1);
+            assertThat(r.toStop()).isEqualTo(4);
+            assertThat(r.startDelay()).isEqualTo(60);
+            assertThat(r.departure()).isEqualTo(local("07:01:00"));
+        });
+        BrigadeDto.Trip lost = trips.get(1);
+        assertThat(EnglishPhrases.text(lost.note())).isEqualTo("Lost at stop 2/4");
+        assertThat(lost.missing()).singleElement().satisfies(m -> {
+            assertThat(m.fromStop()).isEqualTo(2);
+            assertThat(m.toStop()).isEqualTo(4);
+            assertThat(m.why()).isEqualTo("not-run");
+        });
+        assertThat(trips.get(2).runs()).extracting(BrigadeDto.ActualRun::bus).containsExactly("IT-BD-B");
+        assertThat(day.summary().buses()).containsExactly("IT-BD-A", "IT-BD-B");
+        assertThat(day.summary().judged()).isEqualTo(3);
+        assertThat(day.summary().abnormal()).isEqualTo(1);
+        assertThat(day.summary().onTime()).isEqualTo(3);
+
+        assertThat(runs.day(DAY, "ITB-77").trips()).as("no such brigade").isEmpty();
+        assertThat(runs.day(null, "ITB-01").serviceDay()).as("today's by default").isEqualTo(DAY);
+
+        // The same trips on Trips: all of the window, or those a search names.
+        ReportWindow morning = new ReportWindow(local("06:30:00"), local("09:00:00"));
+        TripRunDto.Page all = runs.page(morning, null, 0);
+        assertThat(all.trips()).filteredOn(r -> r.brigade().startsWith("ITB"))
+                .extracting(r -> r.trip().tripId() + "=" + r.trip().kind())
+                .containsExactly("ITB-01_IT_BD_1=completed", "ITB-02_IT_BD_1=cancelled", "ITB-01_IT_BD_2=lost",
+                        "ITB-01_IT_BD_3=completed");
+        TripRunDto.Trip ran = all.trips().get(0);
+        assertThat(ran.serviceDay()).isEqualTo(DAY);
+        assertThat(ran.samples()).isNotEmpty().allSatisfy(p -> assertThat(p.bus()).isEqualTo("IT-BD-A"));
+        assertThat(ran.samples().get(0).delay()).isEqualTo(60);
+        assertThat(runs.page(morning, "it-bd-b", 0).trips()).as("a bus, whatever the case")
+                .extracting(r -> r.trip().tripId()).containsExactly("ITB-01_IT_BD_3");
+        assertThat(runs.page(morning, "ITB-02", 0).trips()).as("a brigade")
+                .extracting(r -> r.trip().tripId()).containsExactly("ITB-02_IT_BD_1");
+        assertThat(runs.page(morning, "nowhere", 0).total()).isZero();
+        assertThat(runs.page(morning, null, 50_000_000).trips()).as("a page far past the end").isEmpty();
+        TripRunDto.Page week = runs.page(new ReportWindow(local("09:00:00").minusSeconds(7 * 86_400),
+                local("09:00:00")), "ITB-01", 0);
+        assertThat(week.shownFrom()).as("its last day").isEqualTo(local("09:00:00").minusSeconds(86_400));
+        assertThat(week.total()).isEqualTo(3);
+
+        // A brigade's whole day: exactly its trips, as the window's list gives them.
+        TripRunDto.Day wholeDay = runs.day(DAY, "ITB-01");
+        assertThat(wholeDay.serviceDay()).isEqualTo(DAY);
+        assertThat(wholeDay.trips()).usingRecursiveComparison()
+                .isEqualTo(all.trips().stream().filter(r -> r.brigade().equals("ITB-01")).toList());
+        assertThat(runs.day(null, "ITB-01").serviceDay()).as("today's").isEqualTo(DAY);
+        assertThat(runs.day(DAY, "nope").trips()).isEmpty();
+
+        // The first trip on a map: bus A's reports while it ran it, with its delay, and the route.
+        TripRunDto.Detail path = runs.detail(DAY, "ITB-01", "ITB-01_IT_BD_1");
+        assertThat(path.points()).isNotEmpty().allSatisfy(p -> {
+            assertThat(p.bus()).isEqualTo("IT-BD-A");
+            assertThat(p.delay()).isEqualTo(60);
+        });
+        assertThat(path.route()).isNotEmpty();
+        assertThat(path.points()).as("standing between reports at the same place").anySatisfy(p -> assertThat(p.kmh()).isZero());
+        assertThat(path.stops()).extracting(TripRunDto.DetailStop::name)
+                .containsExactly("IT-BD 1", "IT-BD 2", "IT-BD 3", "IT-BD 4");
+        assertThat(path.stops()).allSatisfy(s -> assertThat(s.passed()).isNotNull());
+        assertThat(path.stops().get(0).scheduled()).isEqualTo(local("07:00:00"));
+        assertThat(path.stops()).extracting(TripRunDto.DetailStop::scheduled).isSorted();
+        assertThatThrownBy(() -> runs.detail(DAY, "ITB-01", "nope")).isInstanceOf(NotFoundException.class);
+    }
+
+    /**
+     * Night route IT-BN on the weekday timetable: its trips after midnight are given as 00:10 and 02:58 on the next
+     * date (as the city's night routes are), so on Tuesday's timetable they run the night after Monday, Monday's service
+     * day. The second one ends at 03:04, after Tuesday's service day starts.
+     */
+    @Test
+    void countsNightTripsOnTheNextDatesTimetableAsTheEveningBefore() {
+        var timetable = new TimetableFixture(jdbc, "IT_BN");
+        long route = timetable.route("IT-BN", "IT-BN", "night_urban");
+        long agency = jdbc.queryForObject("""
+                INSERT INTO agency (gtfs_id, name, url, timezone)
+                VALUES ('IT-BNA', 'Night agency', 'https://example.org', 'Europe/Warsaw') RETURNING id""", Long.class);
+        jdbc.update("UPDATE route SET agency_id = ? WHERE id = ?", agency, route);
+        timetable.shape("IT-BN-S");
+        for (int i = 1; i <= 4; i++) {
+            double at = 53.10 + (i - 1) * 0.02;
+            jdbc.update("INSERT INTO stop (gtfs_id, code, name, latitude, longitude) VALUES (?, ?, ?, ?, ?)",
+                    "IT-BN" + i, "IT-BN" + i, "IT-BN " + i, at, 23.10 + (i - 1) * 0.02);
+        }
+        String[] stops = {"IT-BN1", "IT-BN2", "IT-BN3", "IT-BN4"};
+        timetable.trip(route, "ITN-01_IT_BN_1", 0, "IT-BN 4", "IT-BN-S", "00:10", 6, stops);
+        timetable.trip(route, "ITN-01_IT_BN_2", 0, "IT-BN 4", "IT-BN-S", "02:58", 6, stops);
+
+        Instant tuesday = ServiceDay.gtfsTimeZero(DAY.plusDays(1));
+        long bus = vehicle("IT-BN-A");
+        drive(bus, "IT-BN", "ITN-01", tuesday.plusSeconds(9 * 60 + 40), 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 4);
+        // From 03:00 on, the reports are after Tuesday's service day starts; they still count for Monday's trip.
+        drive(bus, "IT-BN", "ITN-01", tuesday.plusSeconds(2 * 3600 + 59 * 60 + 40), 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 4);
+        Instant fourAm = tuesday.plusSeconds(4 * 3600);
+        long other = vehicle("IT-BN-C");
+        for (Instant t = tuesday; t.isBefore(fourAm); t = t.plusSeconds(60)) {
+            report(other, "IT-BN", "ITN-99", t, 0, 1);
+        }
+
+        var service = new BrigadeDayService(jdbc);
+        var runs = new TripRunService(timetables, reports, shapes, anomalies, Clock.fixed(fourAm, ZoneOffset.UTC));
+        assertThat(service.brigades("IT-BNA").brigades()).extracting(BrigadeDto.BrigadeRef::brigade)
+                .as("listed whatever day it runs").containsExactly("ITN-01");
+
+        TripRunDto.Day day = runs.day(DAY, "ITN-01");
+        List<BrigadeDto.Trip> trips = day.trips().stream().map(TripRunDto.Trip::trip).toList();
+        assertThat(trips).extracting(BrigadeDto.Trip::departure)
+                .containsExactly(tuesday.plusSeconds(10 * 60), tuesday.plusSeconds(2 * 3600 + 58 * 60));
+        assertThat(trips).extracting(BrigadeDto.Trip::kind).containsExactly("completed", "completed");
+        assertThat(trips.get(1).runs()).singleElement().satisfies(r -> assertThat(r.toStop()).isEqualTo(4));
+        assertThat(runs.day(DAY.plusDays(1), "ITN-01").trips()).extracting(TripRunDto.Trip::trip).as("Tuesday's trips are the next night's")
+                .extracting(BrigadeDto.Trip::departure).first()
+                .isEqualTo(ServiceDay.gtfsTimeZero(DAY.plusDays(2)).plusSeconds(10 * 60));
+
+        BrigadeDto.Schedule schedule = new BrigadeScheduleService(jdbc)
+                .schedule("ITN-01", tuesday.plusSeconds(30 * 60));
+        assertThat(schedule.serviceDay()).isEqualTo(DAY);
+        assertThat(schedule.runs()).extracting(BrigadeDto.Run::departure)
+                .containsExactly(tuesday.plusSeconds(10 * 60), tuesday.plusSeconds(2 * 3600 + 58 * 60));
+    }
+
+    private long vehicle(String number) {
+        return jdbc.queryForObject(
+                "INSERT INTO vehicle (vehicle_number, type, agency) VALUES (?, 'BUS', 'BKM') RETURNING id",
+                Long.class, number);
+    }
+
+    private static Instant local(String hhmmss) {
+        return ServiceDay.gtfsTimeZero(DAY).plusSeconds(LocalTime.parse(hhmmss).toSecondOfDay());
+    }
+
+    /** Reports every 20 s from {@code start} with this delay: the next stop's sequence number in turn. */
+    private void drive(long vehicle, String brigade, String start, long delay, int... nextStops) {
+        drive(vehicle, "IT-BD", brigade, local(start), delay, nextStops);
+    }
+
+    private void drive(long vehicle, String route, String brigade, Instant start, long delay, int... nextStops) {
+        Instant t = start;
+        for (int next : nextStops) {
+            report(vehicle, route, brigade, t, delay, next);
+            t = t.plusSeconds(20);
+        }
+    }
+
+    private void report(long vehicle, String brigade, Instant t, long delay, int nextStop) {
+        report(vehicle, "IT-BD", brigade, t, delay, nextStop);
+    }
+
+    private void report(long vehicle, String route, String brigade, Instant t, long delay, int nextStop) {
+        double lat = 53.10 + Math.max(0, nextStop - 2) * 0.02 + 0.01;
+        writer.write(List.of(new FeedPosition(vehicle, "x", "BUS", "BKM", null, route, null, brigade, route + " 4",
+                lat, 23.10 + (lat - 53.10), 0.0, delay, t, List.of(new FeedPosition.UpcomingStop(nextStop,
+                route + " " + nextStop, null, null)))), t);
+    }
+}

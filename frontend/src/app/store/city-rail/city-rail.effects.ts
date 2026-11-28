@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { catchError, exhaustMap, map, of } from 'rxjs';
+import { catchError, exhaustMap, map, of, switchMap } from 'rxjs';
 import { CityRailApi } from '../../core/api/api.services';
 import { errorMessage } from '../paged';
 import { CityRailActions } from './city-rail.actions';
@@ -47,6 +47,23 @@ export const loadProposal = createEffect(
           map((proposal) => CityRailActions.proposalLoaded({ proposal })),
           catchError((err: HttpErrorResponse) =>
             of(CityRailActions.proposalFailure({ error: errorMessage(err) })),
+          ),
+        ),
+      ),
+    ),
+  { functional: true },
+);
+
+/** Loads the routes of a solution at a frequency; choosing another cancels the one still loading. */
+export const loadVariant = createEffect(
+  (actions$ = inject(Actions), api = inject(CityRailApi)) =>
+    actions$.pipe(
+      ofType(CityRailActions.loadVariant),
+      switchMap(({ solution, frequency }) =>
+        api.variant(solution, frequency).pipe(
+          map((variant) => CityRailActions.variantLoaded({ solution, variant })),
+          catchError((err: HttpErrorResponse) =>
+            of(CityRailActions.variantFailure({ error: errorMessage(err) })),
           ),
         ),
       ),

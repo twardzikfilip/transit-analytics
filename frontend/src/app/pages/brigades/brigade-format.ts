@@ -41,7 +41,7 @@ export function shortStop(name: string): string {
 
 /** "103 → Choroszcz/Cmentarz". */
 export function tripLabel(t: BrigadeTrip): string {
-  return `${t.line} → ${t.headsign ?? t.to}`;
+  return `${t.route} → ${t.headsign ?? t.to}`;
 }
 
 /** The buses that ran a trip, "209" or "209 → 486". */

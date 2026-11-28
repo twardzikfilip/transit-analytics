@@ -1,8 +1,8 @@
 package com.transitanalytics.web;
 
+import com.transitanalytics.common.ReportWindows;
 import com.transitanalytics.dto.FleetDto;
-import com.transitanalytics.service.FleetService;
-import com.transitanalytics.service.ReportWindows;
+import com.transitanalytics.fleet.FleetService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -32,8 +32,8 @@ public class FleetController {
     @Operation(summary = "The fleet in a time window",
             description = "Buses in use and in the fleet (every bus ever seen on the live feed), per model; the 10 "
                     + "most and least used; every bus's hours in service, the longest first; and the buses that "
-                    + "broke down (replaced midway through a trip and not used again that day, as on Abnormal "
-                    + "trips), with when they served a line again. Hours count each report on a line until the "
+                    + "were changed (replaced midway through a trip and not used again that day, as on Abnormal "
+                    + "trips), with when they served a route again. Hours count each report on a route until the "
                     + "bus's next one, up to a minute. Cached for 2 minutes. The figures can be limited to some "
                     + "operators' buses.")
     @GetMapping
@@ -45,10 +45,16 @@ public class FleetController {
         return fleet.report(windows.resolve(from, to), agency == null ? Set.of() : Set.copyOf(agency));
     }
 
+    @Operation(summary = "One bus: its number, model, class and companies")
+    @GetMapping("/vehicles/{id}/info")
+    public FleetDto.Vehicle vehicleInfo(@PathVariable long id) {
+        return fleet.vehicle(id);
+    }
+
     @Operation(summary = "One bus in a time window",
-            description = "Its runs (consecutive reports on one line, brigade and headsign) and breaks of 30 minutes "
+            description = "Its runs (consecutive reports on one route, brigade and headsign) and breaks of 30 minutes "
                     + "or more per service day, hours in service per day, and the abnormal trips it was involved in: "
-                    + "trips it broke down on, and its brigade's trips it missed.")
+                    + "trips it was changed on, and its brigade's trips it missed.")
     @GetMapping("/vehicles/{id}")
     public FleetDto.VehicleDetail vehicle(@PathVariable long id,
                                           @RequestParam(required = false) Instant from,

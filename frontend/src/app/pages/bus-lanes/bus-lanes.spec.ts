@@ -14,7 +14,7 @@ import {
   NO_SPEED_COLOR,
   delayPerKmText,
   headingText,
-  linesText,
+  routesText,
   slowdownText,
   speedColor,
   speedText,
@@ -27,7 +27,6 @@ const figures = (speed: number, delayPerKm: number, km = 500): LaneFigures => ({
   offPeakSpeed: speed,
   delayPerKm,
   peakDelayPerKm: delayPerKm + 2,
-  offPeakDelayPerKm: delayPerKm,
   peakSlowdown: (1 / speed) * 100,
 });
 
@@ -47,7 +46,6 @@ function report(): BusLaneReport {
         laneDelayPerKm: 19.6,
         otherDelayPerKm: -5.3,
         laneKm: 246,
-        otherKm: 1787,
       },
       {
         hour: 8,
@@ -56,7 +54,6 @@ function report(): BusLaneReport {
         laneDelayPerKm: 13.7,
         otherDelayPerKm: -18.5,
         laneKm: 258,
-        otherKm: 1876,
       },
     ],
     stretches: [
@@ -65,7 +62,7 @@ function report(): BusLaneReport {
         name: 'Sienkiewicza',
         heading: 'southbound',
         km: 0.53,
-        lines: ['3', '6'],
+        routes: ['3', '6'],
         figures: figures(15.6, 29.9, 100),
         opposite: figures(19.2, 3, 80),
       },
@@ -74,7 +71,7 @@ function report(): BusLaneReport {
         name: 'Lipowa',
         heading: 'eastbound',
         km: 0.67,
-        lines: ['1', '2', '4', '5', '7', '9', '12', '15', '18', '21'],
+        routes: ['1', '2', '4', '5', '7', '9', '12', '15', '18', '21'],
         figures: figures(20.4, -4, 300),
         opposite: null,
       },
@@ -166,8 +163,8 @@ describe('Bus lanes page', () => {
     render();
     expect(el.querySelector('tr.selected td')?.textContent).toBe('Sienkiewicza');
 
-    const lines = el.querySelectorAll('app-bus-lane-map .leaflet-interactive');
-    lines[lines.length - 1].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    const routes = el.querySelectorAll('app-bus-lane-map .leaflet-interactive');
+    routes[routes.length - 1].dispatchEvent(new MouseEvent('click', { bubbles: true }));
     render();
     expect(el.querySelector('tr.selected')).not.toBeNull();
   });
@@ -218,7 +215,7 @@ describe('Bus lanes page', () => {
     expect(slowdownText({ ...figures(20, 0), peakSlowdown: 0.2 })).toBe('no slower');
     expect(slowdownText(null)).toBe('–');
     expect(headingText('westbound')).toBe('← westbound');
-    expect(linesText(['1', '2'])).toBe('1, 2');
+    expect(routesText(['1', '2'])).toBe('1, 2');
     expect(speedColor(null)).toBe(NO_SPEED_COLOR);
     expect(speedColor(10)).not.toBe(speedColor(30));
   });

@@ -9,11 +9,11 @@ import { StopTimesActions } from '../../store/stop-times/stop-times.actions';
 import { stopTimesFeature } from '../../store/stop-times/stop-times.reducer';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { t } from '../../core/i18n/t';
-import { LineBadge } from '../../shared/line-kind/line-kinds';
+import { RouteBadge } from '../../shared/route-kind/route-kinds';
 
 @Component({
   selector: 'app-stop-times',
-  imports: [LineBadge, Skeleton, RouterLink, Pager],
+  imports: [RouteBadge, Skeleton, RouterLink, Pager],
   templateUrl: './stop-times.html',
 })
 export class StopTimes {
@@ -28,7 +28,6 @@ export class StopTimes {
     filters: ['tripId', 'stopId'],
     size: 50,
     // One trip: in stop order. One stop: a departure board. Otherwise: as stored.
-    sort: (f) => (f['tripId'] ? 'stopSequence' : f['stopId'] ? ['departureTime', 'id'] : 'id'),
     onChange: (query) => this.store.dispatch(StopTimesActions.load({ query })),
   });
 

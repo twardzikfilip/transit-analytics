@@ -77,7 +77,7 @@ export class BusLaneMap {
     grey: true,
     setUp: (map) => this.drawBoundaries(map),
   });
-  private readonly lines = new Map<number, L.Polyline[]>();
+  private readonly routes = new Map<number, L.Polyline[]>();
   private framed = false;
   private chosenOnMap: number | null = null;
 
@@ -103,7 +103,7 @@ export class BusLaneMap {
   private draw(stretches: BusLaneStretch[], figures: Map<number, LaneStretchFigures>): void {
     const layer = this.host.layer;
     layer.clearLayers();
-    this.lines.clear();
+    this.routes.clear();
     const bounds = L.latLngBounds([]);
     // Unrecorded first, so recorded lanes lie on top.
     const ordered = [...stretches].sort(
@@ -139,7 +139,7 @@ export class BusLaneMap {
           })
           .addTo(layer),
       );
-      this.lines.set(s.id, polylines);
+      this.routes.set(s.id, polylines);
       for (const path of s.paths) for (const p of path) bounds.extend(p);
     }
     if (!this.framed && bounds.isValid()) {
@@ -150,11 +150,11 @@ export class BusLaneMap {
 
   /** Thickens and outlines the chosen stretch; moves the map to it when it was chosen in the table. */
   private highlight(id: number | null, move: boolean): void {
-    for (const [key, polylines] of this.lines) {
-      for (const line of polylines) line.setStyle({ weight: key === id ? 10 : 6 });
+    for (const [key, polylines] of this.routes) {
+      for (const route of polylines) route.setStyle({ weight: key === id ? 10 : 6 });
       if (key === id) polylines.forEach((l) => l.bringToFront());
     }
-    const chosen = id === null ? undefined : this.lines.get(id);
+    const chosen = id === null ? undefined : this.routes.get(id);
     if (chosen && move && id !== this.chosenOnMap) {
       const bounds = L.latLngBounds([]);
       chosen.forEach((l) => bounds.extend(l.getBounds()));

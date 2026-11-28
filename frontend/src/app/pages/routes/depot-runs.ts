@@ -3,7 +3,7 @@ import { DepotRun } from '../../core/models/models';
 import { clock } from '../../shared/format/time';
 import { t } from '../../core/i18n/t';
 
-/** The line's depot runs (pull-outs and pull-ins) with their brigades, in yellow with a label. */
+/** The route's depot runs (pull-outs and pull-ins) with their brigades, in yellow with a label. */
 @Component({
   selector: 'app-depot-runs',
   templateUrl: './depot-runs.html',

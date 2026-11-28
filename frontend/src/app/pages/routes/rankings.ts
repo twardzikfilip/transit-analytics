@@ -1,9 +1,9 @@
-import { LineStats, TimePeriod } from '../../core/models/models';
+import { RouteStats, TimePeriod } from '../../core/models/models';
 import { decimal, kmh } from '../../shared/format/number';
 import { formatDelay } from '../../shared/format/time';
 import { t } from '../../core/i18n/t';
 
-/** One way of ranking the lines: its label ("Longest") and which end of the scale comes first. */
+/** One way of ranking the routes: its label ("Longest") and which end of the scale comes first. */
 export interface RankingSide {
   label: string;
   /** Highest value first. */
@@ -17,13 +17,13 @@ export interface Ranking {
   /** What is measured, and when. */
   note: string;
   sides: [RankingSide, RankingSide];
-  value: (l: LineStats) => number | null;
+  value: (l: RouteStats) => number | null;
   format: (value: number) => string;
 }
 
-/** A ranked line: its name, colours and the value shown. */
-export interface RankedLine {
-  line: string;
+/** A ranked route: its name, colours and the value shown. */
+export interface RankedRoute {
+  route: string;
   color: string | null;
   textColor: string | null;
   value: string;
@@ -42,7 +42,7 @@ export function frequency(minutes: number): string {
 const delay = (s: number) => (s > 0 ? '+' : '') + formatDelay(s);
 
 /**
- * The eight tiles under the lines: length, speed (peak and off-peak), regularity, delay and frequency (each in peak
+ * The eight tiles under the routes: length, speed (peak and off-peak), regularity, delay and frequency (each in peak
  * and off-peak hours); each can be ranked from either end. Regularity is the peak hours' (when it matters most).
  */
 export function rankings(peak: string, offPeak: string, delayDays: number): Ranking[] {
@@ -141,15 +141,15 @@ export function rankings(peak: string, offPeak: string, delayDays: number): Rank
   ];
 }
 
-/** The top lines of a ranking from one end; lines without a value are left out. Ties keep the lines' order. */
-export function ranked(lines: LineStats[], ranking: Ranking, side: RankingSide): RankedLine[] {
-  return lines
+/** The top routes of a ranking from one end; routes without a value are left out. Ties keep the routes' order. */
+export function ranked(routes: RouteStats[], ranking: Ranking, side: RankingSide): RankedRoute[] {
+  return routes
     .map((l) => ({ l, v: ranking.value(l) }))
-    .filter((x): x is { l: LineStats; v: number } => x.v !== null)
+    .filter((x): x is { l: RouteStats; v: number } => x.v !== null)
     .sort((a, b) => (side.descending ? b.v - a.v : a.v - b.v))
     .slice(0, TOP)
     .map(({ l, v }) => ({
-      line: l.route,
+      route: l.route,
       color: l.color,
       textColor: l.textColor,
       value: ranking.format(v),

@@ -8,13 +8,13 @@ import {
   DelayGenerationApi,
   GtfsApi,
   HotspotApi,
-  LineDetailApi,
-  LineStatsApi,
+  RouteDetailApi,
+  RouteStatsApi,
   TripAnomalyApi,
   TripRunApi,
   PositionHistoryApi,
   FleetApi,
-  RouteApi,
+  StopApi,
   VersionApi,
   ZbiorkomApi,
 } from './api.services';
@@ -32,49 +32,27 @@ describe('API clients', () => {
 
   afterEach(() => http.verify());
 
-  it('lists a CRUD resource with paging, several sort orders and only the filters that are set', () => {
-    TestBed.inject(RouteApi)
-      .list(2, 25, ['number,asc', 'id'], { agency: 'BKM', model: null, q: '' })
-      .subscribe();
-    const req = http.expectOne((r) => r.url === '/api/routes');
+  it('lists a page with only the filters that are set', () => {
+    TestBed.inject(StopApi).list(2, 25, { zoneId: '1', q: '', code: null }).subscribe();
+    const req = http.expectOne((r) => r.url === '/api/stops');
     expect(req.request.params.get('page')).toBe('2');
     expect(req.request.params.get('size')).toBe('25');
-    expect(req.request.params.getAll('sort')).toEqual(['number,asc', 'id']);
-    expect(req.request.params.get('agency')).toBe('BKM');
-    expect(req.request.params.has('model')).toBe(false);
+    expect(req.request.params.get('zoneId')).toBe('1');
     expect(req.request.params.has('q')).toBe(false);
+    expect(req.request.params.has('code')).toBe(false);
   });
 
   it("asks for a brigade's day of trips, today's without a date", () => {
-    const api = TestBed.inject(TripRunApi);
+    const api = TestBed.inject(BrigadeApi);
     api.day('103-05', '2026-11-23').subscribe();
     api.day('103-05', null).subscribe();
-    expect(http.expectOne('/api/trip-runs/day?brigade=103-05&date=2026-11-23').request.method).toBe(
-      'GET',
-    );
-    http.expectOne('/api/trip-runs/day?brigade=103-05');
+    expect(http.expectOne('/api/brigades/103-05/day?date=2026-11-23').request.method).toBe('GET');
+    http.expectOne('/api/brigades/103-05/day');
   });
 
   it('asks for the versions', () => {
     TestBed.inject(VersionApi).versions().subscribe();
     expect(http.expectOne({ method: 'GET', url: '/api/version' })).toBeTruthy();
-  });
-
-  it('reads, creates, updates and deletes one item by id', () => {
-    const api = TestBed.inject(RouteApi);
-    api.get(7).subscribe();
-    api.create({ number: '230' } as never).subscribe();
-    api.update(7, { number: '231' } as never).subscribe();
-    api.delete(7).subscribe();
-
-    expect(http.expectOne({ method: 'GET', url: '/api/routes/7' })).toBeTruthy();
-    expect(http.expectOne({ method: 'POST', url: '/api/routes' }).request.body).toEqual({
-      number: '230',
-    });
-    expect(http.expectOne({ method: 'PUT', url: '/api/routes/7' }).request.body).toEqual({
-      number: '231',
-    });
-    expect(http.expectOne({ method: 'DELETE', url: '/api/routes/7' })).toBeTruthy();
   });
 
   it('asks for position history with an optional line and operator', () => {
@@ -99,24 +77,24 @@ describe('API clients', () => {
   });
 
   it('calls the line, corridor and import endpoints, escaping the line id', () => {
-    TestBed.inject(LineStatsApi).weekday().subscribe();
-    TestBed.inject(LineDetailApi).lines().subscribe();
-    TestBed.inject(LineDetailApi).detail('N 1/x').subscribe();
-    TestBed.inject(LineDetailApi).performance('103').subscribe();
+    TestBed.inject(RouteStatsApi).weekday().subscribe();
+    TestBed.inject(RouteDetailApi).routes().subscribe();
+    TestBed.inject(RouteDetailApi).detail('N 1/x').subscribe();
+    TestBed.inject(RouteDetailApi).performance('103').subscribe();
     TestBed.inject(CorridorApi).report().subscribe();
     TestBed.inject(GtfsApi).importFeed('rail').subscribe();
     TestBed.inject(GtfsApi).feeds().subscribe();
 
     for (const url of [
-      '/api/lines/stats',
-      '/api/lines',
-      '/api/lines/103/performance',
+      '/api/routes/stats',
+      '/api/routes',
+      '/api/routes/103/performance',
       '/api/corridors',
       '/api/gtfs/feeds',
     ]) {
       http.expectOne(url);
     }
-    http.expectOne('/api/lines/N%201%2Fx/detail');
+    http.expectOne('/api/routes/N%201%2Fx/detail');
     expect(http.expectOne('/api/gtfs/rail/import').request.method).toBe('POST');
   });
 
@@ -156,18 +134,18 @@ describe('API clients', () => {
     TestBed.inject(HotspotApi).report({ from: 'A', to: 'B' }).subscribe();
     const all = http.expectOne((r) => r.url === '/api/hotspots');
     expect(all.request.params.get('from')).toBe('A');
-    expect(all.request.params.has('line')).toBe(false);
+    expect(all.request.params.has('route')).toBe(false);
     all.flush({});
 
     TestBed.inject(HotspotApi).report({ from: 'A', to: 'B' }, '10').subscribe();
-    expect(http.expectOne('/api/hotspots?from=A&to=B&line=10').request.method).toBe('GET');
+    expect(http.expectOne('/api/hotspots?from=A&to=B&route=10').request.method).toBe('GET');
   });
 
   it('reads delay generation for the network and for a line', () => {
     TestBed.inject(DelayGenerationApi).report({ from: null, to: 'B' }).subscribe();
     expect(http.expectOne('/api/delay-generation?to=B').request.method).toBe('GET');
-    TestBed.inject(DelayGenerationApi).line({ from: 'A', to: 'B' }, 'N/1').subscribe();
-    expect(http.expectOne('/api/delay-generation/lines/N%2F1?from=A&to=B').request.method).toBe(
+    TestBed.inject(DelayGenerationApi).route({ from: 'A', to: 'B' }, 'N/1').subscribe();
+    expect(http.expectOne('/api/delay-generation/routes/N%2F1?from=A&to=B').request.method).toBe(
       'GET',
     );
   });

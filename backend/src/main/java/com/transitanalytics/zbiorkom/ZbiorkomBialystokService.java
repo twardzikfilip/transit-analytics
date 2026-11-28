@@ -1,7 +1,7 @@
 package com.transitanalytics.zbiorkom;
 
 import com.transitanalytics.dto.LivePositionDto;
-import com.transitanalytics.service.LineSubtypes;
+import com.transitanalytics.timetable.RouteSubtypes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -28,15 +28,15 @@ public class ZbiorkomBialystokService {
 
     private final RecorderClient recorder;
     private final BialystokFeed feed;
-    private final LineSubtypes lineSubtypes;
+    private final RouteSubtypes routeSubtypes;
     private final Clock clock;
     private volatile Instant warnedAt = Instant.MIN;
 
-    public ZbiorkomBialystokService(RecorderClient recorder, BialystokFeed feed, LineSubtypes lineSubtypes,
+    public ZbiorkomBialystokService(RecorderClient recorder, BialystokFeed feed, RouteSubtypes routeSubtypes,
                                     Clock clock) {
         this.recorder = recorder;
         this.feed = feed;
-        this.lineSubtypes = lineSubtypes;
+        this.routeSubtypes = routeSubtypes;
         this.clock = clock;
     }
 
@@ -71,7 +71,7 @@ public class ZbiorkomBialystokService {
                         s.scheduledDeparture()))
                 .toList();
         return new LivePositionDto(p.vehicleId(), p.vehicleNumber(), p.type(), p.agency(), p.model(), p.routeName(),
-                p.routeColor(), p.brigade(), p.headsign(), p.latitude(), p.longitude(), p.bearing(),
-                p.delaySeconds(), p.timestamp(), stops, lineSubtypes.of(p.routeName()));
+                p.brigade(), p.headsign(), p.latitude(), p.longitude(), p.bearing(),
+                p.delaySeconds(), p.timestamp(), stops, routeSubtypes.of(p.routeName()));
     }
 }

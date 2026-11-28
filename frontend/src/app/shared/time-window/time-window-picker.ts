@@ -16,7 +16,7 @@ import { t } from '../../core/i18n/t';
 /**
  * The time window (and operators) of a report page, in the URL: from/to pickers in the first row; below, the
  * presets (1 min to 1 month, and all time) and, when the page passes operators, a dropdown to choose them. Whatever
- * the page projects (e.g. a line filter, a loading note) follows on the second row. Changing the window clears the
+ * the page projects (e.g. a route filter, a loading note) follows on the second row. Changing the window clears the
  * `reset` parameters (e.g. a page number).
  */
 @Component({

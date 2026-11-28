@@ -7,14 +7,14 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-/** A line's capacity class from its departures and its MEGA buses, by the rules in {@code classification/routes.yml}. */
+/** A route's capacity class from its departures and its MEGA buses, by the rules in {@code classification/routes.yml}. */
 public final class RouteCapacityClassifier {
 
     /**
      * What the rules look at.
      *
-     * @param megaWeekday       share of the line's reports made by MEGA buses on weekdays; null when not recorded
-     * @param megaSaturday      …on Saturdays; null when the line wasn't recorded then
+     * @param megaWeekday       share of the route's reports made by MEGA buses on weekdays; null when not recorded
+     * @param megaSaturday      …on Saturdays; null when the route wasn't recorded then
      * @param megaSunday        …on Sundays (and holidays)
      * @param peakHeadway       minutes between departures at peak, per direction, averaged; null without peak trips
      * @param averageHeadway    minutes between departures from the first to the last of the day, averaged
@@ -73,7 +73,7 @@ public final class RouteCapacityClassifier {
         };
     }
 
-    /** A day type the line wasn't recorded on (it doesn't run then) doesn't count against it. */
+    /** A day type the route wasn't recorded on (it doesn't run then) doesn't count against it. */
     private boolean everyDay(Double share) {
         return share == null || share >= rules.megaEveryDayShare();
     }

@@ -1,5 +1,6 @@
 package com.transitanalytics.gtfs;
 
+import com.transitanalytics.common.NotFoundException;
 import io.micrometer.observation.ObservationRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.util.unit.DataSize;
@@ -114,7 +115,7 @@ class GtfsFeedServiceTest {
                 org.mockito.ArgumentMatchers.<Object>argThat(e -> e instanceof GtfsImported g && g.feed().equals("other")));
 
         assertThatThrownBy(() -> service.importFeed("nowhere"))
-                .isInstanceOf(com.transitanalytics.service.NotFoundException.class);
+                .isInstanceOf(com.transitanalytics.common.NotFoundException.class);
 
         // On schedule: every other feed; a failure is only logged.
         given(downloader.download(OTHER_URL)).willThrow(new GtfsFeedException("gone"));

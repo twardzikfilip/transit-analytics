@@ -112,7 +112,7 @@ export function brigadeSection(
     .map(
       ({ run, now }) =>
         `<li${now ? ' class="now"' : ''}><span class="t">${localTime(run.departure)}–${localTime(run.arrival)}</span> ` +
-        `<strong>${escapeHtml(run.line)}</strong> ${escapeHtml(run.from)} → ${escapeHtml(run.to)}</li>`,
+        `<strong>${escapeHtml(run.route)}</strong> ${escapeHtml(run.from)} → ${escapeHtml(run.to)}</li>`,
     )
     .join('');
   const rest = escapeHtml(t(today ? 'brigadeTip.restOfToday' : 'brigadeTip.restOfThatDay'));

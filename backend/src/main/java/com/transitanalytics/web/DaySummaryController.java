@@ -1,6 +1,6 @@
 package com.transitanalytics.web;
 
-import com.transitanalytics.service.DaySummaries;
+import com.transitanalytics.common.DaySummaries;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.DeleteMapping;

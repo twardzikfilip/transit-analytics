@@ -34,12 +34,12 @@ import { Skeleton } from '../../shared/skeleton/skeleton';
 import { LocalDatePipe } from '../../shared/i18n/locale-pipes';
 import { t, tn } from '../../core/i18n/t';
 import { phrasesText } from '../../shared/i18n/phrases';
-import { LineBadge } from '../../shared/line-kind/line-kinds';
+import { RouteBadge } from '../../shared/route-kind/route-kinds';
 
 /** Rows of the trips table shown at first, and added by "Show more". */
 export const PAGE_ROWS = 50;
-/** Lines listed before "Show all lines". */
-export const FIRST_LINES = 12;
+/** Routes listed before "Show all routes". */
+export const FIRST_ROUTES = 12;
 /** How often short windows reload. */
 export const REFRESH_MS = 60_000;
 /** Preset windows up to this long move on (and reload) every minute. */
@@ -54,12 +54,12 @@ export function refreshes(w: TimeWindow): boolean {
 
 /**
  * Abnormal trips: every trip scheduled to leave in the window, judged against the recorded positions, with counts
- * by outcome and per line, and a table of the trips that weren't run in full on their route: cancelled, missed,
+ * by outcome and per route, and a table of the trips that weren't run in full on their route: cancelled, missed,
  * lost, short-turned, detours and gaps in tracking. The window is in the URL; short windows refresh every minute.
  */
 @Component({
   selector: 'app-trip-anomalies',
-  imports: [AssumedTimetable, LineBadge, Skeleton, LocalDatePipe, TimeWindowPicker, PathMap],
+  imports: [AssumedTimetable, RouteBadge, Skeleton, LocalDatePipe, TimeWindowPicker, PathMap],
   templateUrl: './trip-anomalies.html',
   styleUrl: './trip-anomalies.scss',
 })
@@ -83,22 +83,22 @@ export class TripAnomalies {
   });
   protected readonly refreshing = computed(() => refreshes(this.window()));
 
-  /** The kinds shown in the table (none chosen: all), and one line or all. */
+  /** The kinds shown in the table (none chosen: all), and one route or all. */
   protected readonly shownKinds = signal<TripAnomalyKind[]>([]);
-  protected readonly line = signal<string | null>(null);
+  protected readonly route = signal<string | null>(null);
   /** One bus: the trips it ran (or was replaced on) only. */
   protected readonly bus = signal<string | null>(null);
   protected readonly rowsShown = signal(PAGE_ROWS);
-  protected readonly allLines = signal(false);
+  protected readonly allRoutes = signal(false);
 
   protected readonly filtered = computed(() => {
     const kinds = this.shownKinds();
-    const line = this.line();
+    const route = this.route();
     const bus = this.bus();
     return (this.report()?.trips ?? []).filter(
       (t) =>
         (!kinds.length || kinds.includes(t.kind)) &&
-        (!line || t.line === line) &&
+        (!route || t.route === route) &&
         (!bus || t.vehicles.includes(bus)),
     );
   });
@@ -109,16 +109,16 @@ export class TripAnomalies {
     ),
   );
   protected readonly rows = computed(() => this.filtered().slice(0, this.rowsShown()));
-  /** Lines with abnormal trips, for the table (first few unless all are shown) and the filter. */
-  protected readonly abnormalLines = computed(() =>
-    (this.report()?.lines ?? []).filter((l) => abnormalCount(l) > 0),
+  /** Routes with abnormal trips, for the table (first few unless all are shown) and the filter. */
+  protected readonly abnormalRoutes = computed(() =>
+    (this.report()?.routes ?? []).filter((l) => abnormalCount(l) > 0),
   );
-  protected readonly lines = computed(() =>
-    this.allLines() ? this.abnormalLines() : this.abnormalLines().slice(0, FIRST_LINES),
+  protected readonly routes = computed(() =>
+    this.allRoutes() ? this.abnormalRoutes() : this.abnormalRoutes().slice(0, FIRST_ROUTES),
   );
-  protected readonly lineOptions = computed(() =>
-    this.abnormalLines()
-      .map((l) => l.line)
+  protected readonly routeOptions = computed(() =>
+    this.abnormalRoutes()
+      .map((l) => l.route)
       .sort((a, b) => a.localeCompare(b, undefined, { numeric: true })),
   );
 
@@ -132,7 +132,7 @@ export class TripAnomalies {
   protected readonly joinedAt = joinedAt;
   protected readonly stoodLabel = stoodLabel;
   protected readonly abnormalCount = abnormalCount;
-  protected readonly firstLines = FIRST_LINES;
+  protected readonly firstRoutes = FIRST_ROUTES;
 
   constructor() {
     // Load the window; short windows again every minute.
@@ -161,8 +161,8 @@ export class TripAnomalies {
     this.rowsShown.set(PAGE_ROWS);
   }
 
-  protected setLine(line: string | null): void {
-    this.line.set(line || null);
+  protected setRoute(route: string | null): void {
+    this.route.set(route || null);
     this.rowsShown.set(PAGE_ROWS);
   }
 
@@ -173,7 +173,7 @@ export class TripAnomalies {
 
   protected clearFilters(): void {
     this.shownKinds.set([]);
-    this.line.set(null);
+    this.route.set(null);
     this.bus.set(null);
     this.rowsShown.set(PAGE_ROWS);
   }

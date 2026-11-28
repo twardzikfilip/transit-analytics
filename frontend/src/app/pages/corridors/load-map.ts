@@ -7,7 +7,7 @@ import { leafletHost } from '../../shared/map/leaflet-host';
 import { t } from '../../core/i18n/t';
 
 /**
- * Every stretch between two stops on a map (grey base map), drawn by its peak-hour buses: as line width in proportion
+ * Every stretch between two stops on a map (grey base map), drawn by its peak-hour buses: as route width in proportion
  * ("width"), or as a sequential blue in equal classes ("color"). Hover a stretch for its numbers.
  */
 @Component({

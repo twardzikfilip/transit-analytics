@@ -14,7 +14,7 @@ public final class PositionHistoryDto {
      * one poll of the feed.
      *
      * @param stepSeconds bucket size, chosen from the window length (1 minute for windows up to 24 hours)
-     * @param route       line filter, or null for all lines
+     * @param route       route filter, or null for all routes
      * @param points      only buckets with data; a missing bucket means nothing was recorded then
      */
     public record FleetSeries(Instant from, Instant to, long stepSeconds, String route, List<FleetPoint> points,
@@ -54,7 +54,7 @@ public final class PositionHistoryDto {
     public record DelayBand(Integer fromMinutes, Integer toMinutes, long vehicles, long reports) {
     }
 
-    /** A line with recordings in the window, for the line filter. */
+    /** A route with recordings in the window, for the route filter. */
     public record RouteActivity(String route, long samples) {
     }
 }

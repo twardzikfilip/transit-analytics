@@ -1,7 +1,5 @@
 package com.transitanalytics.classification;
 
-import com.transitanalytics.domain.Vehicle;
-import com.transitanalytics.repository.VehicleRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -10,8 +8,6 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
 
 class OperatorPropertiesTest {
 
@@ -56,26 +52,15 @@ class OperatorPropertiesTest {
     }
 
     @Test
-    void operatorsAreStoredForAllBusesAndForNewOnes() {
-        VehicleRepository vehicles = mock(VehicleRepository.class);
-        Vehicle known = bus("230");
-        Vehicle fresh = bus("931");
-        given(vehicles.findAll()).willReturn(List.of(known));
-        given(vehicles.findUnclassified()).willReturn(List.of(fresh));
-        VehicleClasses classes = new VehicleClasses(vehicles,
-                new VehicleClassifier(ClassificationConfigs.vehicles()), operators);
+    void classingSetsTheOperatingCompany() {
+        VehicleClasses classes = new VehicleClasses(null, new VehicleClassifier(ClassificationConfigs.vehicles()),
+                operators);
 
-        classes.applyAll();
-        assertThat(known.getOperatingAgency()).isEqualTo("KZK");
-        assertThat(classes.applyToNew()).isEqualTo(1);
-        assertThat(fresh.getOperatingAgency()).isEqualTo("KPKM");
-        assertThat(classes.applyToNew()).as("nothing left to change").isZero();
+        assertThat(classes.classed(bus("230")).operatingAgency()).isEqualTo("KZK");
+        assertThat(classes.classed(bus("931")).operatingAgency()).isEqualTo("KPKM");
     }
 
-    private static Vehicle bus(String number) {
-        Vehicle v = new Vehicle();
-        v.setVehicleNumber(number);
-        v.setAgency("BKM");
-        return v;
+    private static VehicleClasses.Vehicle bus(String number) {
+        return new VehicleClasses.Vehicle(1, number, "BKM", null, null, null, null);
     }
 }

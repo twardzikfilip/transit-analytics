@@ -6,7 +6,7 @@ export interface PositionHistoryState {
   query: HistoryQuery | null;
   /** Vehicles over time for the query. Kept while a new one loads, so the chart doesn't flash. */
   series: FleetSeries | null;
-  /** Lines recorded in the window, for the line filter. */
+  /** Routes recorded in the window, for the route filter. */
   routes: RouteActivity[];
   /** Vehicles and reports per delay band. */
   delays: DelayBand[];

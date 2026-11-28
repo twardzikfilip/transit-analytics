@@ -1,10 +1,9 @@
 package com.transitanalytics.classification;
 
-import com.transitanalytics.domain.Vehicle;
 import com.transitanalytics.domain.VehicleClass;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.api.Test;
 
 import static com.transitanalytics.domain.VehicleClass.DOUBLE_DECKER;
 import static com.transitanalytics.domain.VehicleClass.MAXI;
@@ -73,16 +72,16 @@ class VehicleClassifierTest {
 
     @Test
     void appliesTheClassAndKnownCapacityButKeepsACapacityEnteredByHand() {
-        Vehicle known = new Vehicle();
-        assertThat(VehicleClasses.apply(known, classifier.classify("Solaris Urbino 18"))).isTrue();
-        assertThat(known.getVehicleClass()).isEqualTo(MEGA);
-        assertThat(known.getCapacity()).isEqualTo(145);
-        assertThat(VehicleClasses.apply(known, classifier.classify("Solaris Urbino 18"))).isFalse();
+        var known = VehicleClasses.apply(bus(null), classifier.classify("Solaris Urbino 18"));
+        assertThat(known.vehicleClass()).isEqualTo(MEGA);
+        assertThat(known.capacity()).isEqualTo(145);
 
-        Vehicle byHand = new Vehicle();
-        byHand.setCapacity(40);
-        VehicleClasses.apply(byHand, classifier.classify("Solaris Urbino 8,9 LE"));
-        assertThat(byHand.getVehicleClass()).isEqualTo(MIDI);
-        assertThat(byHand.getCapacity()).isEqualTo(40);
+        var byHand = VehicleClasses.apply(bus(40), classifier.classify("Solaris Urbino 8,9 LE"));
+        assertThat(byHand.vehicleClass()).isEqualTo(MIDI);
+        assertThat(byHand.capacity()).isEqualTo(40);
+    }
+
+    private static VehicleClasses.Vehicle bus(Integer capacity) {
+        return new VehicleClasses.Vehicle(1, "230", "BKM", null, null, capacity, null);
     }
 }

@@ -5,7 +5,7 @@ import { BrigadeSchedule, ScheduledRun } from '../../core/models/models';
 import { BrigadeSchedules, brigadeSection, remainingRuns, serviceDayOf } from './brigade-schedules';
 
 const run = (departure: string, arrival: string): ScheduledRun => ({
-  line: '103',
+  route: '103',
   headsign: null,
   from: 'A',
   to: 'B',

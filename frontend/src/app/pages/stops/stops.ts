@@ -34,7 +34,6 @@ export class Stops {
   protected readonly query = listQuery({
     filters: ['q', 'zoneId'],
     size: 50,
-    sort: () => 'name',
     onChange: (query) => this.store.dispatch(StopsActions.load({ query })),
   });
 

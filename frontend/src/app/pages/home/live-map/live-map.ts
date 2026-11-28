@@ -9,12 +9,12 @@ import { LivePosition } from '../../../core/models/models';
 import { LivePositionsActions } from '../../../store/live-positions/live-positions.actions';
 import { livePositionsFeature } from '../../../store/live-positions/live-positions.reducer';
 import {
-  LINE_TYPES,
+  ROUTE_TYPES,
   agencies,
   delayedOver,
   ofAgency,
-  ofLineType,
-  parseLineType,
+  ofRouteType,
+  parseRouteType,
   parseMinDelay,
 } from './delay-filter';
 import { escapeHtml } from '../../../shared/format/html';
@@ -24,7 +24,7 @@ import {
   BOUNDARY_STYLES,
   BUS_LANE_STYLE,
   DELAY_STOPS,
-  LINE_KIND_COLORS,
+  ROUTE_KIND_COLORS,
   NO_DELAY_COLOR,
   delayColor,
 } from '../../../shared/palette';
@@ -34,7 +34,7 @@ import {
   brigadeSection,
 } from '../../../shared/brigade/brigade-schedules';
 import { injectBusLanes } from '../../../shared/map/bus-lanes';
-import { LineKinds } from '../../../shared/line-kind/line-kinds';
+import { RouteKinds } from '../../../shared/route-kind/route-kinds';
 import { cssColor } from '../../../shared/palette';
 import { injectCityBoundaries } from '../../../shared/map/city-boundaries';
 import { LocalDatePipe } from '../../../shared/i18n/locale-pipes';
@@ -71,7 +71,7 @@ export class LiveMap {
     string,
     { marker: L.Marker; html: string; position: LivePosition }
   >();
-  private readonly kinds = inject(LineKinds);
+  private readonly kinds = inject(RouteKinds);
 
   protected readonly positions = this.store.selectSignal(livePositionsFeature.selectAll);
   protected readonly count = this.store.selectSignal(livePositionsFeature.selectTotal);
@@ -82,21 +82,21 @@ export class LiveMap {
   /**
    * The map's own filters, kept in the URL under their own names, so the time window and operator of the recorded
    * positions below it never change the map: "delay over N minutes" (?mapMinDelay=5; null = all vehicles), the
-   * operator (?mapAgency=BKM; '' = all operators) and the kind of line (?mapLineType=suburban; null = all lines).
+   * operator (?mapAgency=BKM; '' = all operators) and the kind of route (?mapLineType=suburban; null = all routes).
    */
   protected readonly minDelay = computed(() => parseMinDelay(this.params().get('mapMinDelay')));
   protected readonly agency = computed(() => this.params().get('mapAgency') ?? '');
-  protected readonly lineType = computed(() => parseLineType(this.params().get('mapLineType')));
+  protected readonly routeType = computed(() => parseRouteType(this.params().get('mapLineType')));
   /** Operators on the map now, plus the selected one even when none of its vehicles is reporting. */
   protected readonly agencies = computed(() => agencies(this.positions(), this.agency()));
   protected readonly filtering = computed(
-    () => this.minDelay() !== null || this.agency() !== '' || this.lineType() !== null,
+    () => this.minDelay() !== null || this.agency() !== '' || this.routeType() !== null,
   );
-  /** The filters in force, for the header: "BKM, suburban lines, delayed over 5 min". */
+  /** The filters in force, for the header: "BKM, suburban routes, delayed over 5 min". */
   protected readonly filterSummary = computed(() =>
     [
       this.agency(),
-      this.lineType() && t('live.typeLines', { type: t(`live.typesLower.${this.lineType()}`) }),
+      this.routeType() && t('live.typeLines', { type: t(`live.typesLower.${this.routeType()}`) }),
       this.minDelay() !== null && t('live.delayedOver', { n: this.minDelay() }),
     ]
       .filter(Boolean)
@@ -105,7 +105,7 @@ export class LiveMap {
   /** The vehicles on the map. */
   protected readonly visible = computed(() =>
     delayedOver(
-      ofLineType(ofAgency(this.positions(), this.agency()), this.lineType()),
+      ofRouteType(ofAgency(this.positions(), this.agency()), this.routeType()),
       this.minDelay(),
     ),
   );
@@ -114,9 +114,9 @@ export class LiveMap {
   /** Delays with a ring: over a minute late. */
   protected readonly lateStops = DELAY_STOPS.filter((s) => s.seconds > LATE_RING_SECONDS);
   protected readonly kindLegend = (['urban', 'suburban', 'regional', 'night_urban'] as const).map(
-    (kind) => ({ token: LINE_KIND_COLORS[kind].token, label: `live.kinds.${kind}` }),
+    (kind) => ({ token: ROUTE_KIND_COLORS[kind].token, label: `live.kinds.${kind}` }),
   );
-  protected readonly lineTypes = LINE_TYPES;
+  protected readonly routeTypes = ROUTE_TYPES;
   protected readonly boundaries = [
     BOUNDARY_STYLES.city,
     BOUNDARY_STYLES.centre,
@@ -144,13 +144,13 @@ export class LiveMap {
     this.setQuery({ mapAgency: agency || null });
   }
 
-  protected setLineType(type: string): void {
-    this.setQuery({ mapLineType: parseLineType(type) });
+  protected setRouteType(type: string): void {
+    this.setQuery({ mapRouteType: parseRouteType(type) });
   }
 
   /** Clears every filter: all vehicles on the map again. */
   protected resetFilters(): void {
-    this.setQuery({ mapMinDelay: null, mapAgency: null, mapLineType: null });
+    this.setQuery({ mapMinDelay: null, mapAgency: null, mapRouteType: null });
   }
 
   /** Fetches a brigade's schedule for its popup, unless a recent one is at hand; the popup updates when it arrives. */
@@ -227,10 +227,10 @@ export class LiveMap {
     }
   }
 
-  /** The colour of the vehicle's kind of line; grey when it reports no line. */
+  /** The colour of the vehicle's kind of route; grey when it reports no route. */
   private kindColor(p: LivePosition): string {
     if (p.subtype) {
-      const kind = LINE_KIND_COLORS[p.subtype];
+      const kind = ROUTE_KIND_COLORS[p.subtype];
       return cssColor(kind.token, kind.fallback);
     }
     return this.kinds.color(p.routeName) ?? NO_DELAY_COLOR;
@@ -241,7 +241,7 @@ export class LiveMap {
 export const LATE_RING_SECONDS = 60;
 
 /**
- * A vehicle's badge: its line (its number when it reports none) in its kind's colour, an arrow pointing its way when
+ * A vehicle's badge: its route (its number when it reports none) in its kind's colour, an arrow pointing its way when
  * the feed gives a bearing, and a ring in its delay's colour when over a minute late.
  */
 export function badgeHtml(p: LivePosition, kindColor: string): string {
@@ -259,7 +259,7 @@ function badgeIcon(html: string): L.DivIcon {
 }
 
 function popup(p: LivePosition, schedule: ScheduleState | undefined, open: boolean): string {
-  const line = [p.routeName, p.headsign]
+  const route = [p.routeName, p.headsign]
     .filter(Boolean)
     .map((v) => escapeHtml(v!))
     .join(' → ');
@@ -275,7 +275,7 @@ function popup(p: LivePosition, schedule: ScheduleState | undefined, open: boole
     ? `<br><span class="muted">${escapeHtml(t('live.asOf', { time: localTime(p.timestamp) }))}</span>`
     : '';
   return (
-    `<strong>${line || escapeHtml(p.vehicleNumber)}</strong><br>${vehicle}<br>${delay(p.delaySeconds)}${nextStop}${seen}` +
+    `<strong>${route || escapeHtml(p.vehicleNumber)}</strong><br>${vehicle}<br>${delay(p.delaySeconds)}${nextStop}${seen}` +
     brigadeSection(p.brigade, schedule, new Date(), true, open)
   );
 }

@@ -7,7 +7,7 @@ import { LocalDatePipe } from '../../shared/i18n/locale-pipes';
 type Faster = 'train' | 'bus' | null;
 
 /**
- * Train against bus between every two stations in the city: the fastest journey each way, the lines taken, and how
+ * Train against bus between every two stations in the city: the fastest journey each way, the routes taken, and how
  * much longer the bus takes. The stations' bus stops are listed below.
  */
 @Component({
@@ -34,13 +34,13 @@ export class RailBusTable {
     }));
   });
 
-  /** The lines taken, the first departure and the last arrival: "20 → 8 · 09:04–09:19". */
+  /** The routes taken, the first departure and the last arrival: "20 → 8 · 09:04–09:19". */
   protected summary(journey: RailBusJourney): string {
-    const lines = journey.legs.map((l) => l.line).join(' → ');
-    return `${lines} · ${journey.departure}–${journey.arrival}`;
+    const routes = journey.legs.map((l) => l.route).join(' → ');
+    return `${routes} · ${journey.departure}–${journey.arrival}`;
   }
 
-  /** Every ride, one a line, for the tooltip. */
+  /** Every ride, one a route, for the tooltip. */
   protected legs(journey: RailBusJourney): string {
     return journey.legs.map((l) => t('cityRail.vsBus.leg', { ...l })).join('\n');
   }

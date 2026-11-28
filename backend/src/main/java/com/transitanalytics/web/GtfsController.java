@@ -3,7 +3,7 @@ package com.transitanalytics.web;
 import com.transitanalytics.dto.TimetableCoverageDto;
 import com.transitanalytics.gtfs.GtfsFeedService;
 import com.transitanalytics.gtfs.GtfsImportResult;
-import com.transitanalytics.service.TimetableCoverageService;
+import com.transitanalytics.timetable.TimetableCoverageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;

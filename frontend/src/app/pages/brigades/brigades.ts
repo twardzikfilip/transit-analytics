@@ -8,16 +8,16 @@ import { BrigadesActions } from '../../store/brigades/brigades.actions';
 import { brigadesFeature } from '../../store/brigades/brigades.reducer';
 import { Skeleton } from '../../shared/skeleton/skeleton';
 import { t } from '../../core/i18n/t';
-import { LineBadge } from '../../shared/line-kind/line-kinds';
+import { RouteBadge } from '../../shared/route-kind/route-kinds';
 
 /**
  * Brigades: every brigade of an operator (BKM at first; ?agency=X: the city's agency, or another operator's feed),
- * any in the timetable or learnt from the recordings, in rows by line. Choosing one
+ * any in the timetable or learnt from the recordings, in rows by route. Choosing one
  * opens its own page ({@link BrigadePage}), where its day is chosen.
  */
 @Component({
   selector: 'app-brigades',
-  imports: [LineBadge, Skeleton],
+  imports: [RouteBadge, Skeleton],
   templateUrl: './brigades.html',
   styleUrl: './brigades.scss',
 })
@@ -42,8 +42,8 @@ export class BrigadesPage {
     const q = this.search().trim().toLowerCase();
     return q ? brigades.filter((b) => this.searchText(b).includes(q)) : brigades;
   });
-  /** Every matching brigade, one row per line. */
-  protected readonly byLine = computed(() => groupByLine(this.matches()));
+  /** Every matching brigade, one row per route. */
+  protected readonly byRoute = computed(() => groupByRoute(this.matches()));
 
   constructor() {
     // Every brigade of the agency in the URL.
@@ -59,7 +59,7 @@ export class BrigadesPage {
 
   /**
    * An operator's name: another operator's timetable by its short name (Wschód Express), as its agencies are the
-   * municipalities ordering its lines; else as the timetable names it.
+   * municipalities ordering its routes; else as the timetable names it.
    */
   protected operatorName(a: BrigadeAgency): string {
     const key = `timetable.feeds.${a.id}`;
@@ -67,13 +67,13 @@ export class BrigadesPage {
     return name === key ? a.name : name;
   }
 
-  /** "103-05 · line 103", for the search list. */
+  /** "103-05 · route 103", for the search list. */
   protected describe(b: BrigadeRef): string {
-    return t('brigades.describe', { brigade: b.brigade, lines: b.lines.join(', ') });
+    return t('brigades.describe', { brigade: b.brigade, routes: b.routes.join(', ') });
   }
 
   private searchText(b: BrigadeRef): string {
-    return `${b.brigade} ${b.lines.join(' ')}`.toLowerCase();
+    return `${b.brigade} ${b.routes.join(' ')}`.toLowerCase();
   }
 
   protected setAgency(agency: string): void {
@@ -102,26 +102,26 @@ export class BrigadesPage {
 const natural = new Intl.Collator('en', { numeric: true }).compare;
 
 /**
- * The line a brigade belongs to: the line its name starts with ("016-02" → "16"), else the first line it runs.
- * A brigade can run several lines; its name says which one is its own.
+ * The route a brigade belongs to: the route its name starts with ("016-02" → "16"), else the first route it runs.
+ * A brigade can run several routes; its name says which one is its own.
  */
-export function homeLine(b: BrigadeRef): string {
+export function homeRoute(b: BrigadeRef): string {
   const prefix = b.brigade.split('-')[0];
-  const own = b.lines.find((l) => l === prefix || l === prefix.replace(/^0+(?=.)/, ''));
-  return own ?? b.lines[0] ?? prefix;
+  const own = b.routes.find((l) => l === prefix || l === prefix.replace(/^0+(?=.)/, ''));
+  return own ?? b.routes[0] ?? prefix;
 }
 
-/** Brigades grouped by their line, lines in natural order (2, 10, 100, N1), brigades in order within each line. */
-export function groupByLine(brigades: BrigadeRef[]): { line: string; brigades: BrigadeRef[] }[] {
+/** Brigades grouped by their route, routes in natural order (2, 10, 100, N1), brigades in order within each route. */
+export function groupByRoute(brigades: BrigadeRef[]): { route: string; brigades: BrigadeRef[] }[] {
   const groups = new Map<string, BrigadeRef[]>();
   for (const b of brigades) {
-    const line = homeLine(b);
-    groups.set(line, [...(groups.get(line) ?? []), b]);
+    const route = homeRoute(b);
+    groups.set(route, [...(groups.get(route) ?? []), b]);
   }
   return [...groups.entries()]
     .sort(([a], [b]) => natural(a, b))
-    .map(([line, list]) => ({
-      line,
+    .map(([route, list]) => ({
+      route,
       brigades: list.sort((a, b) => natural(a.brigade, b.brigade)),
     }));
 }

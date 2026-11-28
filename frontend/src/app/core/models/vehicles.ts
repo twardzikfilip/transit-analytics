@@ -26,7 +26,6 @@ export interface LivePosition {
   agency: string | null;
   model: string | null;
   routeName: string | null;
-  routeColor: string | null;
   brigade: string | null;
   headsign: string | null;
   latitude: number;
@@ -36,7 +35,7 @@ export interface LivePosition {
   delaySeconds: number | null;
   timestamp: string | null;
   upcomingStops: UpcomingStop[];
-  /** Kind of line; null when the vehicle reports no line. */
+  /** Kind of route; null when the vehicle reports no route. */
   subtype: RouteSubtype | null;
 }
 
@@ -50,7 +49,7 @@ export interface BrigadeSchedule {
 }
 
 export interface ScheduledRun {
-  line: string;
+  route: string;
   headsign: string | null;
   from: string;
   to: string;

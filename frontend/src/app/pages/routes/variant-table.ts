@@ -1,10 +1,10 @@
 import { Component, input } from '@angular/core';
-import { LineVariant } from '../../core/models/models';
+import { RouteVariant } from '../../core/models/models';
 import { variantKindLabel } from './format';
 import { LocalNumberPipe } from '../../shared/i18n/locale-pipes';
 import { t } from '../../core/i18n/t';
 
-/** A line's variants: each one's ends, length, trips, scheduled travel time and speed; the main ones in bold. */
+/** A route's variants: each one's ends, length, trips, scheduled travel time and speed; the main ones in bold. */
 @Component({
   selector: 'app-variant-table',
   imports: [LocalNumberPipe],
@@ -17,7 +17,7 @@ import { t } from '../../core/i18n/t';
 })
 export class VariantTable {
   protected readonly t = t;
-  readonly variants = input.required<LineVariant[]>();
+  readonly variants = input.required<RouteVariant[]>();
 
   protected readonly kindLabel = variantKindLabel;
 }

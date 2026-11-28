@@ -1,5 +1,10 @@
 package com.transitanalytics.geo;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.List;
+
 /**
  * Distances, headings and shapes across a city: a flat projection around Białystok's latitude, in metres east
  * ({@code x}) and north ({@code y}). Points are {@code [latitude, longitude]}.
@@ -66,5 +71,45 @@ public final class Geo {
             }
         }
         return in;
+    }
+
+    /**
+     * A route or ring ([latitude, longitude]) with the points dropped that lie within {@code metres} of the route through
+     * their neighbours (Douglas-Peucker): it looks the same on a map, with fewer points. The ends are kept.
+     */
+    public static List<double[]> simplify(List<double[]> points, double metres) {
+        if (points.size() < 3) {
+            return points;
+        }
+        double[][] xy = points.stream().map(p -> xy(p[0], p[1])).toArray(double[][]::new);
+        boolean[] keep = new boolean[xy.length];
+        keep[0] = true;
+        keep[xy.length - 1] = true;
+        Deque<int[]> spans = new ArrayDeque<>();
+        spans.push(new int[] {0, xy.length - 1});
+        while (!spans.isEmpty()) {
+            int[] span = spans.pop();
+            int far = -1;
+            double farthest = metres;
+            for (int i = span[0] + 1; i < span[1]; i++) {
+                double d = toSegment(xy[i], xy[span[0]], xy[span[1]]);
+                if (d > farthest) {
+                    farthest = d;
+                    far = i;
+                }
+            }
+            if (far >= 0) {
+                keep[far] = true;
+                spans.push(new int[] {span[0], far});
+                spans.push(new int[] {far, span[1]});
+            }
+        }
+        List<double[]> kept = new ArrayList<>();
+        for (int i = 0; i < keep.length; i++) {
+            if (keep[i]) {
+                kept.add(points.get(i));
+            }
+        }
+        return kept;
     }
 }

@@ -50,7 +50,7 @@ describe('Faulty trackers tile', () => {
       trips: 129,
       days: 4,
       lastNoSignal: '2026-11-22T10:00:00Z',
-      lines: ['6', '104'],
+      routes: ['6', '104'],
     };
     const { el } = renderPage(FaultyTrackersTile, {}, {}, [
       { provide: TripAnomalyApi, useValue: { faultyTrackers: () => of(report([tracker])) } },

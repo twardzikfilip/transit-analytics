@@ -6,6 +6,6 @@ import { StopTimesActions } from './stop-times.actions';
 
 export const loadStopTimes = createEffect(
   (actions$ = inject(Actions), api = inject(StopTimeApi)) =>
-    pagedLoadEffect(StopTimesActions, (q) => api.list(q.page, q.size, q.sort, q.filters))(actions$),
+    pagedLoadEffect(StopTimesActions, (q) => api.list(q.page, q.size, q.filters))(actions$),
   { functional: true },
 );

@@ -28,7 +28,7 @@ import { localTime } from '../../shared/format/time';
 import {
   dailyBars,
   dayLabel,
-  daysOutText,
+  hoursOutText,
   isShortWindow,
   wholePercent,
   searchVehicles,
@@ -49,11 +49,11 @@ const bus = (
   vehicleClass: model ? 'maxi' : null,
   operatingAgency: 'KZK',
 });
-const usage = (v: FleetVehicle, hours: number, lines: string[] = ['103']): VehicleUsage => ({
+const usage = (v: FleetVehicle, hours: number, routes: string[] = ['103']): VehicleUsage => ({
   vehicle: v,
   hours,
   days: hours ? 2 : 0,
-  lines: hours ? lines : [],
+  routes: hours ? routes : [],
 });
 
 const A = bus(1, '230');
@@ -87,16 +87,16 @@ function report(): FleetReport {
     mostUsed: [usage(A, 30.5, ['11', '103']), usage(B, 4)],
     leastUsed: [usage(B, 4), usage(A, 30.5)],
     usage: [usage(A, 30.5, ['11', '103']), usage(B, 4), usage(C, 0)],
-    breakdowns: [
+    busChanges: [
       {
         vehicle: B,
         at: '2026-11-16T07:04:00Z',
-        line: '9',
+        route: '9',
         brigade: '009-01',
         headsign: 'Dworzec',
         stop: 'Rynek',
         returned: null,
-        daysOut: 1.2,
+        hoursOut: 29,
       },
     ],
   };
@@ -108,14 +108,16 @@ function detail(to = '2026-11-17T11:00:00Z'): VehicleDetail {
     from: '2026-11-10T11:00:00Z',
     to,
     hours: 3.5,
-    lines: ['11', '103'],
+    routes: ['11', '103'],
     lastSeen: '2026-11-16T20:00:00Z',
     days: [
       {
         day: '2026-11-15',
         start: '2026-11-14T23:00:00Z',
         hours: 1,
-        runs: [{ from: 6 * 3600, to: 7 * 3600, line: '103', brigade: '103-05', headsign: 'Rynek' }],
+        runs: [
+          { from: 6 * 3600, to: 7 * 3600, route: '103', brigade: '103-05', headsign: 'Rynek' },
+        ],
         breaks: [],
       },
       {
@@ -123,9 +125,9 @@ function detail(to = '2026-11-17T11:00:00Z'): VehicleDetail {
         start: '2026-11-15T23:00:00Z',
         hours: 2.5,
         runs: [
-          { from: 6 * 3600, to: 7 * 3600, line: '11', brigade: null, headsign: null },
-          { from: 8 * 3600, to: 9.5 * 3600, line: '11', brigade: '011-02', headsign: 'Dworzec' },
-          { from: 24.5 * 3600, to: 25 * 3600, line: 'N1', brigade: null, headsign: null },
+          { from: 6 * 3600, to: 7 * 3600, route: '11', brigade: null, headsign: null },
+          { from: 8 * 3600, to: 9.5 * 3600, route: '11', brigade: '011-02', headsign: 'Dworzec' },
+          { from: 24.5 * 3600, to: 25 * 3600, route: 'N1', brigade: null, headsign: null },
         ],
         breaks: [{ from: 7 * 3600, to: 8 * 3600 }],
       },
@@ -134,62 +136,11 @@ function detail(to = '2026-11-17T11:00:00Z'): VehicleDetail {
       {
         kind: 'vehicle-changed',
         day: '2026-11-16',
-        line: '11',
+        route: '11',
         brigade: '011-02',
         headsign: 'Dworzec',
         scheduledDeparture: '2026-11-16T07:00:00Z',
-        note: [{ key: 'silentAtOnce', params: { bus: '230' } }],
-        story: [
-          {
-            at: '2026-11-16T07:01:00Z',
-            text: [
-              {
-                key: 'stepRuns',
-                params: {
-                  bus: '230',
-                  line: '11',
-                  to: 'Dworzec',
-                  stop: 'Rynek',
-                  index: 1,
-                  total: 25,
-                },
-              },
-            ],
-          },
-          {
-            at: '2026-11-16T07:10:00Z',
-            text: [
-              {
-                key: 'stepStops',
-                params: {
-                  bus: '230',
-                  stop: 'Lipowa',
-                  index: 8,
-                  total: 25,
-                  then: { key: 'thenStays', params: {} },
-                },
-              },
-            ],
-          },
-          {
-            at: '2026-11-16T07:27:00Z',
-            text: [
-              {
-                key: 'stepTakesOver',
-                params: {
-                  bus: '412',
-                  joined: { key: 'stopsFurtherOn', params: { n: 2 } },
-                  stop: 'Lipowa',
-                  index: 10,
-                  total: 25,
-                  away: { key: 'kilometres', params: { n: 1.5 } },
-                  other: '230',
-                },
-              },
-              { key: 'stepNoBusFor', params: { n: 17 } },
-            ],
-          },
-        ],
+        note: [{ key: 'notUsedAgain', params: { bus: '230' } }],
         timeline: [
           {
             vehicle: '230',
@@ -248,13 +199,16 @@ describe('Fleet helpers', () => {
     expect(searchVehicles(all, '1', 1)).toHaveLength(1);
   });
 
-  it('describes buses, breakdowns and shares', () => {
+  it('describes buses, bus changes and shares', () => {
     expect(vehicleName(A)).toBe('230 · Solaris Urbino 12');
     expect(vehicleName(C)).toBe('17');
-    const b = report().breakdowns[0];
-    expect(daysOutText(b)).toBe('not back yet (1.2 days)');
-    expect(daysOutText({ ...b, returned: '2026-11-17T05:00:00Z', daysOut: 1 })).toBe(
-      'back after 1 day',
+    const b = report().busChanges[0];
+    expect(hoursOutText(b)).toBe('not back yet (1 d 5 h)');
+    expect(hoursOutText({ ...b, returned: '2026-11-17T05:00:00Z', hoursOut: 22 })).toBe(
+      'back after 22 h',
+    );
+    expect(hoursOutText({ ...b, returned: '2026-11-18T07:00:00Z', hoursOut: 48 })).toBe(
+      'back after 2 d 0 h',
     );
     expect(wholePercent(2, 3)).toBe(67);
     expect(wholePercent(1, 0)).toBe(0);
@@ -382,8 +336,8 @@ describe('Fleet page', () => {
       '11, 103',
     ]);
     expect(text(lists[1].querySelector('li'))).toContain('1230');
-    expect(text(el.querySelector('.breakdowns .hero'))).toBe('1');
-    expect(text(el.querySelector('.breakdowns li'))).toContain('not back yet (1.2 days)');
+    expect(text(el.querySelector('.bus-changes .hero'))).toBe('1');
+    expect(text(el.querySelector('.bus-changes li'))).toContain('not back yet (1 d 5 h)');
     expect(el.querySelectorAll('app-bar-chart rect.bar')).toHaveLength(3);
     // The search comes first, above the time window; no bus is shown, so this is the overview.
     const order = [...el.querySelectorAll('.search, app-time-window')].map((e) => e.tagName);
@@ -493,7 +447,7 @@ describe('Fleet page', () => {
     expect(logo(null)).toBeNull();
   });
 
-  it('tells each breakdown of the bus step by step, with both buses on a time line and a map', async () => {
+  it('shows each bus change of the bus with both buses on a time line and a map', async () => {
     useSvgMaps();
     const { el, fixture } = renderPage(
       VehiclePage,
@@ -511,17 +465,10 @@ describe('Fleet page', () => {
     // Open at first; it folds away and back.
     const story = () => el.querySelector('.detail tr.story-row app-incident-story');
     const toggle = el.querySelector('.detail button.story-toggle') as HTMLButtonElement;
-    expect(text(toggle)).toBe('▾ Step by step (3 steps)');
+    expect(text(toggle)).toBe('▾ Time line');
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
-    expect([...story()!.querySelectorAll('ol.steps li')].map(text)).toEqual([
-      `${localTime('2026-11-16T07:01:00Z')} Bus 230 runs line 11 towards Dworzec, heading to Rynek (stop 1 of 25).`,
-      `${localTime('2026-11-16T07:10:00Z')} Bus 230 stops heading to Lipowa (stop 8 of 25) and doesn't move on.`,
-      `${localTime('2026-11-16T07:27:00Z')} Bus 412 takes over 2 stops further on, heading to Lipowa (stop 10 of 25), ` +
-        '1.5 km from where bus 230 stopped. The trip had no bus for 17 min.',
-    ]);
-    // A lane per bus, a bar per stretch, the steps numbered on the axis.
+    // A lane per bus, a bar per stretch.
     expect([...story()!.querySelectorAll('.lane-label')].map(text)).toEqual([
-      'Steps',
       'Bus 230',
       'Bus 412',
       '',
@@ -537,7 +484,6 @@ describe('Fleet page', () => {
       `Bus 230: standing still, ${localTime('2026-11-16T07:10:00Z')}–${localTime('2026-11-16T07:44:00Z')}`,
     );
     expect(parseFloat(bars[0].style.left)).toBeLessThan(parseFloat(bars[1].style.left));
-    expect([...story()!.querySelectorAll('.step')].map(text)).toEqual(['1', '2', '3']);
     expect([...story()!.querySelectorAll('app-incident-timeline .legend li')].map(text)).toEqual([
       'On the trip',
       'Standing still',
@@ -545,10 +491,10 @@ describe('Fleet page', () => {
       'On the brigade',
     ]);
     expect(story()!.querySelectorAll('.tick').length).toBeGreaterThan(1);
-    // Both buses on a map: the one that broke down in orange, ringed where last seen; the other in blue.
+    // Both buses on a map: the replaced one in orange, ringed where last seen; the other in blue.
     const map = story()!.querySelector('app-path-map')!;
     expect([...map.querySelectorAll('.legend li')].map(text)).toEqual([
-      'Bus 230 (broke down)',
+      'Bus 230 (replaced)',
       'Bus 412 (took over)',
     ]);
     const strokes = [...map.querySelectorAll('.leaflet-overlay-pane path')].map((p) =>
@@ -559,7 +505,7 @@ describe('Fleet page', () => {
     toggle.click();
     fixture.detectChanges();
     expect(story()).toBeNull();
-    expect(text(toggle)).toBe('▸ Step by step (3 steps)');
+    expect(text(toggle)).toBe('▸ Time line');
     toggle.click();
     fixture.detectChanges();
     expect(story()).not.toBeNull();
@@ -596,7 +542,7 @@ describe('Fleet page', () => {
     expect(el.querySelectorAll('.detail app-bar-chart circle.mark')).toHaveLength(1);
     const row = [...el.querySelectorAll('.detail table tbody tr td')].map(text);
     expect(row[0]).toBe('Mon 16 Nov');
-    expect(row[3]).toBe('Broke down');
+    expect(row[3]).toBe('Bus changed');
 
     const run = el.querySelector('app-run-timeline rect.run') as SVGElement;
     run.dispatchEvent(new Event('pointerenter'));
@@ -629,7 +575,7 @@ describe('Fleet page', () => {
     );
     expect(text(el.querySelector('.detail h4'))).toBe('Runs');
     expect(el.querySelectorAll('app-run-timeline text.name')).toHaveLength(4);
-    expect(text(el.querySelector('.detail tbody'))).toContain('It broke down on no trip');
+    expect(text(el.querySelector('.detail tbody'))).toContain("It wasn't changed on any trip");
   });
 
   it('says when a bus served no line in the window', () => {

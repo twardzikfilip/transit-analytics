@@ -1,4 +1,4 @@
-import { Hotspot, HotspotApproach, HotspotLineTime } from '../../core/models/models';
+import { Hotspot, HotspotApproach, HotspotRouteTime } from '../../core/models/models';
 import { formatDelay } from '../../shared/format/time';
 import { t } from '../../core/i18n/t';
 import { decimal } from '../../shared/format/number';
@@ -43,10 +43,10 @@ export function approachText(a: HotspotApproach): { short: string; long: string 
   return { short: `${h.arrow} ${pct}%`, long: t('hotspots.headingTo', { pct, dir }) };
 }
 
-/** The lines with the most time lost there, e.g. "21, 9, 12 +3". */
-export function linesText(lines: HotspotLineTime[], shown = 4): string {
-  const names = lines.slice(0, shown).map((l) => l.line);
-  return names.join(', ') + (lines.length > shown ? ` +${lines.length - shown}` : '');
+/** The routes with the most time lost there, e.g. "21, 9, 12 +3". */
+export function routesText(routes: HotspotRouteTime[], shown = 4): string {
+  const names = routes.slice(0, shown).map((l) => l.route);
+  return names.join(', ') + (routes.length > shown ? ` +${routes.length - shown}` : '');
 }
 
 /** "07–08": the hour from 07:00 to 08:00. */

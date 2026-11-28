@@ -12,7 +12,7 @@ import { TRIP_COLORS } from './brigade-format';
 const at = (hhmm: string) => `2026-11-18T${hhmm}:00Z`;
 const trip = (from: string, to: string, extra: Partial<BrigadeTrip> = {}): BrigadeTrip => ({
   tripId: from,
-  line: '103',
+  route: '103',
   headsign: 'Choroszcz/Cmentarz',
   from: 'Piastowska',
   to: 'Choroszcz/Cmentarz',

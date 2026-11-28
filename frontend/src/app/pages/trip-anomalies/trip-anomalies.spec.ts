@@ -6,7 +6,7 @@ import {
   AbnormalTrip,
   StoodThen,
   TripAnomalyKind,
-  TripAnomalyLine,
+  TripAnomalyRoute,
   TripAnomalyReport,
 } from '../../core/models/models';
 import { TripAnomaliesActions } from '../../store/trip-anomalies/trip-anomalies.actions';
@@ -26,19 +26,14 @@ import {
   signedDelay,
 } from './trip-kinds';
 
-const trip = (kind: TripAnomalyKind, line: string, i = 0): AbnormalTrip => {
+const trip = (kind: TripAnomalyKind, route: string, i = 0): AbnormalTrip => {
   const run = kind !== 'missed' && kind !== 'cancelled';
   return {
     kind,
-    note: [
-      {
-        key: 'lostForGood',
-        params: { bus: '319', stop: 'Lipowa', index: 8, total: 25, time: '07:20' },
-      },
-    ],
-    tripId: `${line}-0${i}_P_${i}`,
-    line,
-    brigade: `0${line}-0${i}`,
+    note: [{ key: 'lostAt', params: { index: 8, total: 25 } }],
+    tripId: `${route}-0${i}_P_${i}`,
+    route,
+    brigade: `0${route}-0${i}`,
     headsign: 'Dworzec',
     firstStop: 'Rynek',
     lastStop: 'Dworzec',
@@ -75,8 +70,8 @@ const trip = (kind: TripAnomalyKind, line: string, i = 0): AbnormalTrip => {
             [53.137, 23.15],
           ]
         : [],
-    changeFate: kind === 'vehicle-changed' ? 'broken-down' : null,
-    replacementLine: kind === 'vehicle-changed' ? '29' : null,
+    changeFate: kind === 'vehicle-changed' ? 'not-used' : null,
+    replacementRoute: kind === 'vehicle-changed' ? '29' : null,
     replacementBrigade: kind === 'vehicle-changed' ? '029-05' : null,
     changeMinutes: kind === 'vehicle-changed' ? 17 : null,
     delayBeforeChange: kind === 'vehicle-changed' ? 122 : null,
@@ -84,65 +79,10 @@ const trip = (kind: TripAnomalyKind, line: string, i = 0): AbnormalTrip => {
     changeStop: kind === 'vehicle-changed' ? 'C' : null,
     joinStop: kind === 'vehicle-changed' ? 'E' : null,
     skippedStops: kind === 'vehicle-changed' ? 1 : null,
-    changeAt: null,
     stoodMinutes: kind === 'vehicle-changed' ? 34 : null,
     stoodThen: kind === 'vehicle-changed' ? 'vanished' : null,
     stoodLastSeen: kind === 'vehicle-changed' ? '2026-11-17T07:44:00Z' : null,
     stoodLastSeenMeters: kind === 'vehicle-changed' ? 0 : null,
-    story:
-      kind === 'vehicle-changed'
-        ? [
-            {
-              at: '2026-11-17T07:01:00Z',
-              text: [
-                {
-                  key: 'stepRuns',
-                  params: {
-                    bus: '319',
-                    line: '9',
-                    to: 'Dworzec',
-                    stop: 'Rynek',
-                    index: 1,
-                    total: 25,
-                  },
-                },
-              ],
-            },
-            {
-              at: '2026-11-17T07:10:00Z',
-              text: [
-                {
-                  key: 'stepStops',
-                  params: {
-                    bus: '319',
-                    stop: 'Lipowa',
-                    index: 8,
-                    total: 25,
-                    then: { key: 'thenStays', params: {} },
-                  },
-                },
-              ],
-            },
-            {
-              at: '2026-11-17T07:27:00Z',
-              text: [
-                {
-                  key: 'stepTakesOver',
-                  params: {
-                    bus: '412',
-                    joined: { key: 'stopsFurtherOn', params: { n: 2 } },
-                    stop: 'Lipowa',
-                    index: 10,
-                    total: 25,
-                    away: { key: 'kilometres', params: { n: 1.5 } },
-                    other: '319',
-                  },
-                },
-                { key: 'stepNoBusFor', params: { n: 17 } },
-              ],
-            },
-          ]
-        : [],
     timeline:
       kind === 'vehicle-changed'
         ? [
@@ -175,8 +115,8 @@ const trip = (kind: TripAnomalyKind, line: string, i = 0): AbnormalTrip => {
   };
 };
 
-const line = (name: string, judged: number, completed: number, lost = 0): TripAnomalyLine => ({
-  line: name,
+const route = (name: string, judged: number, completed: number, lost = 0): TripAnomalyRoute => ({
+  route: name,
   judged,
   completed,
   detours: 0,
@@ -205,10 +145,10 @@ function report(trips: AbnormalTrip[] = []): TripAnomalyReport {
       cancelled: 4,
       notRecorded: 300,
       pending: 200,
-      changedBrokenDown: 1,
+      changedNotUsed: 1,
       changedReassigned: 1,
     },
-    lines: [line('104', 90, 26, 30), line('12', 150, 146), line('9', 120, 120)],
+    routes: [route('104', 90, 26, 30), route('12', 150, 146), route('9', 120, 120)],
     tripsTotal: trips.length + 5,
     trips,
   };
@@ -261,11 +201,11 @@ describe('Abnormal trips page', () => {
       'No signal',
     ]);
 
-    // Lines with abnormal trips only.
-    const lines = [...el.querySelectorAll('table.by-line tbody tr')].map((r) =>
+    // Routes with abnormal trips only.
+    const routes = [...el.querySelectorAll('table.by-line tbody tr')].map((r) =>
       [...r.querySelectorAll('td')].map(text),
     );
-    expect(lines).toEqual([
+    expect(routes).toEqual([
       ['104', '90', '29%', '·', '·', '30', '34', '·', '·', '·'],
       ['12', '150', '97%', '·', '·', '·', '4', '·', '·', '·'],
     ]);
@@ -285,9 +225,7 @@ describe('Abnormal trips page', () => {
     expect(lost[4]).toContain('Stops 1–8 of 25');
     expect(cells[4].getAttribute('title')).toBe('Heading to Rynek … Lipowa');
     expect(lost[5]).toBe('0:00 · +2:15 · −0:40');
-    expect(lost[6]).toBe(
-      "Bus 319 stopped reporting heading to Lipowa (stop 8 of 25) at 07:20 and wasn't seen again that day.",
-    );
+    expect(lost[6]).toBe('Lost at stop 8/25');
     const missed = [...rows[1].querySelectorAll('td')].map(text);
     expect(missed[3]).toBe('—');
     expect(missed[4]).toBe('Not run');
@@ -298,7 +236,7 @@ describe('Abnormal trips page', () => {
     const changed = [...rows[3].querySelectorAll('td')].map(text);
     expect(text(rows[3].querySelector('.tag'))).toBe('Bus changed');
     expect(changed[3]).toBe('319 → 412 New bus from line 29 (029-05)');
-    expect(text(rows[3].querySelector('.fate'))).toBe('Possibly broken down');
+    expect(text(rows[3].querySelector('.fate'))).toBe('Old bus not used again');
     expect([...rows[3].querySelectorAll('.changeover .chip')].map(text)).toEqual([
       'No bus for 17 min',
       'Delay +2:02 → +17:15',
@@ -309,9 +247,7 @@ describe('Abnormal trips page', () => {
       'Old bus heading to C; new bus to E',
     );
     expect(rows[0].querySelector('.changeover')).toBeNull();
-    expect(text(el.querySelector('.kind-card .changes'))).toBe(
-      '1 possibly broken down · 1 reassigned',
-    );
+    expect(text(el.querySelector('.kind-card .changes'))).toBe('1 not used again · 1 reassigned');
     expect(text(el.querySelector('section.card:last-of-type p.muted'))).toContain(
       'the latest 4 of 9 abnormal trips are listed',
     );
@@ -345,7 +281,7 @@ describe('Abnormal trips page', () => {
     render();
     expect(rows()).toHaveLength(PAGE_ROWS);
 
-    // A line, from its row or the menu; "Show all" clears.
+    // A route, from its row or the menu; "Show all" clears.
     (el.querySelector('table.by-line tbody tr') as HTMLElement).click();
     render();
     expect(rows()).toHaveLength(PAGE_ROWS);
@@ -479,10 +415,12 @@ describe('Abnormal trips page', () => {
     expect(coverage(trip('missed', '9'))).toBe('Not run');
     expect(coverage(trip('lost', '9'))).toBe('Stops 1–8 of 25');
     expect(kindLabel('no-signal')).toBe('No signal');
-    expect(
-      ['broken-down', 'reassigned', 'returned'].map((f) => changeFateLabel(f as never)),
-    ).toEqual(['Possibly broken down', 'Old bus reassigned', 'Old bus back later']);
-    expect(replacementFrom({ ...trip('vehicle-changed', '9'), replacementLine: null })).toBe(
+    expect(['not-used', 'reassigned', 'returned'].map((f) => changeFateLabel(f as never))).toEqual([
+      'Old bus not used again',
+      'Old bus reassigned',
+      'Old bus back later',
+    ]);
+    expect(replacementFrom({ ...trip('vehicle-changed', '9'), replacementRoute: null })).toBe(
       'New bus from the depot',
     );
     expect(joinedAt({ ...trip('vehicle-changed', '9'), skippedStops: 0 })).toBe(

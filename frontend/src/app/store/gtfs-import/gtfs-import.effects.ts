@@ -4,7 +4,6 @@ import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { catchError, exhaustMap, map, of, switchMap } from 'rxjs';
 import { GtfsApi } from '../../core/api/api.services';
 import { errorMessage } from '../paged';
-import { RoutesActions } from '../routes/routes.actions';
 import { GtfsImportActions } from './gtfs-import.actions';
 
 export const loadFeeds = createEffect(
@@ -40,16 +39,12 @@ export const importFeed = createEffect(
   { functional: true },
 );
 
-/** After an import, the feeds' last imports change, and the routes kept for pickers may too. */
+/** After an import, the feeds' last imports change. */
 export const reloadAfterImport = createEffect(
   (actions$ = inject(Actions)) =>
     actions$.pipe(
       ofType(GtfsImportActions.importSuccess),
-      switchMap(({ result }) =>
-        result.unchanged
-          ? of(GtfsImportActions.loadFeeds())
-          : of(GtfsImportActions.loadFeeds(), RoutesActions.load()),
-      ),
+      map(() => GtfsImportActions.loadFeeds()),
     ),
   { functional: true },
 );

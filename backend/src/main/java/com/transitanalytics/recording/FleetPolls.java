@@ -32,7 +32,7 @@ final class FleetPolls {
     }
 
     /** A report as read: its poll, when the vehicle reported, the vehicle, and its delay (null when unknown). */
-    record Report(long poll, long observed, long vehicle, Integer delay) {
+    public record Report(long poll, long observed, long vehicle, Integer delay) {
     }
 
     private FleetPolls() {

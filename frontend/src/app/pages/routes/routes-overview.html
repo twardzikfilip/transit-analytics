@@ -1,8 +1,8 @@
 <!-- Lines to pick: a row per kind of line, a column per geometry; thicker and darker buttons carry more. -->
-@if (!lines().length && !error()) {
+@if (!routes().length && !error()) {
   <app-skeleton kind="chips" [count]="48" [label]="t('routes.loadingLines')" />
 } @else {
-  <app-line-chooser [table]="table()" (choose)="open($event)" />
+  <app-route-chooser [table]="table()" (choose)="open($event)" />
 }
 
 <!-- The lines ranked: two rows of four tiles, each a top 10 from either end. -->
@@ -31,13 +31,13 @@
         }
       </div>
       <ol class="ranked">
-        @for (l of tile.lines; track l.line) {
+        @for (l of tile.routes; track l.route) {
           <li>
             <a
               class="route-badge"
-              [routerLink]="['/routes/route', l.line]"
-              [appLineBadge]="l.line"
-              >{{ l.line }}</a
+              [routerLink]="['/routes/route', l.route]"
+              [appRouteBadge]="l.route"
+              >{{ l.route }}</a
             >
             <span class="value">{{ l.value }}</span>
           </li>

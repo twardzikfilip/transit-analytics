@@ -50,7 +50,7 @@
           <span class="info">
             <span class="first">
               <span class="time">{{ time(run.trip.departure) }}–{{ time(run.trip.arrival) }}</span>
-              <span class="route-badge" [appLineBadge]="run.trip.line">{{ run.trip.line }}</span>
+              <span class="route-badge" [appRouteBadge]="run.trip.route">{{ run.trip.route }}</span>
               <span class="to">→ {{ run.trip.headsign ?? run.trip.to }}</span>
             </span>
             <span class="second muted">

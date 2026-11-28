@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * GTFS feeds the app can import: Białystok's (the main timetable) and other operators' lines ({@code extra}), each
+ * GTFS feeds the app can import: Białystok's (the main timetable) and other operators' routes ({@code extra}), each
  * loaded into its own share of the timetable (its rows' {@code feed} is the key, {@code bialystok} for the main one).
  *
  * @param maxDownloadSize   a download larger than this is aborted
@@ -33,8 +33,8 @@ public record GtfsProperties(Duration connectTimeout, Duration readTimeout, Data
     /**
      * @param url    address of the feed's zip file
      * @param name   what the feed is, for people
-     * @param agency the operator its buses have on the live feed (e.g. "WSCHODEXPRESS"), so a line's recorded runs
-     *               can be told from another operator's line of the same number; null when its buses aren't on it
+     * @param agency the operator its buses have on the live feed (e.g. "WSCHODEXPRESS"), so a route's recorded runs
+     *               can be told from another operator's route of the same number; null when its buses aren't on it
      * @param only   the part of the feed to load; null: all of it
      */
     public record Feed(String url, String name, String agency, Selection only) {

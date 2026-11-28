@@ -11,8 +11,6 @@ export interface PageQuery {
   /** Zero-based. */
   page: number;
   size: number;
-  /** One or more "property[,asc|desc]". */
-  sort: string | string[];
   filters: Filters;
 }
 

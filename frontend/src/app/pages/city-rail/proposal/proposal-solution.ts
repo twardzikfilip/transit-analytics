@@ -1,19 +1,20 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { map } from 'rxjs';
 import {
+  ProposalChoice,
   ProposalFrequency,
-  ProposalLine,
+  ProposalRoute,
   ProposalTrip,
-  ProposalVariant,
 } from '../../../core/models/models';
 import { t } from '../../../core/i18n/t';
 import { LocalDatePipe, LocalNumberPipe } from '../../../shared/i18n/locale-pipes';
 import { VARIANT_COLORS } from '../../../shared/palette';
 import { Skeleton } from '../../../shared/skeleton/skeleton';
 import { injectSetQuery } from '../../../shared/url-query';
+import { CityRailActions } from '../../../store/city-rail/city-rail.actions';
 import { cityRailFeature } from '../../../store/city-rail/city-rail.reducer';
 import { MapLine, MapStation, NEW_STATION_COLOR, ProposalMap } from './proposal-map';
 
@@ -23,8 +24,8 @@ export const FREQUENCIES: ProposalFrequency[] = ['1tp2h', '1tph', '2tph', '3tph'
 export const DEFAULT_FREQUENCY: ProposalFrequency = '1tph';
 export const DEFAULT_FLEET = 10;
 
-/** A line with its colour and the figures worked out from it. */
-interface ColoredLine extends ProposalLine {
+/** A route with its colour and the figures worked out from it. */
+interface ColoredRoute extends ProposalRoute {
   color: string;
   name: string;
   /** Stations it calls at. */
@@ -34,10 +35,10 @@ interface ColoredLine extends ProposalLine {
 }
 
 /**
- * One solution of proposal no. 1 (radial: five lines from Białystok; through: lines running through it) at a
+ * One solution of proposal no. 1 (radial: five routes from Białystok; through: routes running through it) at a
  * frequency or with at most a number of trains (?freq=2tph, or ?fleet=12: the most frequent variant that many trains
- * run; one of the two decides the other): its lines on the map, each numbered in its colour; their lengths, run times
- * and what they need; and the timetable of the line chosen (?line=S2), both ways, beside today's Polregio and PKP
+ * run; one of the two decides the other): its routes on the map, each numbered in its colour; their lengths, run times
+ * and what they need; and the timetable of the route chosen (?route=S2), both ways, beside today's Polregio and PKP
  * Intercity trains on its way.
  */
 @Component({
@@ -68,12 +69,12 @@ export class ProposalSolutionPage {
     initialValue: this.route.snapshot.queryParamMap,
   });
 
-  private readonly variants = computed<ProposalVariant[]>(
+  private readonly variants = computed<ProposalChoice[]>(
     () => this.proposal()?.solutions.find((s) => s.id === this.id())?.variants ?? [],
   );
 
   /** The frequency asked for, or the one the fleet asked for runs, or the default. */
-  protected readonly variant = computed<ProposalVariant | null>(() => {
+  protected readonly variant = computed<ProposalChoice | null>(() => {
     const variants = this.variants();
     if (!variants.length) return null;
     const byDefault = variants.find((v) => v.frequency === DEFAULT_FREQUENCY) ?? variants[0];
@@ -112,28 +113,53 @@ export class ProposalSolutionPage {
     return Array.from({ length: to - from + 1 }, (_, i) => from + i);
   });
 
-  protected readonly lines = computed<ColoredLine[]>(() =>
-    (this.variant()?.lines ?? []).map((line, i) => ({
-      ...line,
+  /** The chosen variant's routes, once loaded (not another solution's or frequency's still in the store). */
+  private readonly loaded = this.store.selectSignal(cityRailFeature.selectVariant);
+  protected readonly variantLoading = this.store.selectSignal(cityRailFeature.selectVariantLoading);
+  protected readonly shown = computed(() => {
+    const loaded = this.loaded();
+    const chosen = this.variant();
+    return loaded &&
+      chosen &&
+      loaded.solution === this.id() &&
+      loaded.variant.frequency === chosen.frequency
+      ? loaded.variant
+      : null;
+  });
+
+  constructor() {
+    effect(() => {
+      const chosen = this.variant();
+      if (chosen && !this.shown()) {
+        this.store.dispatch(
+          CityRailActions.loadVariant({ solution: this.id(), frequency: chosen.frequency }),
+        );
+      }
+    });
+  }
+
+  protected readonly routes = computed<ColoredRoute[]>(() =>
+    (this.shown()?.routes ?? []).map((route, i) => ({
+      ...route,
       color: VARIANT_COLORS[i % VARIANT_COLORS.length],
-      name: `${line.stations[0].name} – ${line.stations[line.stations.length - 1].name}`,
-      calls: line.stations.filter((s) => s.kind !== 'passed').length,
-      speed: line.runMinutes ? (line.km / line.runMinutes) * 60 : 0,
+      name: `${route.stations[0].name} – ${route.stations[route.stations.length - 1].name}`,
+      calls: route.stations.filter((s) => s.kind !== 'passed').length,
+      speed: route.runMinutes ? (route.km / route.runMinutes) * 60 : 0,
     })),
   );
 
   protected readonly mapLines = computed<MapLine[]>(() => {
     const hub = this.hub();
-    return this.lines().map((line) => ({
-      id: line.id,
-      color: line.color,
-      points: line.points,
-      name: `${line.id}: ${line.name}`,
+    return this.routes().map((route) => ({
+      id: route.id,
+      color: route.color,
+      points: route.points,
+      name: `${route.id}: ${route.name}`,
       // The number at each end that isn't Białystok.
       badges: [
-        ...(line.stations[0].name !== hub ? [line.points[0]] : []),
-        ...(line.stations[line.stations.length - 1].name !== hub
-          ? [line.points[line.points.length - 1]]
+        ...(route.stations[0].name !== hub ? [route.points[0]] : []),
+        ...(route.stations[route.stations.length - 1].name !== hub
+          ? [route.points[route.points.length - 1]]
           : []),
       ],
     }));
@@ -149,22 +175,22 @@ export class ProposalSolutionPage {
     return [...all.values()];
   });
 
-  /** The line chosen, from the URL; the first when none is (or one of another solution is). */
+  /** The route chosen, from the URL; the first when none is (or one of another solution is). */
   protected readonly chosen = computed(
-    () => this.lines().find((l) => l.id === this.query().get('line')) ?? this.lines()[0] ?? null,
+    () => this.routes().find((l) => l.id === this.query().get('route')) ?? this.routes()[0] ?? null,
   );
-  /** The line pointed at in the table. */
+  /** The route pointed at in the table. */
   protected readonly hovered = signal<string | null>(null);
   protected readonly highlighted = computed(() => this.hovered() ?? this.chosen()?.id ?? null);
 
-  /** The chosen line's two ways: stations in order, and the trains on them. */
+  /** The chosen route's two ways: stations in order, and the trains on them. */
   protected readonly ways = computed(() => {
-    const line = this.chosen();
-    if (!line) return [];
-    const back = [...line.stations].reverse();
+    const route = this.chosen();
+    if (!route) return [];
+    const back = [...route.stations].reverse();
     return [
-      { key: 'out', stations: line.stations, trips: line.out },
-      { key: 'back', stations: back, trips: line.back },
+      { key: 'out', stations: route.stations, trips: route.out },
+      { key: 'back', stations: back, trips: route.back },
     ].map((w) => ({
       ...w,
       title: t('cityRail.proposal.towards', { to: w.stations[w.stations.length - 1].name }),
@@ -172,7 +198,7 @@ export class ProposalSolutionPage {
   });
 
   protected choose(id: string): void {
-    this.setQuery({ line: id });
+    this.setQuery({ route: id });
   }
 
   protected chooseFrequency(frequency: string): void {

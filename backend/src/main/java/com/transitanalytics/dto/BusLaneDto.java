@@ -67,31 +67,31 @@ public final class BusLaneDto {
      * @param peakSlowdown  how much slower at peak than off-peak, %
      */
     public record Figures(double km, Double speed, Double peakSpeed, Double offPeakSpeed, Double delayPerKm,
-                          Double peakDelayPerKm, Double offPeakDelayPerKm, Double peakSlowdown) {
+                          Double peakDelayPerKm, Double peakSlowdown) {
     }
 
-    /** One weekday hour: speeds (km/h) and delay change (s/km), on bus lanes and elsewhere. */
+    /** One weekday hour: speeds (km/h) and delay change (s/km), on bus lanes and elsewhere, and km on lanes. */
     public record Hour(int hour, Double laneSpeed, Double otherSpeed, Double laneDelayPerKm,
-                       Double otherDelayPerKm, double laneKm, double otherKm) {
+                       Double otherDelayPerKm, double laneKm) {
     }
 
     /**
      * One stretch's figures.
      *
      * @param km     length of the stretch
-     * @param lines    the lines recorded on it
+     * @param routes    the routes recorded on it
      * @param opposite the same street the other way, where it has no bus lane; null when it has one there too
      */
-    public record StretchFigures(int id, String name, String heading, double km, List<String> lines,
+    public record StretchFigures(int id, String name, String heading, double km, List<String> routes,
                                  Figures figures, Figures opposite) {
     }
 
     /**
-     * How much of a line's route runs on bus lanes, per direction (its main route).
+     * How much of a route's route runs on bus lanes, per direction (its main route).
      *
      * @param onLanes the parts on bus lanes, [lat, lon] in order
      */
-    public record LineShare(int direction, String from, String to, double km, double laneKm, double percent,
+    public record RouteShare(int direction, String from, String to, double km, double laneKm, double percent,
                             List<List<double[]>> onLanes) {
     }
 }

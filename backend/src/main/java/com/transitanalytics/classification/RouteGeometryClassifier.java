@@ -6,7 +6,7 @@ import com.transitanalytics.geo.Geo;
 import java.util.List;
 
 /**
- * A line's geometry from its route shape and the city centre, by the rules in {@code classification/routes.yml}.
+ * A route's geometry from its route shape and the city centre, by the rules in {@code classification/routes.yml}.
  * Coordinates are {latitude, longitude}; distances use a flat projection, fine across a city.
  */
 public final class RouteGeometryClassifier {

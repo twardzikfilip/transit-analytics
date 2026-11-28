@@ -1,12 +1,12 @@
 import { Component, computed, input } from '@angular/core';
-import { HourStat, LinePerformance } from '../../core/models/models';
+import { HourStat, RoutePerformance } from '../../core/models/models';
 import { clock, formatDelay } from '../../shared/format/time';
 import { HourBand, HourChart, HourSeries, RefLine } from '../../shared/hour-chart/hour-chart';
 import { LocalDatePipe, LocalNumberPipe } from '../../shared/i18n/locale-pipes';
 import { t as tr, tn } from '../../core/i18n/t';
 import { decimal } from '../../shared/format/number';
 
-/** A chart's data: series, band and reference lines for the hour chart. */
+/** A chart's data: series, band and reference routes for the hour chart. */
 interface HourChartData {
   series: HourSeries[];
   band: HourBand | null;
@@ -14,7 +14,7 @@ interface HourChartData {
 }
 
 /**
- * How a line actually runs, from recorded positions: travel time and speed of full runs by departure hour for the
+ * How a route actually runs, from recorded positions: travel time and speed of full runs by departure hour for the
  * base route and each longer variant, and average delay over the weekday, each with a table view.
  */
 @Component({
@@ -26,7 +26,7 @@ interface HourChartData {
 export class TravelCharts {
   protected readonly tr = tr;
   protected readonly tn = tn;
-  readonly performance = input<LinePerformance | null>(null);
+  readonly performance = input<RoutePerformance | null>(null);
   readonly loading = input(false);
 
   protected readonly clock = clock;
@@ -88,7 +88,7 @@ export class TravelCharts {
   protected readonly delayMinutes = (minutes: number) => formatDelay(minutes * 60);
 }
 
-/** Hourly min–max band with average (and median) lines, each at the middle of its hour. */
+/** Hourly min–max band with average (and median) routes, each at the middle of its hour. */
 function statChart(
   stats: HourStat[],
   bandLabel: string,

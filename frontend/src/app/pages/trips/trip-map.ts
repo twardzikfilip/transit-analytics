@@ -1,6 +1,6 @@
 import { Component, ElementRef, effect, input, viewChild } from '@angular/core';
 import * as L from 'leaflet';
-import { TripRun, TripRunDetail, TripStopTime } from '../../core/models/models';
+import { TripDetailStop, TripRun, TripRunDetail } from '../../core/models/models';
 import { dwellText } from './trip-layout';
 import { escapeHtml } from '../../shared/format/html';
 import { localTime } from '../../shared/format/time';
@@ -20,7 +20,7 @@ import { t } from '../../core/i18n/t';
 /** Two reports further apart than this aren't joined: the bus wasn't seen in between. */
 const GAP_MS = 2 * 60_000;
 
-/** The trip's path as lines between consecutive reports of the same bus, each in the colour of the delay at its start. */
+/** The trip's path as routes between consecutive reports of the same bus, each in the colour of the delay at its start. */
 export function delayPath(
   path: TripRunDetail,
 ): { points: [number, number][]; color: string; tip: string }[] {
@@ -41,31 +41,23 @@ export function delayPath(
 }
 
 /** A stop's tooltip: its name and number, when it was due and when the bus passed it. */
-export function stopTooltip(
-  stop: { index: number; name: string; dwellSeconds?: number | null },
-  time: TripStopTime | undefined,
-  total: number,
-): string {
-  const lines = [
+export function stopTooltip(stop: TripDetailStop, total: number): string {
+  const routes = [
     `<strong>${escapeHtml(stop.name)}</strong>`,
     escapeHtml(t('trips.stops.index', { index: stop.index, total })),
+    escapeHtml(t('trips.stops.due', { time: localTime(stop.scheduled) })),
+    escapeHtml(
+      stop.passed
+        ? t('trips.stops.passed', {
+            time: localTime(stop.passed),
+            delay: departureDelayText(stop.delay),
+          })
+        : t('trips.stops.notSeen'),
+    ),
   ];
-  if (time) {
-    lines.push(escapeHtml(t('trips.stops.due', { time: localTime(time.scheduled) })));
-    lines.push(
-      escapeHtml(
-        time.passed
-          ? t('trips.stops.passed', {
-              time: localTime(time.passed),
-              delay: departureDelayText(time.delay),
-            })
-          : t('trips.stops.notSeen'),
-      ),
-    );
-  }
   const dwell = dwellText(stop.dwellSeconds);
-  if (dwell) lines.push(escapeHtml(dwell));
-  return lines.join('<br>');
+  if (dwell) routes.push(escapeHtml(dwell));
+  return routes.join('<br>');
 }
 
 /**
@@ -86,7 +78,7 @@ export function stopTooltip(
       #map
       class="map"
       role="img"
-      [attr.aria-label]="t('trips.map.label', { line: run().trip.line })"
+      [attr.aria-label]="t('trips.map.label', { route: run().trip.route })"
     ></div>
     <div class="legend muted">
       <span class="item"><span class="key route"></span>{{ t('trips.map.route') }}</span>
@@ -168,7 +160,6 @@ export class TripMap {
         .addTo(layer);
     }
     // The stops, over the path: hover one for its name and times.
-    const times = this.run().stops;
     for (const stop of path.stops) {
       L.circleMarker([stop.lat, stop.lon], {
         radius: 4,
@@ -177,7 +168,7 @@ export class TripMap {
         fillColor: WHITE,
         fillOpacity: 1,
       })
-        .bindTooltip(stopTooltip(stop, times[stop.index - 1], path.stops.length))
+        .bindTooltip(stopTooltip(stop, path.stops.length))
         .addTo(layer);
     }
     const first = path.points[0];

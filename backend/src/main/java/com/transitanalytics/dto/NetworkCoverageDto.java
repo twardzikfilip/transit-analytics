@@ -8,7 +8,7 @@ import java.util.List;
  * density of the city's districts and of the villages and towns around it, also without those. Areas in km²; points
  * are {@code [latitude, longitude]}.
  *
- * @param stops      where the city's lines stop (one point per place)
+ * @param stops      where the city's routes stop (one point per place)
  * @param cellMeters the grid the city's areas are measured on (squares of this side)
  * @param city       the city's border and area
  * @param coverages  one per walking distance, shortest first

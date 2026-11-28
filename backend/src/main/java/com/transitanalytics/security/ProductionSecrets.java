@@ -1,7 +1,5 @@
 package com.transitanalytics.security;
 
-import com.transitanalytics.domain.User;
-import com.transitanalytics.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.SmartInitializingSingleton;
@@ -15,8 +13,7 @@ import java.util.Map;
 /**
  * With {@code ENVIRONMENT=production}, nothing from the (public) repository lets anyone in: the app doesn't start with
  * the default secret or database passwords, and the seeded users (admin/admin, guest/guest) get the passwords
- * given in {@code ADMIN_PASSWORD} and {@code GUEST_PASSWORD}. Checked before the app takes requests. Passwords changed
- * since (through the API) stay.
+ * given in {@code ADMIN_PASSWORD} and {@code GUEST_PASSWORD}. Checked before the app takes requests.
  */
 @Component
 public class ProductionSecrets implements SmartInitializingSingleton {
@@ -24,7 +21,7 @@ public class ProductionSecrets implements SmartInitializingSingleton {
     static final int MIN_PASSWORD = 10;
     private static final Logger log = LoggerFactory.getLogger(ProductionSecrets.class);
 
-    private final UserRepository users;
+    private final Users users;
     private final PasswordEncoder encoder;
     private final boolean production;
     /** By setting: its value and the value in the repository. */
@@ -32,7 +29,7 @@ public class ProductionSecrets implements SmartInitializingSingleton {
     /** By seeded user (the password is the name): the password to give it. */
     private final Map<String, String> passwords = new LinkedHashMap<>();
 
-    public ProductionSecrets(UserRepository users, PasswordEncoder encoder,
+    public ProductionSecrets(Users users, PasswordEncoder encoder,
                              @Value("${app.environment:local}") String environment,
                              @Value("${app.jwt.secret:}") String jwtSecret,
                              @Value("${spring.datasource.password:}") String databasePassword,
@@ -61,20 +58,19 @@ public class ProductionSecrets implements SmartInitializingSingleton {
                 throw new IllegalStateException(setting + " is missing or the one in the repository: set another");
             }
         });
-        passwords.forEach((name, password) -> users.findByUsername(name).ifPresent(u -> replaceSeeded(u, password)));
+        passwords.forEach((name, password) -> users.find(name).ifPresent(u -> replaceSeeded(u, password)));
     }
 
-    private void replaceSeeded(User user, String password) {
-        String name = user.getUsername();
-        if (!encoder.matches(name, user.getPasswordHash())) {
+    private void replaceSeeded(Users.Account user, String password) {
+        String name = user.username();
+        if (!encoder.matches(name, user.passwordHash())) {
             return;
         }
         if (password.length() < MIN_PASSWORD) {
             throw new IllegalStateException("User " + name + " has the password from the repository: set "
                     + name.toUpperCase() + "_PASSWORD (at least " + MIN_PASSWORD + " characters)");
         }
-        user.setPasswordHash(encoder.encode(password));
-        users.save(user);
+        users.setPasswordHash(name, encoder.encode(password));
         log.info("User {} has its own password now", name);
     }
 }

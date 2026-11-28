@@ -1,8 +1,8 @@
 import { Routes } from '@angular/router';
 import { provideEffects } from '@ngrx/effects';
 import { provideState } from '@ngrx/store';
-import * as lineStatsEffects from '../../store/line-stats/line-stats.effects';
-import { lineStatsFeature } from '../../store/line-stats/line-stats.reducer';
+import * as routeStatsEffects from '../../store/route-stats/route-stats.effects';
+import { routeStatsFeature } from '../../store/route-stats/route-stats.reducer';
 import * as routeDetailEffects from '../../store/route-detail/route-detail.effects';
 import { routeDetailFeature } from '../../store/route-detail/route-detail.reducer';
 import { RoutesPage } from './routes';
@@ -10,7 +10,7 @@ import { RoutesOverview } from './routes-overview';
 import { openFormerQueryLink } from '../../shared/url-query';
 
 /**
- * Routes (every line, ranked) and one route's page, with their store slices (the lines, and every line's weekday
+ * Routes (every route, ranked) and one route's page, with their store slices (the routes, and every route's weekday
  * statistics) loaded on first visit.
  */
 export const ROUTES_ROUTES: Routes = [
@@ -19,8 +19,8 @@ export const ROUTES_ROUTES: Routes = [
     providers: [
       provideState(routeDetailFeature),
       provideEffects(routeDetailEffects),
-      provideState(lineStatsFeature),
-      provideEffects(lineStatsEffects),
+      provideState(routeStatsFeature),
+      provideEffects(routeStatsEffects),
     ],
     children: [
       {
@@ -29,8 +29,8 @@ export const ROUTES_ROUTES: Routes = [
         canActivate: [openFormerQueryLink('line', ['/routes/route'])],
       },
       {
-        path: 'route/:line',
-        title: (route) => `titles.route:${route.paramMap.get('line')}`,
+        path: 'route/:route',
+        title: (route) => `titles.route:${route.paramMap.get('route')}`,
         component: RoutesPage,
       },
     ],

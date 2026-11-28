@@ -1,8 +1,7 @@
 import { Component, computed, input } from '@angular/core';
-import { IncidentSpan, IncidentStep } from '../../core/models/models';
+import { IncidentSpan } from '../../core/models/models';
 import { localTime } from '../format/time';
 import { t } from '../../core/i18n/t';
-import { phrasesText } from '../i18n/phrases';
 
 /** What a bus was doing, in the legend's order; `label` is a translation key. */
 export const SPAN_KINDS: { kind: IncidentSpan['kind']; label: string }[] = [
@@ -15,8 +14,6 @@ export const SPAN_KINDS: { kind: IncidentSpan['kind']; label: string }[] = [
 
 /** Tick spacings to choose from, in minutes: the smallest giving at most six ticks wins. */
 const TICK_MINUTES = [5, 10, 15, 30, 60, 120, 240];
-/** Steps closer than this (percent of the plot) alternate between two levels. */
-const STEP_SPACING = 3;
 /** A moment (a zero-length stretch) is drawn this wide, in percent of the plot. */
 const MOMENT_WIDTH = 0.8;
 
@@ -25,10 +22,7 @@ export interface TimelineLane {
   bars: { kind: IncidentSpan['kind']; left: number; width: number; title: string }[];
 }
 
-/**
- * The time line of a change of bus: a lane per bus with what it did when, and the numbered steps of the story
- * on a time axis above (the list next to it tells them in words, so colour is never the only cue).
- */
+/** The time line of a change of bus: a lane per bus with what it did when (each bar also says it in its title). */
 @Component({
   selector: 'app-incident-timeline',
   template: `
@@ -38,20 +32,6 @@ export interface TimelineLane {
       }
     </ul>
     <div class="plot" role="img" [attr.aria-label]="label()">
-      <div class="row steps-row">
-        <span class="lane-label muted">{{ tr('incident.steps') }}</span>
-        <div class="track">
-          @for (s of steps(); track $index) {
-            <span
-              class="step"
-              [class.lift]="s.lift"
-              [style.left.%]="s.left"
-              [title]="s.time + ' · ' + s.text"
-              >{{ $index + 1 }}</span
-            >
-          }
-        </div>
-      </div>
       @for (lane of lanes(); track lane.vehicle) {
         <div class="row">
           <span class="lane-label">{{ tr('incident.bus', { bus: lane.vehicle }) }}</span>
@@ -84,14 +64,10 @@ export class IncidentTimeline {
   /** Translates (`t` is a loop variable in the template). */
   protected readonly tr = t;
   readonly spans = input.required<IncidentSpan[]>();
-  readonly story = input.required<IncidentStep[]>();
 
-  /** The time shown: every stretch and step, with a little room either side. */
+  /** The time shown: every stretch, with a little room either side. */
   private readonly range = computed(() => {
-    const times = [
-      ...this.spans().flatMap((s) => [Date.parse(s.from), Date.parse(s.to)]),
-      ...this.story().map((s) => Date.parse(s.at)),
-    ];
+    const times = this.spans().flatMap((s) => [Date.parse(s.from), Date.parse(s.to)]);
     const min = Math.min(...times);
     const max = Math.max(...times);
     const pad = Math.max((max - min) * 0.03, 60_000);
@@ -127,18 +103,6 @@ export class IncidentTimeline {
       });
     }
     return [...lanes.values()];
-  });
-
-  /** Steps on the axis; one close after another sits a level up, so their numbers don't overlap. */
-  protected readonly steps = computed(() => {
-    let previous = -Infinity;
-    let lifted = false;
-    return this.story().map((s) => {
-      const left = this.position(Date.parse(s.at));
-      lifted = left - previous < STEP_SPACING && !lifted;
-      previous = left;
-      return { left, lift: lifted, time: localTime(s.at), text: phrasesText(s.text) };
-    });
   });
 
   protected readonly ticks = computed(() => {

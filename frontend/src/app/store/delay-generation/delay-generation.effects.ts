@@ -23,18 +23,18 @@ export const load = createEffect(
   { functional: true },
 );
 
-/** Loads a line; choosing another line (or clearing it) cancels the one still loading. */
-export const loadLine = createEffect(
+/** Loads a route; choosing another route (or clearing it) cancels the one still loading. */
+export const loadRoute = createEffect(
   (actions$ = inject(Actions), api = inject(DelayGenerationApi)) =>
     actions$.pipe(
-      ofType(DelayGenerationActions.loadLine, DelayGenerationActions.clearLine),
+      ofType(DelayGenerationActions.loadRoute, DelayGenerationActions.clearRoute),
       switchMap((action) =>
-        action.type === DelayGenerationActions.clearLine.type
+        action.type === DelayGenerationActions.clearRoute.type
           ? of()
-          : api.line(action.window, action.line).pipe(
-              map((report) => DelayGenerationActions.lineLoaded({ report })),
+          : api.route(action.window, action.route).pipe(
+              map((report) => DelayGenerationActions.routeLoaded({ report })),
               catchError((err: HttpErrorResponse) =>
-                of(DelayGenerationActions.lineFailure({ error: errorMessage(err) })),
+                of(DelayGenerationActions.routeFailure({ error: errorMessage(err) })),
               ),
             ),
       ),

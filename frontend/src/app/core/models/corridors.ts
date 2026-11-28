@@ -1,15 +1,15 @@
 /** Important corridors and the stretch loads for their maps. */
 
-/** A stretch of 4+ consecutive stops along which every listed line runs (both directions where they run back). */
+/** A stretch of 4+ consecutive stops along which every listed route runs (both directions where they run back). */
 export interface Corridor {
   from: string;
   to: string;
   /** Stops of the busier direction, in order. */
   stops: string[];
-  /** Every line running along it (at least half of it). */
-  lines: string[];
-  /** The lines running all of it; the others run part of it. */
-  throughLines: string[];
+  /** Every route running along it (at least half of it). */
+  routes: string[];
+  /** The routes running all of it; the others run part of it. */
+  throughRoutes: string[];
   km: number | null;
   /** Weekday buses on its stretches (averaged along it), both directions. */
   buses: number;

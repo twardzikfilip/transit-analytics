@@ -7,8 +7,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Who runs the lines, from {@code classification/operators.yml}: the organiser (BKM) and the operating companies,
- * each with its lines, buses and depot.
+ * Who runs the routes, from {@code classification/operators.yml}: the organiser (BKM) and the operating companies,
+ * each with its routes, buses and depot.
  *
  * @param sharedAgency the agency whose buses the companies run between them ("BKM")
  */
@@ -19,9 +19,9 @@ public record OperatorProperties(String organiser, String sharedAgency, List<Com
         companies = companies == null ? List.of() : List.copyOf(companies);
     }
 
-    /** The company running a line (by its name, e.g. "103"), or null. */
-    public Company companyOf(String line) {
-        return companies.stream().filter(c -> c.lines().contains(line)).findFirst().orElse(null);
+    /** The company running a route (by its name, e.g. "103"), or null. */
+    public Company companyOf(String route) {
+        return companies.stream().filter(c -> c.routes().contains(route)).findFirst().orElse(null);
     }
 
     /** The company with this code, or null. */
@@ -44,13 +44,13 @@ public record OperatorProperties(String organiser, String sharedAgency, List<Com
      * @param depot    its depot's code in {@code map/depots.yml}
      * @param vehicles the numbers of its buses: single ones or ranges ("031-040")
      */
-    public record Company(String code, String name, String website, String depot, List<String> lines,
+    public record Company(String code, String name, String website, String depot, List<String> routes,
                           List<String> vehicles) {
 
         private static final Pattern NUMBERS = Pattern.compile("(\\d+)(?:-(\\d+))?");
 
         public Company {
-            lines = lines == null ? List.of() : List.copyOf(lines);
+            routes = routes == null ? List.of() : List.copyOf(routes);
             vehicles = vehicles == null ? List.of() : List.copyOf(vehicles);
             vehicles.forEach(Company::numbers);
         }

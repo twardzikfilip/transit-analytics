@@ -9,11 +9,11 @@
 <app-time-window [defaultPreset]="defaultPreset">
   <label class="line">
     <span class="sr-only">{{ t('hotspots.line') }}</span>
-    <select [value]="line() ?? ''" (change)="setLine($any($event.target).value)">
+    <select [value]="route() ?? ''" (change)="setRoute($any($event.target).value)">
       <option value="">{{ t('hotspots.allLines') }}</option>
-      @for (l of lineOptions(); track l) {
-        <option [value]="l" [selected]="l === line()">
-          {{ t('hotspots.lineX', { line: l }) }}
+      @for (l of routeOptions(); track l) {
+        <option [value]="l" [selected]="l === route()">
+          {{ t('hotspots.lineX', { route: l }) }}
         </option>
       }
     </select>
@@ -28,7 +28,7 @@
     class="summary"
     [innerHTML]="
       t('hotspots.summary', {
-        onLine: r.line ? t('hotspots.onLine', { line: r.line }) : '',
+        onRoute: r.route ? t('hotspots.onLine', { route: r.route }) : '',
         count: r.standstills,
         lost: lostTime(r.standstillHours),
         perDay: lostTime(r.standstillHours / r.days),
@@ -101,8 +101,8 @@
                 }
               </td>
               <td class="time">{{ hourText(h.peakHour) }}</td>
-              <td class="lines" [title]="t('hotspots.linesCount', { n: h.lines.length })">
-                {{ linesText(h.lines) }}
+              <td class="lines" [title]="t('hotspots.linesCount', { n: h.routes.length })">
+                {{ routesText(h.routes) }}
               </td>
             </tr>
           } @empty {

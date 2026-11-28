@@ -1,8 +1,7 @@
 package com.transitanalytics.security;
 
-import com.transitanalytics.domain.User;
-import com.transitanalytics.repository.UserRepository;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -11,6 +10,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -18,17 +18,16 @@ import static org.mockito.Mockito.verify;
 
 class ProductionSecretsTest {
 
-    private final UserRepository users = mock(UserRepository.class);
+    private final Users users = mock(Users.class);
     private final PasswordEncoder encoder = new BCryptPasswordEncoder(4);
-    private final User admin = user("admin", "admin");
-    private final User guest = user("guest", "chosen-before");
 
-    private User user(String name, String password) {
-        User user = new User();
-        user.setUsername(name);
-        user.setPasswordHash(encoder.encode(password));
-        given(users.findByUsername(name)).willReturn(Optional.of(user));
-        return user;
+    {
+        user("admin", "admin");
+        user("guest", "chosen-before");
+    }
+
+    private void user(String name, String password) {
+        given(users.find(name)).willReturn(Optional.of(new Users.Account(name, encoder.encode(password), "ADMIN")));
     }
 
     private void start(String environment, String jwt, String db, String adminPassword) {
@@ -40,10 +39,10 @@ class ProductionSecretsTest {
     void replacesOnlyPasswordsFromTheRepository() {
         start("production", "a-secret", "db-secret", "a-new-admin-password");
 
-        assertThat(encoder.matches("a-new-admin-password", admin.getPasswordHash())).isTrue();
-        assertThat(encoder.matches("chosen-before", guest.getPasswordHash())).as("changed since: stays").isTrue();
-        verify(users).save(admin);
-        verify(users, never()).save(guest);
+        ArgumentCaptor<String> hash = ArgumentCaptor.forClass(String.class);
+        verify(users).setPasswordHash(eq("admin"), hash.capture());
+        assertThat(encoder.matches("a-new-admin-password", hash.getValue())).isTrue();
+        verify(users, never()).setPasswordHash(eq("guest"), any());
     }
 
     @Test
@@ -61,6 +60,6 @@ class ProductionSecretsTest {
     @Test
     void changesNothingElsewhere() {
         start("local", "", "transit", "");
-        verify(users, never()).save(any());
+        verify(users, never()).setPasswordHash(any(), any());
     }
 }

@@ -5,7 +5,7 @@ import { CHANGE_COLOR, NOT_RUN_COLOR, NOT_SEEN_COLOR } from '../../shared/palett
 import { axisTicks, timeScale, tripMarks } from './trip-layout';
 import { t } from '../../core/i18n/t';
 
-/** Space at the ends of every lane and of the axis above them, so their times line up. */
+/** Space at the ends of every lane and of the axis above them, so their times route up. */
 const PAD = 8;
 const SCHED_Y = 4;
 const ACTUAL_Y = 18;

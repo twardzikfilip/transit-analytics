@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.Locale;
 
 /**
- * How a line runs relative to the city centre (rules set in {@code classification/routes.yml}).
+ * How a route runs relative to the city centre (rules set in {@code classification/routes.yml}).
  * <ul>
  *     <li>radial: links the centre with the periphery;</li>
  *     <li>diameter: links one side of the city with the opposite side through the centre;</li>
@@ -22,10 +22,8 @@ public enum RouteGeometry {
         return name().toLowerCase(Locale.ROOT);
     }
 
-    @jakarta.persistence.Converter(autoApply = true)
-    public static class Converter extends LowercaseEnumConverter<RouteGeometry> {
-        public Converter() {
-            super(RouteGeometry.class);
-        }
+    /** From its stored lowercase name; null for null. */
+    public static RouteGeometry of(String value) {
+        return value == null ? null : valueOf(value.toUpperCase(Locale.ROOT));
     }
 }

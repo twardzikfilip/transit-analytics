@@ -166,11 +166,11 @@ td.bus {
   white-space: normal;
 }
 
-.fate-broken-down {
+.fate-not-used {
   color: #a32626;
 }
 
-:host-context([data-theme='dark']) .fate-broken-down {
+:host-context([data-theme='dark']) .fate-not-used {
   color: #ec948a;
 }
 

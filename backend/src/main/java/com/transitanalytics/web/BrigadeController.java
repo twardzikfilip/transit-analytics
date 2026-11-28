@@ -1,8 +1,10 @@
 package com.transitanalytics.web;
 
+import com.transitanalytics.brigades.BrigadeDayService;
+import com.transitanalytics.brigades.BrigadeScheduleService;
 import com.transitanalytics.dto.BrigadeDto;
-import com.transitanalytics.service.BrigadeDayService;
-import com.transitanalytics.service.BrigadeScheduleService;
+import com.transitanalytics.dto.TripRunDto;
+import com.transitanalytics.trips.TripRunService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,19 +25,22 @@ public class BrigadeController {
 
     private final BrigadeScheduleService schedules;
     private final BrigadeDayService days;
+    private final TripRunService runs;
     private final Clock clock;
 
-    public BrigadeController(BrigadeScheduleService schedules, BrigadeDayService days, Clock clock) {
+    public BrigadeController(BrigadeScheduleService schedules, BrigadeDayService days, TripRunService runs,
+                             Clock clock) {
         this.schedules = schedules;
         this.days = days;
+        this.runs = runs;
         this.clock = clock;
     }
 
     @Operation(summary = "Every brigade in the timetable",
-            description = "An operator's brigades, whatever day they run, each with all the lines it runs; and every "
+            description = "An operator's brigades, whatever day they run, each with all the routes it runs; and every "
                     + "operator to choose from: the city's agency, and each other operator's timetable as one. "
                     + "Brigades other operators' timetables don't name are learnt from the recorded positions "
-                    + "(414-1: live brigade 1 on lines 414–416); an operator with neither has none. The operator "
+                    + "(414-1: live brigade 1 on routes 414–416); an operator with neither has none. The operator "
                     + "defaults to the city's (BKM).")
     @GetMapping
     public BrigadeDto.BrigadeList brigades(
@@ -50,18 +55,19 @@ public class BrigadeController {
                     + "its outcome as on Abnormal trips (completed, detour, vehicle-changed, no-signal, short-turned, "
                     + "lost, missed, cancelled, not-recorded, pending) and what ran, from the recorded positions: "
                     + "each bus's part, from which stop to which, when (scheduled time plus the reported delay), "
-                    + "and the parts nobody ran or no bus was seen on. With a summary: punctuality and buses used.")
+                    + "and the parts nobody ran or no bus was seen on; the bus's delay and speed about every minute, "
+                    + "and where it stood still for 3 min or more. With a summary: punctuality and buses used.")
     @GetMapping("/{brigade}/day")
-    public BrigadeDto.Day day(
+    public TripRunDto.Day day(
             @Parameter(description = "Brigade, e.g. 103-05") @PathVariable("brigade") String brigade,
             @Parameter(description = "Service day, e.g. 2026-11-19; default today's")
             @RequestParam(required = false) LocalDate date) {
-        return days.day(brigade, date == null ? days.today() : date);
+        return runs.day(date, brigade);
     }
 
     @Operation(summary = "A brigade's runs on a service day",
             description = "Every run of the brigade on the service day (03:00 to 03:00 Warsaw time) that `at` falls "
-                    + "in (default: now), in departure order, with line, headsign, first and last stop, and "
+                    + "in (default: now), in departure order, with route, headsign, first and last stop, and "
                     + "scheduled times.")
     @GetMapping("/{brigade}/schedule")
     public BrigadeDto.Schedule schedule(

@@ -104,7 +104,7 @@ export type SkeletonKind = 'tiles' | 'chart' | 'map' | 'table' | 'lines' | 'chip
 export class Skeleton {
   protected readonly t = t;
   readonly kind = input<SkeletonKind>('lines');
-  /** How many tiles, chips, table rows or lines. */
+  /** How many tiles, chips, table rows or routes. */
   readonly count = input(4);
   /** Height of a chart, map or card body, e.g. '360px'. */
   readonly height = input('220px');

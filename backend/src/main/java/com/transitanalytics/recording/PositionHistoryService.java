@@ -1,10 +1,10 @@
 package com.transitanalytics.recording;
 
+import com.transitanalytics.common.RecentCache;
+import com.transitanalytics.common.ServiceDayCache;
+import com.transitanalytics.common.WarmUp;
 import com.transitanalytics.dto.PositionHistoryDto;
-import com.transitanalytics.service.RecentCache;
-import com.transitanalytics.service.ServiceDayCache;
-import com.transitanalytics.service.TimetableMath;
-import com.transitanalytics.service.WarmUp;
+import com.transitanalytics.timetable.TimetableMath;
 import com.transitanalytics.zbiorkom.BialystokFeed;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-/** Reads the recorded position time series ({@code position_sample}), for one operator's lines or all of them. */
+/** Reads the recorded position time series ({@code position_sample}), for one operator's routes or all of them. */
 @Service
 public class PositionHistoryService {
 
@@ -62,19 +62,19 @@ public class PositionHistoryService {
         return "%1$sobserved_at >= ? AND %1$sobserved_at < ?".formatted(p)
                 + " AND coalesce(%1$sfetched_at, %1$sobserved_at) >= ? AND coalesce(%1$sfetched_at, %1$sobserved_at) < ?"
                 .formatted(p)
-                // Every line in the feed is run by a single operator, so the vehicle's operator picks its lines.
+                // Every route in the feed is run by a single operator, so the vehicle's operator picks its routes.
                 + (agency ? " AND %svehicle_id IN (SELECT id FROM vehicle WHERE agency = ?)".formatted(p) : "");
     }
 
     private static final Duration SLACK = Duration.ofMinutes(15);
-    /** How long the line and delay counts of a window are kept (windows end on the minute, so a reload hits). */
+    /** How long the route and delay counts of a window are kept (windows end on the minute, so a reload hits). */
     static final Duration COUNTS_KEPT_FOR = Duration.ofMinutes(1);
 
     private final JdbcTemplate jdbc;
     private final TransactionTemplate transaction;
     private final Clock clock;
     private final Map<String, ServiceDayCache<FleetPolls.Part>> fleetDays = new HashMap<>();
-    /** The line and delay filters' answers, kept briefly: they count every report in the window. */
+    /** The route and delay filters' answers, kept briefly: they count every report in the window. */
     private final RecentCache<String, List<PositionHistoryDto.RouteActivity>> routes;
     private final RecentCache<String, List<PositionHistoryDto.DelayBand>> delays;
 
@@ -96,14 +96,14 @@ public class PositionHistoryService {
 
     /** How far before the window reports are read, so vehicles running at its start are counted. */
     private static final Duration RUNNING_LOOKBACK = FleetPolls.REPORT_COVERS;
-    /** Lines whose polls are kept (all lines, and the lines looked at most recently), per operator choice. */
+    /** Routes whose polls are kept (all routes, and the routes looked at most recently), per operator choice. */
     private static final int CACHED_ROUTES = 16;
 
     /**
      * Vehicles running and mean delay per bucket, plus totals, for polls in {@code [from, to)}. Worked out per service
      * day; days that are over are kept, so only today is read again (see {@link FleetPolls} for what "running" is).
      *
-     * @param route  a line, or null for all
+     * @param route  a route, or null for all
      * @param agency an operator, or null for all
      */
     public PositionHistoryDto.FleetSeries fleet(Instant from, Instant to, String route, String agency) {
@@ -154,7 +154,7 @@ public class PositionHistoryService {
         return new PositionHistoryDto.FleetSeries(from, to, step.toSeconds(), route, points, summary);
     }
 
-    /** The polls of a line (or all lines, null) of an operator (or all, null), by service day. */
+    /** The polls of a route (or all routes, null) of an operator (or all, null), by service day. */
     private ServiceDayCache<FleetPolls.Part> days(String route, String agency) {
         String key = (agency == null ? "*" : agency) + "|" + (route == null ? "" : route);
         synchronized (fleetDays) {
@@ -189,7 +189,7 @@ public class PositionHistoryService {
      * How many vehicles and reports fall in each delay band (see {@link #DELAY_BAND_MINUTES}): on time (under 2
      * minutes late, or early), 2–5, 5–10, and 10 minutes or more. Reports without a delay are left out.
      *
-     * @param route  a line, or null for all
+     * @param route  a route, or null for all
      * @param agency an operator, or null for all
      */
     public List<PositionHistoryDto.DelayBand> delays(Instant from, Instant to, String route, String agency) {
@@ -197,7 +197,7 @@ public class PositionHistoryService {
         return delays.get(from + "|" + to + "|" + route + "|" + agency, () -> countDelays(from, to, route, agency));
     }
 
-    /** Forgets the kept line and delay counts (for tests, which record new reports in the same window). */
+    /** Forgets the kept route and delay counts (for tests, which record new reports in the same window). */
     void forgetCounts() {
         routes.clear();
         delays.clear();
@@ -239,7 +239,7 @@ public class PositionHistoryService {
                         .thenComparing(Comparator.naturalOrder())).toList();
     }
 
-    /** Lines of an operator (or all, null) recorded in the window, in natural line order (2, 10, 100, N1). */
+    /** Routes of an operator (or all, null) recorded in the window, in natural route order (2, 10, 100, N1). */
     public List<PositionHistoryDto.RouteActivity> routes(Instant from, Instant to, String agency) {
         validate(from, to);
         return routes.get(from + "|" + to + "|" + agency, () -> countRoutes(from, to, agency));
@@ -253,10 +253,10 @@ public class PositionHistoryService {
                 GROUP BY route_name""".formatted(windowCondition("", agency != null)),
                 (rs, i) -> new PositionHistoryDto.RouteActivity(rs.getString("route_name"), rs.getLong("samples")),
                 window(from, to, agency, null).toArray());
-        return routes.stream().sorted(Comparator.comparing(PositionHistoryDto.RouteActivity::route, TimetableMath.LINE_ORDER)).toList();
+        return routes.stream().sorted(Comparator.comparing(PositionHistoryDto.RouteActivity::route, TimetableMath.ROUTE_ORDER)).toList();
     }
 
-    /** Arguments for the window condition, then the operator and the line when filtering by them. */
+    /** Arguments for the window condition, then the operator and the route when filtering by them. */
     private static List<Object> window(Instant from, Instant to, String agency, String route) {
         List<Object> args = new ArrayList<>(List.of(ts(from.minus(SLACK)), ts(to.plus(SLACK)), ts(from), ts(to)));
         if (agency != null) {

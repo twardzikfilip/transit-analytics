@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { DelayBand, FleetSeries, RouteActivity, WindowQuery } from '../models/models';
 import { windowParams } from './window-params';
 
-/** What a position-history request covers: a window, and optionally one line and one operator (null for all). */
+/** What a position-history request covers: a window, and optionally one route and one operator (null for all). */
 export interface HistoryFilter {
   route: string | null;
   agency: string | null;
@@ -23,7 +23,7 @@ export class PositionHistoryApi {
     return this.http.get<DelayBand[]>('/api/positions/delays', { params: params(window, filter) });
   }
 
-  /** Lines of the operator recorded in the window. */
+  /** Routes of the operator recorded in the window. */
   routes(window: WindowQuery, agency: string | null): Observable<RouteActivity[]> {
     return this.http.get<RouteActivity[]>('/api/positions/routes', {
       params: params(window, { route: null, agency }),

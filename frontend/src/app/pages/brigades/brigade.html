@@ -64,7 +64,7 @@
       <h2>{{ t('brigades.scheduledAndActual') }}</h2>
       <p class="muted">{{ t('brigades.chartIntro') }}</p>
       <app-brigade-day-chart
-        [trips]="d.trips"
+        [trips]="scheduled()"
         [selected]="selected()"
         (choose)="chooseTrip($event)"
       />
@@ -85,16 +85,12 @@
     </section>
 
     <h2 class="list-title">{{ t('brigades.everyTrip') }}</h2>
-    @if (tripDay(); as td) {
-      <app-trip-list
-        [trips]="td.trips"
-        [span]="tripSpan()"
-        [loading]="loadingTrips()"
-        [brigadeLink]="false"
-      />
-    } @else if (loadingTrips()) {
-      <app-skeleton kind="lines" [count]="10" [label]="t('trips.loading')" />
-    }
+    <app-trip-list
+      [trips]="d.trips"
+      [span]="tripSpan()"
+      [loading]="loadingDay()"
+      [brigadeLink]="false"
+    />
 
     <details class="card how">
       <summary>{{ t('brigades.how') }}</summary>

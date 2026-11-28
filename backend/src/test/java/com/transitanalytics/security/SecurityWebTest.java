@@ -1,50 +1,47 @@
 package com.transitanalytics.security;
 
+import com.transitanalytics.brigades.BrigadeDayService;
+import com.transitanalytics.brigades.BrigadeScheduleService;
+import com.transitanalytics.common.ReportWindow;
+import com.transitanalytics.common.ReportWindows;
+import com.transitanalytics.coverage.NetworkCoverageService;
+import com.transitanalytics.delays.DelayGenerationService;
+import com.transitanalytics.domain.CityBoundaries;
 import com.transitanalytics.dto.BrigadeDto;
-import com.transitanalytics.dto.NetworkCoverageDto;
 import com.transitanalytics.dto.DelayGenerationDto;
+import com.transitanalytics.dto.FleetDto;
 import com.transitanalytics.dto.HotspotDto;
-import com.transitanalytics.dto.LineStatsDto;
 import com.transitanalytics.dto.LivePositionDto;
+import com.transitanalytics.dto.NetworkCoverageDto;
 import com.transitanalytics.dto.PositionHistoryDto;
+import com.transitanalytics.dto.RouteStatsDto;
 import com.transitanalytics.dto.TripAnomalyDto;
 import com.transitanalytics.dto.TripRunDto;
-import com.transitanalytics.dto.VehicleDto;
-import com.transitanalytics.dto.FleetDto;
-import com.transitanalytics.gtfs.GtfsFeedService;
+import com.transitanalytics.fleet.FleetService;
 import com.transitanalytics.gtfs.GtfsFeedException;
+import com.transitanalytics.gtfs.GtfsFeedService;
 import com.transitanalytics.gtfs.GtfsImportInProgressException;
 import com.transitanalytics.gtfs.GtfsImportResult;
+import com.transitanalytics.hotspots.HotspotService;
 import com.transitanalytics.recording.PositionHistoryService;
-import com.transitanalytics.service.BrigadeDayService;
-import com.transitanalytics.service.NetworkCoverageService;
-import com.transitanalytics.service.BrigadeScheduleService;
-import com.transitanalytics.domain.CityBoundaries;
-import com.transitanalytics.web.BoundaryController;
-import com.transitanalytics.service.DelayGenerationService;
+import com.transitanalytics.routes.RouteDetailService;
+import com.transitanalytics.routes.RouteStatsService;
 import com.transitanalytics.service.ExternalServiceException;
-import com.transitanalytics.service.HotspotService;
-import com.transitanalytics.service.LineStatsService;
-import com.transitanalytics.service.FleetService;
-import com.transitanalytics.service.ReportWindow;
-import com.transitanalytics.service.ReportWindows;
-import com.transitanalytics.service.FaultyTrackers;
-import com.transitanalytics.service.TripAnomalyService;
-import com.transitanalytics.service.TripRunService;
-import com.transitanalytics.service.TimetableCoverageService;
-import com.transitanalytics.service.VehicleService;
-
+import com.transitanalytics.timetable.TimetableCoverageService;
+import com.transitanalytics.trips.FaultyTrackers;
+import com.transitanalytics.trips.TripAnomalyService;
+import com.transitanalytics.trips.TripRunService;
+import com.transitanalytics.web.BoundaryController;
 import com.transitanalytics.web.BrigadeController;
-import com.transitanalytics.web.NetworkCoverageController;
 import com.transitanalytics.web.DelayGenerationController;
+import com.transitanalytics.web.FleetController;
 import com.transitanalytics.web.GtfsController;
 import com.transitanalytics.web.HotspotController;
-import com.transitanalytics.web.LineStatsController;
+import com.transitanalytics.web.NetworkCoverageController;
 import com.transitanalytics.web.PositionHistoryController;
+import com.transitanalytics.web.RouteController;
 import com.transitanalytics.web.TripAnomalyController;
 import com.transitanalytics.web.TripRunController;
-import com.transitanalytics.web.VehicleController;
-import com.transitanalytics.web.FleetController;
 import com.transitanalytics.web.ZbiorkomController;
 import com.transitanalytics.zbiorkom.ZbiorkomBialystokService;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -56,6 +53,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -65,34 +63,32 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-import org.springframework.jdbc.core.JdbcTemplate;
-
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.time.Clock;
-import java.time.ZoneOffset;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = {AuthController.class, VehicleController.class, ZbiorkomController.class,
+@WebMvcTest(controllers = {AuthController.class, ZbiorkomController.class,
         GtfsController.class, PositionHistoryController.class,
-        LineStatsController.class, FleetController.class, BrigadeController.class, HotspotController.class,
+        RouteController.class, FleetController.class, BrigadeController.class, HotspotController.class,
         DelayGenerationController.class, TripAnomalyController.class, TripRunController.class,
         BoundaryController.class, NetworkCoverageController.class})
 @Import({SecurityConfig.class, JwtAuthFilter.class, JwtService.class, LoginAttempts.class,
@@ -103,10 +99,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "app.cors.allowed-origins=http://localhost:4200"
 })
 class SecurityWebTest {
-
-    private static final String VEHICLE_JSON = """
-            {"vehicleNumber":"BUS-1","type":"BUS","capacity":50}
-            """;
 
     @Autowired
     MockMvc mvc;
@@ -151,9 +143,6 @@ class SecurityWebTest {
     AuthenticationManager authenticationManager;
 
     @MockitoBean
-    VehicleService vehicleService;
-
-    @MockitoBean
     ZbiorkomBialystokService zbiorkomBialystokService;
 
     @MockitoBean
@@ -166,7 +155,10 @@ class SecurityWebTest {
     PositionHistoryService positionHistoryService;
 
     @MockitoBean
-    LineStatsService lineStatsService;
+    RouteStatsService routeStatsService;
+
+    @MockitoBean
+    RouteDetailService routeDetailService;
 
     @MockitoBean
     FleetService fleetService;
@@ -256,26 +248,9 @@ class SecurityWebTest {
     }
 
     @Test
-    void guestCannotCreateVehicle() throws Exception {
-        mvc.perform(post("/api/vehicles").header("Authorization", bearer("guest", "GUEST"))
-                        .contentType(MediaType.APPLICATION_JSON).content(VEHICLE_JSON))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
-    void adminCanCreateVehicle() throws Exception {
-        given(vehicleService.create(any())).willReturn(new VehicleDto.Response(1L, "BUS-1", "BUS", 50, null, null, null, null));
-
-        mvc.perform(post("/api/vehicles").header("Authorization", bearer("admin", "ADMIN"))
-                        .contentType(MediaType.APPLICATION_JSON).content(VEHICLE_JSON))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(1));
-    }
-
-    @Test
     void guestCanReadLivePositions() throws Exception {
         given(zbiorkomBialystokService.positions()).willReturn(List.of(new LivePositionDto(7L, "230", "BUS", "BKM",
-                "Solaris Urbino 12 W33", "18", "#006963", "018-02", "Warzywna", 53.15, 23.08, 152.0, 0L,
+                "Solaris Urbino 12 W33", "18", "018-02", "Warzywna", 53.15, 23.08, 152.0, 0L,
                 Instant.parse("2026-11-16T09:00:00Z"), List.of(), null)));
 
         mvc.perform(get("/api/zbiorkom/bialystok/positions").header("Authorization", bearer("guest", "GUEST")))
@@ -383,17 +358,17 @@ class SecurityWebTest {
     }
 
     @Test
-    void guestCanReadLineStats() throws Exception {
-        given(lineStatsService.weekdayReport()).willReturn(new LineStatsDto.Report("P_1349", 59, null, null, List.of(),
-                List.of(new LineStatsDto.Period("17:00", "20:00")), 28,
-                List.of(new LineStatsDto.Line(17L, "103", null, null, 19.8, 2400, 3000, 24.5, 26.0, 31.7, 40.2, 0.39, 0.2, 5, 4,
+    void guestCanReadRouteStats() throws Exception {
+        given(routeStatsService.weekdayReport()).willReturn(new RouteStatsDto.Report("P_1349", List.of(),
+                List.of(new RouteStatsDto.Period("17:00", "20:00")), 28,
+                List.of(new RouteStatsDto.Route(17L, "103", null, null, 19.8, 24.5, 26.0, 31.7, 40.2, 0.39, 0.2, 5,
                         64, 95.0, 40.0))));
 
-        mvc.perform(get("/api/lines/stats").header("Authorization", bearer("guest", "GUEST")))
+        mvc.perform(get("/api/routes/stats").header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.lines[0].lengthKm").value(19.8))
+                .andExpect(jsonPath("$.routes[0].lengthKm").value(19.8))
                 .andExpect(jsonPath("$.offPeak[0].to").value("20:00"));
-        mvc.perform(get("/api/lines/stats")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/routes/stats")).andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -407,8 +382,8 @@ class SecurityWebTest {
                 List.of(new FleetDto.ModelCount("Solaris Urbino 12", 1, 2)),
                 List.of(new FleetDto.ModelCount("maxi", 1, 2)), List.of(new FleetDto.ModelCount("Solaris", 1, 2)),
                 List.of(usage), List.of(usage),
-                List.of(usage), List.of(new FleetDto.Breakdown(vehicle, Instant.parse("2026-11-16T07:00:00Z"), "103",
-                "103-05", "Choroszcz", "Rynek", null, 1.2)));
+                List.of(usage), List.of(new FleetDto.BusChange(vehicle, Instant.parse("2026-11-16T07:00:00Z"), "103",
+                "103-05", "Choroszcz", "Rynek", null, 29)));
         given(fleetService.report(new ReportWindow(from, to), Set.of())).willReturn(report);
         given(fleetService.report(new ReportWindow(FIRST_RECORDING, NOW), Set.of("BKM", "KPKM"))).willReturn(report);
 
@@ -417,7 +392,7 @@ class SecurityWebTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.agencies[0].name").value("BKM"))
                 .andExpect(jsonPath("$.models[0].fleet").value(2))
-                .andExpect(jsonPath("$.breakdowns[0].daysOut").value(1.2))
+                .andExpect(jsonPath("$.busChanges[0].hoursOut").value(29))
                 .andExpect(jsonPath("$.mostUsed[0].hours").value(12.5));
         // No window: all time, from the first recording until now.
         mvc.perform(get("/api/fleet").param("agency", "BKM").param("agency", "KPKM")
@@ -437,7 +412,7 @@ class SecurityWebTest {
                 List.of("103"), NOW, List.of(new FleetDto.Day(LocalDate.of(2026, 11, 16), from, 1.5,
                 List.of(new FleetDto.Run(18000, 21000, "103", "103-05", "Choroszcz")), List.of())),
                 List.of(new FleetDto.Incident("missed", LocalDate.of(2026, 11, 16), "103", "103-05", "Choroszcz",
-                        from, List.of(TripAnomalyDto.Phrase.of("betweenRuns")), List.of(), List.of(), List.of())));
+                        from, List.of(TripAnomalyDto.Phrase.of("noBus")), List.of(), List.of())));
         given(fleetService.vehicle(7L, new ReportWindow(from, NOW))).willReturn(detail);
 
         mvc.perform(get("/api/fleet/vehicles/7").param("from", from.toString())
@@ -449,15 +424,15 @@ class SecurityWebTest {
     }
 
     @Test
-    void guestCanReadStopHotspotsForAWindowAndLine() throws Exception {
+    void guestCanReadStopHotspotsForAWindowAndRoute() throws Exception {
         var hotspot = new HotspotDto.Hotspot(1, 53.136, 23.151, 19, 2.43, 20.8, 216, 82, 40, 39, 60,
-                "Częstochowska/Piłsudskiego", 70, List.of(new HotspotDto.LineTime("21", 0.5)),
+                "Częstochowska/Piłsudskiego", 70, List.of(new HotspotDto.RouteTime("21", 0.5)),
                 List.of(new HotspotDto.Approach("E", 1.0)), 7);
         var from = Instant.parse("2026-11-09T20:00:00Z");
         var report = new HotspotDto.Report(from, NOW, "21", List.of("21"), 7, 216, 2.9, 2.4, List.of(hotspot));
         given(hotspotService.report(new ReportWindow(from, NOW), "21")).willReturn(report);
 
-        mvc.perform(get("/api/hotspots").param("from", from.toString()).param("line", "21")
+        mvc.perform(get("/api/hotspots").param("from", from.toString()).param("route", "21")
                         .header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.hotspots[0].nearestStop").value("Częstochowska/Piłsudskiego"))
@@ -468,7 +443,7 @@ class SecurityWebTest {
     }
 
     @Test
-    void guestCanReadDelayGenerationForTheNetworkAndALine() throws Exception {
+    void guestCanReadDelayGenerationForTheNetworkAndARoute() throws Exception {
         var report = new DelayGenerationDto.Report(FIRST_RECORDING, NOW, 4, 8479, List.of(new DelayGenerationDto.Band("all", "All day")),
                 List.of(new DelayGenerationDto.Stretch("Lipowa/Nowy Świat", "pl. Niepodległości", 53.13, 23.15,
                         53.131, 23.152, List.of("2"), List.of(707), List.of(35.6))),
@@ -476,31 +451,31 @@ class SecurityWebTest {
         given(delayGenerationService.report(new ReportWindow(FIRST_RECORDING, NOW))).willReturn(report);
         var from = Instant.parse("2026-10-17T20:00:00Z");
         var to = Instant.parse("2026-11-16T20:00:00Z");
-        var line = new DelayGenerationDto.LineReport(from, to, "21", 8, List.of(), List.of(
+        var route = new DelayGenerationDto.RouteReport(from, to, "21", 8, List.of(), List.of(
                 new DelayGenerationDto.BrigadeGain("021-07", 84, 124.0, 664)), List.of());
-        given(delayGenerationService.line(new ReportWindow(from, to), "21")).willReturn(line);
+        given(delayGenerationService.route(new ReportWindow(from, to), "21")).willReturn(route);
 
         mvc.perform(get("/api/delay-generation").header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.stretches[0].meanSeconds[0]").value(35.6));
-        mvc.perform(get("/api/delay-generation/lines/21").param("from", from.toString()).param("to", to.toString())
+        mvc.perform(get("/api/delay-generation/routes/21").param("from", from.toString()).param("to", to.toString())
                         .header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.brigades[0].brigade").value("021-07"));
         mvc.perform(get("/api/delay-generation").param("from", NOW.plusSeconds(60).toString())
                 .header("Authorization", bearer("guest", "GUEST"))).andExpect(status().isBadRequest());
-        mvc.perform(get("/api/delay-generation/lines/21")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/delay-generation/routes/21")).andExpect(status().isUnauthorized());
     }
 
     @Test
     void guestCanReadAbnormalTripsForAWindow() throws Exception {
         var trip = new TripAnomalyDto.Trip("lost",
-                List.of(TripAnomalyDto.Phrase.of("lostForGood", "bus", "319")), "012-02_P_1", "12", "012-02",
+                List.of(TripAnomalyDto.Phrase.of("lostAt", "index", 8, "total", 25)), "012-02_P_1", "12", "012-02",
                 "Hetmańska", "Starosielce", "Hetmańska", Instant.parse("2026-11-15T08:15:00Z"),
                 Instant.parse("2026-11-15T09:00:00Z"), 25, List.of("319"), 1, 8, "Starosielce", "Gen. Fieldorfa",
                 Instant.parse("2026-11-15T08:16:00Z"), Instant.parse("2026-11-15T09:24:00Z"), 0, 120, 60, null,
-                null, null, null, List.of(), List.of(), null, null, null, null, null, null, null, null, null, null, null, null, null, null,
-                List.of(), List.of());
+                null, null, null, List.of(), List.of(), null, null, null, null, null, null, null, null, null, null, null, null, null,
+                List.of());
         var from = Instant.parse("2026-11-17T11:45:00Z");
         var report = new TripAnomalyDto.Report(from, NOW,
                 new TripAnomalyDto.Summary(40, 30, 29, 0, 0, 0, 0, 1, 0, 0, 0, 10, 0, 0), List.of(), 1, List.of(trip));
@@ -526,16 +501,9 @@ class SecurityWebTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.total").value(51));
         mvc.perform(get("/api/trip-runs")).andExpect(status().isUnauthorized());
-        given(tripRunService.day(LocalDate.of(2026, 11, 23), "103-05")).willReturn(
-                new TripRunDto.Day(LocalDate.of(2026, 11, 23), "103-05", List.of()));
-        mvc.perform(get("/api/trip-runs/day").param("brigade", "103-05").param("date", "2026-11-23")
-                        .header("Authorization", bearer("guest", "GUEST")))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.serviceDay").value("2026-11-23"));
-        mvc.perform(get("/api/trip-runs/day").param("brigade", "103-05")).andExpect(status().isUnauthorized());
         given(tripRunService.detail(LocalDate.of(2026, 11, 23), "103-05", "t1")).willReturn(new TripRunDto.Detail(
                 "t1", List.of(new TripRunDto.DetailPoint(from, "230", 53.1, 23.1, 60, 0)),
-                List.of(new double[] {53.1, 23.1}), List.of(new TripRunDto.DetailStop(1, "Rynek", 53.1, 23.1, 35))));
+                List.of(new double[] {53.1, 23.1}), List.of(new TripRunDto.DetailStop(1, "Rynek", 53.1, 23.1, from, from, 0, 35))));
         mvc.perform(get("/api/trip-runs/2026-11-23/103-05/t1").header("Authorization", bearer("guest", "GUEST")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.points[0].delay").value(60))
@@ -572,11 +540,10 @@ class SecurityWebTest {
     @Test
     void guestCanReadTheBrigadesOfADayAndOnesDay() throws Exception {
         LocalDate day = LocalDate.of(2026, 11, 18);
-        given(brigadeDayService.today()).willReturn(day);
         given(brigadeDayService.brigades(null)).willReturn(new BrigadeDto.BrigadeList("BKM",
                 List.of(new BrigadeDto.Agency("BKM", "BKM")), List.of(new BrigadeDto.BrigadeRef("103-05",
                 List.of("103")))));
-        given(brigadeDayService.day("103-05", day)).willReturn(new BrigadeDto.Day("103-05", day,
+        given(tripRunService.day(day, "103-05")).willReturn(new TripRunDto.Day(day, "103-05",
                 new BrigadeDto.Summary(0, 0, 0, 0, 0, 0, null, null, List.of()), List.of()));
 
         mvc.perform(get("/api/brigades").header("Authorization", bearer("guest", "GUEST")))
@@ -611,7 +578,7 @@ class SecurityWebTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.city[0].length()").value(2))
                 .andExpect(jsonPath("$.centre.length()").value(CityBoundaries.CENTRE.length))
-                .andExpect(jsonPath("$.lineCentre.length()").value(9));
+                .andExpect(jsonPath("$.routeCentre.length()").value(9));
         mvc.perform(get("/api/boundaries")).andExpect(status().isUnauthorized());
     }
 

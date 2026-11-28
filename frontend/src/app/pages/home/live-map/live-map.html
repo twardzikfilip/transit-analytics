@@ -31,10 +31,12 @@
   </label>
   <label>
     {{ t('live.lines') }}
-    <select class="line-type" (change)="setLineType($any($event.target).value)">
-      <option value="" [selected]="lineType() === null">{{ t('live.allLines') }}</option>
-      @for (type of lineTypes; track type.key) {
-        <option [value]="type.key" [selected]="type.key === lineType()">{{ t(type.label) }}</option>
+    <select class="line-type" (change)="setRouteType($any($event.target).value)">
+      <option value="" [selected]="routeType() === null">{{ t('live.allLines') }}</option>
+      @for (type of routeTypes; track type.key) {
+        <option [value]="type.key" [selected]="type.key === routeType()">
+          {{ t(type.label) }}
+        </option>
       }
     </select>
   </label>

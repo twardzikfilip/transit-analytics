@@ -12,16 +12,16 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
 import * as L from 'leaflet';
-import { LineDetail, LineVariant, RouteSubtype } from '../../core/models/models';
+import { RouteDetail, RouteVariant, RouteSubtype } from '../../core/models/models';
 import { escapeHtml } from '../../shared/format/html';
-import { LineStatsActions } from '../../store/line-stats/line-stats.actions';
-import { lineStatsFeature } from '../../store/line-stats/line-stats.reducer';
+import { RouteStatsActions } from '../../store/route-stats/route-stats.actions';
+import { routeStatsFeature } from '../../store/route-stats/route-stats.reducer';
 import { RouteDetailActions } from '../../store/route-detail/route-detail.actions';
 import { routeDetailFeature } from '../../store/route-detail/route-detail.reducer';
 import { BrigadeTimeline } from './brigade-timeline';
 import { EndStops } from './end-stops';
-import { LineVehiclesSection } from './line-vehicles';
-import { LineRegularity } from './variant-tiles';
+import { RouteVehiclesSection } from './route-vehicles';
+import { RouteRegularity } from './variant-tiles';
 import { clock, duration } from '../../shared/format/time';
 import { cssColor, INK, WHITE } from '../../shared/palette';
 import {
@@ -44,7 +44,7 @@ import { injectCityBoundaries } from '../../shared/map/city-boundaries';
 import {
   BOUNDARY_STYLES,
   BUS_LANE_STYLE,
-  LINE_KIND_COLORS,
+  ROUTE_KIND_COLORS,
   VARIANT_COLORS,
 } from '../../shared/palette';
 import { Skeleton } from '../../shared/skeleton/skeleton';
@@ -56,9 +56,9 @@ import { decimal, int } from '../../shared/format/number';
 export const RARE_SHARE = 0.05;
 
 /**
- * One route (/routes/route/103): the line (city, suburban, night or regional) on the map with its variants, its
+ * One route (/routes/route/103): the route (city, suburban, night or regional) on the map with its variants, its
  * timetable figures (lengths, travel times, speeds, zone 2, brigades) and how it actually runs, measured from
- * recorded vehicle positions; with links to its trips and its timetable on the operator's website. Regional lines of
+ * recorded vehicle positions; with links to its trips and its timetable on the operator's website. Regional routes of
  * other operators aren't in the timetable: only what was recorded is shown for them.
  */
 
@@ -76,7 +76,7 @@ export const RARE_SHARE = 0.05;
     TravelCharts,
     BrigadeTimeline,
     EndStops,
-    LineVehiclesSection,
+    RouteVehiclesSection,
   ],
   templateUrl: './routes.html',
   styleUrl: './routes.scss',
@@ -100,13 +100,13 @@ export class RoutesPage {
     routeDetailFeature.selectLoadingPerformance,
   );
 
-  /** Every line's weekday statistics (GET /api/lines/stats), for the chosen line's regularity tile. */
-  private readonly lineStats = this.store.selectSignal(lineStatsFeature.selectReport);
-  /** The chosen line's regularity in peak and off-peak hours, and when those are; null until known. */
-  protected readonly regularity = computed((): LineRegularity | null => {
-    const report = this.lineStats();
+  /** Every route's weekday statistics (GET /api/routes/stats), for the chosen route's regularity tile. */
+  private readonly routeStats = this.store.selectSignal(routeStatsFeature.selectReport);
+  /** The chosen route's regularity in peak and off-peak hours, and when those are; null until known. */
+  protected readonly regularity = computed((): RouteRegularity | null => {
+    const report = this.routeStats();
     const id = this.detail()?.id;
-    const stats = report && id != null ? report.lines.find((l) => l.routeId === id) : undefined;
+    const stats = report && id != null ? report.routes.find((l) => l.routeId === id) : undefined;
     return stats && report
       ? {
           peakCv: stats.peakRegularityCv,
@@ -117,7 +117,7 @@ export class RoutesPage {
       : null;
   });
 
-  /** What a line's classes mean, for the line title. */
+  /** What a route's classes mean, for the route title. */
   protected readonly classes = computed(() => {
     const d = this.detail();
     if (!d) return null;
@@ -133,8 +133,8 @@ export class RoutesPage {
         : null,
     };
   });
-  /** The line in the path (/routes/route/103). */
-  protected readonly selected = computed(() => this.path().get('line'));
+  /** The route in the path (/routes/route/103). */
+  protected readonly selected = computed(() => this.path().get('route'));
 
   protected readonly clock = clock;
   protected readonly duration = duration;
@@ -149,7 +149,7 @@ export class RoutesPage {
     return m ? `${m.firstStop} ⇄ ${m.lastStop}` : '';
   });
 
-  /** A line without a timetable: its recorded variants, each with its colour and whether it was driven rarely. */
+  /** A route without a timetable: its recorded variants, each with its colour and whether it was driven rarely. */
   protected readonly recorded = computed(() => {
     const r = this.detail()?.recorded;
     if (!r?.variants.length) return null;
@@ -177,24 +177,24 @@ export class RoutesPage {
       this.drawBusLanes(map);
     },
   });
-  /** The line on the map, so a recorded variant chosen stays chosen while the same line is shown. */
+  /** The route on the map, so a recorded variant chosen stays chosen while the same route is shown. */
   private drawnLine: string | null = null;
-  /** City limits, and the centre lines are classified by (geometry). */
-  private readonly drawBoundaries = injectCityBoundaries('lineCentre');
+  /** City limits, and the centre routes are classified by (geometry). */
+  private readonly drawBoundaries = injectCityBoundaries('routeCentre');
   private readonly drawBusLanes = injectBusLanes();
   protected readonly busLaneStyle = BUS_LANE_STYLE;
   protected readonly boundaryStyles = BOUNDARY_STYLES;
 
   constructor() {
-    this.store.dispatch(LineStatsActions.load());
+    this.store.dispatch(RouteStatsActions.load());
 
-    // Load the selected line once per change.
+    // Load the selected route once per change.
     let loaded: string | null = null;
     effect(() => {
-      const line = this.selected();
-      if (line && line !== loaded) {
-        loaded = line;
-        this.store.dispatch(RouteDetailActions.select({ line }));
+      const route = this.selected();
+      if (route && route !== loaded) {
+        loaded = route;
+        this.store.dispatch(RouteDetailActions.select({ route }));
       }
     });
 
@@ -202,14 +202,14 @@ export class RoutesPage {
       const detail = this.detail();
       if (this.host.ready() && detail) {
         if (detail.id === null) {
-          // Drawn again when the line's data changes, not when a variant is chosen (that redraws on its own).
+          // Drawn again when the route's data changes, not when a variant is chosen (that redraws on its own).
           untracked(() => {
-            if (detail.line !== this.drawnLine) this.chosenVariant.set(null);
-            this.drawnLine = detail.line;
+            if (detail.route !== this.drawnLine) this.chosenVariant.set(null);
+            this.drawnLine = detail.route;
             this.drawRecorded();
           });
         } else {
-          this.drawnLine = detail.line;
+          this.drawnLine = detail.route;
           this.drawRoute(detail);
         }
       }
@@ -228,13 +228,13 @@ export class RoutesPage {
 
   /**
    * Base routes thick, other variants thin and dashed in the same colour, depot runs dotted in yellow; stops as small
-   * circles, zone 2 filled; every depot's area, and dashed yellow lines along the streets between the operator's
-   * depot and where the line's brigades start and end their day.
+   * circles, zone 2 filled; every depot's area, and dashed yellow routes along the streets between the operator's
+   * depot and where the route's brigades start and end their day.
    */
-  private drawRoute(detail: LineDetail): void {
+  private drawRoute(detail: RouteDetail): void {
     const layers = this.host.layer;
     layers.clearLayers();
-    const color = cssColor(this.colorVar(detail.subtype), LINE_KIND_COLORS.urban.fallback);
+    const color = cssColor(this.colorVar(detail.subtype), ROUTE_KIND_COLORS.urban.fallback);
     const depotColor = cssColor('--depot', '#eda100');
     const ordered = [...detail.variants].sort(
       (a, b) => (a.kind === 'main' ? 1 : 0) - (b.kind === 'main' ? 1 : 0),
@@ -274,7 +274,7 @@ export class RoutesPage {
         bounds.extend([s.lat, s.lon]);
       }
     }
-    // Every depot's area, the one this line's operator runs from named.
+    // Every depot's area, the one this route's operator runs from named.
     const own = detail.operator?.code;
     for (const d of detail.depots) {
       for (const ring of d.outlines) {
@@ -321,7 +321,7 @@ export class RoutesPage {
         .addTo(layers);
       l.path.forEach((p) => bounds.extend(p));
     }
-    // The map may just have been shown again (it is hidden for lines without a timetable).
+    // The map may just have been shown again (it is hidden for routes without a timetable).
     this.host.map.invalidateSize();
     if (bounds.isValid()) this.host.map.fitBounds(bounds, { padding: [24, 24] });
   }
@@ -332,7 +332,7 @@ export class RoutesPage {
   }
 
   /**
-   * A line without a timetable: where its buses went, from their recorded positions. Each variant in its colour,
+   * A route without a timetable: where its buses went, from their recorded positions. Each variant in its colour,
    * the most driven on top, rare ones thin and dashed; a hollow circle where runs start and a filled one where they
    * end. A chosen variant is drawn thick, the others faded.
    */
@@ -392,7 +392,7 @@ export class RoutesPage {
   }
 }
 
-function variantLabel(v: LineVariant): string {
+function variantLabel(v: RouteVariant): string {
   const kind =
     v.kind === 'main' || v.kind === 'depot'
       ? variantKindLabel(v.kind)

@@ -1,5 +1,5 @@
 import { ActionReducer, createFeature, createReducer, on } from '@ngrx/store';
-import { DelayGenerationReport, DelayLineReport } from '../../core/models/models';
+import { DelayGenerationReport, DelayRouteReport } from '../../core/models/models';
 import { DelayGenerationActions } from './delay-generation.actions';
 
 export interface DelayGenerationState {
@@ -7,19 +7,19 @@ export interface DelayGenerationState {
   report: DelayGenerationReport | null;
   loading: boolean;
   error: string | null;
-  /** The chosen line, likewise. */
-  line: DelayLineReport | null;
-  lineLoading: boolean;
-  lineError: string | null;
+  /** The chosen route, likewise. */
+  route: DelayRouteReport | null;
+  routeLoading: boolean;
+  routeError: string | null;
 }
 
 const initialState: DelayGenerationState = {
   report: null,
   loading: false,
   error: null,
-  line: null,
-  lineLoading: false,
-  lineError: null,
+  route: null,
+  routeLoading: false,
+  routeError: null,
 };
 
 const reducer: ActionReducer<DelayGenerationState> = createReducer(
@@ -27,26 +27,26 @@ const reducer: ActionReducer<DelayGenerationState> = createReducer(
   on(DelayGenerationActions.load, (state) => ({ ...state, loading: true, error: null })),
   on(DelayGenerationActions.loaded, (state, { report }) => ({ ...state, report, loading: false })),
   on(DelayGenerationActions.failure, (state, { error }) => ({ ...state, loading: false, error })),
-  on(DelayGenerationActions.loadLine, (state) => ({
+  on(DelayGenerationActions.loadRoute, (state) => ({
     ...state,
-    lineLoading: true,
-    lineError: null,
+    routeLoading: true,
+    routeError: null,
   })),
-  on(DelayGenerationActions.lineLoaded, (state, { report }) => ({
+  on(DelayGenerationActions.routeLoaded, (state, { report }) => ({
     ...state,
-    line: report,
-    lineLoading: false,
+    route: report,
+    routeLoading: false,
   })),
-  on(DelayGenerationActions.lineFailure, (state, { error }) => ({
+  on(DelayGenerationActions.routeFailure, (state, { error }) => ({
     ...state,
-    lineLoading: false,
-    lineError: error,
+    routeLoading: false,
+    routeError: error,
   })),
-  on(DelayGenerationActions.clearLine, (state) => ({
+  on(DelayGenerationActions.clearRoute, (state) => ({
     ...state,
-    line: null,
-    lineLoading: false,
-    lineError: null,
+    route: null,
+    routeLoading: false,
+    routeError: null,
   })),
 );
 

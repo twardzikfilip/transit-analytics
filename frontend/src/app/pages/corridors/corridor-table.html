@@ -70,7 +70,7 @@
       </tr>
     </thead>
     <tbody>
-      @for (c of sorted(); track c.from + c.to + c.lines.join(); let i = $index) {
+      @for (c of sorted(); track c.from + c.to + c.routes.join(); let i = $index) {
         <tr>
           <td class="num muted">{{ i + 1 }}</td>
           <td>
@@ -91,12 +91,12 @@
           <td class="num sep">{{ c.stops.length }}</td>
           <td class="sep">
             <span class="lines">
-              @for (l of c.lines; track l) {
+              @for (l of c.routes; track l) {
                 <a
                   class="route-badge"
-                  [appLineBadge]="l"
-                  [class.partial]="!c.throughLines.includes(l)"
-                  [attr.title]="t(c.throughLines.includes(l) ? 'corridors.all' : 'corridors.part')"
+                  [appRouteBadge]="l"
+                  [class.partial]="!c.throughRoutes.includes(l)"
+                  [attr.title]="t(c.throughRoutes.includes(l) ? 'corridors.all' : 'corridors.part')"
                   [routerLink]="['/routes/route', l]"
                   >{{ l }}</a
                 >

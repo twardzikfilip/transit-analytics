@@ -16,10 +16,8 @@ public enum VehicleClass {
         return name().toLowerCase(Locale.ROOT);
     }
 
-    @jakarta.persistence.Converter(autoApply = true)
-    public static class Converter extends LowercaseEnumConverter<VehicleClass> {
-        public Converter() {
-            super(VehicleClass.class);
-        }
+    /** From its stored lowercase name; null for null. */
+    public static VehicleClass of(String value) {
+        return value == null ? null : valueOf(value.toUpperCase(Locale.ROOT));
     }
 }

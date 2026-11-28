@@ -24,177 +24,194 @@
       </span>
     </section>
 
-    <section class="card map-card">
-      <app-proposal-map
-        [railways]="railways()"
-        [lines]="mapLines()"
-        [stations]="stations()"
-        [highlighted]="highlighted()"
-        (choose)="choose($event)"
-      />
-      <ul class="legend inset muted">
-        @for (line of lines(); track line.id) {
+    @if (shown()) {
+      <section class="card map-card">
+        <app-proposal-map
+          [railways]="railways()"
+          [routes]="mapLines()"
+          [stations]="stations()"
+          [highlighted]="highlighted()"
+          (choose)="choose($event)"
+        />
+        <ul class="legend inset muted">
+          @for (route of routes(); track route.id) {
+            <li>
+              <span class="route-badge" [style.--route-color]="route.color">{{ route.id }}</span>
+              {{ route.name }}
+            </li>
+          }
           <li>
-            <span class="route-badge" [style.--route-color]="line.color">{{ line.id }}</span>
-            {{ line.name }}
+            <span class="dot" [style.background]="newColor"></span
+            >{{ t('cityRail.proposal.legend.new') }}
           </li>
-        }
-        <li>
-          <span class="dot" [style.background]="newColor"></span
-          >{{ t('cityRail.proposal.legend.new') }}
-        </li>
-      </ul>
-    </section>
+        </ul>
+      </section>
 
-    <section class="card">
-      <h2>{{ t('cityRail.proposal.linesTitle') }}</h2>
-      <p class="muted intro">
-        {{
-          t('cityRail.proposal.' + id() + 'Intro') +
-            ' ' +
-            t('cityRail.proposal.linesIntro', { day: (p.day | date: 'EEEE d MMMM') })
-        }}
-      </p>
-      <div class="data-table-wrap">
-        <table class="data-table clickable lines">
-          <thead>
-            <tr>
-              <th>{{ t('cityRail.proposal.line') }}</th>
-              <th class="num">{{ t('cityRail.proposal.length') }}</th>
-              <th class="num">{{ t('cityRail.proposal.stations') }}</th>
-              <th class="num">{{ t('cityRail.proposal.spacing') }}</th>
-              <th class="num">{{ t('cityRail.proposal.runTime') }}</th>
-              <th class="num">{{ t('cityRail.proposal.speed') }}</th>
-              <th class="num">{{ t('cityRail.proposal.trains') }}</th>
-              <th class="num">{{ t('cityRail.proposal.interval') }}</th>
-              <th class="num">{{ t('cityRail.proposal.vehicles') }}</th>
-              <th class="num">{{ t('cityRail.proposal.closest') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (line of lines(); track line.id) {
-              <tr
-                tabindex="0"
-                [class.selected]="chosen()?.id === line.id"
-                [attr.aria-selected]="chosen()?.id === line.id"
-                (click)="choose(line.id)"
-                (keydown.enter)="choose(line.id)"
-                (mouseenter)="hovered.set(line.id)"
-                (mouseleave)="hovered.set(null)"
-              >
-                <td>
-                  <span class="route-badge" [style.--route-color]="line.color">{{ line.id }}</span>
-                  {{ line.name }}
-                </td>
-                <td class="num">
-                  {{ t('cityRail.proposal.kmValue', { km: (line.km | number: '1.1-1') }) }}
-                </td>
-                <td class="num">{{ line.calls }}</td>
-                <td class="num">
-                  {{ t('cityRail.proposal.kmValue', { km: (line.spacingKm | number: '1.2-2') }) }}
-                </td>
-                <td class="num">
-                  {{
-                    t('cityRail.proposal.minutesBoth', {
-                      out: line.runMinutes,
-                      back: line.runMinutesBack,
-                    })
-                  }}
-                </td>
-                <td class="num">
-                  {{ t('cityRail.proposal.kmh', { v: (line.speed | number: '1.0-0') }) }}
-                </td>
-                <td class="num">{{ line.trainsPerDay }}</td>
-                <td class="num">{{ t('cityRail.vsBus.min', { n: line.maxIntervalMinutes }) }}</td>
-                <td class="num">{{ line.vehicles }}</td>
-                <td class="num" [class.conflict]="line.conflicts > 0">
-                  @if (line.closestMinutes !== null) {
-                    {{ t('cityRail.vsBus.min', { n: line.closestMinutes }) }}
-                  } @else {
-                    –
-                  }
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-      <p class="muted note">{{ t('cityRail.proposal.tableNote') }}</p>
-    </section>
-
-    @if (chosen(); as line) {
-      <section class="card timetable">
-        <h2>
-          <span class="route-badge" [style.--route-color]="line.color">{{ line.id }}</span>
-          {{ t('cityRail.proposal.timetable', { name: line.name }) }}
-        </h2>
+      <section class="card">
+        <h2>{{ t('cityRail.proposal.linesTitle') }}</h2>
         <p class="muted intro">
           {{
-            t('cityRail.proposal.timetableIntro', {
-              min: line.minTurnaround,
-              max: line.maxTurnaround,
-              vehicles: line.vehicles,
-            })
+            t('cityRail.proposal.' + id() + 'Intro') +
+              ' ' +
+              t('cityRail.proposal.linesIntro', { day: (p.day | date: 'EEEE d MMMM') })
           }}
-          @if (line.conflicts > 0) {
-            <span class="conflict">{{
-              t('cityRail.proposal.conflicts', { n: line.conflicts })
-            }}</span>
-          }
         </p>
-        <ul class="legend muted">
-          <li>
-            <span class="kind-swatch city"></span>{{ t('cityRail.proposal.kindsOfTrain.city') }}
-          </li>
-          <li><span class="kind-swatch PR"></span>{{ t('cityRail.proposal.kindsOfTrain.PR') }}</li>
-          <li><span class="kind-swatch IC"></span>{{ t('cityRail.proposal.kindsOfTrain.IC') }}</li>
-          <li><b>|</b> {{ t('cityRail.proposal.passes') }}</li>
-        </ul>
-        @for (way of ways(); track way.key) {
-          <h3>{{ way.title }}</h3>
-          <div class="data-table-wrap timetable-wrap">
-            <table class="data-table times">
-              <thead>
-                <tr>
-                  <th scope="col" class="corner"></th>
-                  @for (trip of way.trips; track $index) {
-                    <th scope="col" [class]="'time ' + trip.kind" [attr.title]="title(trip)">
-                      @if (trip.kind === 'city') {
-                        <span class="pill" [style.border-color]="line.color">{{ trip.label }}</span>
-                      } @else {
-                        {{ short(trip) }}
-                      }
-                    </th>
-                  }
+        <div class="data-table-wrap">
+          <table class="data-table clickable lines">
+            <thead>
+              <tr>
+                <th>{{ t('cityRail.proposal.line') }}</th>
+                <th class="num">{{ t('cityRail.proposal.length') }}</th>
+                <th class="num">{{ t('cityRail.proposal.stations') }}</th>
+                <th class="num">{{ t('cityRail.proposal.spacing') }}</th>
+                <th class="num">{{ t('cityRail.proposal.runTime') }}</th>
+                <th class="num">{{ t('cityRail.proposal.speed') }}</th>
+                <th class="num">{{ t('cityRail.proposal.trains') }}</th>
+                <th class="num">{{ t('cityRail.proposal.interval') }}</th>
+                <th class="num">{{ t('cityRail.proposal.vehicles') }}</th>
+                <th class="num">{{ t('cityRail.proposal.closest') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (route of routes(); track route.id) {
+                <tr
+                  tabindex="0"
+                  [class.selected]="chosen()?.id === route.id"
+                  [attr.aria-selected]="chosen()?.id === route.id"
+                  (click)="choose(route.id)"
+                  (keydown.enter)="choose(route.id)"
+                  (mouseenter)="hovered.set(route.id)"
+                  (mouseleave)="hovered.set(null)"
+                >
+                  <td>
+                    <span class="route-badge" [style.--route-color]="route.color">{{
+                      route.id
+                    }}</span>
+                    {{ route.name }}
+                  </td>
+                  <td class="num">
+                    {{ t('cityRail.proposal.kmValue', { km: (route.km | number: '1.1-1') }) }}
+                  </td>
+                  <td class="num">{{ route.calls }}</td>
+                  <td class="num">
+                    {{
+                      t('cityRail.proposal.kmValue', { km: (route.spacingKm | number: '1.2-2') })
+                    }}
+                  </td>
+                  <td class="num">
+                    {{
+                      t('cityRail.proposal.minutesBoth', {
+                        out: route.runMinutes,
+                        back: route.runMinutesBack,
+                      })
+                    }}
+                  </td>
+                  <td class="num">
+                    {{ t('cityRail.proposal.kmh', { v: (route.speed | number: '1.0-0') }) }}
+                  </td>
+                  <td class="num">{{ route.trainsPerDay }}</td>
+                  <td class="num">
+                    {{ t('cityRail.vsBus.min', { n: route.maxIntervalMinutes }) }}
+                  </td>
+                  <td class="num">{{ route.vehicles }}</td>
+                  <td class="num" [class.conflict]="route.conflicts > 0">
+                    @if (route.closestMinutes !== null) {
+                      {{ t('cityRail.vsBus.min', { n: route.closestMinutes }) }}
+                    } @else {
+                      –
+                    }
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                @for (s of way.stations; track s.name; let i = $index) {
+              }
+            </tbody>
+          </table>
+        </div>
+        <p class="muted note">{{ t('cityRail.proposal.tableNote') }}</p>
+      </section>
+
+      @if (chosen(); as route) {
+        <section class="card timetable">
+          <h2>
+            <span class="route-badge" [style.--route-color]="route.color">{{ route.id }}</span>
+            {{ t('cityRail.proposal.timetable', { name: route.name }) }}
+          </h2>
+          <p class="muted intro">
+            {{
+              t('cityRail.proposal.timetableIntro', {
+                min: route.minTurnaround,
+                max: route.maxTurnaround,
+                vehicles: route.vehicles,
+              })
+            }}
+            @if (route.conflicts > 0) {
+              <span class="conflict">{{
+                t('cityRail.proposal.conflicts', { n: route.conflicts })
+              }}</span>
+            }
+          </p>
+          <ul class="legend muted">
+            <li>
+              <span class="kind-swatch city"></span>{{ t('cityRail.proposal.kindsOfTrain.city') }}
+            </li>
+            <li>
+              <span class="kind-swatch PR"></span>{{ t('cityRail.proposal.kindsOfTrain.PR') }}
+            </li>
+            <li>
+              <span class="kind-swatch IC"></span>{{ t('cityRail.proposal.kindsOfTrain.IC') }}
+            </li>
+            <li><b>|</b> {{ t('cityRail.proposal.passes') }}</li>
+          </ul>
+          @for (way of ways(); track way.key) {
+            <h3>{{ way.title }}</h3>
+            <div class="data-table-wrap timetable-wrap">
+              <table class="data-table times">
+                <thead>
                   <tr>
-                    <th scope="row">
-                      {{ s.name }}
-                      @if (s.kind === 'new' || s.kind === 'passed') {
-                        <span class="tag" [class]="s.kind">{{
-                          t('cityRail.proposal.kinds.' + s.kind)
-                        }}</span>
-                      }
-                    </th>
+                    <th scope="col" class="corner"></th>
                     @for (trip of way.trips; track $index) {
-                      <td
-                        [class]="'time ' + trip.kind"
-                        [class.conflict]="trip.conflict"
-                        [attr.title]="trip.conflict ? t('cityRail.proposal.tooClose') : null"
-                      >
-                        {{ trip.times[i] ?? '' }}
-                      </td>
+                      <th scope="col" [class]="'time ' + trip.kind" [attr.title]="title(trip)">
+                        @if (trip.kind === 'city') {
+                          <span class="pill" [style.border-color]="route.color">{{
+                            trip.label
+                          }}</span>
+                        } @else {
+                          {{ short(trip) }}
+                        }
+                      </th>
                     }
                   </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        }
-      </section>
+                </thead>
+                <tbody>
+                  @for (s of way.stations; track s.name; let i = $index) {
+                    <tr>
+                      <th scope="row">
+                        {{ s.name }}
+                        @if (s.kind === 'new' || s.kind === 'passed') {
+                          <span class="tag" [class]="s.kind">{{
+                            t('cityRail.proposal.kinds.' + s.kind)
+                          }}</span>
+                        }
+                      </th>
+                      @for (trip of way.trips; track $index) {
+                        <td
+                          [class]="'time ' + trip.kind"
+                          [class.conflict]="trip.conflict"
+                          [attr.title]="trip.conflict ? t('cityRail.proposal.tooClose') : null"
+                        >
+                          {{ trip.times[i] ?? '' }}
+                        </td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </section>
+      }
+    } @else if (variantLoading()) {
+      <app-skeleton kind="map" height="560px" [label]="t('cityRail.proposal.loading')" />
+      <app-skeleton kind="table" [count]="6" />
     }
   } @else {
     <section class="card">

@@ -75,7 +75,7 @@ export const BOUNDARY_STYLES = {
 } as const;
 
 /**
- * Categorical colours for a line's recorded variants (Routes, lines without a timetable), in order: the most driven
+ * Categorical colours for a route's recorded variants (Routes, routes without a timetable), in order: the most driven
  * first; further ones repeat them. Checked with the dataviz palette validator (light surface); every variant is also
  * named in a list beside the map.
  */
@@ -91,7 +91,7 @@ export const VARIANT_COLORS = [
 
 /**
  * Bus lanes on maps: a wide, translucent band in the primary colour (--primary in styles.scss) under the vehicles
- * and the line, so it reads as part of the street.
+ * and the route, so it reads as part of the street.
  */
 export const BUS_LANE_STYLE = {
   color: '#00a9bc',
@@ -100,7 +100,7 @@ export const BUS_LANE_STYLE = {
   label: 'palette.busLane',
 } as const;
 
-/** Railways on the City rail map, under the routes: lines, and thinner the spurs to depots and factories. */
+/** Railways on the City rail map, under the routes: railway lines, and thinner the spurs to depots and factories. */
 export const RAILWAY_STYLES = {
   line: { color: '#495057', weight: 2, opacity: 0.8 },
   spur: { color: '#495057', weight: 1, opacity: 0.7 },
@@ -138,16 +138,16 @@ export const DENSITY_NONE = { fill: '#f1f3f5', line: '#9aa1a9' } as const;
 export const DENSITY_UNKNOWN = { fill: WHITE, line: NEUTRAL_GREY } as const;
 
 /**
- * Each kind of line's colour (badges, maps), kept in step with the --line-* tokens in styles.scss: a token in styles.scss (light and dark), and its value before styles load. */
-export const LINE_KIND_COLORS: Record<RouteSubtype, { token: string; fallback: string }> = {
+ * Each kind of route's colour (badges, maps), kept in step with the --line-* tokens in styles.scss: a token in styles.scss (light and dark), and its value before styles load. */
+export const ROUTE_KIND_COLORS: Record<RouteSubtype, { token: string; fallback: string }> = {
   urban: { token: '--line-urban', fallback: '#4b0082' },
   suburban: { token: '--line-suburban', fallback: '#03bf03' },
   regional: { token: '--line-regional', fallback: '#0021ff' },
   night_urban: { token: '--line-night', fallback: '#111111' },
 };
 
-/** Line numbers on a line kind's colour. */
-export const LINE_TEXT_COLOR = '#fff';
+/** Route numbers on a route kind's colour. */
+export const ROUTE_TEXT_COLOR = '#fff';
 
 /** BKM's colours, as $green_bkm and $lightblue_bkm (--green-bkm, --lightblue-bkm) in styles.scss. */
 export const GREEN_BKM = '#4cb034';

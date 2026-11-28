@@ -9,7 +9,7 @@ export interface DayPart {
   label: string;
 }
 
-/** One direction between two consecutive stops, all lines together. Per band, aligned with the report's bands. */
+/** One direction between two consecutive stops, all routes together. Per band, aligned with the report's bands. */
 export interface DelayStretch {
   from: string;
   to: string;
@@ -17,14 +17,14 @@ export interface DelayStretch {
   fromLon: number;
   toLat: number;
   toLon: number;
-  lines: string[];
+  routes: string[];
   runs: number[];
   /** Average change in delay per bus (positive: generated); null without runs. */
   meanSeconds: (number | null)[];
 }
 
-export interface DelayLineSummary {
-  line: string;
+export interface DelayRouteSummary {
+  route: string;
   runs: number;
   /** Average change in delay from a run's first stop to its last. */
   meanGainSeconds: number;
@@ -46,11 +46,11 @@ export interface DelayGenerationReport {
   runs: number;
   bands: DayPart[];
   stretches: DelayStretch[];
-  lines: DelayLineSummary[];
+  routes: DelayRouteSummary[];
 }
 
-/** A stretch of one direction of a line. */
-export interface DelayLineStretch {
+/** A stretch of one direction of a route. */
+export interface DelayRouteStretch {
   from: string;
   to: string;
   fromSeq: number;
@@ -73,7 +73,7 @@ export interface DelayDirection {
   runs: number;
   meanGainSeconds: number;
   /** In route order. */
-  stretches: DelayLineStretch[];
+  stretches: DelayRouteStretch[];
   /** The runs that gained the most delay. */
   exampleIds: number[];
 }
@@ -104,10 +104,10 @@ export interface DelayExample {
   stops: DelayExampleStop[];
 }
 
-export interface DelayLineReport {
+export interface DelayRouteReport {
   from: string;
   to: string;
-  line: string;
+  route: string;
   days: number;
   directions: DelayDirection[];
   brigades: DelayBrigadeGain[];

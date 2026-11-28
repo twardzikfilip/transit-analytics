@@ -8,20 +8,13 @@ describe('stops reducer (paged)', () => {
   const stop = (id: number, name: string): Stop => ({
     id,
     feed: 'bialystok',
-    gtfsId: String(id),
     code: String(id),
     name,
-    description: null,
     latitude: 53.13,
     longitude: 23.16,
     zoneId: '1',
-    url: null,
-    locationType: null,
-    parentStation: null,
-    wheelchairBoarding: null,
-    platformCode: null,
   });
-  const query: PageQuery = { page: 1, size: 2, sort: 'name', filters: { q: 'dw' } };
+  const query: PageQuery = { page: 1, size: 2, filters: { q: 'dw' } };
   const meta = { size: 2, number: 1, totalElements: 5, totalPages: 3 };
 
   it('remembers the query, then holds exactly the loaded page', () => {

@@ -1,5 +1,5 @@
 import {
-  LineRef,
+  RouteRef,
   RouteCapacity,
   RouteGeometry,
   RouteSubtype,
@@ -9,7 +9,7 @@ import {
 import { localTime } from '../../shared/format/time';
 import { t } from '../../core/i18n/t';
 
-/** Subtypes in display order, with their label and line colour (a CSS custom property from styles.scss). */
+/** Subtypes in display order, with their label and route colour (a CSS custom property from styles.scss). */
 export const SUBTYPES: { subtype: RouteSubtype; color: string }[] = [
   { subtype: 'urban', color: '--line-urban' },
   { subtype: 'suburban', color: '--line-suburban' },
@@ -58,24 +58,24 @@ export function capacityDescription(capacity: RouteCapacity): string {
   return t(`routes.capacityDesc.${capacity}`);
 }
 
-/** A cell of the line table: one kind of line (a row) run in one geometry (a column). */
-export interface LineTableRow {
+/** A cell of the route table: one kind of route (a row) run in one geometry (a column). */
+export interface RouteTableRow {
   label: string;
   color: string;
-  cells: LineRef[][];
+  cells: RouteRef[][];
 }
 
 /**
- * Lines in a table: a row per kind of line (urban, suburban, night, regional), a column per geometry, and a last
- * column for lines not classified, when there are any. Empty rows are left out; lines keep their order.
+ * Routes in a table: a row per kind of route (urban, suburban, night, regional), a column per geometry, and a last
+ * column for routes not classified, when there are any. Empty rows are left out; routes keep their order.
  */
-export interface LineTable {
+export interface RouteTable {
   columns: { label: string; description: string }[];
-  rows: LineTableRow[];
+  rows: RouteTableRow[];
 }
 
-export function lineTable(lines: LineRef[]): LineTable {
-  const unclassified = lines.some((l) => l.geometry === null);
+export function routeTable(routes: RouteRef[]): RouteTable {
+  const unclassified = routes.some((l) => l.geometry === null);
   const geometries: (RouteGeometry | null)[] = [
     ...GEOMETRIES.map((g) => g.geometry),
     ...(unclassified ? [null] : []),
@@ -89,7 +89,7 @@ export function lineTable(lines: LineRef[]): LineTable {
       label: subtypeLabel(s.subtype),
       color: s.color,
       cells: geometries.map((g) =>
-        lines.filter((l) => l.subtype === s.subtype && l.geometry === g),
+        routes.filter((l) => l.subtype === s.subtype && l.geometry === g),
       ),
     })).filter((r) => r.cells.some((c) => c.length > 0)),
   };

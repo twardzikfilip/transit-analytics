@@ -1,0 +1,134 @@
+package com.transitanalytics.timetable;
+
+import com.transitanalytics.brigades.RecordedBrigades;
+import com.transitanalytics.domain.CityTime;
+import com.transitanalytics.domain.TimetableFeed;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+
+import static com.transitanalytics.timetable.Periods.*;
+
+/**
+ * The service day: local time in Białystok, running from 03:00 to 03:00, so the hours after midnight (24, 25, 26)
+ * belong to the day before.
+ */
+public final class ServiceDay {
+
+    /** A service day runs from 03:00 to 03:00; times before 03:00 count as hours 24, 25 and 26 of the day before. */
+    public static final int DAY_START_HOUR = 3;
+    public static final ZoneId ZONE = CityTime.ZONE;
+
+    /** Hour of the service day: 3–23, then 24, 25, 26 for the hours after midnight. */
+    public static int serviceHour(double epochSeconds) {
+        int hour = ZonedDateTime.ofInstant(Instant.ofEpochSecond((long) epochSeconds), ZONE).getHour();
+        return hour < DAY_START_HOUR ? hour + 24 : hour;
+    }
+
+    private static final String LEARNT_BRIGADE = "(SELECT b.brigade FROM trip_brigade b WHERE b.trip_id = t.id)";
+
+    /**
+     * The brigade (vehicle duty) of a trip, in SQL on {@code trip t}: its block id, else the brigade learnt from the
+     * recordings ({@link RecordedBrigades}), else the trip id's prefix, as in the city's timetable (103-05_P_1349_… is
+     * brigade 103-05; live positions name BKM's brigades the same way). A trip of another feed without either is
+     * a brigade of its own (its id); {@link #NAMED_BRIGADE_SQL} tells them apart.
+     */
+    public static final String BRIGADE_SQL = "coalesce(t.block_id, " + LEARNT_BRIGADE + ", split_part(t.gtfs_id, '_', 1))";
+
+    /**
+     * SQL on {@code trip t}: whether {@link #BRIGADE_SQL} names a real brigade: in the city's timetable (trip ids), by
+     * a block id, or learnt from the recordings.
+     */
+    public static final String NAMED_BRIGADE_SQL = "(t.feed = '" + TimetableFeed.MAIN + "' OR t.block_id IS NOT NULL OR "
+            + LEARNT_BRIGADE + " IS NOT NULL)";
+
+    /** SQL: whether a date (an SQL expression of type date) is a weekday, Monday to Friday. */
+    public static String weekdaySql(String date) {
+        return "extract(isodow FROM " + date + ") <= 5";
+    }
+
+    /**
+     * SQL: whether a recorded time (an SQL timestamptz expression) falls on a weekday's service day: a report at 00:30
+     * on Saturday still belongs to Friday's service.
+     */
+    public static String weekdayServiceDaySql(String instant) {
+        return weekdaySql(serviceTimeSql(instant));
+    }
+
+    /**
+     * SQL: a recorded time (an SQL timestamptz expression) as a local timestamp moved back by the day's start, so its
+     * date is the service day and its time runs from 00:00 at 03:00.
+     */
+    public static String serviceTimeSql(String instant) {
+        return "((%s AT TIME ZONE '%s') - make_interval(hours => %d))".formatted(instant, ZONE.getId(), DAY_START_HOUR);
+    }
+
+    /** GTFS times before this (03:00, in seconds) belong to the service day before the timetable's date. */
+    static final int DAY_START_SECONDS = DAY_START_HOUR * 3600;
+
+    private static final String RUNS_ON =
+            "(t.feed, t.service_id) IN (SELECT feed, service_id FROM calendar_date WHERE date = ? AND exception_type = 1)";
+    private static final String STARTS_BEFORE_DAY_START = "EXISTS (SELECT 1 FROM stop_time e WHERE e.trip_id = t.id"
+            + " AND e.departure_time::interval < interval '" + DAY_START_HOUR + " hours')";
+
+    /**
+     * The trips of a service day, in SQL on {@code trip t}; takes the parameters {@link #tripsOfDayArgs}. A timetable
+     * gives trips after midnight either as 24:10 on the day, or as 00:10 on the next date (as this one does for the
+     * night routes); both belong to the service day that started the evening before, as the hours after midnight do.
+     */
+    public static final String TRIPS_OF_DAY_SQL = "(" + RUNS_ON + " AND NOT " + STARTS_BEFORE_DAY_START
+            + " OR " + RUNS_ON + " AND " + STARTS_BEFORE_DAY_START + ")";
+
+    /** The parameters of {@link #TRIPS_OF_DAY_SQL}: the day and the date after it. */
+    public static Object[] tripsOfDayArgs(LocalDate day) {
+        return new Object[] {day, day.plusDays(1)};
+    }
+
+    /**
+     * What a trip of the service day counts its GTFS times from, given its first departure: trips starting before
+     * 03:00 are on the next date's timetable (see {@link #TRIPS_OF_DAY_SQL}).
+     */
+    public static Instant tripTimeZero(LocalDate day, int firstDeparture) {
+        return gtfsTimeZero(firstDeparture < DAY_START_SECONDS ? day.plusDays(1) : day);
+    }
+
+    public static LocalDate serviceDay(double epochSeconds) {
+        return ZonedDateTime.ofInstant(Instant.ofEpochSecond((long) epochSeconds), ZONE)
+                .minusHours(DAY_START_HOUR).toLocalDate();
+    }
+
+    public static LocalDate serviceDay(Instant instant) {
+        return serviceDay(instant.getEpochSecond());
+    }
+
+    /** When a service day begins: 03:00 local time. */
+    public static Instant start(LocalDate day) {
+        return day.atTime(DAY_START_HOUR, 0).atZone(ZONE).toInstant();
+    }
+
+    /**
+     * What GTFS times on that day count from (e.g. 25:10:00 is 25 h 10 min after it): noon minus 12 hours, which is
+     * midnight except on days the clocks change.
+     */
+    public static Instant gtfsTimeZero(LocalDate day) {
+        return day.atTime(LocalTime.NOON).atZone(ZONE).minusHours(12).toInstant();
+    }
+
+    private static final java.time.format.DateTimeFormatter HH_MM =
+            java.time.format.DateTimeFormatter.ofPattern("HH:mm").withZone(ZONE);
+
+    /** Local time of day, "07:41". */
+    static String localTime(Instant instant) {
+        return HH_MM.format(instant);
+    }
+
+    /** Whether a run departing then starts in the peak hours of Route statistics. */
+    public static boolean inPeak(double epochSeconds) {
+        int second = ZonedDateTime.ofInstant(Instant.ofEpochSecond((long) epochSeconds), ZONE).toLocalTime()
+                .toSecondOfDay();
+        return Periods.PEAK.stream().anyMatch(w -> second >= w.from() && second < w.to());
+    }
+}
