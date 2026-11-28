@@ -49,4 +49,15 @@ export interface DelayBand {
 export interface RouteActivity {
   route: string;
   samples: number;
+  /** Its reports' mean delay, outliers left out; null when none had a delay. */
+  meanDelaySeconds: number | null;
+  /** The reports that mean is over. */
+  delaySamples: number;
+}
+
+/** A stop where buses dwell long: the mean of its visits in the window (passing without halting counts 0). */
+export interface StopDwell {
+  stop: string;
+  meanSeconds: number;
+  visits: number;
 }

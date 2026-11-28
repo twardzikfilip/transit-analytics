@@ -8,7 +8,7 @@
     {{ tr('travel.fullRuns', { n: p.fullRuns }) }}
   </p>
 } @else if (loading()) {
-  <p class="muted">{{ tr('travel.loading') }}</p>
+  <app-skeleton kind="chart" />
 }
 
 <div class="charts" [class.loading]="loading()">

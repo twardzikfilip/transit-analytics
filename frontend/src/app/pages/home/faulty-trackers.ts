@@ -28,17 +28,19 @@ export function trackerTrips(f: FaultyTracker): string {
   imports: [RouterLink, RouteBadge, Skeleton, LocalDatePipe],
   template: `
     @if (report(); as r) {
-      <section
+      <details
         class="card tile"
         [class.alert]="r.trackers.length"
         [attr.aria-label]="t('home.trackers.title')"
       >
-        <h2>
-          {{ t('home.trackers.title') }}
-          @if (r.trackers.length) {
-            <span class="count">{{ r.trackers.length }}</span>
-          }
-        </h2>
+        <summary>
+          <h2>
+            {{ t('home.trackers.title') }}
+            @if (r.trackers.length) {
+              <span class="count">{{ r.trackers.length }}</span>
+            }
+          </h2>
+        </summary>
         <p class="muted rule">
           {{
             t('home.trackers.rule', {
@@ -69,7 +71,7 @@ export function trackerTrips(f: FaultyTracker): string {
         } @else {
           <p class="muted">{{ t('home.trackers.none') }}</p>
         }
-      </section>
+      </details>
     } @else if (loading()) {
       <section class="card tile">
         <app-skeleton kind="lines" [count]="3" [label]="t('home.trackers.loading')" />
@@ -86,11 +88,38 @@ export function trackerTrips(f: FaultyTracker): string {
       border-color: var(--danger);
     }
 
+    /* Folded by default: only the title and the count show until it is opened. */
+    summary {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      list-style: none;
+    }
+
+    summary::-webkit-details-marker {
+      display: none;
+    }
+
+    summary::before {
+      content: '▸';
+      color: var(--muted);
+      transition: transform 0.15s;
+    }
+
+    details[open] > summary::before {
+      transform: rotate(90deg);
+    }
+
+    details[open] > summary {
+      margin-bottom: 0.5rem;
+    }
+
     h2 {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      margin: 0 0 0.25rem;
+      margin: 0;
       font-size: 1.05rem;
     }
 

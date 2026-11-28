@@ -1,5 +1,6 @@
 package com.transitanalytics.web;
 
+import com.transitanalytics.dwell.StopDwellService;
 import com.transitanalytics.common.ReportWindow;
 import com.transitanalytics.common.ReportWindows;
 import com.transitanalytics.dto.PositionHistoryDto;
@@ -22,10 +23,12 @@ public class PositionHistoryController {
 
     private final PositionHistoryService history;
     private final ReportWindows windows;
+    private final StopDwellService dwell;
 
-    public PositionHistoryController(PositionHistoryService history, ReportWindows windows) {
+    public PositionHistoryController(PositionHistoryService history, ReportWindows windows, StopDwellService dwell) {
         this.history = history;
         this.windows = windows;
+        this.dwell = dwell;
     }
 
     @Operation(summary = "Vehicles running and mean delay over time",
@@ -59,6 +62,26 @@ public class PositionHistoryController {
             @Parameter(description = "Operator, e.g. BKM; all operators when left out") @RequestParam(required = false) String agency) {
         ReportWindow w = windows.resolve(from, to);
         return history.routes(w.from(), w.to(), blankToNull(agency));
+    }
+
+    @Operation(summary = "The stops where buses dwell longest",
+            description = "The 5 stops with the longest mean dwell in the window, of at least 20 visits. A visit is a "
+                    + "bus's consecutive reports within 50 m of a stop along its route (its route's first and last "
+                    + "stops left out): the time it halted there, 0 when it went past; halts over 10 minutes are "
+                    + "breaks, left out. For one route, its stops; else each stop's visits on all routes (an "
+                    + "operator's routes, when one is chosen). Worked out per service day and stored.")
+    @GetMapping("/dwell")
+    public List<PositionHistoryDto.StopDwell> dwell(@RequestParam(required = false) Instant from,
+            @RequestParam(required = false) Instant to,
+            @Parameter(description = "Route, e.g. 103; all routes when left out") @RequestParam(required = false) String route,
+            @Parameter(description = "Operator, e.g. BKM; all operators when left out") @RequestParam(required = false) String agency) {
+        ReportWindow w = windows.resolve(from, to);
+        String one = blankToNull(route);
+        String operator = blankToNull(agency);
+        List<String> routes = one != null || operator == null ? null
+                : history.routes(w.from(), w.to(), operator).stream().map(PositionHistoryDto.RouteActivity::route)
+                .toList();
+        return dwell.top(w, one, routes);
     }
 
     @Operation(summary = "Operators on the feed", description = "For the operator filter: the city operator first.")

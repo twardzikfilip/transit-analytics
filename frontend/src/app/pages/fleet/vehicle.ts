@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { operatorLogo } from '../../shared/format/operator-logo';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Store } from '@ngrx/store';
@@ -13,14 +14,7 @@ import { windowQuery } from '../../shared/time-window/time-window';
 import { FleetActions } from '../../store/fleet/fleet.actions';
 import { fleetFeature } from '../../store/fleet/fleet.reducer';
 import { DEFAULT_PRESET, fleetQuery, loadReport, openVehicle } from './fleet';
-import {
-  dailyBars,
-  dayLabel,
-  hoursAxis,
-  isShortWindow,
-  operatorLogo,
-  timelineRows,
-} from './fleet-format';
+import { dailyBars, dayLabel, hoursAxis, isShortWindow, timelineRows } from './fleet-format';
 import { RunTimeline } from './run-timeline';
 import { VehicleSearch } from './vehicle-search';
 import { Skeleton } from '../../shared/skeleton/skeleton';

@@ -40,6 +40,15 @@ $lightblue_bkm: #2393ca;
   --shadow: 0 1px 3px rgb(0 0 0 / 10%), 0 1px 2px rgb(0 0 0 / 6%);
   /* Floating panels (menus, dropdowns, popups). */
   --shadow-float: 0 4px 12px rgb(0 0 0 / 15%);
+  /* Raised above the page: the login card and dialogs. */
+  --shadow-raised: 0 20px 50px rgb(0 0 0 / 55%), 0 4px 12px rgb(0 0 0 / 35%);
+  /* Dialogs (Angular Material's MatDialog): a card raised like the login card. Their content is the app's own. */
+  --mat-dialog-container-color: var(--surface);
+  --mat-dialog-container-shape: var(--radius);
+  --mat-dialog-container-elevation-shadow: var(--shadow-raised);
+  --mat-dialog-container-min-width: 320px;
+  --mat-dialog-container-max-width: min(460px, 92vw);
+  --mat-dialog-container-small-max-width: 92vw;
   /* Chart series colour; validated against the chart surface for each mode. */
   --chart-line: #1e88e5;
   /* More chart series (categorical slots 2 and 3). */

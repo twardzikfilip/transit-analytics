@@ -23,7 +23,7 @@ import { RouteStatsActions } from '../store/route-stats/route-stats.actions';
 import { routeStatsFeature } from '../store/route-stats/route-stats.reducer';
 import { Corridors } from './corridors/corridors';
 import { LiveMap } from './home/live-map/live-map';
-import { PositionHistory } from './home/position-history/position-history';
+import { PositionHistory, delayRankings } from './home/position-history/position-history';
 import { RoutesPage } from './routes/routes';
 import { RoutesOverview } from './routes/routes-overview';
 
@@ -306,6 +306,87 @@ describe('Position history charts', () => {
       '2026-11-17T11:00:00.000Z',
     ]);
     expect(charts.rows).toHaveLength(2);
+  });
+});
+
+describe('Position history rankings and dwell', () => {
+  const activity = (route: string, meanDelaySeconds: number | null, delaySamples = 500) => ({
+    route,
+    samples: 600,
+    meanDelaySeconds,
+    delaySamples,
+  });
+  // 12 routes: 1 to 12 with a mean of 30 s to 360 s; 0 running early; X seen too little; N with no delays.
+  const routes = [
+    ...Array.from({ length: 12 }, (_, i) => activity(String(i + 1), 30 * (i + 1))),
+    activity('0', -45),
+    activity('X', 900, 10),
+    activity('N', null, 0),
+  ];
+  const dwell = [
+    { stop: 'Rynek Kościuszki', meanSeconds: 52.4, visits: 310 },
+    { stop: 'Lipowa', meanSeconds: 41, visits: 120 },
+  ];
+  const state = stateAfter(
+    positionHistoryFeature,
+    PositionHistoryActions.routesLoaded({ routes }),
+    PositionHistoryActions.dwellLoaded({ dwell }),
+  );
+  const ranked = (el: HTMLElement, which: string) =>
+    [...el.querySelectorAll(`.ranking.${which} li`)].map(
+      (li) => `${text(li.querySelector('.route-badge'))} ${text(li.querySelector('strong'))}`,
+    );
+
+  it('lists the 10 routes with the most and the least delay side by side, of enough reports', () => {
+    expect(delayRankings(routes).most.map((r) => r.route)).toEqual([
+      '12',
+      '11',
+      '10',
+      '9',
+      '8',
+      '7',
+      '6',
+      '5',
+      '4',
+      '3',
+    ]);
+    const { el } = renderPage(PositionHistory, state, { range: '24h' });
+    expect(text(el.querySelector('.ranking.most h3'))).toBe('Most delay');
+    expect(ranked(el, 'most')[0]).toBe('12 6:00');
+    expect(ranked(el, 'least').slice(0, 3)).toEqual(['0 −0:45', '1 0:30', '2 1:00']);
+    expect(ranked(el, 'least')).toHaveLength(10);
+    expect([...ranked(el, 'most'), ...ranked(el, 'least')].some((r) => r.startsWith('X'))).toBe(
+      false,
+    );
+  });
+
+  it('hides the rankings for one route, and lists its stops with the longest dwell', () => {
+    const all = renderPage(PositionHistory, state, { range: '24h' });
+    expect(text(all.el.querySelector('.dwell h3'))).toBe('Longest dwell at stops');
+    expect(
+      [...all.el.querySelectorAll('.dwell li')].map((li) => [...li.children].map(text).join(' ')),
+    ).toEqual(['Rynek Kościuszki 0:52 310 visits', 'Lipowa 0:41 120 visits']);
+    TestBed.resetTestingModule();
+
+    const one = renderPage(PositionHistory, state, { range: '24h', route: '103' });
+    expect(one.el.querySelector('.rankings')).toBeNull();
+    expect(text(one.el.querySelector('.dwell h3'))).toBe('Longest dwell at stops of line 103');
+  });
+
+  it('shows skeletons, not text, while they load', () => {
+    const { el } = renderPage(
+      PositionHistory,
+      stateAfter(
+        positionHistoryFeature,
+        PositionHistoryActions.load({
+          query: { from: null, to: '2026-11-17T12:00:00Z', route: null, agency: null },
+        }),
+      ),
+      { range: '24h' },
+    );
+    expect(el.querySelectorAll('app-skeleton').length).toBeGreaterThanOrEqual(2);
+    expect(el.querySelector('.rankings')).toBeNull();
+    expect(el.querySelector('.dwell')).toBeNull();
   });
 });
 
@@ -799,7 +880,6 @@ describe('Routes page', () => {
       fullRuns: 109,
       travelTimes: [],
       delays: [],
-      segments: [],
       vehicles: { days: 7, vehicles: [], brigades: [], switches: [] },
     } as RoutePerformance;
     // Every route's weekday statistics: the chosen route's (route 2) regularity goes in its tile.
@@ -853,7 +933,10 @@ describe('Routes page', () => {
     expect(text(el.querySelector('.map-legend'))).toContain('City centre (for line classes)');
     // City limits and the line-classification centre, under the route.
     expect(el.querySelectorAll('.leaflet-city-boundaries-pane path').length).toBeGreaterThan(0);
-    // Who runs it.
+    // Who runs it, its logo under the line number.
+    const logo = el.querySelector('.line-mark .operator-logo img') as HTMLImageElement;
+    expect(logo.getAttribute('src')).toBe('/images/operators/kzk.png');
+    expect(logo.alt).toBe('KZK');
     expect(text(el.querySelector('.line-title .operator'))).toContain(
       'Organised by BKM; operated by KZK (Komunalny Zakład Komunikacyjny sp. z o.o.), from Zajezdnia autobusowa KZK, ' +
         'ul. Pomocna 1. KZK website ↗',
@@ -951,7 +1034,6 @@ describe('Routes page', () => {
       fullRuns: 0,
       travelTimes: [],
       delays: [{ minute: 420, avgDelaySeconds: 60, samples: 30 }],
-      segments: [],
       vehicles: {
         days: 9,
         vehicles: [
@@ -989,6 +1071,8 @@ describe('Routes page', () => {
     const { el, fixture } = renderPage(RoutesPage, state, {}, [], { route: '700' });
     expect(el.querySelector('.line-classes')).toBeNull();
     expect(text(el.querySelector('.line-title h2'))).toBe('Line 700');
+    // Not run by one of BKM's companies: no logo.
+    expect(el.querySelector('.operator-logo')).toBeNull();
     expect(el.querySelectorAll('.line-links a')).toHaveLength(0);
     expect(text(el)).toContain("isn't in the city timetable: it is run by another operator");
     expect(el.querySelector('app-variant-tiles')).toBeNull();

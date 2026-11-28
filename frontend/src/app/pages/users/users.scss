@@ -1,0 +1,32 @@
+.page-header {
+  align-items: center;
+  margin-bottom: 1rem;
+
+  p {
+    margin: 0;
+  }
+}
+
+.add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+td.num {
+  text-align: right;
+  width: 1%;
+}
+
+.icon-button {
+  display: inline-flex;
+  padding: 0.35rem 0.5rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}

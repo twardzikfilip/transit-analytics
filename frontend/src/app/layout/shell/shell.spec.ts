@@ -9,7 +9,7 @@ import { APP_VERSION } from '../../core/version';
 import { Shell } from './shell';
 
 describe('Shell', () => {
-  it('shows the user, every page in the sidebar, and a menu of settings, data sources and logout', () => {
+  it('shows the user, every page in the sidebar, and a menu of settings, users, data sources and logout', () => {
     const { el, store, render } = renderPage(Shell, signedIn('ADMIN'));
 
     expect(text(el.querySelector('.user'))).toBe('ann ADMIN');
@@ -24,8 +24,13 @@ describe('Shell', () => {
     render();
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
     const items = [...el.querySelectorAll('[role=menuitem]')];
-    expect(items.map(text)).toEqual(['Settings', 'Data sources', 'Logout']);
-    expect(items.map((i) => i.getAttribute('href'))).toEqual(['/settings', '/sources', null]);
+    expect(items.map(text)).toEqual(['Settings', 'Users', 'Data sources', 'Logout']);
+    expect(items.map((i) => i.getAttribute('href'))).toEqual([
+      '/settings',
+      '/users',
+      '/sources',
+      null,
+    ]);
     expect(items.every((i) => i.querySelector('app-icon svg path'))).toBe(true);
     const logout = [...el.querySelectorAll('[role=menuitem]')].find(
       (i) => text(i) === 'Logout',
@@ -34,6 +39,17 @@ describe('Shell', () => {
     render();
     expect(store.dispatch).toHaveBeenCalledWith(AuthActions.logout());
     expect(el.querySelector('.dropdown')).toBeNull();
+  });
+
+  it('shows Users in the menu to admins only', () => {
+    const { el, render } = renderPage(Shell, signedIn('GUEST'));
+    (el.querySelector('button.hamburger') as HTMLButtonElement).click();
+    render();
+    expect([...el.querySelectorAll('[role=menuitem]')].map(text)).toEqual([
+      'Settings',
+      'Data sources',
+      'Logout',
+    ]);
   });
 
   it('closes the menu on a click elsewhere or Escape', () => {

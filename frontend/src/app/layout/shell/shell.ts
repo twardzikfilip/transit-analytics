@@ -7,13 +7,14 @@ import { ApiActivity } from '../../core/api/activity';
 import { PageBack } from '../../core/title/page-back';
 import { PageTitle } from '../../core/title/page-title';
 import { Icon } from '../../shared/icons/icon';
+import { HasRoleDirective } from '../../core/auth/has-role.directive';
 import { ActivityBar } from './activity-bar';
 import { Sidebar } from './sidebar';
 import { t } from '../../core/i18n/t';
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, Icon, ActivityBar, Sidebar],
+  imports: [RouterOutlet, RouterLink, Icon, ActivityBar, Sidebar, HasRoleDirective],
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
   host: {

@@ -15,6 +15,7 @@
     "stops": "Przystanki",
     "trips": "Kursy",
     "stopTimes": "Godziny odjazdów",
+    "users": "Użytkownicy",
     "sources": "Źródła danych",
     "pages": "Strony",
     "showPages": "Pokaż strony",
@@ -57,7 +58,8 @@
     "cityRailCurrent": "Kolej miejska: stan obecny",
     "cityRailProposal": "Kolej miejska: propozycja nr 1",
     "cityRailRadial": "Propozycja nr 1: pięć linii z Białegostoku",
-    "cityRailThrough": "Propozycja nr 1: linie przez Białystok"
+    "cityRailThrough": "Propozycja nr 1: linie przez Białystok",
+    "users": "Użytkownicy"
   },
   "login": {
     "username": "Nazwa użytkownika",
@@ -125,8 +127,7 @@
       "few": "{{n}} dni",
       "many": "{{n}} dni",
       "other": "{{n}} dnia"
-    },
-    "loading": "Wczytywanie…"
+    }
   },
   "time": {
     "from": "Od",
@@ -351,7 +352,21 @@
     "stepDays": "na {{n}} dzień",
     "stepHours": "na {{n}} godz.",
     "stepMinutes": "na {{n}} min",
-    "stepMinute": "co minutę"
+    "stepMinute": "co minutę",
+    "mostDelay": "Największe opóźnienie",
+    "leastDelay": "Najmniejsze opóźnienie",
+    "loadingRankings": "Ładowanie linii z największym i najmniejszym opóźnieniem",
+    "dwellAll": "Najdłuższe postoje na przystankach",
+    "dwellRoute": "Najdłuższe postoje na przystankach linii {{route}}",
+    "dwellIntro": "Średni postój autobusu na przystanku po drodze (przejazd bez zatrzymania liczy się jako 0; postoje ponad 10 minut to przerwy i są pomijane). Przystanki z co najmniej 20 wizytami.",
+    "dwellNone": "Za mało wizyt na przystankach w tym przedziale.",
+    "loadingDwell": "Ładowanie przystanków z najdłuższymi postojami",
+    "visits": {
+      "one": "{{count}} wizyta",
+      "few": "{{count}} wizyty",
+      "many": "{{count}} wizyt",
+      "other": "{{count}} wizyty"
+    }
   },
   "brigades": {
     "brigade": "Brygada",
@@ -829,7 +844,6 @@
     "loading": "Wczytywanie mapy opóźnień",
     "lineX": "Linia {{route}}",
     "close": "Zamknij",
-    "loadingLine": "Wczytywanie linii {{route}}…",
     "noRuns": "W tym przedziale nie zmierzono żadnego przejazdu tej linii.",
     "direction": "Kierunek",
     "towards": "W kierunku {{to}}",
@@ -1303,22 +1317,14 @@
       "fromTo": "Od → do (zgłaszane przystanki)",
       "driven": "Przejechane",
       "length": "Długość",
-      "lastDriven": "Ostatnio",
-      "brigade": "Brygada",
-      "leaves": "Wyjazd z zajezdni",
-      "returns": "Powrót",
-      "runs": "Kursy",
-      "inService": "W służbie",
-      "breaks": "Przerwy"
+      "lastDriven": "Ostatnio"
     },
     "km": "{{n}} km",
     "vehicles": "Pojazdy",
     "noTimetable": "Brak rozkładu. Administrator może go zaimportować w Ustawieniach.",
     "variants": "Warianty",
-    "speedBetween": "Prędkość między przystankami w szczycie",
     "brigades": "Brygady",
     "brigadesIntro": "Służba każdego autobusu w dzień roboczy według rozkładu: wyjeżdża z zajezdni na pierwszy kurs i wraca po ostatnim. Krótkie przerwy to postoje na pętli; przerwy 30 minut lub dłuższe są oznaczone jako przerwy.",
-    "asTable": "Pokaż jako tabelę",
     "how": "Jak to jest liczone",
     "how1": "<strong>Dane z rozkładu</strong> pochodzą z regularnego rozkładu dnia roboczego. <strong>Trasa podstawowa</strong> każdego kierunku to jego najczęstszy wariant; inne warianty są od niej dłuższe lub krótsze albo są zjazdami do zajezdni.",
     "how2": "<strong>Średnia prędkość rozkładowa:</strong> dystans podzielony przez czas przejazdu najwolniejszego i najszybszego kursu trasy podstawowej. Czas na przystankach się liczy.",
@@ -1372,7 +1378,6 @@
       "other": "{{count}} dnia roboczego"
     },
     "fullRuns": "· {{n}} pełnych przejazdów trasy podstawowej i dłuższych wariantów.",
-    "loading": "Wczytywanie danych na żywo…",
     "travelTime": "Czas przejazdu · {{title}}",
     "kmRuns": "· {{km}} km, {{runs}} pełnych przejazdów",
     "min": "min",
@@ -1442,19 +1447,6 @@
     }
   },
   "speed": {
-    "intro": "Średnia prędkość na każdym odcinku między dwoma przystankami, w pełnych przejazdach z odjazdem 06:30–08:30 lub 15:00–17:00. Każdy słupek jest tak szeroki, jak długi jest odcinek; trzy najwolniejsze są ponumerowane.",
-    "towards": "W kierunku {{to}}",
-    "runs": "· {{n}} przejazdów",
-    "from": "Od",
-    "to": "Do",
-    "distance": "Odległość",
-    "speed": "Prędkość",
-    "none": "W tym kierunku nie zapisano jeszcze pełnych przejazdów w szczycie.",
-    "noRecorded": "Brak zapisanych przejazdów.",
-    "kmFrom": " · {{km}} km, od km {{from}}",
-    "chartSlow": "{{from}} – {{to}} {{kmh}} km/h",
-    "chartLabel": "Prędkość między przystankami w kierunku {{to}}. Najwolniejsze: {{slow}}.",
-    "noneMeasured": "brak pomiarów",
     "col": {
       "variant": "Wariant",
       "fromTo": "Od → do",
@@ -1494,7 +1486,9 @@
       "breakTitle": "{{brigade}}: przerwa {{time}}",
       "breakDetail": "{{from}}–{{to}}, prawdopodobnie w zajezdni",
       "brigadeTitle": "{{brigade}}: {{runs}} kursów, {{time}} w służbie",
-      "brigadeDetail": "wyjazd z zajezdni {{start}}, powrót {{end}}"
+      "brigadeDetail": "wyjazd z zajezdni {{start}}, powrót {{end}}",
+      "openBrigade": "Otwórz brygadę {{brigade}} na dziś",
+      "openTrip": "Otwórz kurs brygady {{brigade}} o {{time}} dziś"
     },
     "kind": {
       "longer": "wydłużony",
@@ -1515,7 +1509,6 @@
     "daysOf": "{{n}} z {{total}}",
     "changes": "Zmiany pojazdu w ciągu dnia",
     "noChanges": "Każda brygada miała ten sam autobus przez cały dzień.",
-    "loading": "Wczytywanie pojazdów…",
     "none": "Nie zapisano pojazdów."
   },
   "tripNotes": {
@@ -1755,6 +1748,39 @@
       },
       "passes": "przejeżdża bez zatrzymania",
       "tooClose": "Bliżej innego pociągu niż odstęp"
+    }
+  },
+  "users": {
+    "intro": "Kto może się zalogować i z jaką rolą: administratorzy mogą zmieniać dane i zarządzać użytkownikami, goście tylko przeglądają.",
+    "newUser": "Nowy użytkownik",
+    "username": "Nazwa użytkownika",
+    "password": "Hasło",
+    "confirmPassword": "Powtórz hasło",
+    "role": "Rola",
+    "created": "Dodany",
+    "actions": "Akcje",
+    "you": "(ty)",
+    "create": "Utwórz",
+    "cancel": "Anuluj",
+    "delete": "Usuń",
+    "deleteUser": "Usuń użytkownika {{name}}",
+    "deleteTitle": "Usuń użytkownika",
+    "deleteQuestion": "Usunąć użytkownika {{name}}? Nie będzie mógł się już zalogować.",
+    "loading": "Ładowanie użytkowników",
+    "roles": {
+      "ADMIN": "Administrator",
+      "GUEST": "Gość"
+    },
+    "rules": "Nazwa: {{min}}–{{max}} znaków, bez spacji, nie zaczyna się od cyfry. Hasło: co najmniej {{password}} znaków, z co najmniej dwoma rodzajami: małe litery, wielkie litery, cyfry, inne znaki.",
+    "errors": {
+      "required": "Wymagane",
+      "spaces": "Bez spacji",
+      "startsWithDigit": "Nie może zaczynać się od cyfry",
+      "nameLength": "Od {{min}} do {{max}} znaków",
+      "taken": "Ta nazwa jest zajęta",
+      "passwordLength": "Co najmniej {{min}} znaków",
+      "kinds": "Co najmniej dwa rodzaje: małe litery, wielkie litery, cyfry, inne znaki",
+      "mismatch": "Hasła się różnią"
     }
   }
 }

@@ -1,0 +1,39 @@
+<form class="dialog" [formGroup]="form" (ngSubmit)="create()">
+  <h2>{{ t('users.newUser') }}</h2>
+  <label>
+    {{ t('users.username') }}
+    <input formControlName="username" autocomplete="off" autofocus />
+    @if (error('username'); as e) {
+      <span class="error" role="alert">{{ e }}</span>
+    }
+  </label>
+  <label>
+    {{ t('users.password') }}
+    <input formControlName="password" type="password" autocomplete="new-password" />
+    @if (error('password'); as e) {
+      <span class="error" role="alert">{{ e }}</span>
+    }
+  </label>
+  <label>
+    {{ t('users.confirmPassword') }}
+    <input formControlName="confirm" type="password" autocomplete="new-password" />
+    @if (error('confirm'); as e) {
+      <span class="error" role="alert">{{ e }}</span>
+    }
+  </label>
+  <label>
+    {{ t('users.role') }}
+    <select formControlName="role">
+      @for (r of roles; track r) {
+        <option [value]="r">{{ t('users.roles.' + r) }}</option>
+      }
+    </select>
+  </label>
+  <p class="muted hint">
+    {{ t('users.rules', { min: limits.min, max: limits.max, password: limits.password }) }}
+  </p>
+  <div class="actions">
+    <button type="button" (click)="cancel()">{{ t('users.cancel') }}</button>
+    <button type="submit" class="primary" [disabled]="form.invalid">{{ t('users.create') }}</button>
+  </div>
+</form>

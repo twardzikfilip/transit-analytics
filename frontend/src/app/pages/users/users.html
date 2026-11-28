@@ -1,0 +1,52 @@
+<div class="page-header">
+  <p class="muted">{{ t('users.intro') }}</p>
+  <button type="button" class="primary add" (click)="add()">
+    <app-icon name="addUser" />{{ t('users.newUser') }}
+  </button>
+</div>
+
+@if (users(); as list) {
+  <section class="card data-table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>{{ t('users.username') }}</th>
+          <th>{{ t('users.role') }}</th>
+          <th>{{ t('users.created') }}</th>
+          <th>
+            <span class="visually-hidden">{{ t('users.actions') }}</span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (u of list; track u.username) {
+          <tr>
+            <td>
+              {{ u.username }}
+              @if (u.username === me()) {
+                <span class="muted">{{ t('users.you') }}</span>
+              }
+            </td>
+            <td>{{ t('users.roles.' + u.role) }}</td>
+            <td>{{ u.createdAt | date: 'd MMM y, HH:mm' }}</td>
+            <td class="num">
+              @if (u.username !== me()) {
+                <button
+                  type="button"
+                  class="danger icon-button"
+                  [attr.aria-label]="t('users.deleteUser', { name: u.username })"
+                  [title]="t('users.deleteUser', { name: u.username })"
+                  (click)="remove(u.username)"
+                >
+                  <app-icon name="delete" />
+                </button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </section>
+} @else if (loading()) {
+  <app-skeleton kind="table" [count]="4" [label]="t('users.loading')" />
+}

@@ -246,12 +246,17 @@ public class PositionHistoryService {
     }
 
     private List<PositionHistoryDto.RouteActivity> countRoutes(Instant from, Instant to, String agency) {
+        // The mean delay leaves out outliers (feed errors), as the route pages do.
         List<PositionHistoryDto.RouteActivity> routes = jdbc.query("""
-                SELECT route_name, count(*) AS samples
+                SELECT route_name, count(*) AS samples,
+                       avg(delay_seconds) FILTER (WHERE abs(delay_seconds) <= %2$d) AS mean_delay,
+                       count(delay_seconds) FILTER (WHERE abs(delay_seconds) <= %2$d) AS delay_samples
                 FROM position_sample
-                WHERE %s AND route_name IS NOT NULL
-                GROUP BY route_name""".formatted(windowCondition("", agency != null)),
-                (rs, i) -> new PositionHistoryDto.RouteActivity(rs.getString("route_name"), rs.getLong("samples")),
+                WHERE %1$s AND route_name IS NOT NULL
+                GROUP BY route_name""".formatted(windowCondition("", agency != null), DelayOutliers.THRESHOLD_SECONDS),
+                (rs, i) -> new PositionHistoryDto.RouteActivity(rs.getString("route_name"), rs.getLong("samples"),
+                        rs.getObject("mean_delay") == null ? null : Math.round(rs.getDouble("mean_delay")),
+                        rs.getLong("delay_samples")),
                 window(from, to, agency, null).toArray());
         return routes.stream().sorted(Comparator.comparing(PositionHistoryDto.RouteActivity::route, TimetableMath.ROUTE_ORDER)).toList();
     }

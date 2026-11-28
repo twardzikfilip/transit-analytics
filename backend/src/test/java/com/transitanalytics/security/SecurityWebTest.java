@@ -47,6 +47,11 @@ import com.transitanalytics.zbiorkom.ZbiorkomBialystokService;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import java.util.Optional;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.junit.jupiter.api.BeforeEach;
+import com.transitanalytics.dto.UserDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -90,7 +95,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         GtfsController.class, PositionHistoryController.class,
         RouteController.class, FleetController.class, BrigadeController.class, HotspotController.class,
         DelayGenerationController.class, TripAnomalyController.class, TripRunController.class,
-        BoundaryController.class, NetworkCoverageController.class})
+        BoundaryController.class, NetworkCoverageController.class, UserController.class})
 @Import({SecurityConfig.class, JwtAuthFilter.class, JwtService.class, LoginAttempts.class,
         SecurityWebTest.Metrics.class})
 @TestPropertySource(properties = {
@@ -186,6 +191,67 @@ class SecurityWebTest {
 
     @MockitoBean
     TripRunService tripRunService;
+
+    @MockitoBean
+    Users users;
+
+    @MockitoBean
+    com.transitanalytics.dwell.StopDwellService stopDwellService;
+
+    @MockitoBean
+    PasswordEncoder passwordEncoder;
+
+    /** The users the tokens below are for: admin and guest (a token of anyone else is refused). */
+    @BeforeEach
+    void knownUsers() {
+        given(users.find("admin")).willReturn(Optional.of(new Users.Account("admin", "-", "ADMIN")));
+        given(users.find("guest")).willReturn(Optional.of(new Users.Account("guest", "-", "GUEST")));
+    }
+
+    @Test
+    void onlyAdminsListAddAndRemoveUsers() throws Exception {
+        given(users.list()).willReturn(List.of(new UserDto.User("admin", "ADMIN", NOW)));
+        given(passwordEncoder.encode(anyString())).willReturn("hash");
+        given(users.create("ann", "hash", "GUEST")).willReturn(new UserDto.User("ann", "GUEST", NOW));
+        given(users.exists("Admin")).willReturn(true);
+        given(users.delete("ann")).willReturn(true);
+
+        mvc.perform(get("/api/users").header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/users").header("Authorization", bearer("admin", "ADMIN")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].username").value("admin"));
+
+        mvc.perform(newUser("ann", "Secret-pass1", "GUEST", "guest")).andExpect(status().isForbidden());
+        mvc.perform(newUser("ann", "Secret-pass1", "GUEST", "admin"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.role").value("GUEST"));
+        mvc.perform(newUser("Admin", "Secret-pass1", "GUEST", "admin")).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("User Admin already exists"));
+        mvc.perform(newUser("1ann", "Secret-pass1", "GUEST", "admin")).andExpect(status().isBadRequest());
+        mvc.perform(newUser("ann", "onlylowercase", "GUEST", "admin")).andExpect(status().isBadRequest());
+        mvc.perform(newUser("ann", "Secret-pass1", "ROOT", "admin")).andExpect(status().isBadRequest());
+
+        mvc.perform(delete("/api/users/ann").header("Authorization", bearer("guest", "GUEST")))
+                .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/users/ann").header("Authorization", bearer("admin", "ADMIN")))
+                .andExpect(status().isNoContent());
+        mvc.perform(delete("/api/users/admin").header("Authorization", bearer("admin", "ADMIN")))
+                .andExpect(status().isBadRequest());
+        mvc.perform(delete("/api/users/nobody").header("Authorization", bearer("admin", "ADMIN")))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void aDeletedUsersTokenIsRefused() throws Exception {
+        // A valid token, but its user is gone.
+        mvc.perform(get("/api/auth/me").header("Authorization", bearer("ann", "ADMIN")))
+                .andExpect(status().isUnauthorized());
+    }
+
+    private MockHttpServletRequestBuilder newUser(String name, String password, String role, String as) {
+        return post("/api/users").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"%s\",\"password\":\"%s\",\"role\":\"%s\"}".formatted(name, password, role))
+                .header("Authorization", bearer(as, as.toUpperCase()));
+    }
 
     @Test
     void loginReturnsToken() throws Exception {

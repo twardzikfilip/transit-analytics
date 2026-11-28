@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -86,6 +87,30 @@ public class Timetables {
                     new double[] {last.lat(), last.lon()}));
         }
         return trips;
+    }
+
+    /**
+     * Each route's stops along the way (of the recorded feeds' trips), by route; a stop where any of the route's trips
+     * starts or ends is left out (buses lay over there).
+     */
+    public Map<String, List<Stop>> stopsAlongRoutes() {
+        Map<String, List<Stop>> byRoute = new HashMap<>();
+        jdbc.query("""
+                WITH ends AS (
+                    SELECT st.trip_id, min(st.stop_sequence) AS first, max(st.stop_sequence) AS last
+                    FROM stop_time st JOIN trip t ON t.id = st.trip_id WHERE t.feed = ANY (?) GROUP BY st.trip_id)
+                SELECT r.gtfs_id AS route, s.name, s.latitude, s.longitude
+                FROM trip t JOIN route r ON r.id = t.route_id JOIN ends e ON e.trip_id = t.id
+                     JOIN stop_time st ON st.trip_id = t.id JOIN stop s ON s.id = st.stop_id
+                WHERE t.feed = ANY (?) AND s.latitude IS NOT NULL
+                GROUP BY r.gtfs_id, s.id, s.name, s.latitude, s.longitude
+                HAVING NOT bool_or(st.stop_sequence IN (e.first, e.last))""",
+                rs -> {
+                    byRoute.computeIfAbsent(rs.getString("route"), k -> new ArrayList<>()).add(new Stop(
+                            StopPlaces.stopName(rs.getString("name")), rs.getDouble("latitude"),
+                            rs.getDouble("longitude")));
+                }, recordedFeeds, recordedFeeds);
+        return byRoute;
     }
 
     /** The stops of a route's trip (its first trip with that id), in order. */

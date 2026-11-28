@@ -26,9 +26,6 @@
       }
     </select>
   </label>
-  @if (loadingList()) {
-    <span class="muted" role="status">{{ t('common.loading') }}</span>
-  }
 </div>
 
 @if (!list() && loadingList()) {

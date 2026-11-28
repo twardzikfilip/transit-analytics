@@ -14,15 +14,16 @@ the short version for working on the code.
   `Reports` (recorded positions, and pairs of consecutive ones with one rule for all features), `Shapes`,
   `RailTrains`),
   `timetable` (service days, routes, stops), `routes`, `trips` (abnormal trips, trip runs), `brigades`, `fleet`,
-  `corridors`, `delays`, `hotspots`, `buslanes`, `coverage`, `rail` (with `rail.proposal`), `recording` (position
-  history), `gtfs` (import), `zbiorkom` (live feed), `geo`, `classification`, `security`. A transit line is a
+  `corridors`, `delays`, `dwell` (stops' dwell), `hotspots`, `buslanes`, `coverage`, `rail` (with `rail.proposal`), `recording` (position
+  history), `gtfs` (import), `zbiorkom` (live feed), `geo`, `classification`, `security` (sign-in, users). A transit line is a
   *route* in code and API (`/api/routes`, `route` fields); UI texts still say "line".
   - `backend/zbiorkom-feed/` (live feed client, shared) and `backend/recorder/` (the app that stores positions).
   - Settings in `src/main/resources/map/*.yml` and `classification/`; `./config/...` files override them.
   - Place data (borders, woods, Biała valley, residents) in `src/main/resources/places/` (see its README): generated
     files under `osm/`, hand-edited CSVs under `population/`.
 - `frontend/`: Angular 22 (standalone components, signals), NgRx (`createFeature`, functional effects; each page
-  registers its own slice in its `*.routes.ts`), Leaflet maps, Vitest through `ng test`.
+  registers its own slice in its `*.routes.ts`), Leaflet maps, Angular Material's dialog only (`MatDialog`, styled by
+  the `--mat-dialog-*` variables in `styles.scss`), Vitest through `ng test`.
   - `src/app/pages/<page>/`, `src/app/store/<slice>/`, `src/app/core/` (API, auth, theme, title, models),
     `src/app/shared/` (maps, charts, formatting, palette, icons, time window), `src/app/layout/shell/` (sidebar).
 - `tools/geo/`: OpenStreetMap fetch (`fetch_osm.sh [file.json]`, Overpass, tries mirrors with backoff) and the
@@ -73,7 +74,8 @@ Before calling a change done:
 - **One thing's page** has its own route under its list (`/brigades/:brigade`, `/vehicles/:id`,
   `/routes/route/:line`); filters stay in query parameters. Its way back is the header's chevron
   (`injectBackLink`, `core/title/page-back.ts`); Routes still has its own back button.
-- **Loading:** show `<app-skeleton>` (`shared/skeleton`, ngx-skeleton-loader) shaped like the content while it loads,
+- **Loading:** show `<app-skeleton>` (`shared/skeleton`, ngx-skeleton-loader) shaped like the content while it loads
+  (never a "Loading…" text),
   and only while loading (a failure is a toast, not a skeleton). The header's progress bar comes on by itself for
   `/api` requests; mark polling with the `BACKGROUND` context (`core/api/activity.ts`).
 - **Tests:** a page test renders with `renderPage(...)` and `stateAfter(feature, ...actions)` from

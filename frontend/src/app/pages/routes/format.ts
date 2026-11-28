@@ -3,7 +3,6 @@ import {
   RouteCapacity,
   RouteGeometry,
   RouteSubtype,
-  Segment,
   VariantKind,
 } from '../../core/models/models';
 import { localTime } from '../../shared/format/time';
@@ -93,16 +92,6 @@ export function routeTable(routes: RouteRef[]): RouteTable {
       ),
     })).filter((r) => r.cells.some((c) => c.length > 0)),
   };
-}
-
-/** Indexes of the `count` slowest segments with a measured speed, slowest first. */
-export function slowestSegments(segments: Segment[], count = 3): number[] {
-  return segments
-    .map((s, i) => ({ i, kmh: s.kmh }))
-    .filter((s): s is { i: number; kmh: number } => s.kmh !== null)
-    .sort((a, b) => a.kmh - b.kmh || a.i - b.i)
-    .slice(0, count)
-    .map((s) => s.i);
 }
 
 /** Whole hours around the given seconds-after-midnight times, with an hour of room on each side for labels. */

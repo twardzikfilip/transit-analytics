@@ -15,6 +15,7 @@
     "stops": "Arrêts",
     "trips": "Courses",
     "stopTimes": "Horaires aux arrêts",
+    "users": "Utilisateurs",
     "sources": "Sources de données",
     "pages": "Pages",
     "showPages": "Afficher les pages",
@@ -57,7 +58,8 @@
     "cityRailCurrent": "Train urbain : état actuel",
     "cityRailProposal": "Train urbain : proposition n° 1",
     "cityRailRadial": "Proposition n° 1 : cinq lignes depuis Białystok",
-    "cityRailThrough": "Proposition n° 1 : lignes traversant Białystok"
+    "cityRailThrough": "Proposition n° 1 : lignes traversant Białystok",
+    "users": "Utilisateurs"
   },
   "login": {
     "username": "Nom d'utilisateur",
@@ -124,8 +126,7 @@
       "one": "{{n}} jour",
       "other": "{{n}} jours",
       "many": "{{n}} jours"
-    },
-    "loading": "Chargement…"
+    }
   },
   "time": {
     "from": "Du",
@@ -345,7 +346,20 @@
     "stepDays": "par {{n}} jour",
     "stepHours": "par {{n}} h",
     "stepMinutes": "par {{n}} min",
-    "stepMinute": "chaque minute"
+    "stepMinute": "chaque minute",
+    "mostDelay": "Plus de retard",
+    "leastDelay": "Moins de retard",
+    "loadingRankings": "Chargement des lignes avec le plus et le moins de retard",
+    "dwellAll": "Arrêts aux plus longs stationnements",
+    "dwellRoute": "Arrêts aux plus longs stationnements de la ligne {{route}}",
+    "dwellIntro": "Arrêt moyen d'un bus à un arrêt en route (passer sans s'arrêter compte 0 ; les arrêts de plus de 10 minutes sont des pauses, exclues). Arrêts d'au moins 20 passages.",
+    "dwellNone": "Pas assez de passages aux arrêts sur cette période.",
+    "loadingDwell": "Chargement des arrêts aux plus longs stationnements",
+    "visits": {
+      "one": "{{count}} passage",
+      "other": "{{count}} passages",
+      "many": "{{count}} passages"
+    }
   },
   "brigades": {
     "brigade": "Service",
@@ -817,7 +831,6 @@
     "loading": "Chargement de la carte des retards",
     "lineX": "Ligne {{route}}",
     "close": "Fermer",
-    "loadingLine": "Chargement de la ligne {{route}}…",
     "noRuns": "Aucun trajet de cette ligne n'a été mesuré sur cette période.",
     "direction": "Direction",
     "towards": "Vers {{to}}",
@@ -1290,22 +1303,14 @@
       "fromTo": "De → à (arrêts indiqués)",
       "driven": "Parcourue",
       "length": "Longueur",
-      "lastDriven": "Dernier parcours",
-      "brigade": "Service",
-      "leaves": "Sortie du dépôt",
-      "returns": "Retour",
-      "runs": "Trajets",
-      "inService": "En service",
-      "breaks": "Pauses"
+      "lastDriven": "Dernier parcours"
     },
     "km": "{{n}} km",
     "vehicles": "Véhicules",
     "noTimetable": "Pas encore d'horaire. Un administrateur peut l'importer dans les Paramètres.",
     "variants": "Variantes",
-    "speedBetween": "Vitesse entre les arrêts aux heures de pointe",
     "brigades": "Services",
     "brigadesIntro": "Le service de chaque bus un jour de semaine, d'après l'horaire : il quitte le dépôt pour son premier trajet et y revient après le dernier. Les courts intervalles sont des battements au terminus ; ceux de 30 minutes ou plus sont marqués comme pauses.",
-    "asTable": "Afficher en tableau",
     "how": "Comment c'est calculé",
     "how1": "<strong>Les chiffres de l'horaire</strong> utilisent l'horaire régulier de semaine. <strong>L'itinéraire de base</strong> de chaque sens est sa variante la plus fréquente ; les autres variantes sont plus longues ou plus courtes, ou des trajets du dépôt.",
     "how2": "<strong>Vitesse moyenne prévue :</strong> distance divisée par le temps de parcours du trajet prévu le plus lent et le plus rapide de l'itinéraire de base. Le temps aux arrêts compte.",
@@ -1356,7 +1361,6 @@
       "many": "{{count}} jours de semaine"
     },
     "fullRuns": "· {{n}} trajets complets de l'itinéraire de base et des variantes plus longues.",
-    "loading": "Chargement des données en temps réel…",
     "travelTime": "Temps de parcours · {{title}}",
     "kmRuns": "· {{km}} km, {{runs}} trajets complets",
     "min": "min",
@@ -1426,19 +1430,6 @@
     }
   },
   "speed": {
-    "intro": "Vitesse moyenne sur chaque tronçon entre deux arrêts, pour les trajets complets partant entre 06:30–08:30 ou 15:00–17:00. Chaque barre est aussi large que le tronçon est long ; les trois plus lents sont numérotés.",
-    "towards": "Vers {{to}}",
-    "runs": "· {{n}} trajets",
-    "from": "De",
-    "to": "À",
-    "distance": "Distance",
-    "speed": "Vitesse",
-    "none": "Aucun trajet complet aux heures de pointe enregistré dans ce sens pour le moment.",
-    "noRecorded": "Aucun trajet enregistré.",
-    "kmFrom": " · {{km}} km, depuis le km {{from}}",
-    "chartSlow": "{{from}} à {{to}} {{kmh}} km/h",
-    "chartLabel": "Vitesse entre les arrêts vers {{to}}. Les plus lents : {{slow}}.",
-    "noneMeasured": "aucun mesuré",
     "col": {
       "variant": "Variante",
       "fromTo": "De → à",
@@ -1478,7 +1469,9 @@
       "breakTitle": "{{brigade}} : pause {{time}}",
       "breakDetail": "{{from}}–{{to}}, probablement de retour au dépôt",
       "brigadeTitle": "{{brigade}} : {{runs}} trajets, {{time}} en service",
-      "brigadeDetail": "quitte le dépôt à {{start}}, rentre à {{end}}"
+      "brigadeDetail": "quitte le dépôt à {{start}}, rentre à {{end}}",
+      "openBrigade": "Ouvrir le service {{brigade}} aujourd'hui",
+      "openTrip": "Ouvrir la course du service {{brigade}} à {{time}} aujourd'hui"
     },
     "kind": {
       "longer": "plus longue",
@@ -1499,7 +1492,6 @@
     "daysOf": "{{n}} sur {{total}}",
     "changes": "Changements de véhicule dans la journée",
     "noChanges": "Chaque service a gardé le même bus toute la journée.",
-    "loading": "Chargement des véhicules…",
     "none": "Aucun véhicule enregistré."
   },
   "tripNotes": {
@@ -1737,6 +1729,39 @@
       },
       "passes": "passe sans s’arrêter",
       "tooClose": "Plus proche d’un autre train que l’intervalle"
+    }
+  },
+  "users": {
+    "intro": "Qui peut se connecter, et avec quel rôle : les administrateurs modifient les données et gèrent les utilisateurs, les invités consultent seulement.",
+    "newUser": "Nouvel utilisateur",
+    "username": "Nom d'utilisateur",
+    "password": "Mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "role": "Rôle",
+    "created": "Ajouté",
+    "actions": "Actions",
+    "you": "(vous)",
+    "create": "Créer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "deleteUser": "Supprimer l'utilisateur {{name}}",
+    "deleteTitle": "Supprimer l'utilisateur",
+    "deleteQuestion": "Supprimer l'utilisateur {{name}} ? Il ne pourra plus se connecter.",
+    "loading": "Chargement des utilisateurs",
+    "roles": {
+      "ADMIN": "Administrateur",
+      "GUEST": "Invité"
+    },
+    "rules": "Un nom de {{min}} à {{max}} caractères, sans espace, ne commençant pas par un chiffre. Un mot de passe d'au moins {{password}} caractères, avec au moins deux types : minuscules, majuscules, chiffres, autres caractères.",
+    "errors": {
+      "required": "Obligatoire",
+      "spaces": "Sans espace",
+      "startsWithDigit": "Ne peut pas commencer par un chiffre",
+      "nameLength": "De {{min}} à {{max}} caractères",
+      "taken": "Ce nom est déjà pris",
+      "passwordLength": "Au moins {{min}} caractères",
+      "kinds": "Au moins deux types : minuscules, majuscules, chiffres, autres caractères",
+      "mismatch": "Les mots de passe ne correspondent pas"
     }
   }
 }

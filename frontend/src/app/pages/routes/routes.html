@@ -8,9 +8,14 @@
 
 @if (detail(); as d) {
   <div class="line-title" [class.loading]="loadingDetail()">
-    <span class="badge" [style.--chip-color]="'var(' + colorVar(d.subtype) + ')'">{{
-      d.name
-    }}</span>
+    <div class="line-mark">
+      <span class="badge" [style.--chip-color]="'var(' + colorVar(d.subtype) + ')'">{{
+        d.name
+      }}</span>
+      @if (operatorLogo(d.operator?.code); as logo) {
+        <span class="operator-logo"><img [src]="logo" [alt]="d.operator?.code" /></span>
+      }
+    </div>
     <div>
       <h2>{{ termini() || t('routes.lineX', { route: d.name }) }}</h2>
       <span class="muted">{{ t('routes.lineKind.' + d.subtype) }}</span>
@@ -234,54 +239,11 @@
       <app-travel-charts [performance]="performance()" [loading]="loadingPerformance()" />
     </section>
 
-    <section class="card section">
-      <h2>{{ t('routes.speedBetween') }}</h2>
-      <app-speed-profiles
-        [segments]="performance()?.segments ?? []"
-        [loading]="loadingPerformance()"
-      />
-    </section>
-
     @if (d.brigadesKnown) {
       <section class="card section">
         <h2>{{ t('routes.brigades') }}</h2>
         <p class="muted">{{ t('routes.brigadesIntro') }}</p>
         <app-brigade-timeline [brigades]="d.brigades" [mains]="mains()" />
-        <details>
-          <summary>{{ t('routes.asTable') }}</summary>
-          <table class="data-table compact">
-            <thead>
-              <tr>
-                <th>{{ t('routes.col.brigade') }}</th>
-                <th class="num">{{ t('routes.col.leaves') }}</th>
-                <th class="num">{{ t('routes.col.returns') }}</th>
-                <th class="num">{{ t('routes.col.runs') }}</th>
-                <th class="num">{{ t('routes.col.inService') }}</th>
-                <th>{{ t('routes.col.breaks') }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (b of d.brigades; track b.name) {
-                <tr>
-                  <td>{{ b.name }}</td>
-                  <td class="num">{{ clock(b.start) }}</td>
-                  <td class="num">{{ clock(b.end) }}</td>
-                  <td class="num">{{ b.runs.length }}</td>
-                  <td class="num">{{ duration((b.end - b.start) / 60) }}</td>
-                  <td>
-                    @for (k of b.breaks; track k.from) {
-                      {{ clock(k.from) }}–{{ clock(k.to) }} ({{
-                        duration((k.to - k.from) / 60)
-                      }})<br />
-                    } @empty {
-                      —
-                    }
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </details>
       </section>
     }
 

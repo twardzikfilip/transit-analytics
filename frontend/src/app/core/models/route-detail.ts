@@ -77,6 +77,8 @@ export interface BrigadeRun {
   kind: VariantKind;
   /** Set when the run goes from the depot into service, or back. */
   depot: DepotKind | null;
+  /** Its trip's id in the timetable, for Trips. */
+  trip: string | null;
 }
 
 export type DepotKind = 'pull_out' | 'pull_in';
@@ -188,21 +190,6 @@ export interface DelaySlot {
   samples: number;
 }
 
-export interface Segment {
-  from: string;
-  to: string;
-  fromKm: number;
-  toKm: number;
-  kmh: number | null;
-}
-
-export interface SegmentProfile {
-  direction: number;
-  headsign: string | null;
-  runs: number;
-  segments: Segment[];
-}
-
 /** Measured from recorded positions on weekdays. */
 export interface RoutePerformance {
   firstDay: string | null;
@@ -212,7 +199,6 @@ export interface RoutePerformance {
   /** The base route first, then each longer variant. */
   travelTimes: TravelTimes[];
   delays: DelaySlot[];
-  segments: SegmentProfile[];
   vehicles: RouteVehicles;
 }
 

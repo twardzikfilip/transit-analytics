@@ -15,6 +15,7 @@
     "stops": "Haltestellen",
     "trips": "Fahrten",
     "stopTimes": "Haltezeiten",
+    "users": "Benutzer",
     "sources": "Datenquellen",
     "pages": "Seiten",
     "showPages": "Seiten anzeigen",
@@ -57,7 +58,8 @@
     "cityRailCurrent": "Stadtbahn: heutiger Stand",
     "cityRailProposal": "Stadtbahn: Vorschlag Nr. 1",
     "cityRailRadial": "Vorschlag Nr. 1: fünf Linien ab Białystok",
-    "cityRailThrough": "Vorschlag Nr. 1: Linien durch Białystok"
+    "cityRailThrough": "Vorschlag Nr. 1: Linien durch Białystok",
+    "users": "Benutzer"
   },
   "login": {
     "username": "Benutzername",
@@ -123,8 +125,7 @@
     "days": {
       "one": "{{n}} Tag",
       "other": "{{n}} Tage"
-    },
-    "loading": "Wird geladen…"
+    }
   },
   "time": {
     "from": "Von",
@@ -339,7 +340,19 @@
     "stepDays": "pro {{n}} Tag",
     "stepHours": "pro {{n}} Std.",
     "stepMinutes": "pro {{n}} Min.",
-    "stepMinute": "jede Minute"
+    "stepMinute": "jede Minute",
+    "mostDelay": "Größte Verspätung",
+    "leastDelay": "Geringste Verspätung",
+    "loadingRankings": "Linien mit der größten und geringsten Verspätung werden geladen",
+    "dwellAll": "Längste Haltezeit an Haltestellen",
+    "dwellRoute": "Längste Haltezeit an Haltestellen der Linie {{route}}",
+    "dwellIntro": "Mittlere Haltezeit eines Busses an einer Haltestelle unterwegs (Durchfahren ohne Halt zählt 0; Halte über 10 Minuten sind Pausen und werden weggelassen). Haltestellen mit mindestens 20 Besuchen.",
+    "dwellNone": "Zu wenige Besuche an Haltestellen in diesem Zeitraum.",
+    "loadingDwell": "Haltestellen mit der längsten Haltezeit werden geladen",
+    "visits": {
+      "one": "{{count}} Besuch",
+      "other": "{{count}} Besuche"
+    }
   },
   "brigades": {
     "brigade": "Umlauf",
@@ -805,7 +818,6 @@
     "loading": "Verspätungskarte wird geladen",
     "lineX": "Linie {{route}}",
     "close": "Schließen",
-    "loadingLine": "Linie {{route}} wird geladen…",
     "noRuns": "In diesem Zeitraum wurden keine Fahrten dieser Linie gemessen.",
     "direction": "Richtung",
     "towards": "Richtung {{to}}",
@@ -1277,22 +1289,14 @@
       "fromTo": "Von → bis (gemeldete Haltestellen)",
       "driven": "Gefahren",
       "length": "Länge",
-      "lastDriven": "Zuletzt gefahren",
-      "brigade": "Umlauf",
-      "leaves": "Verlässt Depot",
-      "returns": "Rückkehr",
-      "runs": "Fahrten",
-      "inService": "Im Dienst",
-      "breaks": "Pausen"
+      "lastDriven": "Zuletzt gefahren"
     },
     "km": "{{n}} km",
     "vehicles": "Fahrzeuge",
     "noTimetable": "Noch kein Fahrplan. Ein Admin kann ihn unter Einstellungen importieren.",
     "variants": "Varianten",
-    "speedBetween": "Geschwindigkeit zwischen Haltestellen in der Spitzenzeit",
     "brigades": "Umläufe",
     "brigadesIntro": "Der Dienst jedes Busses an einem Werktag laut Fahrplan: Er verlässt das Depot zur ersten Fahrt und kehrt nach der letzten zurück. Kurze Lücken sind Wendezeiten an der Endstelle; Lücken ab 30 Minuten sind als Pausen markiert.",
-    "asTable": "Als Tabelle zeigen",
     "how": "Wie das berechnet wird",
     "how1": "<strong>Fahrplanzahlen</strong> nutzen den regulären Werktagsfahrplan. Die <strong>Grundstrecke</strong> jeder Richtung ist ihre häufigste Variante; andere Varianten sind länger oder kürzer oder Depotfahrten.",
     "how2": "<strong>Geplante Durchschnittsgeschwindigkeit:</strong> Strecke geteilt durch die Fahrzeit der langsamsten und schnellsten geplanten Fahrt der Grundstrecke. Die Zeit an Haltestellen zählt mit.",
@@ -1340,7 +1344,6 @@
       "other": "{{count}} Werktagen"
     },
     "fullRuns": "· {{n}} vollständige Fahrten der Grundstrecke und längerer Varianten.",
-    "loading": "Echtzeitdaten werden geladen…",
     "travelTime": "Fahrzeit · {{title}}",
     "kmRuns": "· {{km}} km, {{runs}} vollständige Fahrten",
     "min": "Min.",
@@ -1410,19 +1413,6 @@
     }
   },
   "speed": {
-    "intro": "Durchschnittsgeschwindigkeit auf jedem Abschnitt zwischen zwei Haltestellen, bei vollständigen Fahrten mit Abfahrt 06:30–08:30 oder 15:00–17:00. Jeder Balken ist so breit wie der Abschnitt lang; die drei langsamsten sind nummeriert.",
-    "towards": "Richtung {{to}}",
-    "runs": "· {{n}} Fahrten",
-    "from": "Von",
-    "to": "Bis",
-    "distance": "Entfernung",
-    "speed": "Geschwindigkeit",
-    "none": "In dieser Richtung wurden noch keine vollständigen Fahrten in der Spitzenzeit aufgezeichnet.",
-    "noRecorded": "Keine aufgezeichneten Fahrten.",
-    "kmFrom": " · {{km}} km, ab km {{from}}",
-    "chartSlow": "{{from}} bis {{to}} {{kmh}} km/h",
-    "chartLabel": "Geschwindigkeit zwischen Haltestellen Richtung {{to}}. Am langsamsten: {{slow}}.",
-    "noneMeasured": "keine gemessen",
     "col": {
       "variant": "Variante",
       "fromTo": "Von → bis",
@@ -1462,7 +1452,9 @@
       "breakTitle": "{{brigade}}: Pause {{time}}",
       "breakDetail": "{{from}}–{{to}}, wahrscheinlich zurück im Depot",
       "brigadeTitle": "{{brigade}}: {{runs}} Fahrten, {{time}} im Dienst",
-      "brigadeDetail": "verlässt das Depot {{start}}, kehrt {{end}} zurück"
+      "brigadeDetail": "verlässt das Depot {{start}}, kehrt {{end}} zurück",
+      "openBrigade": "Umlauf {{brigade}} für heute öffnen",
+      "openTrip": "Fahrt des Umlaufs {{brigade}} um {{time}} heute öffnen"
     },
     "kind": {
       "longer": "länger",
@@ -1483,7 +1475,6 @@
     "daysOf": "{{n}} von {{total}}",
     "changes": "Fahrzeugwechsel im Laufe des Tages",
     "noChanges": "Jeder Umlauf behielt den ganzen Tag denselben Bus.",
-    "loading": "Fahrzeuge werden geladen…",
     "none": "Keine Fahrzeuge aufgezeichnet."
   },
   "tripNotes": {
@@ -1719,6 +1710,39 @@
       },
       "passes": "fährt ohne Halt durch",
       "tooClose": "Näher an einem anderen Zug als der Mindestabstand"
+    }
+  },
+  "users": {
+    "intro": "Wer sich anmelden kann und mit welcher Rolle: Admins können Daten ändern und Benutzer verwalten, Gäste nur ansehen.",
+    "newUser": "Neuer Benutzer",
+    "username": "Benutzername",
+    "password": "Passwort",
+    "confirmPassword": "Passwort bestätigen",
+    "role": "Rolle",
+    "created": "Hinzugefügt",
+    "actions": "Aktionen",
+    "you": "(Sie)",
+    "create": "Erstellen",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "deleteUser": "Benutzer {{name}} löschen",
+    "deleteTitle": "Benutzer löschen",
+    "deleteQuestion": "Benutzer {{name}} löschen? Er kann sich dann nicht mehr anmelden.",
+    "loading": "Benutzer werden geladen",
+    "roles": {
+      "ADMIN": "Admin",
+      "GUEST": "Gast"
+    },
+    "rules": "Ein Name mit {{min}}–{{max}} Zeichen, ohne Leerzeichen, nicht mit einer Ziffer beginnend. Ein Passwort mit mindestens {{password}} Zeichen und mindestens zwei Arten: Kleinbuchstaben, Großbuchstaben, Ziffern, andere Zeichen.",
+    "errors": {
+      "required": "Erforderlich",
+      "spaces": "Keine Leerzeichen",
+      "startsWithDigit": "Darf nicht mit einer Ziffer beginnen",
+      "nameLength": "{{min}} bis {{max}} Zeichen",
+      "taken": "Dieser Name ist vergeben",
+      "passwordLength": "Mindestens {{min}} Zeichen",
+      "kinds": "Mindestens zwei Arten: Kleinbuchstaben, Großbuchstaben, Ziffern, andere Zeichen",
+      "mismatch": "Die Passwörter stimmen nicht überein"
     }
   }
 }

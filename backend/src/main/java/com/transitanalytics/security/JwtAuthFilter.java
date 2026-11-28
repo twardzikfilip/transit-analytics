@@ -21,9 +21,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private static final String PREFIX = "Bearer ";
 
     private final JwtService jwtService;
+    private final Users users;
 
-    public JwtAuthFilter(JwtService jwtService) {
+    public JwtAuthFilter(JwtService jwtService, Users users) {
         this.jwtService = jwtService;
+        this.users = users;
     }
 
     @Override
@@ -32,12 +34,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (header != null && header.startsWith(PREFIX)
                 && SecurityContextHolder.getContext().getAuthentication() == null) {
-            jwtService.parse(header.substring(PREFIX.length())).ifPresent(claims -> {
-                String role = claims.get(JwtService.ROLE_CLAIM, String.class);
-                var auth = new UsernamePasswordAuthenticationToken(claims.getSubject(), null,
-                        List.of(new SimpleGrantedAuthority("ROLE_" + role)));
-                SecurityContextHolder.getContext().setAuthentication(auth);
-            });
+            // A deleted user's token is refused at once, though it hasn't expired; the role is the user's now.
+            jwtService.parse(header.substring(PREFIX.length()))
+                    .flatMap(claims -> users.find(claims.getSubject()))
+                    .ifPresent(user -> {
+                        var auth = new UsernamePasswordAuthenticationToken(user.username(), null,
+                                List.of(new SimpleGrantedAuthority("ROLE_" + user.role())));
+                        SecurityContextHolder.getContext().setAuthentication(auth);
+                    });
         }
         chain.doFilter(request, response);
     }

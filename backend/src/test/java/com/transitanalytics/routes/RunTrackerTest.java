@@ -90,20 +90,6 @@ class RunTrackerTest {
     }
 
     @Test
-    void segmentSpeedIsTotalDistanceOverTotalTime() {
-        var stops = List.of(stop(0, "1"), stop(1, "1"), stop(3, "1"));
-        var main = new RouteDetailDto.Variant(0, "a", "A", "main", 3, 1, 10, 10, null, null, "S0", "S3",
-                List.of(), stops);
-        var runs = List.of(new FullRun(0, new double[]{0, 120, 360}), new FullRun(0, new double[]{0, 60, 300}));
-
-        var profile = RunTracker.segmentProfile(main, runs);
-        assertThat(profile.runs()).isEqualTo(2);
-        // 2 km in 180 s → 40 km/h; 4 km in 480 s → 30 km/h.
-        assertThat(profile.segments()).extracting(RouteDetailDto.Segment::kmh).containsExactly(40.0, 30.0);
-        assertThat(RunTracker.segmentProfile(main, List.of()).segments().get(0).kmh()).isNull();
-    }
-
-    @Test
     void runsMatchTheVariantWhoseStopNameFitsTheLastReport() {
         var base = variant("a", "main", "S0", "S1", "S2", "S3");
         var longer = variant("b", "longer", "S0", "S1", "S2", "S3", "Far");

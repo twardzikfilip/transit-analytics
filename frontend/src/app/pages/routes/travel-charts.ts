@@ -1,3 +1,4 @@
+import { Skeleton } from '../../shared/skeleton/skeleton';
 import { Component, computed, input } from '@angular/core';
 import { HourStat, RoutePerformance } from '../../core/models/models';
 import { clock, formatDelay } from '../../shared/format/time';
@@ -19,7 +20,7 @@ interface HourChartData {
  */
 @Component({
   selector: 'app-travel-charts',
-  imports: [LocalDatePipe, LocalNumberPipe, HourChart],
+  imports: [LocalDatePipe, LocalNumberPipe, HourChart, Skeleton],
   templateUrl: './travel-charts.html',
   styleUrl: './travel-charts.scss',
 })

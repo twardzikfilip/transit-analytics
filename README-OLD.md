@@ -57,7 +57,12 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
 ### API
 
 - `GET /api/version` → `{backend, recorder}`, each `{version, released}`: the versions running (`recorder` null when it doesn't answer)
-- `POST /api/auth/login` `{username, password}` → `{token, username, role}`; `GET /api/auth/me`
+- `POST /api/auth/login` `{username, password}` → `{token, username, role}`; `GET /api/auth/me`. A token stops
+  working at once when its user is deleted.
+- Users (admins only): `GET /api/users` (`{username, role, createdAt}`, by name), `POST /api/users`
+  `{username, password, role}` → 201 (a name of 3–20 characters, no spaces, not starting with a digit, not taken in
+  any case, else 400 or 409; a password of at least 10 characters of at least two kinds: lowercase, uppercase,
+  digits, others; the role `ADMIN` or `GUEST`), `DELETE /api/users/{username}` → 204 (not your own account: 400).
 - Timetable rows for the Stops and Stop times pages, a page at a time (`?page=&size=`, 50 by default, trains left
   out): `GET /api/stops?q=&zoneId=` (by name; `q` is text in the name or code) and
   `GET /api/stop-times?tripId=&stopId=` (a trip's calls in order, a stop's by departure). The timetable can't be
@@ -71,7 +76,14 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
     vehicles seen*. The last is always larger, because vehicles start and end their runs during the window.
   - `GET /api/positions/delays` — vehicles and reports per delay band: on time (under 2 min late, or early), 2–5,
     5–10, and 10 min or more. A vehicle counts in every band it was in.
-  - `GET /api/positions/routes` — routes recorded in the window.
+  - `GET /api/positions/routes` — routes recorded in the window, each with its reports' mean delay
+    (`meanDelaySeconds`, outliers over 30 min left out) and how many reports that is over (`delaySamples`).
+  - `GET /api/positions/dwell?route=&agency=` — the 5 stops with the longest mean dwell in the window, of at least 20
+    visits (`{stop, meanSeconds, visits}`). A visit is a bus's consecutive report pairs (`Reports.pairs`) within
+    50 m of a stop along its route (the route's first and last stops left out): measured as a trip's stop is in its
+    detail (`trips/Dwell`), passing without halting counts 0, halts over 10 min are breaks and left out. One route's
+    stops, or each stop's visits on all routes (an operator's, when chosen). Per hour, route and stop, worked out
+    per service day and stored (`stop-dwell`); the last week at startup.
   - `GET /api/positions/agencies` — the operators on the feed, BKM first, for the operator filter.
 - `GET /api/routes/stats` — per route, from the regular weekday timetable: length (main route, km), average speed,
   interval, regularity (coefficient of variation of the gaps between
@@ -118,7 +130,7 @@ Seeded dev users (from `V2__seed_users.sql` — **change before deploying anywhe
     last run or next to a break of 30 min or more. A long wait at a standard end stop is a break.
   - `GET /api/routes/{route}/performance` — from recorded positions on weekdays: travel time and average speed of full
     runs by departure hour (min, max, mean, median), per route pattern (base route, each longer variant; both
-    directions), average delay per 15 minutes, and speed between consecutive stops for runs leaving in peak hours.
+    directions), and average delay per 15 minutes.
     Also, from all recorded days, the buses that served the route: days per bus, the most used bus per brigade, and
     brigades that changed bus during a day. A stop counts as passed midway between the two
     reports that bracket it (one a minute), so single runs are accurate to about ±30 s.
@@ -576,7 +588,7 @@ PGPASSWORD=transit psql -h localhost -U transit transit_test -c "CREATE EXTENSIO
 - `core/api` — generic `CrudApiService` + one service per backend resource
 - `layout/shell` — the sidebar (pages grouped into *Operation* and *Network*, each with a filled Bootstrap icon from
   `shared/icons`) and the header bar with the page's title (from the route's `title`, see `core/title/page-title.ts`)
-  and the hamburger menu (Settings, Data sources, Logout, each with an icon). On a desktop the icon at the right of the sidebar's header narrows it to its
+  and the hamburger menu (Settings, Users for admins, Data sources, Logout, each with an icon). On a desktop the icon at the right of the sidebar's header narrows it to its
   icons (names as tooltips; remembered in the browser; `layout/shell/sidebar.ts`). Up to 768 px wide (phones, small tablets) the sidebar is hidden to the
   left and shown over the page with the button at the left of the header bar; choosing a page, tapping beside it,
   its ‹ button or Escape hides it again. Up to 600 px the time window's presets are a dropdown, the From/To fields
@@ -596,10 +608,14 @@ PGPASSWORD=transit psql -h localhost -U transit transit_test -c "CREATE EXTENSIO
   language (`shared/i18n/locale-pipes.ts`). `translations.spec.ts` checks every language has every text, the same
   placeholders and all its plural forms. Texts from the backend (trip notes, error details) and
   data names stay as they are.
+- Users (`/users`, admins only; in the menu for admins): every user with their role and when added. New User opens
+  an Angular Material dialog (raised like the login card): a name, a password typed twice and a role, each rule
+  checked as you type (the backend checks the same); the new user shows at once. Delete (not on your own row) asks
+  first in the same kind of dialog. Store slice `users`, registered by its lazy route.
 - Loading: while a page waits for its data it shows skeletons shaped like what is coming (tiles, charts, maps,
   tables; `shared/skeleton`, ngx-skeleton-loader, in the theme's colours), and a thin bar runs under the header while
   any API request is in flight (`core/api/activity.ts`; after 300 ms, so quick answers don't flicker; the live map's
-  polling doesn't count).
+  polling doesn't count). No page says "Loading…" in words: the bar and the skeletons are enough.
 - `store` — NgRx slices with functional effects: `auth`, `livePositions`, `routes` (all routes), and
   `stops`, `trips`, `stopTimes`, which hold one server-side page each (shared helpers in `store/paged.ts`);
   `gtfsImport` tracks the import. Only `auth` is registered at startup; every other slice is registered by its
@@ -616,7 +632,8 @@ PGPASSWORD=transit psql -h localhost -U transit transit_test -c "CREATE EXTENSIO
 - Startup bundle: telemetry (the OpenTelemetry SDK) loads as its own chunk right after startup, and the NgRx
   devtools are only in development builds (`store-devtools.prod.ts` replaces them in production).
 - `pages` — login (a photo of BKM buses behind the form, in `public/images`), settings (theme; versions; GTFS import for admins), sources (where the data comes from; "Data sources" in the header menu), and:
-- Home: a warning on top while a timetable is ending (`/api/gtfs/coverage`; nothing otherwise; with the day until which it is assumed. Trips, Abnormal trips and a brigade's page opened from its operator's list say when a day shown is assumed); then buses with a possibly faulty tracker first (a tile with a red border while any bus is listed: each bus links
+- Home: a warning on top while a timetable is ending (`/api/gtfs/coverage`; nothing otherwise; with the day until which it is assumed. Trips, Abnormal trips and a brigade's page opened from its operator's list say when a day shown is assumed); then buses with a possibly faulty tracker first (a tile folded to its title and count, opened with a click, with a
+  red border while any bus is listed: each bus links
   to its page, with its no-signal trips of all it ran, the days, its lines and the latest), then the live map
   (Leaflet/OSM; a `livePositions` load every 5 s, markers drawn from the store). Each bus is a pill-shaped badge with
   its line number in its kind's colour, an arrow pointing its way when the feed gives a bearing, and a ring in the
@@ -628,7 +645,9 @@ PGPASSWORD=transit psql -h localhost -U transit transit_test -c "CREATE EXTENSIO
   Below it, the recorded positions with their own time window, operator (`?agency=`, BKM by default, `all` for every
   operator) and line: vehicles running and mean delay every 10 s (each poll) for windows up to an hour, else every
   minute or coarser (SVG line charts with a hover/keyboard tooltip and a table view), running now / most at once /
-  different vehicles seen, and the delay distribution in four bands (on time, more than 2, 5 and 10 min). Preset
+  different vehicles seen; for all lines, the 10 lines with the most and the least mean delay side by side (of at
+  least 50 reports with a delay; the least runs early first); the 5 stops with the longest mean dwell (the chosen
+  line's, or over all lines); and the delay distribution in four bands (on time, more than 2, 5 and 10 min). Preset
   ranges refresh with each poll (up to 1 h) or every minute; a change of window loads at once. Store slices
   `livePositions` and `positionHistory`, registered by Home's lazy route. The former pages `/live-map`,
   `/positions` and `/delays` lead to Home. The former Line statistics page (`/lines`) leads to Routes, where each
@@ -647,11 +666,14 @@ PGPASSWORD=transit psql -h localhost -U transit transit_test -c "CREATE EXTENSIO
   the delay over the day and the buses. The map shows the base
   route thick and other variants thin and dashed in the same colour, with zone-2 stops filled. Below: length,
   scheduled travel time and speed, zone 2, the variants, charts of measured travel time, speed and delay over the
-  day (each with a table view), speed between stops in peak hours with the slowest stretches numbered, and a
-  timeline of the brigades with their breaks. Depot runs are yellow and labelled everywhere, the standard end stops
+  day (each with a table view), and a timeline of the brigades with their breaks: a brigade's name opens its page for
+  today, and a run opens Trips on that trip today (`?q=<brigade>&trip=<id>@<day>`, today's service day as the window;
+  the timeline shows the busiest weekday's timetable, so on another day the trip may not run and the brigade's trips
+  are listed instead). Depot runs are yellow and labelled everywhere, the standard end stops
   and depot-run stops are listed under the title, and a Vehicles section lists the buses and brigade changes.
   Store slice `routeDetail`, registered by its lazy route.
-  Under the title: who runs the line — BKM organises, and one of three companies operates it (KPKM, KPK or KZK; see
+  Under the title: who runs the line — BKM organises, and one of three companies operates it (KPKM, KPK or KZK, its
+  logo under the line number; see
   `classification/operators.yml`, from the BKM contact page) from its depot. The map draws the city limits and the
   centre lines are classified by, every depot's area (OpenStreetMap outlines in `map/depots.yml`: KPKM and KPK on
   ul. Składowa, KZK on ul. Pomocna; the operator's darker and named), and dashed yellow lines along the streets
